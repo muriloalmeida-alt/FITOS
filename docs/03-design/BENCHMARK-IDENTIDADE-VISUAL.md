@@ -236,7 +236,7 @@ Usar algarismos tabulares nas tabelas financeiras e séries de treino.
 
 ### Navegação
 
-- **Desktop:** navigation rail expandido ou drawer, com Dashboard, Alunos, Treinos, Agenda, Financeiro e Relatórios.
+- **Desktop:** navigation rail expandido ou drawer, com Dashboard, Alunos, Treinos e Financeiro no MVP. Agenda e Relatórios são pós-MVP e podem ser adicionados à navegação quando priorizados.
 - **Mobile do personal:** navigation bar com Início, Alunos, Treinos, Financeiro e Mais.
 - **Mobile do aluno:** navigation bar específica com Hoje, Treino, Progresso e Perfil.
 
@@ -254,13 +254,14 @@ Não compartilhar a mesma arquitetura de navegação entre personal e aluno apen
 - Estrutura em etapas: objetivo → exercícios → parâmetros → revisão.
 - Drag handle explícito para reordenar exercícios.
 - Chips para grupo muscular, equipamento e dificuldade.
-- IA como ação “Criar primeira versão com IA”, sempre editável e acompanhada da fonte dos exercícios.
+
+*(Pós-MVP — hipótese sujeita à decisão de Produto: ação “Criar primeira versão com IA”, sempre editável e acompanhada da fonte dos exercícios. Não disponível nos fluxos atuais do MVP.)*
 
 ### Financeiro
 
 - Superfícies mais sóbrias, com números alinhados e estados textuais.
-- Verde reservado a valores recebidos; não usar a cor primária indiscriminadamente.
-- Cobranças com estados: previsto, a vencer, recebido, atrasado e cancelado.
+- Verde reservado a valores pagos; não usar a cor primária indiscriminadamente.
+- Cobranças com estados persistidos: `pendente`, `pago`, `atrasado` e `cancelado`. “A vencer” é apresentação calculada de uma cobrança `pendente` com vencimento futuro, não um estado próprio. Pagamento parcial e estorno estão fora do MVP.
 - Confirmação reforçada para ações irreversíveis.
 
 ### Experiência do aluno durante o treino
@@ -305,7 +306,7 @@ Não compartilhar a mesma arquitetura de navegação entre personal e aluno apen
 ## 12. Princípios de experiência
 
 1. **Atenção antes de informação:** o dashboard aponta o que merece ação.
-2. **Prescrever sem retrabalho:** modelos, duplicação e IA aceleram a primeira versão.
+2. **Prescrever sem retrabalho:** modelos e duplicação aceleram a primeira versão; IA é uma aceleração pós-MVP.
 3. **Evolução visível:** cada registro deve alimentar progresso compreensível.
 4. **Financeiro sem constrangimento:** cobrança clara, profissional e respeitosa.
 5. **Humano no comando:** automações ajudam; o personal decide.
@@ -338,9 +339,9 @@ Não compartilhar a mesma arquitetura de navegação entre personal e aluno apen
 - Execução do treino pelo aluno.
 - Contas a receber e baixa de pagamento.
 
-### Fase 3 — Escala
+### Fase 3 — Escala (pós-MVP)
 
-- Templates, IA e automações.
+- Templates, IA e automações. *(Hipótese sujeita à decisão de Produto.)*
 - Relatórios e visualizações avançadas.
 - Comunicação e notificações.
 - Marca branca, caso faça parte da estratégia futura.
