@@ -1,0 +1,27 @@
+.button {
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+  border-radius: var(--fitos-shape-full);
+  padding: var(--fitos-space-3) var(--fitos-space-6);
+  min-height: 48px;
+  cursor: pointer;
+  transition: background-color var(--fitos-motion-state) var(--fitos-motion-standard);
+}
+
+.filled {
+  background-color: var(--fitos-color-primary);
+  color: var(--fitos-color-on-primary);
+  border: none;
+}
+
+.filled:hover {
+  opacity: 0.92;
+}
+
+.outlined {
+  background-color: transparent;
+  color: var(--fitos-color-primary);
+  border: 1px solid var(--fitos-color-outline);
+}

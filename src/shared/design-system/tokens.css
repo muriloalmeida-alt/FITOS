@@ -1,0 +1,125 @@
+/*
+ * Tokens do Material Design 3 para o FitOS.
+ * Fonte oficial: docs/03-design/M3-DESIGN-TOKENS.md
+ * Não adicionar cor, espaçamento ou tipografia fora do documentado ali.
+ */
+
+:root {
+  /* Primitivos — navy */
+  --fitos-navy-50: #eef3f8;
+  --fitos-navy-100: #d5e0ea;
+  --fitos-navy-300: #91a6ba;
+  --fitos-navy-500: #506a82;
+  --fitos-navy-700: #263e55;
+  --fitos-navy-900: #101c2c;
+
+  /* Primitivos — lime */
+  --fitos-lime-50: #f4fce8;
+  --fitos-lime-100: #e3f8c4;
+  --fitos-lime-300: #bdf478;
+  --fitos-lime-500: #9ddb4a;
+  --fitos-lime-700: #5c970d;
+  --fitos-lime-900: #294900;
+
+  /* Primitivos — teal */
+  --fitos-teal-50: #e4fbf7;
+  --fitos-teal-100: #bdf2ea;
+  --fitos-teal-300: #6cd4c7;
+  --fitos-teal-500: #21a69a;
+  --fitos-teal-700: #00766d;
+  --fitos-teal-900: #004e48;
+
+  /* Primitivos — neutral */
+  --fitos-neutral-0: #ffffff;
+  --fitos-neutral-50: #f8fafc;
+  --fitos-neutral-100: #edf1f4;
+  --fitos-neutral-300: #c7cdd3;
+  --fitos-neutral-500: #727a82;
+  --fitos-neutral-700: #424a52;
+  --fitos-neutral-900: #18212b;
+
+  /* Erro */
+  --fitos-error-100: #ffdad6;
+  --fitos-error-500: #ba1a1a;
+
+  /* Tipografia */
+  --fitos-font-family: var(--fitos-font-manrope, Manrope), system-ui, sans-serif;
+
+  /* Espaçamento (base 4px) */
+  --fitos-space-0: 0px;
+  --fitos-space-1: 4px;
+  --fitos-space-2: 8px;
+  --fitos-space-3: 12px;
+  --fitos-space-4: 16px;
+  --fitos-space-5: 20px;
+  --fitos-space-6: 24px;
+  --fitos-space-8: 32px;
+  --fitos-space-10: 40px;
+  --fitos-space-12: 48px;
+  --fitos-space-16: 64px;
+  --fitos-space-20: 80px;
+
+  /* Forma */
+  --fitos-shape-extra-small: 4px;
+  --fitos-shape-small: 8px;
+  --fitos-shape-medium: 12px;
+  --fitos-shape-large: 16px;
+  --fitos-shape-full: 999px;
+
+  /* Movimento */
+  --fitos-motion-short: 150ms;
+  --fitos-motion-state: 200ms;
+  --fitos-motion-enter: 280ms;
+  --fitos-motion-exit: 200ms;
+  --fitos-motion-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Tema claro (padrão) — semântico */
+  --fitos-color-primary: #3f6600;
+  --fitos-color-on-primary: #ffffff;
+  --fitos-color-primary-container: #bdf478;
+  --fitos-color-on-primary-container: #102000;
+  --fitos-color-secondary: #506173;
+  --fitos-color-on-secondary: #ffffff;
+  --fitos-color-secondary-container: #d4e5f8;
+  --fitos-color-on-secondary-container: #0d1d2a;
+  --fitos-color-tertiary: #006a61;
+  --fitos-color-on-tertiary: #ffffff;
+  --fitos-color-tertiary-container: #9ef2e5;
+  --fitos-color-on-tertiary-container: #00201d;
+  --fitos-color-surface: #f8fafc;
+  --fitos-color-surface-container: #edf1f4;
+  --fitos-color-surface-container-high: #e5e9ed;
+  --fitos-color-on-surface: #18212b;
+  --fitos-color-on-surface-variant: #424a52;
+  --fitos-color-outline: #727a82;
+  --fitos-color-outline-variant: #c2c8d0;
+  --fitos-color-error: #ba1a1a;
+  --fitos-color-on-error: #ffffff;
+}
+
+/* Tema escuro — segue prefers-color-scheme, sem alterar tokens primitivos */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fitos-color-primary: #a2d95c;
+    --fitos-color-on-primary: #1e3700;
+    --fitos-color-primary-container: #2f4e00;
+    --fitos-color-on-primary-container: #bdf478;
+    --fitos-color-secondary: #b8c8db;
+    --fitos-color-on-secondary: #233240;
+    --fitos-color-secondary-container: #39495a;
+    --fitos-color-on-secondary-container: #d4e5f8;
+    --fitos-color-tertiary: #82d5c9;
+    --fitos-color-on-tertiary: #003731;
+    --fitos-color-tertiary-container: #005049;
+    --fitos-color-on-tertiary-container: #9ef2e5;
+    --fitos-color-surface: #0e1722;
+    --fitos-color-surface-container: #182330;
+    --fitos-color-surface-container-high: #222e3b;
+    --fitos-color-on-surface: #e5eaf0;
+    --fitos-color-on-surface-variant: #c2c8d0;
+    --fitos-color-outline: #8c939b;
+    --fitos-color-outline-variant: #424a52;
+    --fitos-color-error: #ffb4ab;
+    --fitos-color-on-error: #690005;
+  }
+}
