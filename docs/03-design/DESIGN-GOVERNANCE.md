@@ -13,7 +13,7 @@
 
 ## Fluxo obrigatório
 
-1. Criar Issue (História) vinculada a Sprint, Épico e História, usando os identificadores de `docs/00-governanca/GOVERNANCA.md` (`FIT-XXX`/`EPIC-XX`/`SPRINT-XX`) — nunca numeração solta de Issue.
+1. Criar Issue de História vinculada à Sprint e ao Épico correspondentes, usando os identificadores de `docs/00-governanca/GOVERNANCA.md` (`FIT-XXX`/`EPIC-XX`/`SPRINT-XX`) — nunca numeração solta de Issue.
 2. Registrar problema, público, hipótese, escopo e critérios de aceite.
 3. Criar branch a partir da `main` atualizada, seguindo a convenção já fixada em `GOVERNANCA.md` (`feat/FIT-XXX-resumo`, `fix/BUG-XXX-resumo`, `docs/FIT-XXX-resumo` ou `chore/FIT-XXX-resumo`).
 4. Produzir ou implementar a mudança.
