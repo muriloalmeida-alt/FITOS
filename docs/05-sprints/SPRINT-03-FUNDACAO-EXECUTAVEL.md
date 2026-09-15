@@ -1,6 +1,6 @@
 # SPRINT-03 — Fundação Executável
 
-Status: em andamento — FIT-006 em revisão
+Status: em andamento — FIT-006 em revisão (segunda rodada, após alterações obrigatórias de Produto/Design/Gate Técnico)
 
 ## Objetivo
 
@@ -44,7 +44,7 @@ As Histórias não são paralelas:
 
 ## Decisões preservadas
 
-- Next.js + TypeScript: confirmado (versão fixada nesta Sprint — ver Fechamento da FIT-006).
+- Next.js 16 + TypeScript + React 19: confirmado (App Router exige React 19; ver Fechamento da FIT-006).
 - Monólito modular: confirmado.
 - PostgreSQL + Prisma: confirmado (implementação na FIT-007).
 - Railway: ADR-001 Aceito (implementação na FIT-008).
@@ -70,9 +70,9 @@ As Histórias não são paralelas:
 
 A FIT-003 (#4, proteção técnica da `main`) pertence à EPIC-00 e continua sendo tratada conforme o estado real do repositório. Verificado nesta rodada: `main` permanece `"protected": false` (via `list_branches`). A SPRINT-03 não declara a `main` protegida e não altera a FIT-003. A disciplina de branch/PR/merge autorizado permanece obrigatória e é a única salvaguarda efetiva enquanto a proteção técnica não existir.
 
-## Risco técnico conhecido (FIT-006)
+## Histórico de revisão da FIT-006
 
-O Next.js 15.5.25 usado na FIT-006 carrega uma versão de `postcss` com avisos moderados/altos de segurança (leitura de sourcemap/arquivo), só eliminável integralmente com Next.js 16 (major, exige React 19). Não há exposição aplicável nesta Sprint (sem CSS de usuário, sem sourcemap servido publicamente). Registrado como decisão pendente de avaliação futura de Produto/Engenharia, não resolvido silenciosamente.
+Na primeira rodada, a FIT-006 foi implementada com Next.js 15.5.25 + React 18, o que gerou uma vulnerabilidade residual moderada/alta transitiva do `postcss`. A revisão de Produto/Design/Gate Técnico no PR #17 determinou alterações obrigatórias: atualização para Next.js 16.3.5 + React 19.3.0 (a combinação correta, já que o App Router é alinhado ao React 19), geração e versionamento do `package-lock.json` por `npm install`/`npm ci` (sem transcrição manual), validação limpa completa e evidência visual anexada diretamente ao PR. Após a atualização, `npm audit` reporta zero vulnerabilidades — a pendência do `postcss` foi removida de `DECISOES-PENDENTES.md`.
 
 ## Fechamento
 
