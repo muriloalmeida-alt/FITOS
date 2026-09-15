@@ -119,3 +119,7 @@ A partir da FIT-005 (SPRINT-02 — Fundação Técnica, ver `docs/05-sprints/SPR
 | Assinatura FitOS (SaaS) separada do financeiro dos alunos | Confirmado | `arquitetura/ASSINATURA-SAAS.md` |
 
 Provas técnicas do Better Auth e do Asaas, fundação do projeto Next.js, provisionamento Railway, modelagem física/migrations e pipeline CI/CD são Histórias futuras, sem identificador ainda — ver "Histórias posteriores propostas" em `docs/04-backlog/EPIC-02-FUNDACAO-TECNICA.md`.
+
+### Fundação executável (SPRINT-03)
+
+A partir da FIT-006 (#14), a Fundação Técnica passa a ter uma contraparte executável: aplicação Next.js/TypeScript, estrutura de monólito modular e Material Design 3 aplicado (ver `docs/05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md` e `docs/06-engenharia/EXECUCAO-LOCAL.md`). FIT-007 (#15, banco/Prisma) e FIT-008 (#16, ambientes Railway) seguem o mesmo sequenciamento obrigatório — cada uma só inicia após o merge explicitamente autorizado da anterior.

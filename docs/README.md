@@ -39,10 +39,12 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `05-sprints/SPRINT-00-DOCUMENTACAO.md`
 - `05-sprints/SPRINT-01-PRODUCT-DESIGN.md`
 - `05-sprints/SPRINT-02-FUNDACAO-TECNICA.md`
+- `05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md`
 
 ## 06 — Engenharia
 
 - `06-engenharia/PROMPT-CLAUDE-CODE.md`
+- `06-engenharia/EXECUCAO-LOCAL.md`
 - `06-engenharia/arquitetura/README.md`
 - `06-engenharia/arquitetura/VISAO-ARQUITETURAL.md`
 - `06-engenharia/arquitetura/MODELO-MULTITENANT.md`
@@ -60,13 +62,17 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`
 - `06-engenharia/arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md`
 
+## Aplicação (FIT-006)
+
+A partir da FIT-006, o repositório também contém o código-fonte da aplicação Next.js/TypeScript do FitOS (`src/`, `package.json`). Execução local documentada em `06-engenharia/EXECUCAO-LOCAL.md`. O código segue a mesma governança desta documentação: toda mudança chega à `main` por PR revisado.
+
 ## Regras rápidas
 
 - Toda entrega funcional nasce de uma história identificada.
 - Toda história pertence a um Épico e a uma Sprint.
 - Toda mudança chega à `main` por PR.
-- Commits, pushes e merges diretos na `main` são proibidos, inclusive para documentação, configuração e hotfix.
+- Commits, pushes e merges diretos na `main` são proibidos, inclusive para documentação, configuração, código de aplicação e hotfix.
 - Toda formalização da entrega deve constar no PR; decisões permanentes devem atualizar também o documento correspondente no mesmo PR.
 - O PR deve atualizar documentação quando houver decisão ou alteração de comportamento.
-- Segredos e dados reais nunca são documentados ou versionados.
-- Identificadores, convenção de branch e de título de PR são únicos em todo o projeto (inclusive design e arquitetura): `docs/00-governanca/GOVERNANCA.md`.
+- Segredos e dados reais nunca são documentados, versionados ou commitados.
+- Identificadores, convenção de branch e de título de PR são únicos em todo o projeto (inclusive design, arquitetura e código): `docs/00-governanca/GOVERNANCA.md`.
