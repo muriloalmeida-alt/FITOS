@@ -31,11 +31,13 @@ Conteúdo obrigatório: severidade, fato, pessoa, tempo e ação. Não usar verm
 
 ### ExerciseCard
 
-Variações: biblioteca, builder e execução. Inclui mídia, nome, grupo muscular, equipamento e ações contextuais.
+Variações: biblioteca, builder e execução. Inclui mídia opcional (imagem; vídeo não é requisito obrigatório no MVP — ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`), nome, grupo muscular, equipamento e ações contextuais.
 
 ### SetRow
 
-Campos: número da série, carga, repetições, RPE opcional e conclusão. No mobile, deve permitir repetição rápida do valor anterior.
+Campos no MVP: número da série, carga, repetições e conclusão. No mobile, deve permitir repetição rápida do valor anterior.
+
+*(RPE/RIR são pós-MVP — hipótese sujeita à decisão de Produto; não incluir como campo do MVP.)*
 
 ### RestTimer
 
@@ -47,17 +49,17 @@ Exibe valor, período, comparação e definição. Nunca usar tendência positiv
 
 ### PaymentStatus
 
-Estados: previsto, a vencer, recebido, atrasado, cancelado e estornado. Cada estado combina texto, ícone e cor.
+Estados persistidos: `pendente`, `pago`, `atrasado` e `cancelado`. “A vencer” é uma apresentação calculada de uma cobrança `pendente` com vencimento futuro, não um estado próprio. Pagamento parcial e estorno estão fora do MVP. Cada estado combina texto, ícone e cor.
 
 ### WorkoutBuilderStep
 
-Etapas: contexto, exercícios, parâmetros e revisão. Salvar rascunho automaticamente e indicar sincronização.
+Etapas: contexto, exercícios, parâmetros e revisão. Salvar rascunho automaticamente e indicar o estado de salvamento (Salvando/Salvo/Erro).
 
-### AIRecommendation
+### AIRecommendation (pós-MVP)
+
+> **Nota de escopo:** este componente e o fluxo “Criar primeira versão com IA” (builder de treino) especificam a experiência para quando a prescrição assistida por IA for priorizada por Produto. Conforme `docs/00-governanca/ROADMAP.md`, a prescrição/recomendação de treino por IA está **fora do MVP** (Gate G5) — este componente é especificação **pós-MVP** (hipótese sujeita à decisão de Produto), não uma entrega do MVP, e não deve ser referenciado como recurso disponível nos fluxos, telas ou eventos analíticos atuais.
 
 Mostra sugestão, justificativa, fonte/contexto utilizado e ações editar/aceitar/descartar. Nunca apresenta conteúdo como decisão definitiva.
-
-> **Nota de escopo:** `AIRecommendation` e o fluxo "Criar primeira versão com IA" (builder de treino) especificam a experiência para quando a prescrição assistida por IA for priorizada. Conforme `docs/00-governanca/ROADMAP.md`, "Prescrição automática por IA" está **fora do MVP** — este componente é especificação antecipada, não uma entrega do MVP.
 
 ## Tabelas no desktop
 
