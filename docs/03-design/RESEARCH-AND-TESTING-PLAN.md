@@ -26,7 +26,7 @@ Perguntas centrais:
 - Onde registra restrições e evolução?
 - Como controla mensalidades e atrasos?
 - O que dá mais retrabalho toda semana?
-- O que não confiaria a uma IA?
+- O que não confiaria a uma IA? *(pergunta exploratória, para subsidiar uma decisão futura de Produto sobre IA — pós-MVP)*
 
 Artefatos: mapa de tarefas, dores, ferramentas, riscos e oportunidades.
 
@@ -47,11 +47,11 @@ Critério: a direção escolhida não pode ser percebida majoritariamente como a
 
 ## Rodada 3 — Usabilidade moderada
 
-Tarefas:
+Tarefas (escopo MVP):
 
 1. Encontrar um aluno sem atividade há sete dias.
 2. Criar e atribuir um treino usando um modelo.
-3. Ajustar um rascunho criado por IA.
+3. Duplicar um modelo de treino existente e ajustar seus parâmetros.
 4. Registrar o recebimento de uma mensalidade.
 5. Executar duas séries no celular.
 6. Corrigir uma carga registrada incorretamente.
@@ -66,6 +66,8 @@ Métricas:
 - Confiança declarada ao final.
 
 Meta inicial: ≥ 80% de conclusão sem ajuda nas tarefas essenciais e nenhum erro crítico recorrente.
+
+> **Nota de escopo:** a tarefa original desta rodada (“ajustar um rascunho criado por IA”) foi substituída pela tarefa 3 acima, compatível com o MVP. Testes de usabilidade específicos para criação de treino por IA ficam para quando essa funcionalidade for priorizada por Produto (pós-MVP, Gate G5 em `docs/00-governanca/ROADMAP.md`).
 
 ## Rodada 4 — Teste não moderado
 
