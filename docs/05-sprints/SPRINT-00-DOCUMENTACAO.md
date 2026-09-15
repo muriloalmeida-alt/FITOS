@@ -84,5 +84,5 @@ Critérios de aceite:
 
 ## PR desta entrega
 
-- Fundação documental e governança: PR [#3](../../pull/3) — mergeado na `main` em `2026-09-15` (commit `a5ec4ecfcff97c251781616ffe6c727a83db8327`).
+- Fundação documental e governança: <https://github.com/muriloalmeida-alt/New-FitOS/pull/3> — mergeado na `main` em `2026-09-15` (commit `a5ec4ecfcff97c251781616ffe6c727a83db8327`).
 - Fechamento da Sprint (este registro): PR de acompanhamento aberto a partir da branch `docs/FIT-000-fechamento-sprint-00`.
