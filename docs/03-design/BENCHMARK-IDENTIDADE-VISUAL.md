@@ -22,8 +22,8 @@ Direção recomendada: base em **azul-noturno**, cor de ação **verde-lima cont
 
 O FitOS atende dois contextos complementares:
 
-1. **Personal trainer:** cadastra alunos, prescreve treinos, acompanha evolução, conversa com clientes e administra cobranças.
-2. **Aluno:** consulta e executa treinos, registra resultados, acompanha evolução e mantém contato com o personal.
+1. **Personal trainer:** cadastra alunos, prescreve treinos, acompanha evolução e administra cobranças.
+2. **Aluno:** consulta e executa treinos, registra resultados e acompanha evolução.
 
 Essa dualidade exige uma marca profissional o bastante para gestão financeira e simples o bastante para ser usada durante um treino.
 
@@ -38,6 +38,8 @@ Essa dualidade exige uma marca profissional o bastante para gestão financeira e
 | **TrueCoach** | Coaching individual que escala | Builder de treinos, biblioteca de vídeos, métricas, metas e mensagens | Visual funcional, esportivo e direto; ênfase no trabalho do coach | Integrar a gestão do negócio à prescrição, sem perder simplicidade |
 | **Everfit** | Plataforma premium “all-in-one” para crescimento | Treino, nutrição, hábitos, automação, pagamentos, analytics, marca própria e IA | Marca energética, expressiva e aspiracional; ampla superfície funcional | Diferenciar pela clareza operacional e pela experiência localizada, não por volume de módulos |
 | **Hevy Coach** | Ferramenta simples para acompanhamento de força | Programas, progressão, analytics, chat e apps de coach/aluno | Interface limpa, escura e orientada a dados; forte associação com musculação | Ampliar o território para diferentes modalidades e para gestão comercial/financeira |
+
+> Nota: esta tabela descreve os concorrentes analisados (recursos deles, não do FitOS). Recursos como agenda, IA e mensagens listados aqui são características de terceiros, usadas apenas para benchmarking — ver a Matriz de aderência ao escopo em `PRODUCT-DESIGN.md` para o que o FitOS entrega no MVP.
 
 ### 3.2 Padrões recorrentes
 
@@ -77,7 +79,7 @@ O FitOS pode vencer não tentando parecer “mais fitness”, mas parecendo **o 
 - **Ativa:** transmite progresso, ritmo e constância.
 - **Confiável:** trata dados de saúde e dinheiro com sobriedade.
 - **Humana:** fala como parceiro de trabalho, sem tom militar ou julgador.
-- **Inteligente:** usa tecnologia e IA como apoio silencioso, não como espetáculo.
+- **Inteligente:** usa tecnologia de forma discreta, priorizando clareza sobre espetáculo. *(Recursos de IA, quando existirem, são pós-MVP — ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`.)*
 
 ### 4.3 Arquétipos
 
@@ -102,8 +104,9 @@ Alternativas para campanhas:
 |---|---|
 | “Pedro concluiu 3 de 4 treinos nesta semana.” | “Seu aluno falhou novamente.” |
 | “Há 2 mensalidades que precisam de atenção.” | “INADIMPLÊNCIA CRÍTICA!” |
-| “Use a IA para criar uma primeira versão e ajuste como preferir.” | “Deixe a IA fazer tudo por você.” |
 | Frases curtas, verbos de ação e dados objetivos | Gírias excessivas, pressão estética e linguagem punitiva |
+
+> Exemplo de tom quando a IA (pós-MVP) for priorizada: preferir “Use a IA para criar uma primeira versão e ajuste como preferir” a “Deixe a IA fazer tudo por você” — não é uma funcionalidade do MVP.
 
 ## 5. Conceito visual
 
@@ -114,7 +117,7 @@ O nome FitOS já sugere **fitness + operating system**. A identidade deve explor
 Elementos visuais recomendados:
 
 - Trajetórias curtas e curvas que indiquem continuidade.
-- Blocos modulares representando aluno, treino, agenda e financeiro.
+- Blocos modulares representando aluno, treino, exercícios e financeiro.
 - Anéis de progresso usados com moderação.
 - Dados e indicadores apresentados com respiro e hierarquia.
 - Fotografia realista, diversa e centrada na relação personal–aluno.
