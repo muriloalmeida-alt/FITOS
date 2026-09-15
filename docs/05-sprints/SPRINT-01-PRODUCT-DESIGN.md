@@ -1,13 +1,13 @@
 # SPRINT-01 — Fundação de Product Design
 
-Status: em revisão  
+Status: concluída  
 Objetivo: publicar a identidade visual e o Design System (Material Design 3) do FitOS como fundação documental de UX/UI para as Fases funcionais do roadmap, com o escopo normalizado ao MVP confirmado por Produto — sem iniciar implementação de frontend ou backend.
 
 ## Épico
 
 ### EPIC-01 — Identidade Visual e Design System (Material Design 3)
 
-Estabelecer marca, tokens M3, arquitetura de UX, biblioteca de componentes, especificação de telas críticas, plano de pesquisa e governança de design, todos aderentes ao escopo confirmado do MVP.
+Estabelecer marca, tokens M3, arquitetura de UX, biblioteca de componentes, especificação de telas críticas, plano de pesquisa e governança de design, todos aderentes ao escopo confirmado do MVP. Permanece aberta como container de rastreio (#6).
 
 ## História da Sprint
 
@@ -50,10 +50,32 @@ Critérios de aceite:
 
 ## Fechamento
 
-Preencher após o merge:
+- **Entregue:**
+  - Documentação integral da FIT-004: benchmark e identidade visual, tokens M3 (claro/escuro), arquitetura de UX, biblioteca de componentes, especificação das telas críticas, plano de pesquisa e validação, e governança de design — todos em `docs/03-design/`.
+  - `docs/03-design/PRODUCT-DESIGN.md` como visão geral/índice, com a Matriz de aderência ao escopo (Seção 11).
+  - `docs/00-governanca/ROADMAP.md` com a Trilha de Design vinculada a esta Sprint, e `docs/README.md` indexando todos os novos documentos.
+  - Épico EPIC-01 (#6, aberto como container de rastreio) e História FIT-004 (#7, concluída e fechada).
+  - PR #8 (`[FIT-004] Identidade visual e Design System M3`), revisado em três rodadas por Produto e Design, aprovado e mergeado na `main` exclusivamente pelo fluxo de PR.
 
-- Entregue:
-- Não entregue:
-- Decisões tomadas:
-- Riscos:
-- Próxima Sprint proposta:
+- **Não entregue (deliberadamente fora desta Sprint):**
+  - Concept board (`fitos-concept-board.png`) — mantido como referência visual opcional fora do repositório, por decisão de Produto e Design e por risco de corrupção binária na ferramenta de escrita disponível.
+  - Execução futura das pesquisas: o plano de pesquisa e validação (`RESEARCH-AND-TESTING-PLAN.md`) foi documentado, mas nenhuma entrevista, teste de conceito ou teste de usabilidade foi realmente executado nesta Sprint — é trabalho de pesquisa a ser conduzido posteriormente.
+
+- **Decisões tomadas:**
+  - Identidade de marca "Sistema em movimento" (paleta OS Navy/Motion Lime/Flow Teal/Cloud/Graphite, tipografia Manrope) **aprovada** por Produto e Design.
+  - **Material Design 3** confirmado como Design System oficial do FitOS.
+  - **EPIC-01 como Épico próprio** (não História do EPIC-00), por seu caráter transversal às fases funcionais — confirmado por Produto e Design.
+  - Escopo do MVP normalizado: IA, RPE/RIR, sincronização offline, vídeo obrigatório, agenda, mensagens, relatórios avançados e administração de academias tratados exclusivamente como "Pós-MVP" ou "Hipótese"; estados financeiros restritos a `pendente`/`pago`/`atrasado`/`cancelado`.
+  - **Acesso do personal e do aluno confirmado como capacidade do MVP**: ambos têm conta própria e autenticada, com o aluno restrito ao tenant do personal ao qual está vinculado — sem detalhamento de arquitetura técnica (Better Auth, multi-tenancy), que fica para a futura fundação de arquitetura.
+
+- **Resultado:**
+  - FIT-004 **concluída**, fechada pelo merge do PR #8.
+
+- **Riscos residuais:**
+  - A identidade de marca e a arquitetura de UX ainda não foram validadas com personal trainers e alunos reais — a Rodada 2 (teste de conceito) e a Rodada 3 (usabilidade moderada) de `RESEARCH-AND-TESTING-PLAN.md` permanecem pendentes de execução. Decisões de marca e de fluxo seguem, portanto, sujeitas a ajuste quando essa validação ocorrer.
+
+- **SHA do merge:** `0518ab1554c10cb8777f3a313ce2f935ecdb5d0f` (PR #8 → `main`).
+
+- **Próxima Sprint proposta:** **SPRINT-02 — Fundação Técnica**.
+- **Próximo Épico proposto:** **EPIC-02 — Fundação Técnica**.
+- **Próxima História proposta:** **FIT-005 — Definição da arquitetura da solução**.
