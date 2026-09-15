@@ -10,16 +10,17 @@ Responder em poucos segundos: “Como está meu negócio e quem precisa da minha
 
 1. Saudação e contexto temporal.
 2. Card “Atenção hoje”.
-3. KPIs: alunos ativos, adesão semanal, receita prevista e recebida.
-4. Agenda do dia.
-5. Evolução da carteira.
+3. KPIs: alunos ativos, adesão semanal, receita prevista e paga.
+4. Evolução da carteira.
+
+*(Agenda do dia é pós-MVP; poderá ser incorporada ao dashboard quando a funcionalidade de Agenda for priorizada — ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`.)*
 
 ### Ações
 
 - Adicionar aluno.
 - Criar treino.
 - Abrir item de atenção.
-- Ver agenda ou financeiro.
+- Ver financeiro.
 
 ### Critérios de aceite
 
@@ -27,7 +28,7 @@ Responder em poucos segundos: “Como está meu negócio e quem precisa da minha
 - Cada KPI mostra período e definição.
 - O usuário alcança um aluno sinalizado em até dois cliques.
 - Loading não desloca o layout.
-- Mobile prioriza atenção e agenda antes de gráficos.
+- Mobile prioriza atenção antes de gráficos.
 
 ## 2. Lista de alunos
 
@@ -62,7 +63,7 @@ Solicitar apenas o necessário para começar; avaliações extensas podem ser co
 
 ### Perfil
 
-Resumo, treinos, progresso, avaliações, financeiro, mensagens e histórico.
+Resumo, treinos, progresso, avaliações, financeiro e histórico.
 
 ### Critérios
 
@@ -80,7 +81,7 @@ Consumir API-Ninjas por camada interna, com cache e normalização. A UI não de
 
 - Busca.
 - Filtros: músculo, equipamento, tipo e dificuldade.
-- Preview de execução.
+- Preview de execução (imagem; vídeo não é requisito obrigatório no MVP).
 - Favoritos e recentes.
 - Exercício próprio.
 
@@ -103,7 +104,9 @@ Consumir API-Ninjas por camada interna, com cache e normalização. A UI não de
 
 ### Parâmetros
 
-Séries, repetições ou duração, carga, descanso, RPE/RIR opcional, observação e vídeo.
+Séries, repetições ou duração, carga, descanso e observação.
+
+*(RPE/RIR e vídeo são pós-MVP — hipótese sujeita à decisão de Produto; ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`.)*
 
 ### Regras
 
@@ -111,7 +114,10 @@ Séries, repetições ou duração, carga, descanso, RPE/RIR opcional, observaç
 - Duplicar exercício ou sessão.
 - Desfazer após remoção.
 - Alertar conflito com restrição cadastrada.
-- IA inicia rascunho, nunca publica automaticamente. *(Recurso de IA é pós-MVP — ver nota de escopo em `COMPONENT-LIBRARY.md`.)*
+
+### Pós-MVP (hipótese sujeita à decisão de Produto)
+
+- Criação de rascunho assistida por IA, sempre editável e nunca publicada automaticamente. Ver nota de escopo em `COMPONENT-LIBRARY.md` e Gate G5 em `docs/00-governanca/ROADMAP.md`. Não disponível como recurso do MVP.
 
 ## 6. Treino em execução — aluno
 
@@ -130,7 +136,7 @@ Séries, repetições ou duração, carga, descanso, RPE/RIR opcional, observaç
 - Teclado numérico para valores.
 - Repetir último valor em um toque.
 - Estado preservado ao bloquear a tela ou trocar de app.
-- Sincronização posterior quando offline.
+- Em caso de falha de conexão, informar o problema e permitir nova tentativa; o MVP não promete armazenamento nem sincronização offline.
 
 ### Critérios
 
@@ -143,7 +149,7 @@ Séries, repetições ou duração, carga, descanso, RPE/RIR opcional, observaç
 
 ### Visão geral
 
-Receita prevista, recebida, atrasada, próximos vencimentos e evolução mensal.
+Receita prevista, paga, atrasada, próximos vencimentos e evolução mensal.
 
 ### Lista de recebimentos
 
@@ -154,12 +160,13 @@ Aluno, plano, competência, vencimento, valor, estado e forma de pagamento.
 - Valores usam algarismos tabulares.
 - Filtro de competência explícito.
 - Baixa manual registra autor, data e observação.
-- Cancelamento/estorno exige confirmação.
+- Estado exibido é um dos quatro estados persistidos (`pendente`, `pago`, `atrasado`, `cancelado`); “a vencer” é calculado a partir de `pendente` com vencimento futuro. Pagamento parcial e estorno estão fora do MVP.
+- Cancelamento exige confirmação.
 - “Atrasado” não usa linguagem constrangedora em comunicações ao aluno.
 
 ## 8. Estados transversais
 
-Cada tela deve especificar: skeleton, vazio inicial, vazio por filtro, erro, offline, sem permissão, sucesso e conteúdo extremo.
+Cada tela deve especificar: skeleton, vazio inicial, vazio por filtro, erro, falha de conexão, sem permissão, sucesso e conteúdo extremo.
 
 ## 9. Responsividade
 
