@@ -36,6 +36,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 ## 05 — Sprints
 
 - `05-sprints/SPRINT-00-DOCUMENTACAO.md`
+- `05-sprints/SPRINT-01-PRODUCT-DESIGN.md`
 
 ## 06 — Engenharia
 
