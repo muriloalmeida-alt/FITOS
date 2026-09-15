@@ -1,13 +1,31 @@
 # FitOS — Diretrizes de Product Design
 
+## Mapa da documentação de Design
+
+| Documento | Uso |
+|---|---|
+| `PRODUCT-DESIGN.md` (este arquivo) | Visão geral, tese, princípios e índice |
+| `BENCHMARK-IDENTIDADE-VISUAL.md` | Benchmark competitivo, marca, paleta, tom de voz e direção visual completa |
+| `M3-DESIGN-TOKENS.md` | Tokens de cor (claro/escuro), tipografia, espaço, forma, elevação e movimento |
+| `UX-ARCHITECTURE.md` | Papéis, JTBD, arquitetura de informação, jornadas, estados e analytics |
+| `COMPONENT-LIBRARY.md` | Inventário e regras dos componentes M3, incluindo componentes de domínio |
+| `CRITICAL-SCREEN-SPECS.md` | Especificação funcional das 7 telas prioritárias |
+| `RESEARCH-AND-TESTING-PLAN.md` | Plano de pesquisa com usuários, testes de usabilidade e métricas |
+| `DESIGN-GOVERNANCE.md` | Fluxo de decisão, QA visual, versionamento do Design System e templates complementares de Issue/PR |
+
+Ordem de leitura recomendada: este documento → Benchmark → Tokens M3 → Arquitetura de UX → Componentes → Telas críticas → Pesquisa e validação → Governança de design.
+
 ## 1. Tese visual
 
-Uma central de trabalho esportiva, precisa e moderna: superfícies escuras, contraste alto, dados fáceis de ler e cor de ação usada com parcimônia. A interface deve transmitir desempenho sem parecer um aplicativo de fisiculturismo agressivo. O Material Design 3 (Seção 7) é o Design System escolhido para executar esta tese, não para substituí-la.
+Uma central de trabalho esportiva, precisa e moderna: superfícies com contraste alto, dados fáceis de ler e cor de ação usada com parcimônia. A interface deve transmitir desempenho sem parecer um aplicativo de fisiculturismo agressivo.
+
+**Conceito decidido: "Sistema em movimento".** FitOS é o sistema operacional que organiza o negócio do personal e mantém cada aluno em movimento. Assinatura: **"FitOS — Seu negócio em movimento."** Detalhamento completo do benchmark, plataforma de marca e tom de voz em `BENCHMARK-IDENTIDADE-VISUAL.md`.
+
+O Material Design 3 (Seção 7) é o Design System escolhido para executar esta tese, não para substituí-la.
 
 ## 2. Princípios
 
-- Mobile first para treino e consulta rápida.
-- Desktop otimizado para montagem de treinos e gestão da carteira.
+- Plataformas: **web responsiva** para o personal (desktop otimizado para gestão da carteira e montagem de treinos) e **mobile-first** para o aluno (treino e consulta rápida).
 - A ação principal de cada tela deve ser evidente.
 - Evitar painéis cheios de indicadores sem decisão associada.
 - Usar linguagem familiar ao personal trainer brasileiro.
@@ -15,22 +33,15 @@ Uma central de trabalho esportiva, precisa e moderna: superfícies escuras, cont
 
 ## 3. Arquitetura de informação
 
+Visão resumida; arquitetura completa, papéis, Jobs to be Done, jornadas e navegação adaptativa por breakpoint em `UX-ARCHITECTURE.md`.
+
 ### Área do personal
 
-- Início
-- Alunos
-- Treinos
-- Exercícios
-- Financeiro
-- Configurações
+Início, Alunos, Treinos, Agenda, Financeiro, Relatórios, Mensagens, Configurações.
 
 ### Área do aluno
 
-- Hoje
-- Meu plano
-- Histórico
-- Evolução
-- Perfil
+Hoje, Treino, Progresso, Mensagens, Perfil.
 
 ## 4. Primeira experiência do personal
 
@@ -47,10 +58,10 @@ Quando ainda não houver dados, a página inicial deve orientar uma sequência c
 - Lista e perfil do aluno.
 - Construtor de treino.
 - Pesquisa e seleção de exercícios.
-- Plano semanal e atribuição.
-- Treino do dia do aluno.
-- Registro de sessão.
-- Lista de cobranças e resumo financeiro.
+- Treino em execução no celular do aluno.
+- Financeiro (visão geral e recebimentos).
+
+Especificação funcional completa de cada tela (hierarquia, ações, critérios de aceite e estados) em `CRITICAL-SCREEN-SPECS.md`.
 
 ## 6. Comportamentos essenciais
 
@@ -60,65 +71,61 @@ Quando ainda não houver dados, a página inicial deve orientar uma sequência c
 - Registro de pagamento exige confirmação visual e permite correção auditável.
 - Informações vazias explicam a próxima ação, sem telas meramente decorativas.
 
-## 7. Design System oficial — Material Design 3
+## 7. Identidade de marca e Design System oficial — Material Design 3
 
 ### 7.1 Decisão
 
-- O **Material Design 3 (M3)** é o Design System oficial do FitOS a partir desta Sprint.
-- O M3 fornece tokens, componentes, estados e diretrizes de acessibilidade já testados, reduzindo decisões visuais ad-hoc e acelerando a implementação.
-- Adotar o M3 não substitui a tese visual da Seção 1: o esquema de cores, a tipografia e os componentes são configurados a partir de um **tema customizado**, nunca do tema padrão claro/roxo do M3.
-- Toda tela nova deve ser composta a partir dos tokens e componentes desta seção antes de se criar qualquer variação visual própria.
+- O **Material Design 3 (M3)** é o Design System oficial do FitOS.
+- Direção de marca decidida: conceito **"Sistema em movimento"**, paleta **OS Navy** `#101C2C`, **Motion Lime** `#9DDB4A`, **Flow Teal** `#21A69A`, **Cloud** `#F5F7F8` e **Graphite** `#26313D`; tipografia **Manrope**; ícones **Material Symbols Rounded**.
+- Esta decisão substitui a formulação genérica anterior desta seção ("azul vivo/ciano" sem marca nomeada), mantendo a mesma tese visual da Seção 1.
+- Toda tela nova deve ser composta a partir dos tokens e componentes de `M3-DESIGN-TOKENS.md` e `COMPONENT-LIBRARY.md` antes de se criar qualquer variação visual própria.
 
 ### 7.2 Tema e tokens de cor
 
-- Tema padrão do FitOS: **modo escuro** (`dark color scheme` do M3); o modo claro existe como alternativa secundária, sem prioridade no MVP.
-- Cor semente (`seed color`) do esquema dinâmico M3: o azul vivo/ciano de ação da identidade FitOS, usada para gerar as paletas tonais `primary`, `secondary` e `tertiary`.
-- Mapeamento dos papéis de cor M3 para a identidade FitOS:
-  - `surface` e as variações `surface-container` (mais claras a cada nível): preto, azul muito escuro e cinza grafite.
-  - `on-surface` (texto principal): **branco suave** — o branco continua sendo a cor de maior destaque sobre as superfícies escuras. `on-surface-variant` (texto secundário): cinza claro.
-  - `primary` / `on-primary`: azul vivo ou ciano controlado — cor de ação, usada com parcimônia.
-  - `error` / `on-error`: vermelho — atraso e erro.
-  - Cores estendidas do M3 (`extended colors`), fora da paleta base, para os papéis que o M3 não define nativamente: `success` (verde) e `warning` (âmbar).
-- Contraste mínimo **AA** (4.5:1 para texto normal, 3:1 para texto grande) obrigatório em todo par `on-*` / superfície usado em qualquer tela.
+- FitOS suporta **tema claro e tema escuro**, ambos tratados como temas reais (não inversão automática) — valores completos, incluindo JSON pronto para uso, em `M3-DESIGN-TOKENS.md`.
+- Papéis M3 mapeados à marca: `primary`/`onPrimary` derivados de Motion Lime (tom mais escuro no tema claro para manter contraste AA); `surface`/`onSurface` derivados de OS Navy e Graphite no tema escuro, Cloud no tema claro; `tertiary` (Flow Teal) reservado a dados de saúde e informação.
+- Cores de gráfico (`#67B51C`, `#007C72`, `#3D6FD8`, `#7655C6`, `#B26A00`, `#BA1A1A`) não substituem os tokens de feedback e nunca são o único meio de compreensão de um estado.
+- Contraste mínimo **AA** (4.5:1 texto normal, 3:1 texto grande) obrigatório em todo par `on-*`/superfície.
 
 ### 7.3 Tipografia
 
-- Escala tipográfica M3 (`display`, `headline`, `title`, `body`, `label`, cada uma em `large`/`medium`/`small`) substitui tamanhos de fonte livres.
-- Fonte sem serifa, com números tabulares habilitados nos estilos `body` e `label` usados em dados financeiros.
-- `display`/`headline` reservados para valores em destaque (resumo financeiro, indicadores do painel); `title` para cabeçalhos de tela e de seção.
+- Família: **Manrope** (`Manrope, system-ui, sans-serif`), variável, disponível no Google Fonts.
+- Escala tipográfica M3 completa (`display`, `headline`, `title`, `body`, `label`, tamanhos e pesos) em `M3-DESIGN-TOKENS.md`.
+- Algarismos tabulares (`font-variant-numeric: tabular-nums`) obrigatórios em tabelas financeiras e séries de treino.
 
 ### 7.4 Forma, elevação e movimento
 
-- Tokens de forma M3 (`shape.corner`, de `none` a `full`) definem o raio de cada componente: cartões usam `corner.medium`/`large`; botões e chips usam `corner.full`.
-- Elevação M3 (níveis 0 a 5) substitui sombra livre: no tema escuro, elevação é expressa principalmente por tonalidade de `surface-container` (mais clara a cada nível), com sombra reduzida — mantém a diretriz de evitar excesso de bordas e sombras.
-- Transições usam os tokens de movimento M3 (`easing` e `duration` padronizados), aplicados à reordenação no construtor de treino e às trocas de estado de tela.
+- Grid base de 4 px; raios de 8 px (campos) a 16 px (painéis), `full` em chips/FAB.
+- Elevação expressa preferencialmente por tonalidade de superfície, não por sombra livre.
+- Movimento entre 100–300 ms conforme o tipo de transição; respeitar `prefers-reduced-motion` sempre.
+- Detalhamento completo em `M3-DESIGN-TOKENS.md`.
 
 ### 7.5 Componentes
 
-- **Navegação:** `Navigation rail`/`Navigation drawer` M3 no desktop; `Navigation bar` M3 (inferior) no celular — implementa a navegação lateral no desktop e compacta no celular.
-- **Ação principal:** `FAB` (Floating Action Button) M3 para a ação primária de cada tela (novo aluno, novo treino, novo lançamento).
-- **Listas e cartões:** `Card` M3 (`elevated`, `filled` ou `outlined` conforme hierarquia) para alunos, exercícios e cobranças; `List item` M3 para as tabelas financeiras convertidas em lista no celular.
-- **Formulários:** `Text field` M3 (`outlined`, adequado ao tema escuro) para cadastro de aluno, exercício e cobrança.
-- **Feedback:** `Snackbar` M3 para confirmação de ações (ex.: pagamento registrado); `Dialog` M3 para confirmações destrutivas ou de impacto (ex.: atribuição de plano sobre plano vigente).
-- **Seleção e filtro:** `Chip` M3 (`filter`/`assist`) para os filtros de exercícios (grupo muscular, tipo, dificuldade, equipamento).
-- **Progresso:** `Progress indicator` M3 (linear ou circular) para os estados de carregamento.
+Biblioteca completa (fundamentais M3 e componentes de domínio como `StudentCard`, `AttentionItem`, `RestTimer`, `PaymentStatus`, `AIRecommendation`) em `COMPONENT-LIBRARY.md`. Navegação usa `Navigation rail`/`drawer` no desktop do personal e `Navigation bar` distinta para personal e aluno no mobile — as duas experiências não compartilham a mesma arquitetura de navegação.
 
 ### 7.6 Estados
 
-- Todo componente interativo implementa as camadas de estado do M3 (`state layers`): `enabled`, `hover`, `focus`, `pressed`, `dragged` e `disabled`, com a opacidade padrão do M3 sobre a cor do componente.
-- `disabled` sempre reduz contraste e remove a cor de ação, sem nunca remover o componente da tela sem explicação — mantém a diretriz de estados vazios orientativos.
-- Estado de erro de campo (`Text field` M3 em `error`) usa exclusivamente os tokens `error`/`on-error-container`, nunca cor livre.
+Todo componente interativo implementa as camadas de estado do M3 (`enabled`, `hover`, `focus`, `pressed`, `dragged`, `disabled`), nunca comunicando um estado crítico só por cor — sempre com ícone e texto de apoio.
 
 ### 7.7 Acessibilidade
 
-- Área de toque mínima de 48×48dp (padrão M3), especialmente nos controles usados durante o treino.
-- Contraste mínimo AA em todo par de cor da Seção 7.2; nenhuma informação crítica (estado de cobrança, alerta financeiro) depende só de cor — sempre acompanhada de ícone ou texto.
-- Suporte a ampliação de texto e ao `dynamic type` do M3 sem quebrar layout.
-- Foco visível (`focus state layer`) obrigatório em navegação por teclado, mesmo em um produto mobile first.
+- Meta mínima **WCAG 2.2 AA**; área de toque mínima de 48×48 dp; foco visível em toda navegação por teclado; zoom de 200% sem perda de conteúdo ou funcionalidade.
 
 ## 8. Responsividade
 
-- Mobile first permanece o princípio de layout (Seção 2); as classes de tamanho de janela do M3 (`compact`, `medium`, `expanded`) formalizam os breakpoints usados para alternar entre navegação compacta (celular, `compact`) e navegação lateral (desktop, `expanded`).
-- Tabelas financeiras seguem se convertendo em `List item`/`Card` M3 na classe `compact`.
-- Controles usados durante o treino mantêm as áreas de toque da Seção 7.7 em qualquer classe de tamanho.
-- Conteúdo principal permanece utilizável com ampliação de texto e com o `dynamic type` do M3.
+- Breakpoints M3 formalizados em `M3-DESIGN-TOKENS.md`: compact (0–599px), medium (600–839px), expanded (840–1199px), large (1200–1599px), extra large (≥1600px).
+- Validação obrigatória em 360, 768, 1024 e 1440 px (ver `CRITICAL-SCREEN-SPECS.md`).
+- Tabelas financeiras convertem-se em lista/card M3 na classe `compact`; a adaptação prioriza a tarefa, não apenas empilha colunas.
+
+## 9. Pesquisa e validação
+
+Plano de pesquisa com personal trainers e alunos, testes de usabilidade moderados e métricas de produto relacionadas ao design em `RESEARCH-AND-TESTING-PLAN.md`.
+
+## 10. Governança de design
+
+O fluxo de Issue → branch → PR, QA visual, versionamento do Design System e templates complementares estão em `DESIGN-GOVERNANCE.md`. Identificadores, convenção de branch e de título de PR seguem exclusivamente `docs/00-governanca/GOVERNANCA.md` — `DESIGN-GOVERNANCE.md` não introduz uma convenção paralela.
+
+## Nota de escopo
+
+O pacote de origem desta documentação incluía um "prompt mestre" para instruir a implementação em código (auditoria do repositório, matriz de gaps, sequência de PRs de implementação). Esse prompt é uma instrução operacional para uma etapa futura de engenharia, não documentação de produto decidida — por isso não foi versionado aqui, na mesma lógica já aplicada a `INSTRUCOES-AO-CLAUDE.md` na Sprint 00.
