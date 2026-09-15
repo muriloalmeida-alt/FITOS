@@ -4,12 +4,12 @@
 
 | Documento | Uso |
 |---|---|
-| `PRODUCT-DESIGN.md` (este arquivo) | Visão geral, tese, princípios e índice |
+| `PRODUCT-DESIGN.md` (este arquivo) | Visão geral, tese, princípios, índice e matriz de aderência ao escopo |
 | `BENCHMARK-IDENTIDADE-VISUAL.md` | Benchmark competitivo, marca, paleta, tom de voz e direção visual completa |
 | `M3-DESIGN-TOKENS.md` | Tokens de cor (claro/escuro), tipografia, espaço, forma, elevação e movimento |
 | `UX-ARCHITECTURE.md` | Papéis, JTBD, arquitetura de informação, jornadas, estados e analytics |
 | `COMPONENT-LIBRARY.md` | Inventário e regras dos componentes M3, incluindo componentes de domínio |
-| `CRITICAL-SCREEN-SPECS.md` | Especificação funcional das 7 telas prioritárias |
+| `CRITICAL-SCREEN-SPECS.md` | Especificação funcional das telas prioritárias |
 | `RESEARCH-AND-TESTING-PLAN.md` | Plano de pesquisa com usuários, testes de usabilidade e métricas |
 | `DESIGN-GOVERNANCE.md` | Fluxo de decisão, QA visual, versionamento do Design System e templates complementares de Issue/PR |
 
@@ -31,17 +31,19 @@ O Material Design 3 (Seção 7) é o Design System escolhido para executar esta 
 - Usar linguagem familiar ao personal trainer brasileiro.
 - Mostrar progressivamente detalhes técnicos do exercício.
 
-## 3. Arquitetura de informação
+## 3. Arquitetura de informação (escopo MVP)
 
-Visão resumida; arquitetura completa, papéis, Jobs to be Done, jornadas e navegação adaptativa por breakpoint em `UX-ARCHITECTURE.md`.
+Visão resumida do escopo do MVP; arquitetura completa — incluindo os itens pós-MVP (Agenda, Relatórios, Mensagens) — e detalhamento de papéis, Jobs to be Done, jornadas e navegação adaptativa por breakpoint em `UX-ARCHITECTURE.md`.
 
-### Área do personal
+### Área do personal (MVP)
 
-Início, Alunos, Treinos, Agenda, Financeiro, Relatórios, Mensagens, Configurações.
+Início, Alunos, Treinos, Financeiro, Configurações.
 
-### Área do aluno
+### Área do aluno (MVP)
 
-Hoje, Treino, Progresso, Mensagens, Perfil.
+Hoje, Treino, Progresso, Perfil.
+
+> Agenda, Relatórios e Mensagens são pós-MVP — ver "Matriz de aderência ao escopo" (Seção 11).
 
 ## 4. Primeira experiência do personal
 
@@ -102,7 +104,7 @@ Especificação funcional completa de cada tela (hierarquia, ações, critérios
 
 ### 7.5 Componentes
 
-Biblioteca completa (fundamentais M3 e componentes de domínio como `StudentCard`, `AttentionItem`, `RestTimer`, `PaymentStatus`, `AIRecommendation`) em `COMPONENT-LIBRARY.md`. Navegação usa `Navigation rail`/`drawer` no desktop do personal e `Navigation bar` distinta para personal e aluno no mobile — as duas experiências não compartilham a mesma arquitetura de navegação.
+Biblioteca completa (fundamentais M3 e componentes de domínio como `StudentCard`, `AttentionItem`, `RestTimer`, `PaymentStatus`) em `COMPONENT-LIBRARY.md`. `AIRecommendation` também está especificado ali, mas é **pós-MVP** — não deve ser referenciado como recurso disponível nos fluxos atuais. Navegação usa `Navigation rail`/`drawer` no desktop do personal e `Navigation bar` distinta para personal e aluno no mobile — as duas experiências não compartilham a mesma arquitetura de navegação.
 
 ### 7.6 Estados
 
@@ -120,12 +122,36 @@ Todo componente interativo implementa as camadas de estado do M3 (`enabled`, `ho
 
 ## 9. Pesquisa e validação
 
-Plano de pesquisa com personal trainers e alunos, testes de usabilidade moderados e métricas de produto relacionadas ao design em `RESEARCH-AND-TESTING-PLAN.md`.
+Plano de pesquisa com personal trainers e alunos, testes de usabilidade moderados (com tarefas restritas ao escopo do MVP) e métricas de produto relacionadas ao design em `RESEARCH-AND-TESTING-PLAN.md`.
 
 ## 10. Governança de design
 
 O fluxo de Issue → branch → PR, QA visual, versionamento do Design System e templates complementares estão em `DESIGN-GOVERNANCE.md`. Identificadores, convenção de branch e de título de PR seguem exclusivamente `docs/00-governanca/GOVERNANCA.md` — `DESIGN-GOVERNANCE.md` não introduz uma convenção paralela.
 
+## 11. Matriz de aderência ao escopo
+
+Classificação de cada capacidade documentada em `docs/03-design/` frente ao escopo do MVP confirmado por Produto. "Hipótese" indica um item que só se torna pós-MVP definitivo (ou é descartado) por decisão futura de Produto.
+
+| Capacidade | Classificação | Documento de origem | Observação/restrição |
+|---|---|---|---|
+| Autenticação e conta do personal | MVP | `docs/01-produto/PRD-01-MVP.md`, `docs/04-backlog/BACKLOG-MVP.md` (FIT-001) | — |
+| Cadastro e gestão de alunos | MVP | `UX-ARCHITECTURE.md`, `CRITICAL-SCREEN-SPECS.md` | — |
+| Biblioteca de exercícios | MVP | `CRITICAL-SCREEN-SPECS.md` | Fonte API-Ninjas + exercício próprio; preview de mídia é imagem, não vídeo |
+| Integração com API Ninjas | MVP | `docs/02-integracoes/INTEGRACAO-API-NINJAS.md` | Exclusivamente pelo backend |
+| Montagem e atribuição de treinos | MVP | `CRITICAL-SCREEN-SPECS.md`, `COMPONENT-LIBRARY.md` | Builder sem IA — ver linha "Criação/recomendação de treino por IA" |
+| Execução e registro de treinos | MVP | `CRITICAL-SCREEN-SPECS.md` | Sem sincronização offline — ver linha "Sincronização offline" |
+| Evolução básica do aluno | MVP | `UX-ARCHITECTURE.md`, `docs/01-produto/PRD-01-MVP.md` | — |
+| Gestão financeira | MVP | `CRITICAL-SCREEN-SPECS.md`, `COMPONENT-LIBRARY.md` | Estados persistidos: `pendente`, `pago`, `atrasado`, `cancelado`. "A vencer" é apresentação calculada de `pendente`; sem pagamento parcial nem estorno |
+| Dashboard operacional | MVP | `CRITICAL-SCREEN-SPECS.md` | Sem card de Agenda |
+| Criação/recomendação de treino por IA | Pós-MVP | `COMPONENT-LIBRARY.md` (`AIRecommendation`), `UX-ARCHITECTURE.md` | Gate G5 em `docs/00-governanca/ROADMAP.md`; retirada dos fluxos e eventos de analytics atuais |
+| RPE/RIR | Hipótese | `COMPONENT-LIBRARY.md` (`SetRow`), `CRITICAL-SCREEN-SPECS.md` (Builder) | Sujeito à decisão futura de Produto; não é campo do MVP |
+| Sincronização offline | Pós-MVP | `CRITICAL-SCREEN-SPECS.md`, `UX-ARCHITECTURE.md` | MVP trata apenas falha de conexão com nova tentativa; não promete armazenamento nem sincronização |
+| Vídeo como requisito obrigatório | Hipótese | `COMPONENT-LIBRARY.md` (`ExerciseCard`), `CRITICAL-SCREEN-SPECS.md` (Builder) | Mídia de exercício é opcional (imagem); vídeo não é obrigatório no MVP |
+| Agenda | Pós-MVP | `UX-ARCHITECTURE.md`, `docs/00-governanca/ROADMAP.md` | Retirada da arquitetura de informação e do dashboard do MVP |
+| Mensagens | Pós-MVP | `UX-ARCHITECTURE.md` | Retirada da arquitetura de informação de personal e aluno no MVP |
+| Relatórios avançados | Pós-MVP | `UX-ARCHITECTURE.md`, `docs/00-governanca/ROADMAP.md` | Fase 6 do roadmap permanece pós-MVP |
+| Administração de academias | Pós-MVP | `UX-ARCHITECTURE.md` | Já identificado como "futuro" na arquitetura de papéis |
+
 ## Nota de escopo
 
-O pacote de origem desta documentação incluía um "prompt mestre" para instruir a implementação em código (auditoria do repositório, matriz de gaps, sequência de PRs de implementação). Esse prompt é uma instrução operacional para uma etapa futura de engenharia, não documentação de produto decidida — por isso não foi versionado aqui, na mesma lógica já aplicada a `INSTRUCOES-AO-CLAUDE.md` na Sprint 00.
+O pacote de origem desta documentação incluía um "prompt mestre" para instruir a implementação em código (auditoria do repositório, matriz de gaps, sequência de PRs de implementação) e um asset visual (`assets/fitos-concept-board.png`). O prompt mestre é uma instrução operacional para uma etapa futura de engenharia, não documentação de produto decidida — por isso não foi versionado, na mesma lógica já aplicada a `INSTRUCOES-AO-CLAUDE.md` na Sprint 00. O asset visual é referência conceitual opcional, tratada como não bloqueante do aceite de FIT-004 — ver detalhes em `DESIGN-GOVERNANCE.md` e no PR correspondente.
