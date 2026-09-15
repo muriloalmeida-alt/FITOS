@@ -4,16 +4,16 @@ Este documento descreve como executar localmente a fundação executável do Fit
 
 ## Requisitos
 
-- Node.js 20 ou superior (validado nesta História com Node 22).
+- Node.js 22 (versão oficial do projeto).
 - npm.
 
 ## Instalação
 
 ```bash
-npm install
+npm ci
 ```
 
-Nenhuma variável de ambiente é obrigatória para rodar a aplicação nesta História. `.env.example` documenta as variáveis conhecidas; nenhuma delas é sensível.
+`package-lock.json` é versionado e obrigatório para instalação reproduzível (`npm ci`). Nenhuma variável de ambiente é obrigatória para rodar a aplicação nesta História. `.env.example` documenta as variáveis conhecidas; nenhuma delas é sensível.
 
 ## Scripts disponíveis
 
@@ -22,7 +22,7 @@ Nenhuma variável de ambiente é obrigatória para rodar a aplicação nesta His
 | `dev` | `npm run dev` | Servidor de desenvolvimento em `http://localhost:3000`. |
 | `build` | `npm run build` | Build de produção do Next.js. |
 | `start` | `npm run start` | Serve o build de produção (executar após `build`). |
-| `lint` | `npm run lint` | ESLint (`next/core-web-vitals`). |
+| `lint` | `npm run lint` | ESLint flat config (`eslint.config.mjs`, baseado em `eslint-config-next/core-web-vitals`). |
 | `typecheck` | `npm run typecheck` | `tsc --noEmit`, modo estrito. |
 | `test` | `npm run test` | Testes de unidade/componente com Vitest + Testing Library. |
 
@@ -53,6 +53,10 @@ src/
   test/                configuração global dos testes (Vitest + jsdom)
 ```
 
+## Stack validada
+
+Next.js 16.3.5, React/React DOM 19.3.0, TypeScript 5.9.3, ESLint 9.39.5 + `eslint-config-next` 16.3.5 (flat config), Vitest 5.0.1, Node.js 22. `npm audit`: zero vulnerabilidades.
+
 ## O que esta fundação prova
 
 - a aplicação Next.js/TypeScript inicializa, builda e serve páginas;
@@ -67,6 +71,6 @@ src/
 - autenticação (Better Auth/Clerk) ou cobrança (Asaas/Mercado Pago);
 - qualquer funcionalidade de Alunos, Exercícios, Treinos, Execução, Evolução ou Financeiro.
 
-## Risco técnico conhecido
+## Evidência visual
 
-`npm audit` reporta um alerta residual moderado/alto herdado do `postcss` empacotado pelo Next.js 15.5.25 (leitura de sourcemap/arquivo via entrada não confiável). A correção completa exige Next.js 16 (major, requer React 19) e não foi aplicada nesta História — fica registrada como decisão pendente de avaliação futura de Produto/Engenharia em `docs/06-engenharia/arquitetura/DECISOES-PENDENTES.md`. Não há exposição aplicável nesta fundação: não há CSS fornecido por usuário nem sourcemap servido publicamente.
+Capturas de tela (mobile claro/escuro, desktop) em `docs/06-engenharia/evidencias/FIT-006/`.
