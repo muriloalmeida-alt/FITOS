@@ -4,11 +4,11 @@
 
 ### Personal trainer
 
-Gerencia carteira, prescreve, acompanha, agenda e cobra. Busca eficiência e visão de risco.
+Gerencia carteira, prescreve, acompanha e cobra alunos. Busca eficiência e visão de risco.
 
 ### Aluno
 
-Executa o plano, registra resultados, acompanha evolução e conversa com o personal. Busca simplicidade e motivação sem julgamento.
+Executa o plano, registra resultados e acompanha evolução. Busca simplicidade e motivação sem julgamento.
 
 ### Administrador de academia — futuro
 
@@ -20,9 +20,11 @@ Gerencia equipe, unidades, permissões, marca e indicadores agregados. Não deve
 - Quando reviso minha semana, quero identificar quem precisa de atenção.
 - Quando prescrevo, quero reutilizar estruturas sem perder personalização.
 - Quando treino, quero registrar cada série com o mínimo de interação.
-- Quando fecho o mês, quero saber o que recebi e o que precisa de cobrança.
+- Quando fecho o mês, quero saber o que foi pago e o que ainda precisa de cobrança.
 
 ## Arquitetura — personal
+
+### MVP
 
 1. Início
 2. Alunos
@@ -36,17 +38,22 @@ Gerencia equipe, unidades, permissões, marca e indicadores agregados. Não deve
    - Modelos
    - Exercícios
    - Builder
-4. Agenda
-5. Financeiro
+4. Financeiro
    - Visão geral
    - Mensalidades
    - Recebimentos
    - Planos
-6. Relatórios
-7. Mensagens
-8. Configurações
+5. Configurações
+
+### Pós-MVP / futuro (hipótese sujeita à decisão de Produto)
+
+- Agenda
+- Relatórios
+- Mensagens
 
 ## Arquitetura — aluno
+
+### MVP
 
 1. Hoje
 2. Treino
@@ -54,8 +61,11 @@ Gerencia equipe, unidades, permissões, marca e indicadores agregados. Não deve
    - Execução
    - Conclusão
 3. Progresso
-4. Mensagens
-5. Perfil
+4. Perfil
+
+### Pós-MVP / futuro (hipótese sujeita à decisão de Produto)
+
+- Mensagens
 
 ## Navegação adaptativa
 
@@ -70,9 +80,9 @@ Gerencia equipe, unidades, permissões, marca e indicadores agregados. Não deve
 1. Adicionar aluno.
 2. Enviar convite ou concluir cadastro assistido.
 3. Registrar objetivo, restrições e disponibilidade.
-4. Criar treino do zero, por modelo ou com primeira versão de IA.
+4. Criar treino do zero ou a partir de um modelo. *(Criação assistida por IA é pós-MVP — ver Gate G5 em `docs/00-governanca/ROADMAP.md`.)*
 5. Revisar exercícios e parâmetros.
-6. Atribuir período e agenda.
+6. Atribuir período e dias da semana.
 7. Acompanhar execução e feedback.
 8. Ajustar progressão.
 
@@ -110,7 +120,7 @@ Toda tela conectada a dados deve prever:
 - Resultado vazio após filtro.
 - Falha recuperável com tentar novamente.
 - Sem permissão.
-- Offline ou sincronização pendente.
+- Falha de conexão, com nova tentativa disponível. *(O MVP não promete armazenamento nem sincronização offline.)*
 - Sucesso com feedback não bloqueante.
 
 ## Conteúdo e linguagem
@@ -120,13 +130,13 @@ Toda tela conectada a dados deve prever:
 - Não culpabilizar aluno por ausência ou atraso.
 - Datas: `15 set 2026`; valores: `R$ 1.250,00`.
 - Confirmações descrevem consequência antes da ação.
-- Termos de treino devem ser consistentes: série, repetição, carga, descanso, percepção de esforço.
+- Termos de treino devem ser consistentes: série, repetição, carga, descanso.
 
 ## Segurança de experiência
 
 - O FitOS não diagnostica nem substitui decisão profissional.
 - Alertas médicos e restrições aparecem próximos à prescrição.
-- Sugestões de IA devem ser revisadas pelo personal.
+- Quando a funcionalidade de IA for priorizada (pós-MVP), sugestões de IA devem ser revisadas pelo personal antes de qualquer publicação.
 - Exclusões financeiras e alterações de histórico exigem confirmação e auditoria.
 
 ## Eventos essenciais de analytics
@@ -135,8 +145,6 @@ Toda tela conectada a dados deve prever:
 - `student_invite_sent`
 - `workout_builder_started`
 - `workout_assigned`
-- `ai_draft_requested`
-- `ai_draft_accepted`
 - `workout_started`
 - `set_logged`
 - `exercise_substituted`
@@ -146,3 +154,5 @@ Toda tela conectada a dados deve prever:
 - `attention_item_opened`
 
 Eventos não devem registrar observações clínicas, mensagens ou dados sensíveis em texto livre.
+
+> **Nota de escopo:** os eventos `ai_draft_requested` e `ai_draft_accepted`, presentes na versão original deste documento, foram retirados dos eventos atuais do MVP — pertencem à visão pós-MVP (Gate G5 em `docs/00-governanca/ROADMAP.md`) e serão redefinidos quando a funcionalidade de IA for priorizada por Produto.
