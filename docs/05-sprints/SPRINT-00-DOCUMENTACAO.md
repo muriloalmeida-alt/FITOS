@@ -9,11 +9,11 @@ Objetivo: tornar o GitHub a fonte oficial de produto e preparar o FitOS para ent
 
 Criar uma base documental clara e rastreável para orientar Produto, Design e Engenharia.
 
-## Histórias da Sprint
+## História da Sprint
 
 ### FIT-000 — Organizar documentação e governança
 
-Como time do FitOS, queremos uma estrutura oficial de documentação e templates para que cada entrega tenha contexto, escopo, aceite e rastreabilidade.
+Como time do FitOS, queremos uma estrutura oficial de documentação, templates e requisitos organizados para que cada entrega tenha contexto, escopo, aceite e rastreabilidade, e para que a Engenharia receba o necessário para transformar o MVP em plano técnico incremental.
 
 Critérios de aceite:
 
@@ -24,17 +24,12 @@ Critérios de aceite:
 - Definition of Done está documentada.
 - Esta entrega acontece por PR, sem alteração direta na `main`.
 - A governança proíbe explicitamente commits, pushes e merges diretos na `main` e exige formalização completa nos PRs.
-
-### FIT-000A — Preparar backlog para refinamento técnico
-
-Como Engenharia, quero receber requisitos e restrições organizados para transformar o MVP em plano técnico incremental.
-
-Critérios de aceite:
-
 - Backlog possui prioridade e critérios de aceite.
 - Prompt do Claude Code referencia os documentos oficiais.
 - Integração API Ninjas separa MCP de desenvolvimento e REST de produção.
 - Dúvidas técnicas devem retornar para decisão de Produto.
+
+> Nota: a história FIT-000A ("Preparar backlog para refinamento técnico"), inicialmente listada como história independente desta Sprint, foi incorporada à FIT-000 nesta revisão. O escopo era o mesmo Épico (EPIC-00) e a mesma entrega documental; mantê-la separada duplicava o vínculo de Sprint/Épico sem entregar valor isolado. A Sprint 00 passa a ter uma única História.
 
 ## Escopo incluído
 
