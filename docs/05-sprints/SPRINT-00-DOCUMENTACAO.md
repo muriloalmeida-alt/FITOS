@@ -29,7 +29,9 @@ Critérios de aceite:
 - Integração API Ninjas separa MCP de desenvolvimento e REST de produção.
 - Dúvidas técnicas devem retornar para decisão de Produto.
 
-> Nota: a história FIT-000A ("Preparar backlog para refinamento técnico"), inicialmente listada como história independente desta Sprint, foi incorporada à FIT-000 nesta revisão. O escopo era o mesmo Épico (EPIC-00) e a mesma entrega documental; mantê-la separada duplicava o vínculo de Sprint/Épico sem entregar valor isolado. A Sprint 00 passa a ter uma única História.
+> Nota (1ª revisão): a história FIT-000A ("Preparar backlog para refinamento técnico"), inicialmente listada como história independente desta Sprint, foi incorporada à FIT-000 nesta revisão. O escopo era o mesmo Épico (EPIC-00) e a mesma entrega documental; mantê-la separada duplicava o vínculo de Sprint/Épico sem entregar valor isolado. A Sprint 00 passa a ter uma única História.
+
+> Nota (2ª revisão — replanejamento): a proteção técnica da branch `main` **não integra o aceite da FIT-000**. A tentativa de configuração foi bloqueada nesta execução (o GitHub MCP Server disponível não expõe operação de branch protection/ruleset; `main` verificada com `"protected": false`). O Product Owner (Murilo Almeida) **aceitou temporariamente** esse risco para não bloquear o merge da FIT-000, e determinou que o item seja replanejado como história própria: **FIT-003 — Configurar proteção técnica da branch `main`**, vinculada ao EPIC-00. A proteção técnica **não existe** até a conclusão da FIT-003 — este documento não declara o contrário.
 
 ## Escopo incluído
 
@@ -44,6 +46,7 @@ Critérios de aceite:
 - Configuração de infraestrutura.
 - Integração real com API Ninjas.
 - Criação das histórias técnicas posteriores.
+- Proteção técnica da branch `main` — replanejada para a FIT-003.
 
 ## Evidência esperada
 
