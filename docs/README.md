@@ -49,6 +49,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/VISAO-ARQUITETURAL.md`
 - `06-engenharia/arquitetura/MODELO-MULTITENANT.md`
 - `06-engenharia/arquitetura/MODELO-DE-DADOS-CONCEITUAL.md`
+- `06-engenharia/arquitetura/MODELO-FISICO-DE-DADOS.md`
 - `06-engenharia/arquitetura/AUTENTICACAO-E-AUTORIZACAO.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
@@ -62,9 +63,9 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`
 - `06-engenharia/arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md`
 
-## Aplicação (FIT-006)
+## Aplicação (FIT-006/FIT-007)
 
-A partir da FIT-006, o repositório também contém o código-fonte da aplicação Next.js/TypeScript do FitOS (`src/`, `package.json`). Execução local documentada em `06-engenharia/EXECUCAO-LOCAL.md`. O código segue a mesma governança desta documentação: toda mudança chega à `main` por PR revisado.
+A partir da FIT-006, o repositório também contém o código-fonte da aplicação Next.js/TypeScript do FitOS (`src/`, `package.json`). A partir da FIT-007, o repositório também contém o modelo físico de dados (`prisma/`). Execução local documentada em `06-engenharia/EXECUCAO-LOCAL.md`. O código segue a mesma governança desta documentação: toda mudança chega à `main` por PR revisado.
 
 ## Regras rápidas
 
