@@ -6,7 +6,7 @@ Estabelecer uma arquitetura segura, multi-tenant, observável e implantável no 
 
 ## História inicial
 
-### FIT-005 — Definição da arquitetura da solução
+### FIT-005 — Definição da arquitetura da solução — Concluída (PR #12, merged)
 
 Como time do FitOS, queremos registrar as decisões, limites, modelos e riscos da arquitetura, para implementar o MVP de modo consistente, seguro e evolutivo.
 
@@ -45,4 +45,4 @@ Como time do FitOS, queremos registrar as decisões, limites, modelos e riscos d
 - Modelagem física e migrations iniciais.
 - Pipeline CI/CD.
 
-Essas Histórias só recebem identificadores após priorização de Produto.
+Essas Histórias só recebem identificadores após priorização de Produto. O EPIC-02 permanece aberto (Issue #10) como container de acompanhamento até que essas Histórias sejam priorizadas e concluídas.
