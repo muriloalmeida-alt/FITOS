@@ -1,6 +1,6 @@
 # SPRINT-03 — Fundação Executável
 
-Status: em andamento — FIT-006 em revisão (segunda rodada, após alterações obrigatórias de Produto/Design/Gate Técnico)
+Status: em andamento — FIT-006 concluída; FIT-007 aguardando início autorizado
 
 ## Objetivo
 
@@ -12,17 +12,29 @@ Materializar a Fundação Técnica aprovada (EPIC-02) em uma aplicação execut�
 
 ## Histórias
 
-- FIT-006 (#14) — Fundação executável do FitOS. **Implementada, em revisão** (PR próprio, sem merge).
-- FIT-007 (#15) — Banco e modelo físico multi-tenant. **Não iniciada** — aguarda merge da FIT-006.
-- FIT-008 (#16) — Ambientes FitOS no Railway. **Não iniciada** — aguarda merge da FIT-007.
+- FIT-006 (#14) — Fundação executável do FitOS. Concluída pelo PR #17, merge `c2920e87babe09db5d525d08c5939265486413b1`.
+- FIT-007 (#15) — Banco e modelo físico multi-tenant. Não iniciada — início autorizado após o merge deste PR documental.
+- FIT-008 (#16) — Ambientes FitOS no Railway. Não iniciada — aguarda merge autorizado da FIT-007.
+
+## Resultado intermediário — FIT-006
+
+- aplicação Next.js 16.3.5 + React 19.3.0 executável;
+- TypeScript estrito e ESLint 9;
+- `package-lock.json` versionado;
+- `npm audit` com zero vulnerabilidades;
+- Design System M3 materializado;
+- estrutura modular criada sem regra de negócio;
+- nenhuma persistência, autenticação, cobrança ou infraestrutura Railway implementada;
+- evidências visuais versionadas;
+- Issue #14 concluída.
 
 ## Sequenciamento obrigatório
 
 As Histórias não são paralelas:
 
-1. FIT-006 é implementada e submetida a PR. *(feito nesta rodada)*
-2. Produto/Design revisa e autoriza o merge.
-3. Somente após o merge, FIT-007 pode iniciar.
+1. FIT-006 é implementada e submetida a PR. *(concluído — PR #17 mergeado)*
+2. Produto/Design revisa e autoriza o merge. *(concluído)*
+3. Somente após o merge, FIT-007 pode iniciar. *(autorizado após o merge deste PR documental)*
 4. FIT-007 é implementada e submetida a PR.
 5. Produto/Design revisa e autoriza o merge.
 6. Somente após o merge, FIT-008 pode iniciar.
@@ -44,7 +56,7 @@ As Histórias não são paralelas:
 
 ## Decisões preservadas
 
-- Next.js 16 + TypeScript + React 19: confirmado (App Router exige React 19; ver Fechamento da FIT-006).
+- Next.js 16 + TypeScript + React 19: confirmado (App Router exige React 19; ver Resultado intermediário da FIT-006).
 - Monólito modular: confirmado.
 - PostgreSQL + Prisma: confirmado (implementação na FIT-007).
 - Railway: ADR-001 Aceito (implementação na FIT-008).
@@ -72,8 +84,8 @@ A FIT-003 (#4, proteção técnica da `main`) pertence à EPIC-00 e continua sen
 
 ## Histórico de revisão da FIT-006
 
-Na primeira rodada, a FIT-006 foi implementada com Next.js 15.5.25 + React 18, o que gerou uma vulnerabilidade residual moderada/alta transitiva do `postcss`. A revisão de Produto/Design/Gate Técnico no PR #17 determinou alterações obrigatórias: atualização para Next.js 16.3.5 + React 19.3.0 (a combinação correta, já que o App Router é alinhado ao React 19), geração e versionamento do `package-lock.json` por `npm install`/`npm ci` (sem transcrição manual), validação limpa completa e evidência visual anexada diretamente ao PR. Após a atualização, `npm audit` reporta zero vulnerabilidades — a pendência do `postcss` foi removida de `DECISOES-PENDENTES.md`.
+Na primeira rodada, a FIT-006 foi implementada com Next.js 15.5.25 + React 18, o que gerou uma vulnerabilidade residual moderada/alta transitiva do `postcss`. A revisão de Produto/Design/Gate Técnico no PR #17 determinou alterações obrigatórias: atualização para Next.js 16.3.5 + React 19.3.0 (a combinação correta, já que o App Router é alinhado ao React 19), geração e versionamento do `package-lock.json` por `npm install`/`npm ci` (sem transcrição manual), validação limpa completa e evidência visual anexada diretamente ao PR. Após a atualização, `npm audit` reportou zero vulnerabilidades — a pendência do `postcss` foi removida de `DECISOES-PENDENTES.md`. O PR #17 foi aprovado e mergeado no SHA `074ccc3e2dac1eaf165a4ec78ea3d81aad9a8eb5`, resultando no commit `c2920e87babe09db5d525d08c5939265486413b1` na `main`.
 
 ## Fechamento
 
-Preencher em PR documental posterior ao merge de cada História, conforme o padrão já usado na SPRINT-02. Como a SPRINT-03 tem três Histórias sequenciais, o fechamento final desta Sprint só ocorre após o merge da FIT-008.
+Ainda não preenchido. Reservado para PR documental posterior ao merge da FIT-008, conforme o padrão já usado na SPRINT-02. Como a SPRINT-03 tem três Histórias sequenciais, o fechamento final desta Sprint só ocorre após o merge da FIT-008.
