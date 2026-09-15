@@ -26,6 +26,7 @@ O Material Design 3 (Seção 7) é o Design System escolhido para executar esta 
 ## 2. Princípios
 
 - Plataformas: **web responsiva** para o personal (desktop otimizado para gestão da carteira e montagem de treinos) e **mobile-first** para o aluno (treino e consulta rápida).
+- Personal e aluno têm conta própria já no MVP — o aluno não é apenas um registro administrado pelo personal, é um usuário autenticado com acesso restrito ao próprio tenant.
 - A ação principal de cada tela deve ser evidente.
 - Evitar painéis cheios de indicadores sem decisão associada.
 - Usar linguagem familiar ao personal trainer brasileiro.
@@ -41,7 +42,7 @@ Início, Alunos, Treinos, Financeiro, Configurações.
 
 ### Área do aluno (MVP)
 
-Hoje, Treino, Progresso, Perfil.
+Hoje, Treino, Progresso, Perfil. Acesso via conta própria, restrita ao tenant do personal ao qual o aluno está vinculado.
 
 > Agenda, Relatórios e Mensagens são pós-MVP — ver "Matriz de aderência ao escopo" (Seção 11).
 
@@ -135,6 +136,7 @@ Classificação de cada capacidade documentada em `docs/03-design/` frente ao es
 | Capacidade | Classificação | Documento de origem | Observação/restrição |
 |---|---|---|---|
 | Autenticação e conta do personal | MVP | `docs/01-produto/PRD-01-MVP.md`, `docs/04-backlog/BACKLOG-MVP.md` (FIT-001) | — |
+| Autenticação e conta do aluno | MVP | Decisão de Produto | Acesso próprio, restrito ao tenant do personal ao qual está vinculado |
 | Cadastro e gestão de alunos | MVP | `UX-ARCHITECTURE.md`, `CRITICAL-SCREEN-SPECS.md` | — |
 | Biblioteca de exercícios | MVP | `CRITICAL-SCREEN-SPECS.md` | Fonte API-Ninjas + exercício próprio; preview de mídia é imagem, não vídeo |
 | Integração com API Ninjas | MVP | `docs/02-integracoes/INTEGRACAO-API-NINJAS.md` | Exclusivamente pelo backend |
