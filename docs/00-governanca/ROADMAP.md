@@ -103,3 +103,19 @@ A partir da FIT-004 (SPRINT-01 — Fundação de Product Design, ver `docs/05-sp
 - Critérios de aceite anexados à Issue (FIT-XXX).
 - Documentação atualizada no mesmo PR.
 - Escopo do item aderente ao MVP confirmado nesta página, ou explicitamente identificado como "Pós-MVP"/"Hipótese sujeita à decisão de Produto".
+
+## Fundação Técnica (EPIC-02)
+
+A partir da FIT-005 (SPRINT-02 — Fundação Técnica, ver `docs/05-sprints/SPRINT-02-FUNDACAO-TECNICA.md`), a arquitetura da solução está documentada em `docs/06-engenharia/arquitetura/`: visão arquitetural, modelo multi-tenant, modelo conceitual de dados, autenticação/autorização, assinatura SaaS, integração técnica com API Ninjas, segurança/LGPD, ambientes/deploy, observabilidade e estratégia de testes. Nenhuma Fase funcional (1–6) inicia implementação de código sem essa fundação aprovada.
+
+| Decisão arquitetural | Estado | Documento |
+|---|---|---|
+| Next.js + TypeScript, monólito modular | Confirmado | `arquitetura/VISAO-ARQUITETURAL.md` |
+| PostgreSQL + Prisma | Confirmado | `arquitetura/VISAO-ARQUITETURAL.md` |
+| Railway (aplicação e banco) | Confirmado — ADR-001 | `arquitetura/adr/ADR-001-RAILWAY-COMO-PLATAFORMA.md` |
+| Better Auth (autenticação) | Proposto, condicionado à prova técnica — ADR-002; fallback Clerk | `arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md` |
+| Asaas (assinatura SaaS) | Proposto, condicionado à prova técnica — ADR-003; fallback Mercado Pago | `arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md` |
+| Multi-tenant: 1 personal = 1 tenant; aluno vinculado a 1 personal | Confirmado | `arquitetura/MODELO-MULTITENANT.md` |
+| Assinatura FitOS (SaaS) separada do financeiro dos alunos | Confirmado | `arquitetura/ASSINATURA-SAAS.md` |
+
+Provas técnicas do Better Auth e do Asaas, fundação do projeto Next.js, provisionamento Railway, modelagem física/migrations e pipeline CI/CD são Histórias futuras, sem identificador ainda — ver "Histórias posteriores propostas" em `docs/04-backlog/EPIC-02-FUNDACAO-TECNICA.md`.
