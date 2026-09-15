@@ -68,14 +68,14 @@ Campos que **complementam** o template padrão de PR (`.github/pull_request_temp
 | Componente/tokens | recomendado | obrigatório | obrigatório |
 | Fluxo crítico | obrigatório | obrigatório | obrigatório |
 | Financeiro/permissão | obrigatório | obrigatório | obrigatório |
-| IA/recomendação | obrigatório | obrigatório | obrigatório |
+| IA/recomendação (pós-MVP) | obrigatório | obrigatório | obrigatório |
 
 ## QA visual
 
 - Comparar implementação com especificação.
 - Validar 360, 768, 1024 e 1440 px.
 - Verificar temas claro e escuro.
-- Exercitar estados de loading, vazio, erro, sucesso e offline.
+- Exercitar estados de loading, vazio, erro, sucesso e falha de conexão.
 - Testar conteúdo longo.
 - Navegar por teclado.
 - Registrar screenshots no PR.
@@ -91,6 +91,11 @@ Mudanças relevantes em marca, tokens, arquitetura, componentes ou regras de neg
 - Major: mudança incompatível de token, API ou comportamento.
 
 Deprecações devem ter substituto, prazo e plano de migração.
+
+## Assets visuais de referência
+
+- Assets visuais de referência conceitual (ex.: pranchas/concept boards) são **opcionais** e **não bloqueiam o aceite** de uma História — não são especificação pixel-perfect, apenas apoio de comunicação da direção de marca.
+- Não recriar nem converter um asset binário usando ferramentas de escrita de texto: o risco de corrupção silenciosa no histórico do Git é maior que o valor de tê-lo versionado por essa via. Prefira um caminho com suporte binário nativo (upload direto por quem tem acesso, ou ferramenta compatível) quando o asset for necessário no repositório.
 
 ## Segurança documental
 
