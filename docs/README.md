@@ -21,6 +21,13 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 ## 03 — Design
 
 - `03-design/PRODUCT-DESIGN.md`
+- `03-design/BENCHMARK-IDENTIDADE-VISUAL.md`
+- `03-design/M3-DESIGN-TOKENS.md`
+- `03-design/UX-ARCHITECTURE.md`
+- `03-design/COMPONENT-LIBRARY.md`
+- `03-design/CRITICAL-SCREEN-SPECS.md`
+- `03-design/RESEARCH-AND-TESTING-PLAN.md`
+- `03-design/DESIGN-GOVERNANCE.md`
 
 ## 04 — Backlog
 
@@ -29,6 +36,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 ## 05 — Sprints
 
 - `05-sprints/SPRINT-00-DOCUMENTACAO.md`
+- `05-sprints/SPRINT-01-PRODUCT-DESIGN.md`
 
 ## 06 — Engenharia
 
@@ -43,3 +51,4 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - Toda formalização da entrega deve constar no PR; decisões permanentes devem atualizar também o documento correspondente no mesmo PR.
 - O PR deve atualizar documentação quando houver decisão ou alteração de comportamento.
 - Segredos e dados reais nunca são documentados ou versionados.
+- Identificadores, convenção de branch e de título de PR são únicos em todo o projeto (inclusive design): `docs/00-governanca/GOVERNANCA.md`.

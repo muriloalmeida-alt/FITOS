@@ -55,5 +55,51 @@ Objetivo: reunir alertas e indicadores úteis ao trabalho diário do personal.
 - Marketplace de profissionais.
 - Integração com academias.
 - Cobrança automática e emissão fiscal.
-- Prescrição automática por IA.
+- Prescrição e recomendação de treino por IA.
 - Wearables e relógios.
+- RPE/RIR na prescrição e execução de treino.
+- Sincronização offline de dados de treino.
+- Vídeo como requisito obrigatório na biblioteca de exercícios.
+- Agenda.
+- Mensagens.
+- Relatórios avançados.
+- Administração de academias (multiunidade/equipe).
+
+## Trilha de Design (Material Design 3)
+
+A partir da FIT-004 (SPRINT-01 — Fundação de Product Design, ver `docs/05-sprints/SPRINT-01-PRODUCT-DESIGN.md`), o roadmap de produto passa a ter uma trilha de design correspondente, detalhada em `docs/03-design/`. As fases de design não substituem as fases de produto acima — são o detalhamento de UX/UI necessário para entregar cada uma delas, já normalizadas ao escopo do MVP confirmado nesta seção.
+
+| Fase de produto | Entregável de design correspondente | Gate |
+|---|---|---|
+| Fase 0 — Fundação documental | Identidade de marca, benchmark e tokens M3 (claro/escuro) publicados — `BENCHMARK-IDENTIDADE-VISUAL.md`, `M3-DESIGN-TOKENS.md` | G1 — Fundação |
+| Fase 1 — Personal e alunos | Dashboard do personal orientado a atenção; cadastro e perfil do aluno — `UX-ARCHITECTURE.md`, `CRITICAL-SCREEN-SPECS.md` | G2 — Personal |
+| Fase 2 — Exercícios | Biblioteca de exercícios (busca, filtros, exercício próprio) — `CRITICAL-SCREEN-SPECS.md` | — |
+| Fase 3 — Treinos e planos | Builder de treino (etapas, autosave, drag handle, sem IA/RPE-RIR/vídeo obrigatório) — `CRITICAL-SCREEN-SPECS.md`, `COMPONENT-LIBRARY.md` | — |
+| Fase 4 — Experiência do aluno | Treino em execução no celular (uma mão, tratamento de falha de conexão, temporizador) — `CRITICAL-SCREEN-SPECS.md` | G3 — Aluno |
+| Fase 5 — Gestão financeira | Visão geral, recebimentos e baixa manual, com os quatro estados persistidos (`pendente`, `pago`, `atrasado`, `cancelado`) — `CRITICAL-SCREEN-SPECS.md` | G4 — Financeiro |
+| Fase 6 — Consolidação operacional | Dashboard operacional do MVP; relatórios avançados são pós-MVP — `CRITICAL-SCREEN-SPECS.md` | — |
+| Fora do MVP (IA) | `AIRecommendation` e "Criar primeira versão com IA" são especificação pós-MVP, não entrega do MVP — `COMPONENT-LIBRARY.md` | G5 — IA (pós-MVP) |
+
+### Gates de qualidade de design
+
+| Gate | Condição para avançar |
+|---|---|
+| G1 — Fundação | Tokens aprovados, contraste AA e componentes essenciais documentados |
+| G2 — Personal | ≥ 80% de conclusão sem ajuda nos testes críticos |
+| G3 — Aluno | Registro de série em poucos toques e treino resiliente a falhas de conexão |
+| G4 — Financeiro | Estados financeiros inequívocos (`pendente`, `pago`, `atrasado`, `cancelado`) e trilha de auditoria definida |
+| G5 — IA | Usuário entende origem, pode editar e mantém decisão final — aplicável apenas quando a IA for priorizada, pós-MVP |
+
+### Definition of Done de design
+
+- Problema e público identificados.
+- Fluxo feliz e exceções mapeados.
+- Layouts mobile e desktop quando aplicável.
+- Todos os estados do componente especificados.
+- Conteúdo realista em português do Brasil.
+- Critérios WCAG 2.2 AA atendidos.
+- Eventos de analytics definidos.
+- Protótipo revisado com Produto e Engenharia.
+- Critérios de aceite anexados à Issue (FIT-XXX).
+- Documentação atualizada no mesmo PR.
+- Escopo do item aderente ao MVP confirmado nesta página, ou explicitamente identificado como "Pós-MVP"/"Hipótese sujeita à decisão de Produto".
