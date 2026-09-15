@@ -13,5 +13,6 @@
 | Domínios e URLs | Product Owner + Engenharia | antes da homologação pública | configuração incompleta |
 | Retenção e exclusão LGPD | Produto + responsável jurídico | antes da produção | risco legal |
 | Termos comerciais da API Ninjas | Product Owner + Engenharia | antes do uso comercial | bloqueia catálogo externo |
+| Atualização do Next.js (14→16, major) para eliminar o alerta residual de segurança do `postcss` transitivo (identificado na FIT-006) | Engenharia | antes da homologação pública (FIT-008) | risco de segurança residual moderado/alto em ambiente exposto publicamente |
 
 Nenhuma pendência autoriza escolha silenciosa. A decisão deve ser registrada em Issue/PR e ADR quando arquitetural.
