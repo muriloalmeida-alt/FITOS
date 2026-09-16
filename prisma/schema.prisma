@@ -125,6 +125,14 @@ model Student {
 /// TRIGGER em PostgreSQL (`enforce_workout_exercise_tenant`, ver migration
 /// `20260916_add_tenant_composite_constraints`), não representável no
 /// Prisma Schema. Documentado em MODELO-FISICO-DE-DADOS.md.
+///
+/// Um segundo TRIGGER (`enforce_exercise_tenant_immutability`, mesma
+/// migration) protege alterações em `Exercise.tenantId`: rejeita transferir
+/// um exercício privado para outro tenant, ou torná-lo privado de um tenant,
+/// quando isso invalidaria um `WorkoutExercise` já existente de outro
+/// tenant. Sem esse trigger, `enforce_workout_exercise_tenant` só valida a
+/// criação/alteração do vínculo em `workout_exercises`, não uma alteração
+/// posterior no próprio `Exercise`.
 model Exercise {
   id         String         @id @default(cuid())
   tenantId   String?

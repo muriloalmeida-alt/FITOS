@@ -143,3 +143,52 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER workout_exercises_tenant_guard
 BEFORE INSERT OR UPDATE ON "workout_exercises"
 FOR EACH ROW EXECUTE FUNCTION enforce_workout_exercise_tenant();
+
+-- O trigger acima só valida a criação/alteração do vínculo em
+-- workout_exercises. Ele não protege contra uma alteração posterior no
+-- próprio Exercise: sem esta segunda proteção, seria possível (1) associar
+-- um exercício privado do tenant A a um treino do tenant A, (2) depois
+-- mudar Exercise.tenantId desse exercício para o tenant B, deixando um
+-- vínculo cujo tenant do WorkoutExercise (A) diverge do tenant do
+-- Exercise (B) sem que nenhum trigger em workout_exercises seja disparado.
+--
+-- Esta segunda regra impede exatamente essa alteração retroativa:
+-- - transferir um exercício privado já referenciado para outro tenant é
+--   rejeitado quando existe algum WorkoutExercise de tenant diferente do
+--   novo tenantId;
+-- - tornar privado (de um tenant específico) um exercício global já
+--   referenciado por vários tenants é rejeitado pelo mesmo motivo;
+-- - tornar global (tenantId = NULL) um exercício privado é sempre permitido,
+--   pois todo tenant já pode usar exercício global (mais permissivo, nunca
+--   invalida um vínculo existente);
+-- - qualquer alteração que não deixe nenhum WorkoutExercise divergente
+--   (exercício ainda não referenciado, ou referenciado apenas pelo tenant de
+--   destino) continua permitida.
+CREATE OR REPLACE FUNCTION enforce_exercise_tenant_immutability()
+RETURNS TRIGGER AS $$
+DECLARE
+  conflicting_count INTEGER;
+BEGIN
+  IF NEW."tenantId" IS DISTINCT FROM OLD."tenantId" THEN
+    IF NEW."tenantId" IS NULL THEN
+      RETURN NEW;
+    END IF;
+
+    SELECT COUNT(*) INTO conflicting_count
+    FROM "workout_exercises"
+    WHERE "exerciseId" = NEW."id" AND "tenantId" <> NEW."tenantId";
+
+    IF conflicting_count > 0 THEN
+      RAISE EXCEPTION
+        'exercises.tenantId nao pode ser alterado para % pois existem % vinculo(s) em workout_exercises de outro tenant',
+        NEW."tenantId", conflicting_count;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER exercises_tenant_immutability_guard
+BEFORE UPDATE ON "exercises"
+FOR EACH ROW EXECUTE FUNCTION enforce_exercise_tenant_immutability();

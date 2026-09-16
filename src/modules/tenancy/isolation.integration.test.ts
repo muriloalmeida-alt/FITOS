@@ -224,6 +224,94 @@ describe("integridade relacional composta por tenant (rejeição física de vín
   });
 });
 
+// O trigger `enforce_workout_exercise_tenant` (suíte acima) só valida a
+// criação/alteração do vínculo em workout_exercises. Sem uma segunda
+// proteção, seria possível criar um vínculo válido (exercício privado do
+// tenant A usado por um treino do tenant A) e, depois, alterar
+// Exercise.tenantId para o tenant B — deixando o vínculo original
+// inconsistente sem que nenhum trigger em workout_exercises fosse
+// disparado. Esta suíte testa o segundo trigger
+// (`enforce_exercise_tenant_immutability`), que protege a própria alteração
+// em Exercise.tenantId.
+describe("imutabilidade de tenantId em exercícios já referenciados", () => {
+  it("rejeita transferir para outro tenant um exercício privado já usado pelo tenant A", async () => {
+    const exercise = await prisma.exercise.create({
+      data: { tenantId: tenantA.id, name: `Exercício privado imutável ${run}`, origin: "PERSONAL" },
+    });
+    const link = await prisma.workoutExercise.create({
+      data: { tenantId: tenantA.id, workoutId: workoutA.id, exerciseId: exercise.id, position: 1 },
+    });
+
+    await expect(
+      prisma.exercise.update({ where: { id: exercise.id }, data: { tenantId: tenantB.id } })
+    ).rejects.toThrow();
+
+    const unchangedExercise = await prisma.exercise.findUniqueOrThrow({ where: { id: exercise.id } });
+    expect(unchangedExercise.tenantId).toBe(tenantA.id);
+
+    const unchangedLink = await prisma.workoutExercise.findUniqueOrThrow({ where: { id: link.id } });
+    expect(unchangedLink.tenantId).toBe(tenantA.id);
+    expect(unchangedLink.exerciseId).toBe(exercise.id);
+
+    await prisma.workoutExercise.delete({ where: { id: link.id } });
+    await prisma.exercise.delete({ where: { id: exercise.id } });
+  });
+
+  it("rejeita tornar privado de um tenant um exercício global já usado por outro tenant", async () => {
+    const exercise = await prisma.exercise.create({
+      data: { tenantId: null, name: `Exercício global usado por dois tenants ${run}`, origin: "API_NINJAS" },
+    });
+    const linkA = await prisma.workoutExercise.create({
+      data: { tenantId: tenantA.id, workoutId: workoutA.id, exerciseId: exercise.id, position: 1 },
+    });
+    const linkB = await prisma.workoutExercise.create({
+      data: { tenantId: tenantB.id, workoutId: workoutB.id, exerciseId: exercise.id, position: 1 },
+    });
+
+    await expect(
+      prisma.exercise.update({ where: { id: exercise.id }, data: { tenantId: tenantA.id } })
+    ).rejects.toThrow();
+
+    const unchangedExercise = await prisma.exercise.findUniqueOrThrow({ where: { id: exercise.id } });
+    expect(unchangedExercise.tenantId).toBeNull();
+
+    await prisma.workoutExercise.deleteMany({ where: { id: { in: [linkA.id, linkB.id] } } });
+    await prisma.exercise.delete({ where: { id: exercise.id } });
+  });
+
+  it("permite alterar tenantId de exercício privado ainda não referenciado por nenhum treino", async () => {
+    const exercise = await prisma.exercise.create({
+      data: { tenantId: tenantA.id, name: `Exercício privado sem vínculo ${run}`, origin: "PERSONAL" },
+    });
+
+    const updated = await prisma.exercise.update({
+      where: { id: exercise.id },
+      data: { tenantId: tenantB.id },
+    });
+    expect(updated.tenantId).toBe(tenantB.id);
+
+    await prisma.exercise.delete({ where: { id: exercise.id } });
+  });
+
+  it("permite tornar global um exercício privado já referenciado (nunca invalida vínculo existente)", async () => {
+    const exercise = await prisma.exercise.create({
+      data: { tenantId: tenantA.id, name: `Exercício privado tornado global ${run}`, origin: "PERSONAL" },
+    });
+    const link = await prisma.workoutExercise.create({
+      data: { tenantId: tenantA.id, workoutId: workoutA.id, exerciseId: exercise.id, position: 1 },
+    });
+
+    const updated = await prisma.exercise.update({
+      where: { id: exercise.id },
+      data: { tenantId: null },
+    });
+    expect(updated.tenantId).toBeNull();
+
+    await prisma.workoutExercise.delete({ where: { id: link.id } });
+    await prisma.exercise.delete({ where: { id: exercise.id } });
+  });
+});
+
 describe("separação entre StudentCharge e SaasSubscription", () => {
   it("StudentCharge e SaasSubscription do mesmo tenant não têm nenhuma relação entre si", () => {
     const chargeFields = Prisma.dmmf.datamodel.models.find((m) => m.name === "StudentCharge")?.fields ?? [];

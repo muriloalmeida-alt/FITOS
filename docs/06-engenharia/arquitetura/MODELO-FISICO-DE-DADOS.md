@@ -77,7 +77,53 @@ BEFORE INSERT OR UPDATE ON "workout_exercises"
 FOR EACH ROW EXECUTE FUNCTION enforce_workout_exercise_tenant();
 ```
 
-Esse trigger está na migration `20260916000000_add_tenant_composite_constraints/migration.sql` como SQL puro — não é representável no Prisma Schema (o Prisma não tem uma primitiva de trigger). Ele é reaplicado a cada `prisma migrate deploy`/`migrate dev` porque faz parte do arquivo de migration versionado, mas **não aparece** se alguém rodar `prisma db pull` ou `prisma migrate diff` a partir do schema — qualquer alteração futura no modelo `WorkoutExercise`/`Exercise` deve preservar manualmente esse trigger na migration seguinte. Cobertura de teste: ver "Testes negativos" abaixo.
+Esse trigger está na migration `20260916000000_add_tenant_composite_constraints/migration.sql` como SQL puro — não é representável no Prisma Schema (o Prisma não tem uma primitiva de trigger). Ele é reaplicado a cada `prisma migrate deploy`/`migrate dev` porque faz parte do arquivo de migration versionado, mas **não aparece** se alguém rodar `prisma db pull` ou `prisma migrate diff` a partir do schema — qualquer alteração futura no modelo `WorkoutExercise`/`Exercise` deve preservar manualmente esse trigger na migration seguinte. Cobertura de teste: ver "Testes de constraints e isolamento" abaixo.
+
+### Imutabilidade de `Exercise.tenantId` quando já referenciado (`enforce_exercise_tenant_immutability`)
+
+O trigger `enforce_workout_exercise_tenant` acima só valida a **criação/alteração do vínculo** em `workout_exercises`. Ele não protege contra uma **alteração posterior no próprio `Exercise`**: sem uma segunda proteção, seria possível (1) associar corretamente um exercício privado do tenant A a um treino do tenant A, e depois (2) executar `UPDATE exercises SET "tenantId" = '<tenant B>' WHERE id = ...`, deixando um `WorkoutExercise` já existente (tenant A) apontando para um `Exercise` agora privado de outro tenant (B) — sem que nenhum trigger em `workout_exercises` fosse disparado, porque a alteração ocorre na tabela `exercises`, não em `workout_exercises`.
+
+A correção é um segundo trigger, na mesma migration `20260916000000_add_tenant_composite_constraints`, agora `BEFORE UPDATE ON "exercises"`:
+
+```sql
+CREATE OR REPLACE FUNCTION enforce_exercise_tenant_immutability()
+RETURNS TRIGGER AS $$
+DECLARE
+  conflicting_count INTEGER;
+BEGIN
+  IF NEW."tenantId" IS DISTINCT FROM OLD."tenantId" THEN
+    IF NEW."tenantId" IS NULL THEN
+      RETURN NEW;
+    END IF;
+
+    SELECT COUNT(*) INTO conflicting_count
+    FROM "workout_exercises"
+    WHERE "exerciseId" = NEW."id" AND "tenantId" <> NEW."tenantId";
+
+    IF conflicting_count > 0 THEN
+      RAISE EXCEPTION
+        'exercises.tenantId nao pode ser alterado para % pois existem % vinculo(s) em workout_exercises de outro tenant',
+        NEW."tenantId", conflicting_count;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER exercises_tenant_immutability_guard
+BEFORE UPDATE ON "exercises"
+FOR EACH ROW EXECUTE FUNCTION enforce_exercise_tenant_immutability();
+```
+
+Comportamento resultante:
+
+- **exercício privado do tenant A, já usado pelo tenant A → tentar transferir para o tenant B:** rejeitado — existe pelo menos um `WorkoutExercise` com `tenantId` diferente do novo valor.
+- **exercício global já usado por vários tenants → tentar tornar privado de um tenant específico:** rejeitado pelo mesmo motivo — os `WorkoutExercise` dos demais tenants ficariam inconsistentes.
+- **exercício privado (referenciado ou não) → tornar global (`tenantId = NULL`):** sempre permitido — um exercício global pode ser usado por qualquer tenant, então essa alteração nunca invalida um vínculo existente (é sempre mais permissiva).
+- **qualquer alteração de `tenantId` que não deixe nenhum `WorkoutExercise` divergente** (exercício ainda não referenciado por ninguém, ou referenciado apenas pelo tenant de destino): continua permitida, sem restrição adicional além da checagem acima.
+
+Cobertura de teste: ver "Testes de constraints e isolamento" abaixo (suíte "imutabilidade de tenantId em exercícios já referenciados").
 
 ## Autores e atores (`Assessment.authorUserId`, `AuditEvent.actorUserId`) — lacuna conhecida
 
@@ -90,7 +136,7 @@ Isso é uma lacuna conhecida e deliberadamente não corrigida nesta rodada: `Use
 ## O que a FIT-007 garante
 
 - integridade estrutural das relações entre registros do **mesmo tenant** (FK composta rejeita fisicamente o vínculo cruzado nas 8 relações listadas acima);
-- rejeição física de vínculo cruzado envolvendo exercícios privados (trigger);
+- rejeição física de vínculo cruzado envolvendo exercícios privados, tanto na criação/alteração do vínculo (`enforce_workout_exercise_tenant`) quanto em uma alteração posterior no próprio `Exercise.tenantId` que invalidaria um vínculo já existente (`enforce_exercise_tenant_immutability`);
 - constraints de unicidade (`Tenant.ownerId`, `Student.userId`, `SaasSubscription.tenantId`, `(id, tenantId)` nas tabelas pai);
 - separação estrutural entre `StudentCharge` e `SaasSubscription` (nenhuma FK/relação entre os dois);
 - possibilidade de consultas escopadas por `tenantId` (índices em toda tabela de domínio).
@@ -109,10 +155,10 @@ Não se deve afirmar que "nenhum fluxo permite acesso entre tenants" com base ap
 ## Migrations
 
 - `prisma/migrations/20260915233539_init_multitenant_schema/migration.sql` — cria todas as tabelas, enums, índices e foreign keys do modelo físico inicial.
-- `prisma/migrations/20260916000000_add_tenant_composite_constraints/migration.sql` — substitui as foreign keys simples por compostas nas 8 relações listadas acima e cria o trigger de exercícios privados/globais. Gerada com `prisma migrate diff --from-url ... --to-schema-datamodel prisma/schema.prisma --script` (não com `prisma migrate dev`, que exige terminal interativo neste ambiente) e aplicada com `prisma migrate deploy`.
+- `prisma/migrations/20260916000000_add_tenant_composite_constraints/migration.sql` — substitui as foreign keys simples por compostas nas 8 relações listadas acima e cria dois triggers: `enforce_workout_exercise_tenant` (vínculo `workout_exercises` → `exercises`) e `enforce_exercise_tenant_immutability` (alteração posterior em `Exercise.tenantId`, complementada nesta rodada de correção). Gerada com `prisma migrate diff --from-url ... --to-schema-datamodel prisma/schema.prisma --script` (não com `prisma migrate dev`, que exige terminal interativo neste ambiente) e aplicada com `prisma migrate deploy`.
 - Aplicar em desenvolvimento: `npm run db:migrate` (roda `prisma migrate dev`, cria banco-sombra para validar o diff).
 - Aplicar em CI/homologação (sem shadow database): `npm run db:migrate:deploy` (roda `prisma migrate deploy`).
-- Reprodutibilidade validada nesta rodada: as duas migrations foram aplicadas em sequência, com sucesso, em um banco PostgreSQL vazio criado exclusivamente para essa validação (e removido depois).
+- Reprodutibilidade validada nesta rodada: como a migration `20260916000000_add_tenant_composite_constraints` ainda não havia sido mergeada nem aplicada em ambiente compartilhado, ela foi complementada em vez de criar uma nova migration. Os bancos locais `fitos_dev`/`fitos_test` foram recriados do zero (continham apenas dados sintéticos desta sessão) e as duas migrations foram aplicadas em sequência, do início, com sucesso — confirmando que a migration corrigida é reproduzível em um PostgreSQL vazio.
 
 ### Rollback
 
@@ -121,6 +167,9 @@ Para a migration inicial, o rollback documentado é o `DROP` completo das tabela
 Para a migration `20260916000000_add_tenant_composite_constraints`, o rollback (apenas em desenvolvimento/teste) é:
 
 ```sql
+DROP TRIGGER IF EXISTS exercises_tenant_immutability_guard ON "exercises";
+DROP FUNCTION IF EXISTS enforce_exercise_tenant_immutability();
+
 DROP TRIGGER IF EXISTS workout_exercises_tenant_guard ON "workout_exercises";
 DROP FUNCTION IF EXISTS enforce_workout_exercise_tenant();
 
@@ -147,7 +196,7 @@ Para migrations futuras, a política é: nunca editar uma migration já aplicada
 
 ## Testes de constraints e isolamento
 
-`src/modules/tenancy/isolation.integration.test.ts` roda contra um banco de testes real (`fitos_test`, migrations aplicadas via `prisma migrate deploy`) e cobre quatro suítes:
+`src/modules/tenancy/isolation.integration.test.ts` roda contra um banco de testes real (`fitos_test`, migrations aplicadas via `prisma migrate deploy`) e cobre cinco suítes:
 
 1. **Consultas escopadas por tenant** (não é prova de isolamento físico — ver aviso no próprio arquivo de teste): `findMany`/`updateMany`/`deleteMany` com filtro de `tenantId` nunca afetam/retornam registro de outro tenant.
 2. **Constraints de tenancy:** impede segundo tenant para o mesmo owner, impede vincular o mesmo aluno a um segundo tenant, impede segunda assinatura SaaS para o mesmo tenant.
@@ -156,9 +205,14 @@ Para migrations futuras, a política é: nunca editar uma migration já aplicada
    - plano do tenant A atribuído ao aluno do tenant B → rejeitado;
    - treino do tenant A vinculado ao plano do tenant B → rejeitado;
    - sessão com aluno e treino de tenants diferentes → rejeitado;
-   - item de treino do tenant A usando exercício privado do tenant B → rejeitado (via trigger);
+   - item de treino do tenant A usando exercício privado do tenant B → rejeitado (via trigger `enforce_workout_exercise_tenant`);
    - exercício global utilizado por um tenant diferente do seu (não se aplica, pois é global) → **permitido**, caso positivo de controle.
-4. **Separação StudentCharge/SaasSubscription:** nenhuma relação Prisma entre os dois modelos (verificado no DMMF).
+4. **Imutabilidade de `tenantId` em exercícios já referenciados (trigger `enforce_exercise_tenant_immutability`):**
+   - transferir para outro tenant um exercício privado já usado pelo tenant A → rejeitado; exercício e vínculo original permanecem consistentes;
+   - tornar privado de um tenant um exercício global já usado por dois tenants → rejeitado;
+   - alterar `tenantId` de um exercício privado ainda sem nenhum vínculo → **permitido** (nenhum `WorkoutExercise` seria invalidado);
+   - tornar global um exercício privado já referenciado → **permitido** (sempre mais permissivo, nunca invalida vínculo existente).
+5. **Separação StudentCharge/SaasSubscription:** nenhuma relação Prisma entre os dois modelos (verificado no DMMF).
 
 ## Fora do escopo desta História
 
