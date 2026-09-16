@@ -67,6 +67,8 @@ Com a aplicação em execução, `GET /api/health` retorna:
 { "status": "ok", "app": "FitOS", "env": "development", "timestamp": "..." }
 ```
 
+`GET /api/ready` (FIT-008) confirma que o PostgreSQL configurado em `DATABASE_URL` está acessível, executando `SELECT 1` via Prisma: `200 { "status": "ready" }` quando o banco responde, `503 { "status": "unavailable" }` quando não — nunca inclui mensagem de erro, host ou credencial na resposta.
+
 ## Estrutura de pastas
 
 ```text
@@ -110,7 +112,7 @@ Next.js 16.3.5, React/React DOM 19.3.0, TypeScript 5.9.3, ESLint 9.39.5 + `eslin
 
 - autenticação (Better Auth/Clerk) ou cobrança (Asaas/Mercado Pago);
 - derivação real de `tenant_id` a partir de uma sessão autenticada (depende da prova técnica de autenticação);
-- ambientes Railway (FIT-008);
+- produção funcional (apenas homologação existe, e com dados fictícios — ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`);
 - qualquer funcionalidade de Alunos, Exercícios, Treinos, Execução, Evolução ou Financeiro além do modelo físico.
 
 ## Evidência visual (FIT-006)

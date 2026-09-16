@@ -14,13 +14,13 @@ Como time do FitOS, queremos registrar as decisões, limites, modelos e riscos d
 
 Como time do FitOS, queremos materializar a arquitetura aprovada em uma aplicação Next.js/TypeScript executável, com estrutura modular e fundação do Design System, para que as próximas Histórias possam implementar banco, tenancy e funcionalidades sem improvisar estrutura técnica ou visual.
 
-### FIT-007 (#15) — Banco e modelo físico multi-tenant — Implementada, em revisão (SPRINT-03)
+### FIT-007 (#15) — Banco e modelo físico multi-tenant — Concluída (PR #19, merged)
 
 Como time do FitOS, queremos transformar o modelo conceitual aprovado em um schema PostgreSQL/Prisma inicial, com isolamento multi-tenant e migrations rastreáveis, para garantir uma base de dados consistente antes das funcionalidades do MVP.
 
-### FIT-008 (#16) — Ambientes FitOS no Railway — Não iniciada (SPRINT-03)
+### FIT-008 (#16) — Ambientes FitOS no Railway — Em andamento (PR próprio, sem merge; provisionamento Railway pendente — SPRINT-03)
 
-Aguarda o merge explicitamente autorizado da FIT-007.
+Como time do FitOS, queremos disponibilizar a fundação executável e seu banco em ambiente Railway de homologação, para validar deploy, configuração e observabilidade mínima sem expor dados reais.
 
 ## Escopo
 
