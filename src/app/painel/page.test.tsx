@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
+const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
@@ -20,7 +21,10 @@ vi.mock("@/modules/tenancy/authContext", () => ({
 vi.mock("@/shared/db/prisma", () => ({
   prisma: {
     tenant: { findUnique: (...args: unknown[]) => findUniqueTenant(...args) },
-    student: { findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowStudent(...args) },
+    student: {
+      findUnique: (...args: unknown[]) => findUniqueStudent(...args),
+      findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowStudent(...args),
+    },
   },
 }));
 
@@ -68,7 +72,7 @@ describe("PainelPage (FIT-012)", () => {
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 
-  it("aluno autenticado e vinculado vê o shell de aluno, com o perfil real", async () => {
+  it("aluno autenticado e vinculado vê o shell de aluno, com o vínculo real", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Pedro", email: "pedro@example.test", role: "ALUNO" } });
     getAuthContext.mockResolvedValue({
       authenticated: true,
@@ -77,17 +81,23 @@ describe("PainelPage (FIT-012)", () => {
       tenantId: "t1",
       studentId: "s1",
     });
-    findUniqueOrThrowStudent.mockResolvedValue({ id: "s1", displayName: "Pedro" });
+    findUniqueOrThrowStudent.mockResolvedValue({
+      id: "s1",
+      displayName: "Pedro",
+      tenant: { name: "Espaço de Joana", owner: { name: "Joana" } },
+    });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
     expect(screen.getByRole("heading", { name: "Hoje" })).toBeInTheDocument();
-    expect(screen.getByText("pedro@example.test")).toBeInTheDocument();
+    expect(screen.getByText("Joana")).toBeInTheDocument();
+    expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
+    expect(findUniqueStudent).not.toHaveBeenCalled();
   });
 
-  it("aluno autenticado sem vínculo vê a tela de sem permissão, sem shell", async () => {
+  it("aluno autenticado sem vínculo (nunca teve Student) vê a tela de sem permissão, sem shell", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Sem Vínculo", email: "sv@example.test", role: "ALUNO" } });
     getAuthContext.mockResolvedValue({
       authenticated: true,
@@ -96,11 +106,33 @@ describe("PainelPage (FIT-012)", () => {
       tenantId: null,
       studentId: null,
     });
+    findUniqueStudent.mockResolvedValue(null);
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
     expect(screen.getByText("Sem vínculo ativo")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Hoje" })).not.toBeInTheDocument();
+    expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
+  });
+
+  it("aluno autenticado com vínculo inativado vê a tela de conta inativa, sem shell", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Inativo", email: "inativo@example.test", role: "ALUNO" } });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u4",
+      role: "ALUNO",
+      tenantId: null,
+      studentId: null,
+    });
+    findUniqueStudent.mockResolvedValue({ id: "s4", status: "INATIVO" });
+    const { default: PainelPage } = await import("./page");
+
+    render(await PainelPage());
+
+    expect(screen.getByText("Conta inativa")).toBeInTheDocument();
+    expect(screen.getByText(/inativada pelo seu personal/)).toBeInTheDocument();
+    expect(screen.queryByText("Sem vínculo ativo")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Hoje" })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });

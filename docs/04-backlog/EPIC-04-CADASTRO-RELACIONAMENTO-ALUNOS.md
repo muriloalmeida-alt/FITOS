@@ -14,13 +14,17 @@ Como personal, quero cadastrar um aluno com nome e e-mail e encontrá-lo depois 
 
 Como personal, quero consultar e editar os dados básicos de um aluno e poder inativá-lo e reativá-lo sem perder histórico, para manter minha carteira organizada sem apagar registros.
 
-### FIT-015 (#33) — Convite e ativação da conta do aluno
+### FIT-015 (#33) — Convite e ativação da conta do aluno — Concluída (PR #37, merged)
 
 Como personal, quero gerar um link de convite seguro, de uso único e com validade, para que o aluno cadastrado possa definir sua própria senha e ativar o acesso — sem que o aluno tenha cadastro público independente.
 
-### FIT-016 (#34) — Experiência inicial do aluno
+### FIT-016 (#34) — Experiência inicial do aluno — Concluída (PR desta rodada, número preenchido em commit seguinte deste mesmo branch)
 
 Como aluno, quero entrar no FitOS e ver meu nome, meu personal/espaço vinculado e o estado da minha conta, para saber que meu acesso está funcionando, mesmo antes de existir qualquer treino ou avaliação atribuída a mim.
+
+## Estado final
+
+EPIC-04 concluído: as quatro Histórias (FIT-013 a FIT-016) foram implementadas, testadas e mergeadas em sequência, cada uma com PR próprio e gate autônomo registrado. Fechamento completo da Sprint em `docs/05-sprints/SPRINT-05-GESTAO-DE-ALUNOS.md`.
 
 ## Dependências
 
