@@ -40,6 +40,10 @@ npm ci
 
    Os testes derivam a URL do banco de testes a partir de `DATABASE_URL` (troca apenas o nome do banco por `fitos_test`) — ver `src/shared/db/testDatabaseUrl.ts`.
 
+6. A migration `20260916000000_add_tenant_composite_constraints` cria, além de foreign keys compostas, uma função e um trigger PL/pgSQL (`enforce_workout_exercise_tenant` / `workout_exercises_tenant_guard`) que impõem a regra de exercício privado/global em `workout_exercises`. Esse trigger só existe porque `npx prisma migrate deploy` executa o SQL da migration tal como está no arquivo — não é gerado a partir do `schema.prisma` (Prisma não expressa triggers) e não deve ser removido ou "regenerado" por `prisma migrate dev`/`migrate diff` em migrations futuras. Detalhes e SQL completo em `docs/06-engenharia/arquitetura/MODELO-FISICO-DE-DADOS.md`.
+
+> Nota sobre geração de migration em ambiente não interativo: `prisma migrate dev` exige um terminal interativo. Quando não há TTY (por exemplo, execução automatizada), gere o SQL sem tocar no banco com `prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script`, crie manualmente a pasta/arquivo da migration com esse SQL e aplique com `prisma migrate deploy`. `prisma migrate reset` nunca deve ser usado por automação sem consentimento humano explícito — o próprio Prisma bloqueia essa tentativa quando detecta invocação por agente de IA.
+
 ## Scripts disponíveis
 
 | Script | Comando | Descrição |
@@ -99,7 +103,8 @@ Next.js 16.3.5, React/React DOM 19.3.0, TypeScript 5.9.3, ESLint 9.39.5 + `eslin
 - a estrutura modular reflete os limites de `VISAO-ARQUITETURAL.md`;
 - há um healthcheck mínimo e testes automatizados da fundação;
 - o modelo físico multi-tenant existe, com migrations rastreáveis e constraints reais que impedem 1 personal ter mais de 1 tenant, um aluno pertencer a mais de 1 tenant, e um tenant ter mais de 1 assinatura SaaS;
-- consultas/updates/deletes escopados por tenant errado nunca afetam dados de outro tenant, verificado por teste automatizado contra um PostgreSQL real.
+- consultas/updates/deletes escopados por tenant errado nunca afetam dados de outro tenant, verificado por teste automatizado contra um PostgreSQL real;
+- toda relação entre registros de domínio (Workout→TrainingPlan, WorkoutExercise→Workout, PlanAssignment→Student/TrainingPlan, WorkoutSession→Student/Workout, Assessment→Student, StudentCharge→Student) é fisicamente impedida de cruzar tenants por foreign keys compostas `(id, tenantId)`; o vínculo exercício privado/global usa um trigger, pelo motivo explicado em `MODELO-FISICO-DE-DADOS.md`.
 
 ## O que ainda não está implementado
 

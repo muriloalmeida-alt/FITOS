@@ -13,7 +13,7 @@ Materializar a Fundação Técnica aprovada (EPIC-02) em uma aplicação execut�
 ## Histórias
 
 - FIT-006 (#14) — Fundação executável do FitOS. Concluída pelo PR #17, merge `c2920e87babe09db5d525d08c5939265486413b1`.
-- FIT-007 (#15) — Banco e modelo físico multi-tenant. **Implementada, em revisão** (PR próprio, sem merge).
+- FIT-007 (#15) — Banco e modelo físico multi-tenant. **Implementada, em revisão** (PR próprio, sem merge; correção obrigatória de integridade relacional entregue no mesmo PR #19).
 - FIT-008 (#16) — Ambientes FitOS no Railway. Não iniciada — aguarda merge autorizado da FIT-007.
 
 ## Resultado intermediário — FIT-006
@@ -39,6 +39,19 @@ Materializar a Fundação Técnica aprovada (EPIC-02) em uma aplicação execut�
 - testes de isolamento entre dois tenants (consulta, `updateMany`/`deleteMany` escopados por tenant errado, constraints únicas) contra PostgreSQL real;
 - `npm audit` com zero vulnerabilidades (Prisma 6.19.3 escolhido deliberadamente sobre o Prisma 7, que exige um novo modelo de driver adapters — ver `docs/06-engenharia/arquitetura/MODELO-FISICO-DE-DADOS.md`);
 - nenhuma autenticação, UI funcional, Railway ou cobrança real implementada.
+
+## Correção obrigatória da FIT-007 (revisão de Produto/Design/Gate Técnico)
+
+A revisão de Produto/Design/Gate Técnico no PR #19 (head `f4a0133a3ce5cee8e6176330df0630ed8d2b0fb5`) identificou que, embora `tenantId` existisse e estivesse indexado em toda tabela de domínio, as relações entre registros (Workout→TrainingPlan, WorkoutExercise→Workout, PlanAssignment→Student/TrainingPlan, WorkoutSession→Student/Workout, Assessment→Student, StudentCharge→Student) usavam apenas o id do registro pai, sem exigir que o `tenantId` da linha filha coincidisse com o do pai — permitindo, por exemplo, um Workout do tenant A referenciar um TrainingPlan do tenant B. A revisão solicitou alterações obrigatórias antes do merge, mantendo o mesmo PR #19 (sem novo PR, branch ou História):
+
+- substituição das foreign keys simples por foreign keys compostas `(childId, tenantId) -> (id, tenantId)`, apoiadas por `@@unique([id, tenantId])` nos modelos pai (Student, TrainingPlan, Workout) — PostgreSQL passa a rejeitar fisicamente qualquer vínculo cruzado entre tenants;
+- para o caso de Exercise (catálogo global com `tenantId` nulo, ou privado de um tenant), não representável como FK composta por permitir `NULL`, um trigger PL/pgSQL (`enforce_workout_exercise_tenant`) em `workout_exercises` impõe a mesma regra a nível de banco;
+- testes negativos reais contra PostgreSQL, tentando criar cada um dos 6 vínculos inválidos e comprovando a rejeição física (além de um teste positivo confirmando que exercício global pode ser usado por qualquer tenant);
+- documentação (`MODELO-FISICO-DE-DADOS.md`) revisada para separar explicitamente o que a FIT-007 garante do que não garante, sem afirmar isolamento completo com base apenas em testes de consulta escopada;
+- `Assessment.authorUserId` e `AuditEvent.actorUserId` permanecem com FK simples (não compostos), documentados como lacuna conhecida — dependem de um modelo de membership usuário-tenant que ainda não existe e cuja criação agora seria escopo além do solicitado;
+- a referência não formalizada "FIT-006B" em `MODELO-FISICO-DE-DADOS.md` foi substituída por "história futura da prova técnica de autenticação, ainda sem identificador formal", sem criar Issue ou História nova.
+
+Detalhes completos, SQL das constraints/trigger e evidências de validação constam no PR #19 atualizado.
 
 ## Sequenciamento obrigatório
 
