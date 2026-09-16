@@ -42,6 +42,14 @@ enum ExerciseOrigin {
   PERSONAL
 }
 
+/// Ciclo de vida do exercício próprio (FIT-022). Exercício global
+/// (`origin: API_NINJAS`) sempre `ATIVO` — este módulo não arquiva
+/// exercício global, apenas próprio.
+enum ExerciseStatus {
+  ATIVO
+  ARQUIVADO
+}
+
 enum WorkoutSessionStatus {
   PLANEJADA
   EM_ANDAMENTO
@@ -288,6 +296,7 @@ model Exercise {
   tenantId     String?
   name         String
   origin       ExerciseOrigin
+  status       ExerciseStatus @default(ATIVO)
   externalId   String?
   type         String?
   muscle       String?

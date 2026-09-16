@@ -58,3 +58,34 @@ Nenhuma chamada real foi feita nesta rodada (ver ADR-004): sem chave nova nem co
 ## Testes (FIT-021)
 
 `src/modules/exercises/importExercises.integration.test.ts` (Postgres real, `searchFn` substituído por fixtures — nenhuma chamada real): exercício novo criado com `tenantId` nulo/`origin: API_NINJAS`/`externalId` determinístico; reimportação com dado alterado atualiza em vez de duplicar; falha parcial preserva o que já foi importado; resposta vazia sem erro; duas importações concorrentes do mesmo exercício nunca duplicam; `buildExternalId` determinístico e sensível a diferenças relevantes.
+
+## FIT-022 — Gestão de exercícios próprios
+
+`src/modules/exercises/exercises.ts`: `createOwnExercise`, `getOwnExerciseForTenant`, `updateOwnExercise`, `archiveExercise`, `reactivateExercise` — mesmo padrão de `students.ts` (FIT-013/014): `tenantId` sempre derivado da sessão pelo chamador (nunca parâmetro opcional/inferido), nenhuma função aceita `tenantId`/`origin` como campo editável.
+
+### Migration aditiva
+
+`prisma/migrations/20260916050000_add_exercise_status/` adiciona `ExerciseStatus` (`ATIVO`/`ARQUIVADO`, default `ATIVO`) e a coluna `status` em `Exercise`; remove o `DEFAULT` físico não declarado de `updatedAt` (drift da migration anterior, sem efeito de comportamento — toda escrita via Prisma já define o valor); cria um índice único parcial `exercises_personal_tenant_name_key` em `(tenantId, lower(name)) WHERE origin = 'PERSONAL'` — não representável no Prisma Schema (mesma limitação já documentada para os TRIGGERs de isolamento). Testada em banco vazio (histórico completo do zero) e como atualização do schema atual (`fitos_dev`/`fitos_test`).
+
+### Regras aplicadas
+
+- **Nunca muda de tenant nem se torna global**: nenhuma função aceita `tenantId`/`origin` como entrada editável; a imutabilidade de `tenantId` quando já referenciado por um `WorkoutExercise` é garantida fisicamente por `enforce_exercise_tenant_immutability` (FIT-007) — dupla proteção, não uma alternativa à outra.
+- **Isolamento**: `getOwnExerciseForTenant` (e todas as funções que dependem dela) nunca retorna um exercício de outro tenant nem um exercício global — mesmo com o `id` correto. `NAO_ENCONTRADO` nesses casos, nunca revelando se o registro existe em outro tenant/no catálogo global (mesmo padrão de `getStudentForTenant`).
+- **Duplicidade**: dois exercícios PRÓPRIOS do mesmo tenant não podem ter o mesmo nome normalizado (minúsculas), ativo ou arquivado — imposto pelo índice único parcial acima, traduzido para `ExerciseError("NOME_DUPLICADO_NO_TENANT")`. Reativar um exercício arquivado é o caminho para "reusar" o nome, em vez de criar um novo.
+- **Arquivamento**: idempotente (mesmo padrão de `inactivateStudent`/`reactivateStudent`), nunca exclusão física — a linha nunca é removida, apenas `status`.
+- **Auditoria**: `AuditEvent` (`EXERCICIO_ARQUIVADO`/`EXERCICIO_REATIVADO`/`EXERCICIO_EDITADO`) gravado na mesma transação da mudança de estado, nunca com o payload integral (apenas `tenantId`/`actorUserId`/`entityType`/`entityId`). Criação não gera evento — mesmo padrão de `createStudent` (o próprio registro e seu `createdAt` já são o rastro; auditoria aqui é para ações sobre um registro existente).
+- **Aluno não administra exercícios**: as rotas (`/api/exercises`, `/api/exercises/[id]`, `.../arquivar`, `.../reativar`) usam `requirePersonal()` (FIT-011) — a mesma checagem de sessão/papel de todas as rotas de personal desta aplicação.
+
+### Rotas
+
+- `POST /api/exercises` — cadastro.
+- `PATCH /api/exercises/[id]` — edição.
+- `POST /api/exercises/[id]/arquivar` — arquivamento.
+- `POST /api/exercises/[id]/reativar` — reativação.
+
+Nenhuma rota de listagem/detalhe nesta História — a listagem unificada (catálogo global + próprio) e o detalhe são escopo exclusivo da FIT-023, que também entrega a superfície de UI (esta História é inteiramente backend: módulo de domínio + rotas + testes).
+
+## Testes (FIT-022)
+
+- `src/modules/exercises/exercises.integration.test.ts` (Postgres real): criação (sempre `PERSONAL`/`ATIVO`/`externalId` nulo), validação de nome vazio, duplicidade no mesmo tenant (case-insensitive) rejeitada, mesmo nome em tenants diferentes permitido, isolamento cruzado (nunca retorna exercício de outro tenant nem exercício global), edição preservando `tenantId`/`origin`/`status`, edição/arquivamento/reativação de exercício de outro tenant rejeitados (`NAO_ENCONTRADO`), arquivamento/reativação idempotentes sem exclusão física, auditoria gravada em arquivar/reativar, operações sobre id inexistente.
+- `src/app/api/exercises/**/*.test.ts`: 401 sem sessão, 403 quando o autenticado é aluno (rota de criação), tenant sempre da sessão mesmo quando o corpo tenta enviar `tenantId`/`origin` diferentes, 404 quando o exercício não pertence ao tenant da sessão, 400 em validação/duplicidade.
