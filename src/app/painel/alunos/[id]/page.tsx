@@ -5,10 +5,12 @@ import { AppShell, Button, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getStudentForTenant } from "@/modules/students/students";
+import { daysUntil, deriveAccessStatus, getLatestInvitationForStudent } from "@/modules/students/invitations";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { EditarAlunoForm } from "./EditarAlunoForm";
 import { ReativarAlunoButton } from "./ReativarAlunoButton";
+import { ConviteSection } from "./ConviteSection";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -40,6 +42,10 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
   }
 
   const podeEditarEmail = student.userId === null;
+  const latestInvitation = await getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id });
+  const accessStatus = deriveAccessStatus(student, latestInvitation);
+  const diasRestantes =
+    accessStatus === "CONVITE_PENDENTE" && latestInvitation ? daysUntil(latestInvitation.expiresAt) : null;
 
   return (
     <AppShell title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
@@ -61,6 +67,12 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
           emailEditavel={podeEditarEmail}
         />
       </Card>
+
+      {student.status === "ATIVO" ? (
+        <Card title="Acesso e convite">
+          <ConviteSection studentId={student.id} accessStatus={accessStatus} diasRestantes={diasRestantes} />
+        </Card>
+      ) : null}
 
       <Card title="Ciclo de vida">
         {student.status === "ATIVO" ? (

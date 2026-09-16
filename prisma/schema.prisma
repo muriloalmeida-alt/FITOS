@@ -24,6 +24,19 @@ enum StudentStatus {
   INATIVO
 }
 
+/// FIT-015: apenas as transições reais, disparadas por uma ação (gerar,
+/// cancelar, aceitar). "Convite expirado", citado como estado recomendado
+/// em docs/00-governanca (junto com PENDENTE/ACEITO/CANCELADO), é tratado
+/// como estado **derivado** (`expiresAt < now()` sobre um convite ainda
+/// PENDENTE), não persistido — não existe nenhuma tarefa periódica que
+/// precise "expirar" convites em lote, e persistir isso duplicaria uma
+/// informação já derivável de `expiresAt`.
+enum InvitationStatus {
+  PENDENTE
+  ACEITO
+  CANCELADO
+}
+
 enum ExerciseOrigin {
   API_NINJAS
   PERSONAL
@@ -166,6 +179,7 @@ model Tenant {
   studentCharges   StudentCharge[]
   saasSubscription SaasSubscription?
   auditEvents      AuditEvent[]
+  invitations      Invitation[]
 
   @@map("tenants")
 }
@@ -204,11 +218,40 @@ model Student {
   workoutSessions WorkoutSession[]
   assessments     Assessment[]
   charges         StudentCharge[]
+  invitations     Invitation[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("students")
+}
+
+/// Convite de ativação de conta (FIT-015). Um por tentativa — gerar um novo
+/// convite para o mesmo aluno cancela (nunca apaga) qualquer PENDENTE
+/// anterior, preservando o histórico. Apenas o hash do token é armazenado
+/// (`tokenHash`, SHA-256); o token bruto nunca é persistido, logado nem
+/// incluído em evidência — existe apenas na memória do processo entre a
+/// geração e a resposta HTTP ao personal.
+///
+/// `@@unique([studentId, tenantId])` seria incorreto aqui (impediria mais de
+/// um convite por aluno ao longo do tempo) — o histórico é modelado como
+/// múltiplas linhas com status diferentes, não uma linha só reescrita.
+model Invitation {
+  id         String           @id @default(cuid())
+  tenantId   String
+  studentId  String
+  tokenHash  String           @unique
+  status     InvitationStatus @default(PENDENTE)
+  expiresAt  DateTime
+  createdAt  DateTime         @default(now())
+  acceptedAt DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@map("invitations")
 }
 
 /// Catálogo de exercícios. `tenantId` nulo representa exercício global
