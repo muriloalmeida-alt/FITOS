@@ -7,6 +7,7 @@ import { prisma } from "@/shared/db/prisma";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
+import { AlunoInativo } from "./AlunoInativo";
 
 export const metadata: Metadata = {
   title: `Painel — ${appName}`,
@@ -31,9 +32,18 @@ export default async function PainelPage() {
   }
 
   if (!ctx.studentId) {
-    return <AlunoSemVinculo />;
+    // FIT-016: "sem vínculo" (Student nunca existiu) e "inativo" (Student
+    // existe, mas foi pausado pelo personal — FIT-014) são estados reais
+    // distintos — cada um com sua própria mensagem, nunca confundidos.
+    const student = await prisma.student.findUnique({ where: { userId: ctx.userId } });
+    return student?.status === "INATIVO" ? <AlunoInativo /> : <AlunoSemVinculo />;
   }
 
-  const student = await prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId } });
-  return <AlunoHome displayName={student.displayName} email={session.user.email} />;
+  const student = await prisma.student.findUniqueOrThrow({
+    where: { id: ctx.studentId },
+    include: { tenant: { include: { owner: true } } },
+  });
+  return (
+    <AlunoHome displayName={student.displayName} tenantName={student.tenant.name} personalName={student.tenant.owner.name} />
+  );
 }

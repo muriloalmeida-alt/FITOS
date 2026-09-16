@@ -1,6 +1,6 @@
 # SPRINT-05 — Gestão de Alunos
 
-Status: em andamento — execução autônoma integral autorizada pelo Produto.
+Status: concluída — execução autônoma integral autorizada pelo Produto.
 
 ## Objetivo
 
@@ -27,8 +27,8 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 
 - FIT-013 (#31) — Cadastro e listagem de alunos. **Concluída** (PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`).
 - FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. **Concluída** (PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`).
-- FIT-015 (#33) — Convite e ativação da conta do aluno. **Implementada** (PR próprio desta rodada).
-- FIT-016 (#34) — Experiência inicial do aluno. Aguarda merge da FIT-015. Encerra a SPRINT-05.
+- FIT-015 (#33) — Convite e ativação da conta do aluno. **Concluída** (PR #37, mergeado no commit `08b8eed5b8331c87b770b1918411c49453923959`).
+- FIT-016 (#34) — Experiência inicial do aluno. **PR #38** (gate autônomo aprovado — ver fechamento abaixo). Encerra a SPRINT-05.
 
 ## Resultado intermediário — FIT-013
 
@@ -58,6 +58,15 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - comprovado com teste de concorrência real (`Promise.allSettled`, duas ativações simultâneas com o mesmo token — exatamente uma sucede, nenhum `User` duplicado) e com o fluxo real de ponta a ponta (gerar → ativar → aluno autenticado → replay rejeitado → cancelar), contra o build de produção;
 - rota pública `/ativar-conta` (sem sessão exigida) e `ConviteSection` no perfil do aluno ativo (gerar, copiar, cancelar, renovar);
 - decisão documentada em `docs/06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`.
+
+## Resultado intermediário — FIT-016
+
+- `src/app/painel/page.tsx` preenche o conteúdo real do shell do aluno (FIT-012): `AlunoHome` passa a exibir personal e espaço reais (via `Student.tenant.owner`), e a distinção "nunca vinculado" vs. "vínculo inativado pelo personal" (FIT-014) é resolvida nesta página, com uma consulta direta a `Student.status` — sem alterar o contrato de segurança de `getAuthContext`/`AuthContext` estabelecido na FIT-011;
+- `AlunoInativo` (novo componente): mensagem própria para "conta inativada pelo personal", distinta de `AlunoSemVinculo` ("nunca vinculada");
+- `/painel/perfil` (nova): página "Sua conta" do aluno — nome e e-mail da própria sessão, protegida por `requireStudent()` (FIT-011); um personal que altere a URL manualmente é redirecionado a `/painel`, nunca vê a página (comprovado por teste e por evidência visual real);
+- item de navegação "Perfil" do aluno deixa de ser "Em breve";
+- nenhuma migration nesta História (nenhuma mudança de schema);
+- decisão documentada em `docs/06-engenharia/arquitetura/SHELL-AUTENTICADO.md` (seção "Experiência inicial real do aluno (FIT-016)").
 
 ## Sequenciamento obrigatório
 
@@ -97,4 +106,45 @@ A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado
 
 ## Fechamento
 
-Reservado para o PR da FIT-016, conforme a regra desta Sprint de não criar PRs exclusivamente documentais.
+As quatro Histórias do EPIC-04 foram entregues em sequência, cada uma com PR próprio, gate autônomo autoverificado e merge por SHA exato — sem nenhum push direto em `main` e sem nenhuma seed automática executada:
+
+- FIT-013 (#31) — PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`.
+- FIT-014 (#32) — PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`.
+- FIT-015 (#33) — PR #37, mergeado no commit `08b8eed5b8331c87b770b1918411c49453923959`.
+- FIT-016 (#34) — PR #38, gate autônomo aprovado; SHA de merge registrado na Issue #34 após o merge.
+
+### O que foi entregue
+
+Um personal cadastra alunos (nome + e-mail), busca/lista/filtra/pagina, edita nome, bloqueia troca de e-mail depois que o aluno ativa a própria conta, inativa/reativa (idempotente, sem exclusão física, sem perder histórico), gera/copia/cancela/renova um link de convite de uso único e com validade de 7 dias. O aluno ativa a própria conta por esse link (nunca por cadastro público), autentica normalmente depois, vê o próprio nome/vínculo/personal/espaço na "Hoje" e os próprios dados de conta em "Sua conta" — nunca a carteira ou o shell do personal, inclusive tentando manipular a URL diretamente. Todo o isolamento é por tenant derivado da sessão, nunca de payload/query/header do cliente.
+
+### O que não foi entregue (fora do escopo desta Sprint, por decisão de produto)
+
+Exercícios, treinos, avaliações físicas, cobrança/pagamento, agenda, mensagens, envio automático de convite por e-mail/WhatsApp, múltiplos personais por aluno ou transferência de aluno entre tenants, qualquer papel adicional além de PERSONAL/ALUNO. O backlog especulativo correspondente (`BACKLOG-MVP.md`, "Épico 2 — Alunos") permanece registrado, agora sob FIT-017/018/019, para retomada futura.
+
+### Migrations e homologação
+
+Duas migrations aditivas nesta Sprint (`20260916020000_add_student_cadastro_fields`, FIT-013; `20260916030000_add_invitations`, FIT-015), ambas aplicadas com sucesso em `fitos_dev` e `fitos_test`, nenhuma migration anterior alterada, nenhuma constraint multi-tenant removida, nenhum reset de homologação, nenhuma seed automática executada. FIT-014 e FIT-016 não precisaram de migration.
+
+### Evidências
+
+`docs/06-engenharia/evidencias/FIT-013/`, `FIT-014/`, `FIT-015/` e `FIT-016/` — todas capturadas com Playwright contra o build de produção (`npm run start`), fluxo real de UI/rotas, dados sintéticos removidos do banco imediatamente após cada captura.
+
+### Riscos residuais
+
+- A FIT-003 (proteção técnica da `main`) continua pendente — `main` permanece `"protected": false`; a disciplina de branch/PR/merge autorizado é a única salvaguarda efetiva (risco já conhecido, não introduzido por esta Sprint).
+- Não há fluxo de troca de e-mail pós-ativação (rejeitado explicitamente, não implementado) — aceitável para o MVP, mas é uma limitação real relatada ao aluno/personal via mensagem, não um caminho alternativo.
+- Convite expirado é derivado (`expiresAt < now()`), nunca persistido — decisão deliberada (evitar estado duplicado/redundante), sem job de expiração assíncrono; nenhum efeito colateral identificado, já que toda leitura relevante já recalcula a validade em tempo real.
+
+### Estado final do EPIC-04
+
+Todas as quatro Histórias (FIT-013 a FIT-016) concluídas e mergeadas — EPIC-04 encerrado nesta Sprint.
+
+### Confirmações
+
+- Nenhum push direto em `main` em nenhuma História — todo código passou por PR e merge explícito por SHA validado.
+- Nenhuma seed automática foi executada — os únicos dados criados fora de teste automatizado foram sintéticos, usados exclusivamente para evidência visual, e removidos do banco (`fitos_dev`) imediatamente após cada captura.
+- Nenhum ambiente de produção foi tocado — todo trabalho ocorreu em `fitos_dev`/`fitos_test` locais ao ambiente de execução.
+
+### Proposta breve para a SPRINT-06 (não iniciada)
+
+Com cadastro/relacionamento de alunos completo, a próxima fronteira natural é a operação diária do personal com o aluno já vinculado: um cadastro mínimo de exercícios/treinos (sem ainda prescrever), ou a evolução do perfil do aluno com dados físicos básicos (peso/medidas) para permitir a primeira avaliação simples — qualquer uma das duas abre caminho direto para "Treino"/"Progresso" deixarem de ser "Em breve". Recomendação: priorizar exercícios/treinos, por ser a funcionalidade mais valiosa para o personal justificar a assinatura do produto; avaliação física pode vir imediatamente depois, reaproveitando o mesmo `Student` já modelado. Esta proposta não inicia nenhum trabalho de código — aguarda autorização explícita do Produto.

@@ -1,6 +1,6 @@
-# Shell autenticado e navegação responsiva (FIT-012)
+# Shell autenticado e navegação responsiva (FIT-012, estendido pela FIT-016)
 
-Este documento detalha a implementação da FIT-012: a estrutura visual autenticada do FitOS (shell de personal e de aluno), apoiada na autorização por sessão da FIT-011 e aplicando os tokens M3 (`docs/03-design/M3-DESIGN-TOKENS.md`) e a arquitetura de informação (`docs/03-design/UX-ARCHITECTURE.md`).
+Este documento detalha a implementação da FIT-012: a estrutura visual autenticada do FitOS (shell de personal e de aluno), apoiada na autorização por sessão da FIT-011 e aplicando os tokens M3 (`docs/03-design/M3-DESIGN-TOKENS.md`) e a arquitetura de informação (`docs/03-design/UX-ARCHITECTURE.md`). A seção "Experiência inicial real do aluno (FIT-016)", ao final, descreve como a FIT-016 preencheu o conteúdo real de `AlunoHome` e adicionou a página "Perfil" — sem alterar a decisão de shell descrita a seguir.
 
 ## Uma única rota, decidida no servidor
 
@@ -8,10 +8,14 @@ Não existem rotas separadas por papel (`/painel/personal`, `/painel/aluno`). `s
 
 - sem sessão → `redirect("/entrar")`;
 - `role === "PERSONAL"` → `PersonalHome` (busca o tenant real via `ctx.tenantId`);
-- `role === "ALUNO"` com vínculo (`ctx.studentId` presente) → `AlunoHome` (busca o `Student` real);
-- `role === "ALUNO"` sem vínculo (`ctx.studentId` nulo — caso real documentado na FIT-011, não um erro) → `AlunoSemVinculo`, uma tela mínima de "sem permissão", sem nenhum shell de navegação (não há destino de negócio a oferecer sem vínculo).
+- `role === "ALUNO"` com vínculo (`ctx.studentId` presente) → `AlunoHome` (busca o `Student` real, incluindo o `Tenant` e seu `owner`, para exibir personal/espaço reais — FIT-016);
+- `role === "ALUNO"` sem `ctx.studentId` → a FIT-011/FIT-014 colapsam "nunca teve `Student`" e "`Student` inativado pelo personal" no mesmo formato de `AuthContext` (`tenantId: null, studentId: null`) — correto para autorização (nos dois casos não há acesso normal), mas insuficiente para a mensagem certa ao aluno. A FIT-016 resolve isso **nesta página**, não no `AuthContext` (que permanece com o mesmo contrato de segurança da FIT-011/FIT-014): uma consulta adicional e direta, `prisma.student.findUnique({ where: { userId: ctx.userId } })`, decide entre:
+  - `Student` existe com `status === "INATIVO"` → `AlunoInativo` ("Sua conta foi inativada pelo seu personal...");
+  - nenhum `Student` (ou nenhuma linha encontrada) → `AlunoSemVinculo` ("Sua conta ainda não está vinculada a um personal...").
 
-Isso satisfaz diretamente o critério de aceite "não é possível trocar de shell alterando a URL": como há uma única URL e o shell é sempre derivado do papel real da sessão no servidor, não existe parâmetro de URL, cookie ou header que o cliente possa manipular para ver o shell de outro papel — a superfície de ataque desse critério é zero, por construção, não por validação adicional.
+  Nenhuma das duas telas usa `AppShell` — são estados mínimos de "sem permissão", sem destino de negócio a oferecer.
+
+Isso satisfaz diretamente o critério de aceite "não é possível trocar de shell alterando a URL": como há uma única URL e o shell é sempre derivado do papel real da sessão no servidor, não existe parâmetro de URL, cookie ou header que o cliente possa manipular para ver o shell de outro papel — a superfície de ataque desse critério é zero, por construção, não por validação adicional. O mesmo vale para `/painel/perfil` (FIT-016): é protegida por `requireStudent()` (FIT-011), então um personal que altere a URL manualmente é redirecionado de volta a `/painel` (evidência: `personal-tentativa-perfil-aluno.png`).
 
 ## `AppShell` (`src/shared/ui/AppShell.tsx`)
 
@@ -19,7 +23,7 @@ Componente compartilhado, reutilizado pelos dois papéis. Não depende de `ident
 
 ### Nenhuma funcionalidade futura é simulada
 
-Cada `AppShellNavItem` só recebe `href` quando o destino é real. Todo destino ainda não implementado (Alunos, Treinos, Financeiro, Configurações para o personal; Treino, Progresso, Perfil para o aluno) usa `comingSoon: true` e nunca recebe `href` — renderiza como texto desabilitado com o rótulo "Em breve", sem nenhum link, rota ou tela fictícia por trás. Isso é testado (`AppShell.test.tsx`): nenhum item `comingSoon` é encontrável como `role="link"`.
+Cada `AppShellNavItem` só recebe `href` quando o destino é real. Todo destino ainda não implementado (Treinos, Financeiro, Configurações para o personal; Treino, Progresso para o aluno) usa `comingSoon: true` e nunca recebe `href` — renderiza como texto desabilitado com o rótulo "Em breve", sem nenhum link, rota ou tela fictícia por trás. Isso é testado (`AppShell.test.tsx`): nenhum item `comingSoon` é encontrável como `role="link"`. ("Alunos", do personal, passou a real na FIT-013; "Perfil", do aluno, passou a real na FIT-016 — ver seção final.)
 
 ### Navegação responsiva
 
@@ -51,18 +55,30 @@ Nenhum código novo: o FitOS já resolve o tema via `@media (prefers-color-schem
 
 - `src/shared/ui/AppShell.tsx` + `.module.css` — componente compartilhado.
 - `src/app/painel/navigation.ts` — `PERSONAL_NAV_ITEMS`/`ALUNO_NAV_ITEMS`, a arquitetura de informação de nível superior de cada papel (fonte: `UX-ARCHITECTURE.md`).
-- `src/app/painel/PersonalHome.tsx`, `AlunoHome.tsx`, `AlunoSemVinculo.tsx` (+ `.module.css`) — conteúdo por papel/estado.
-- `src/app/painel/page.tsx` — decide qual dos três renderizar, a partir da sessão e do `AuthContext`.
+- `src/app/painel/PersonalHome.tsx`, `AlunoHome.tsx`, `AlunoSemVinculo.tsx`, `AlunoInativo.tsx` (+ `.module.css`) — conteúdo por papel/estado.
+- `src/app/painel/perfil/page.tsx` — página "Sua conta" do aluno (FIT-016).
+- `src/app/painel/page.tsx` — decide qual dos quatro renderizar, a partir da sessão e do `AuthContext` (mais a consulta direta a `Student.status` descrita acima).
 
-## O que esta História não faz
+## O que a FIT-012 não fazia (histórico)
 
-- Não implementa nenhuma funcionalidade de negócio (Alunos, Exercícios, Treinos, Financeiro) — os destinos correspondentes existem apenas como rótulo "Em breve".
-- Não implementa o drawer persistente separado da rail (ver "Simplificação deliberada" acima).
+- Não implementava nenhuma funcionalidade de negócio (Alunos, Exercícios, Treinos, Financeiro) — os destinos correspondentes existiam apenas como rótulo "Em breve" (Alunos passou a real na FIT-013; Perfil do aluno, na FIT-016).
+- Não implementa o drawer persistente separado da rail (ver "Simplificação deliberada" acima — ainda vale).
 - Não adiciona nenhum toggle manual de tema — o tema já seguia o sistema operacional desde a fundação do projeto.
-- Não altera nenhuma migration — nenhum schema novo foi necessário.
-- Encerra a SPRINT-04: não há mais Histórias pendentes no Épico EPIC-03 além desta.
+- Não altera nenhuma migration — nenhum schema novo foi necessário (também vale para a FIT-016).
 
 ## Testes
 
 - `src/shared/ui/AppShell.test.tsx`: título e conteúdo renderizados; destino real navegável com `aria-current`; destino "Em breve" nunca é um link; agrupamento "Mais" (oculto por padrão, revela ao clicar); slot `trailing` renderizado.
-- `src/app/painel/page.test.tsx`: redireciona para `/entrar` sem sessão; personal vê `PersonalHome` com o tenant real (sem chamar `student.findUniqueOrThrow`); aluno vinculado vê `AlunoHome` com o perfil real (sem chamar `tenant.findUnique`); aluno sem vínculo vê `AlunoSemVinculo`, sem nenhum shell.
+- `src/app/painel/page.test.tsx`: redireciona para `/entrar` sem sessão; personal vê `PersonalHome` com o tenant real (sem chamar `student.findUniqueOrThrow`); aluno vinculado vê `AlunoHome` com personal/espaço reais (sem chamar `tenant.findUnique` nem `student.findUnique`); aluno nunca vinculado vê `AlunoSemVinculo`; aluno com vínculo inativado vê `AlunoInativo` — as duas últimas sem nenhum shell.
+- `src/app/painel/perfil/page.test.tsx` (FIT-016): redireciona para `/entrar` sem sessão; redireciona para `/painel` quando `requireStudent()` rejeita (papel diferente de aluno com vínculo ativo — cobre diretamente o caso de um personal alterando a URL); aluno com vínculo ativo vê nome e e-mail da própria conta.
+
+## Experiência inicial real do aluno (FIT-016)
+
+A FIT-012 já decidia corretamente *qual* shell mostrar; a FIT-016 preencheu o conteúdo real do shell do aluno, sem alterar essa decisão:
+
+- **`AlunoHome`** ganhou as props `displayName`, `tenantName`, `personalName` (todas vindas do `Student`/`Tenant`/`User` reais, buscados em `page.tsx`) e passou a exibir um card "Seu vínculo" (Personal, Espaço, Estado da conta) — a `email` foi removida das props: e-mail agora é responsabilidade exclusiva da nova página de conta.
+- **`/painel/perfil`** (nova): página "Sua conta", protegida por `requireStudent()` — mostra nome e e-mail da própria sessão (`getServerSession()`), sem nenhum parâmetro de rota (o aluno é sempre o da própria sessão, nunca um id vindo do cliente). Acessível pelo item "Perfil" da navegação do aluno, que deixa de ser "Em breve".
+- **`AlunoInativo`** (novo componente): mensagem distinta de `AlunoSemVinculo` para o caso "já teve acesso, mas o personal inativou o vínculo" (FIT-014) — ver a distinção completa na seção "Uma única rota, decidida no servidor" acima.
+- Treino e Progresso continuam "Em breve" — esta História não promete treino, carga, evolução, avaliação, agenda ou mensagens.
+
+Evidências visuais completas (mobile/desktop, claro/escuro, os quatro estados do aluno e a tentativa de um personal acessando `/painel/perfil`): `docs/06-engenharia/evidencias/FIT-016/`.
