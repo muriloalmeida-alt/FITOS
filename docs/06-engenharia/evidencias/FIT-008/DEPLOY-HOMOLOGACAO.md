@@ -1,56 +1,85 @@
 # Deploy em homologação (FIT-008)
 
-Este documento registra o estado real da FIT-008 nesta rodada: o que foi entregue em código/configuração nesta PR, o que já existia provisionado no Railway antes desta PR, e o que **não** pôde ser executado neste ambiente de execução por falta de credencial Railway — com os comandos exatos necessários para concluir.
+Este documento registra o estado real e final do provisionamento e deploy da FIT-008 em homologação. O código e a configuração (`src/app/api/ready/`, `railway.json`) foram entregues pelo Claude Code nesta PR; o provisionamento Railway em si (ambiente, PostgreSQL, variáveis, deploy) foi executado diretamente pelo GPT do Murilo, com acesso ao Railway que este agente não possui neste ambiente de execução. Os dados desta seção refletem o retorno dessa execução, não uma verificação independente feita por este agente — exceto onde indicado explicitamente como tentativa própria (seção 6).
 
-## 1. Estado herdado do Railway (informado pelo Produto, anterior a esta PR)
-
-Os dados abaixo foram informados pelo Produto como já provisionados antes do início desta História. Este agente não teve acesso ao Railway para verificá-los independentemente nesta rodada (ver seção 3).
+## 1. Projeto e ambiente
 
 - Projeto: `FitOS` — project ID `d721a8fb-db7f-43f2-a994-b1df66cb8dd9`.
-- Ambiente: environment ID `3f809456-55b0-4eba-b7a2-f91b53e69bcb`, nome **`production`** (nome padrão criado pelo Railway; ver seção 3 para a renomeação pendente para `homologacao`).
-- Serviço web: `fitos-web-hml`, service ID `2e6422fe-9a17-4e5c-8049-02ac705bc50b`.
-- Deployment aprovado: `7a9c5a64-2285-4625-9eb2-843fed7ace53`, URL `https://fitos-web-hml-production.up.railway.app`, código implantado no commit `d8cc585988dac2fc4f0a646f1352e11e5d3ecb2e` (merge do PR #19, FIT-007), status `SUCCESS`, healthcheck em `/api/health`.
-- Variáveis já configuradas no serviço web: `NEXT_PUBLIC_APP_NAME=FitOS`, `NEXT_PUBLIC_APP_ENV=homologacao`, `NODE_ENV=production`.
-- Esse deployment **não** inclui o código desta História (endpoint `/api/ready`, `railway.json`) — ele é anterior a esta PR.
+- Ambiente de homologação: nome retornado pela API Railway **`"homologacao "`** (com um espaço ao final — inconsistência de nomenclatura conhecida, não corrigida nesta rodada por não ser bloqueante), environment ID `8a742a2f-f84a-4222-887f-5684c12fbc79`. Este ambiente foi **criado separadamente** (não é o `production` original renomeado).
+- Ambiente `production` original (environment ID `3f809456-55b0-4eba-b7a2-f91b53e69bcb`): **não foi renomeado, removido ou alterado** nesta rodada. Continua existindo com o deployment anterior `7a9c5a64-2285-4625-9eb2-843fed7ace53` — não recebeu nenhum redeploy nesta rodada. Nenhuma produção funcional foi criada ou configurada.
 
-## 2. O que esta PR entrega em código/configuração (rastreável no repositório)
+## 2. Serviço web (`fitos-web-hml`)
 
-- `src/app/api/ready/route.ts` — endpoint de readiness: `SELECT 1` via Prisma contra `DATABASE_URL`; `200 { "status": "ready" }` quando o PostgreSQL responde, `503 { "status": "unavailable" }` quando não. A resposta nunca inclui mensagem de erro, host, porta ou credencial — testado explicitamente (`route.test.ts`) simulando uma falha de conexão com uma mensagem de erro real (contendo host/porta/usuário) e verificando que nenhum desses dados aparece no corpo da resposta.
-- `src/app/api/ready/route.test.ts` — 2 testes: readiness com banco disponível (200) e indisponível (503, sem detalhes internos).
-- `railway.json` — configuração de deploy como código, versionada no repositório:
-  - `deploy.preDeployCommand`: `npm run db:migrate:deploy` (aplica migrations de forma aditiva/não destrutiva antes de cada deploy, na linha já usada em desenvolvimento — ver `docs/06-engenharia/EXECUCAO-LOCAL.md`);
-  - `deploy.startCommand`: `npm run start`;
-  - `deploy.healthcheckPath`: `/api/health`;
-  - `build.builder`: `NIXPACKS` (padrão do Railway para projetos Next.js).
-  - Este arquivo torna a configuração de pré-deploy rastreável em código; para ter efeito, o serviço `fitos-web-hml` no Railway precisa estar configurado para ler `railway.json` do repositório (configuração de serviço, não coberta neste PR — ver seção 3).
-- Nenhum seed automático foi adicionado a esse fluxo — `railway.json` não referencia `db:seed`, conforme exigido.
-- Documentação: `docs/06-engenharia/arquitetura/AMBIENTES-E-DEPLOY.md` (topologia Railway da FIT-008) e este arquivo.
+- Service ID: `2e6422fe-9a17-4e5c-8049-02ac705bc50b`.
+- Branch implantada: `feat/FIT-008-ambiente-railway`.
+- Commit implantado: `071ba1e91c24702c44d488cae2b554741d194cc0` (head do PR #20 no momento do deploy).
+- Deployment final: `1c5a6a50-9369-46d3-b888-c286d8a70337` — status `SUCCESS`.
+- URL pública: `https://fitos-web-hml-homologacao.up.railway.app`
+- Configuração efetiva do serviço:
+  - Build: `npm run build`.
+  - Start: `npm run start`.
+  - Pré-deploy: `npm run db:migrate:deploy`.
+  - Healthcheck: `/api/health`.
+  - Builder efetivo informado pelo Railway: **Railpack** (não Nixpacks — `railway.json` desta PR declara `"builder": "NIXPACKS"`; o Railway aplicou Railpack como builder efetivo. Isso não impediu o deploy, mas é uma divergência entre a configuração versionada e o comportamento observado, registrada aqui para revisão futura, não corrigida nesta rodada por não ser bloqueante ao resultado).
+  - Nenhum seed automático foi executado ou configurado.
 
-## 3. Ações de infraestrutura Railway — bloqueadas por falta de credencial nesta sessão
+## 3. PostgreSQL (`fitos-postgres-hml`)
 
-O ambiente de execução usado para esta rodada tem o Railway CLI instalado (`railway 5.57.2`), mas **sem nenhuma credencial Railway configurada** (`railway whoami` retorna `Unauthorized`; não há `RAILWAY_TOKEN`/`RAILWAY_API_TOKEN` no ambiente, e não há navegador disponível para `railway login` interativo). Por isso, as ações abaixo — todas exigidas pela História — **não foram executadas** nesta rodada:
+- Service ID: `b3567d92-b727-466c-ba64-9ecfc7698f4a`.
+- Deployment: `4e400709-1b35-4e4a-8fa3-a6136a0dd7fb` — status `SUCCESS`.
+- Imagem: `ghcr.io/railwayapp-templates/postgres-ssl:18`.
+- Volume ID: `7d56bee9-0a3a-4853-a89c-d1a1579bdd5c`, mount path `/var/lib/postgresql/data`, capacidade 5 GB, região `sfo`.
+- `DATABASE_URL` configurada no serviço `fitos-web-hml` **exclusivamente por referência** às variáveis do serviço `fitos-postgres-hml` (sintaxe `${{fitos-postgres-hml.<VARIÁVEL>}}`). Nenhuma string de conexão fixa foi colocada em código, PR ou Issue. Nenhuma credencial é transcrita neste documento.
 
-| # | Ação exigida | Status | Comando exato para concluir (com um token Railway válido) |
-|---|---|---|---|
-| 1 | Renomear ambiente `production` → `homologacao`, preservando o environment ID | **Pendente** | `railway environment rename homologacao --environment 3f809456-55b0-4eba-b7a2-f91b53e69bcb --project d721a8fb-db7f-43f2-a994-b1df66cb8dd9` (ou via dashboard: Settings do ambiente → Rename). Caso o Railway não permita renomear diretamente, seguir o plano B da História (criar `homologacao`, mover/recriar `fitos-web-hml`, remover o ambiente padrão vazio, sem deixar deployment funcional de produção). |
-| 2 | Criar PostgreSQL `fitos-postgres-hml` na homologação | **Pendente** | `railway add --database postgres --service fitos-postgres-hml --environment 3f809456-55b0-4eba-b7a2-f91b53e69bcb --project d721a8fb-db7f-43f2-a994-b1df66cb8dd9` |
-| 3 | Configurar `DATABASE_URL` no serviço web com referência segura ao Postgres | **Pendente** | `railway variables --set 'DATABASE_URL=${{fitos-postgres-hml.DATABASE_URL}}' --service fitos-web-hml --environment 3f809456-55b0-4eba-b7a2-f91b53e69bcb --project d721a8fb-db7f-43f2-a994-b1df66cb8dd9` |
-| 4 | Confirmar que o serviço web usa `railway.json` desta branch para o pré-deploy | **Pendente** | Verificar/ajustar em Settings do serviço `fitos-web-hml` no dashboard, ou `railway service` via CLI, que a config path aponta para `railway.json` na raiz do repositório. |
-| 5 | Fazer deploy do SHA desta branch (`feat/FIT-008-ambiente-railway`) no serviço de homologação | **Pendente** | `railway up --service fitos-web-hml --environment 3f809456-55b0-4eba-b7a2-f91b53e69bcb --project d721a8fb-db7f-43f2-a994-b1df66cb8dd9` (a partir do checkout do commit da branch), ou via integração GitHub do Railway apontando para a branch/PR. |
-| 6 | Executar smoke test (página inicial, `/api/health`, `/api/ready`, confirmação de migrations, inspeção de logs, ausência de dados reais/segredos) | **Pendente** — depende de 1–5 | `curl` nos três endpoints da URL pública do novo deployment; `railway logs --service fitos-web-hml --environment 3f809456-55b0-4eba-b7a2-f91b53e69bcb` para inspecionar logs do pré-deploy (migrations) e da aplicação. |
+## 4. Smoke test (executado contra a URL pública de homologação)
 
-**Nenhuma dessas ações foi simulada ou declarada como concluída.** Nenhum deployment ID, resultado de migration, resultado de healthcheck/readiness ou log real para o código desta História existe ainda, porque o deploy do código desta PR no Railway não ocorreu nesta sessão.
+| Verificação | Resultado |
+|---|---|
+| `GET /` | HTTP 200 — página inicial carregada corretamente |
+| `GET /api/health` | HTTP 200 — `{"status":"ok","app":"FitOS","env":"homologacao",...}` |
+| `GET /api/ready` | HTTP 200 — `{"status":"ready"}` |
+| Logs da aplicação | Next.js 16.3.5 iniciou corretamente; aplicação respondeu aos healthchecks; nenhum dado real encontrado; nenhum segredo, senha ou string de conexão encontrado nos logs. Único aviso presente (não bloqueante): `npm warn config production Use --omit=dev instead.` |
 
-## 4. Situação de backup
+`/api/ready` responder 200 confirma que o PostgreSQL está acessível pela aplicação — mas isso comprova apenas conectividade, não que o schema (migrations) esteja no estado esperado (ver seção 5).
 
-Não verificada nesta rodada, pelo mesmo motivo de acesso. Railway oferece backup gerenciado do PostgreSQL como recurso pago por plano — decisão de habilitar (e sua retenção) permanece pendente e deve ser registrada aqui quando o serviço `fitos-postgres-hml` existir e a decisão for tomada. Até lá, `docs/06-engenharia/arquitetura/AMBIENTES-E-DEPLOY.md` mantém esse item em "Pendências antes do provisionamento de produção".
+## 5. Migrations — gate técnico ainda não comprovado
 
-## 5. Rollback (deploy)
+O serviço está configurado com `preDeployCommand = npm run db:migrate:deploy` (`railway.json`), e o deployment terminou com status `SUCCESS`. Isso é consistente com o pré-deploy tendo rodado sem erro fatal (um erro no pré-deploy normalmente impede o deploy de suceder), mas **não é prova direta**:
 
-Documentado para quando o deploy desta História puder ser executado: Railway mantém o histórico de deployments por serviço; reverter significa promover novamente o deployment anterior (`7a9c5a64-2285-4625-9eb2-843fed7ace53` ou o último estável) via dashboard (`Deployments → Redeploy`) ou `railway redeploy --deployment <id>`. Como o pré-deploy só aplica migrations (`prisma migrate deploy`, aditivo), reverter o código não desfaz uma migration já aplicada — qualquer rollback de schema exige uma migration reversa própria, nunca editar uma migration já aplicada (mesma regra usada em FIT-007).
+- A API e os logs de deploy acessíveis durante a execução do GPT do Murilo não mostraram a saída específica do estágio de pré-deploy.
+- Não foi possível consultar diretamente a tabela `_prisma_migrations` no Postgres de homologação pelas ferramentas disponíveis àquela execução.
+- Este agente (Claude Code) tentou, nesta rodada, verificar de forma independente rodando `railway whoami` neste ambiente de execução: continua retornando `Unauthorized` — sem `RAILWAY_TOKEN` configurado aqui, não há como este agente executar `npx prisma migrate status` contra o Postgres real de homologação nem inspecionar os logs do Railway diretamente.
 
-## 6. Próximos passos para concluir esta História
+**Conclusão explícita: não há evidência conclusiva de que as migrations foram efetivamente aplicadas no `fitos-postgres-hml`.** `/api/ready` = 200 e deployment = `SUCCESS` são evidências indiretas favoráveis, não uma comprovação. Esta é uma pendência classificada como **gate técnico bloqueante antes da aprovação final do PR #20** — não uma formalidade.
 
-1. Fornecer a este agente (ou executar diretamente) um token Railway com acesso ao projeto `FitOS` (`d721a8fb-db7f-43f2-a994-b1df66cb8dd9`), como variável `RAILWAY_TOKEN`, para completar as ações da seção 3.
-2. Com as ações 1–5 da seção 3 concluídas, repetir o smoke test (ação 6) e atualizar este documento com os IDs, resultados e evidências reais (sem credenciais, sem dados reais).
-3. Só então considerar a FIT-008 pronta para revisão de Produto/Design/Gate Técnico — nenhuma dessas confirmações deve ser assumida como feita a partir apenas deste PR de código.
+**Ação recomendada para fechar o gate:** com um `RAILWAY_TOKEN` válido (ou pelo GPT do Murilo, que já tem acesso), rodar `npx prisma migrate status` (ou `railway run npx prisma migrate status --service fitos-web-hml --environment 8a742a2f-f84a-4222-887f-5684c12fbc79`) contra o ambiente de homologação e registrar aqui os nomes das migrations aplicadas e o resultado — sem expor `DATABASE_URL` ou qualquer credencial. Se houver migration pendente, aplicar apenas via `npm run db:migrate:deploy` (nunca editar uma migration existente) e então registrar o resultado.
+
+## 6. Backup
+
+- Backup gerenciado **não está habilitado** no serviço `fitos-postgres-hml`.
+- Motivo: o workspace Railway está no plano Hobby, cujo limite efetivo é zero backups por volume.
+- Habilitar backup exigiria mudança de plano — decisão de custo que não foi tomada nesta rodada e não deve ser tomada unilateralmente por automação.
+- **Registrado como risco residual conhecido e decisão pendente de infraestrutura.** Nenhuma mudança de plano ou contratação de recurso pago foi feita.
+
+## 7. Confirmações de governança
+
+- Nenhum dado real foi utilizado em nenhuma etapa (seed sintético existente não foi executado; nenhum dado de produção foi copiado).
+- Nenhuma credencial foi registrada em código, commit, PR ou Issue — `DATABASE_URL` existe apenas como variável de referência configurada no serviço Railway.
+- O ambiente `production` (environment ID `3f809456-55b0-4eba-b7a2-f91b53e69bcb`) permanece inalterado, com o deployment anterior `7a9c5a64-2285-4625-9eb2-843fed7ace53` — nenhuma produção funcional foi criada, alterada ou redeployada.
+- Nenhum seed automático foi configurado ou executado no pipeline de deploy.
+- Nenhuma migration existente foi alterada.
+- FIT-009 não foi iniciada.
+
+## 8. Rollback (deploy)
+
+Railway mantém o histórico de deployments por serviço; reverter significa promover novamente o deployment anterior — para `fitos-web-hml`, isso seria o estado anterior a `1c5a6a50-9369-46d3-b888-c286d8a70337` — via dashboard (`Deployments → Redeploy`) ou `railway redeploy --deployment <id>`. Como o pré-deploy só aplica migrations de forma aditiva (`prisma migrate deploy`), reverter o código não desfaz uma migration já aplicada — qualquer rollback de schema exige uma migration reversa própria, nunca editar uma migration já aplicada (mesma regra usada em FIT-007).
+
+## 9. Situação final e próximo passo
+
+A FIT-008 **não está pronta para aprovação final** enquanto o gate de migrations (seção 5) não for fechado com evidência direta. Recomenda-se:
+
+1. Fechar o gate de migrations (comando indicado na seção 5), com um token Railway válido.
+2. Registrar aqui o resultado exato (nomes das migrations, sem dados sensíveis).
+3. Só então submeter o PR #20 à revisão final de Produto/Design/Gate Técnico para autorização de merge.
+
+Até lá, o PR #20 permanece aberto, sem merge, com a FIT-008 classificada como **em andamento, bloqueada exclusivamente pela comprovação das migrations**.

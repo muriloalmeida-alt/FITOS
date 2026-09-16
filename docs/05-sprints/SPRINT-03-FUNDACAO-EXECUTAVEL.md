@@ -14,7 +14,7 @@ Materializar a Fundação Técnica aprovada (EPIC-02) em uma aplicação execut�
 
 - FIT-006 (#14) — Fundação executável do FitOS. Concluída pelo PR #17, merge `c2920e87babe09db5d525d08c5939265486413b1`.
 - FIT-007 (#15) — Banco e modelo físico multi-tenant. **Implementada, em revisão** (PR próprio, sem merge; correção obrigatória de integridade relacional entregue no mesmo PR #19).
-- FIT-008 (#16) — Ambientes FitOS no Railway. **Em andamento** (PR próprio, sem merge) — código e configuração de deploy entregues; provisionamento Railway (renomear ambiente, criar `fitos-postgres-hml`, configurar `DATABASE_URL`, deploy do SHA da branch) pendente por falta de credencial Railway no ambiente de execução — ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`.
+- FIT-008 (#16) — Ambientes FitOS no Railway. **Em andamento** (PR #20, sem merge) — código, configuração e provisionamento Railway (ambiente `homologacao`, `fitos-postgres-hml`, deploy do SHA `071ba1e91c24702c44d488cae2b554741d194cc0`, smoke test) entregues e executados; **bloqueada exclusivamente pela comprovação direta de que as migrations foram aplicadas** (gate técnico ainda aberto) — ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`.
 
 ## Resultado intermediário — FIT-006
 
@@ -57,9 +57,13 @@ Detalhes completos, SQL das constraints/trigger e evidências de validação con
 
 - endpoint `GET /api/ready` (checagem de PostgreSQL via `SELECT 1`, resposta genérica em ambos os casos — nunca expõe host/credencial/stack trace), com testes cobrindo disponível (200) e indisponível (503);
 - `railway.json` versionado no repositório, configurando o pré-deploy (`npm run db:migrate:deploy`, sem seed automático) e o healthcheck como código rastreável;
-- topologia Railway documentada em `docs/06-engenharia/arquitetura/AMBIENTES-E-DEPLOY.md`: projeto `FitOS`, ambiente de homologação, serviço web `fitos-web-hml`, serviço de banco `fitos-postgres-hml`;
-- **provisionamento Railway em si (renomear ambiente `production` → `homologacao`, criar `fitos-postgres-hml`, configurar `DATABASE_URL` por referência, disparar o deploy do SHA desta branch e executar o smoke test) não foi executado nesta rodada** — o ambiente de execução usado não tinha credencial Railway configurada. Detalhes, comandos exatos pendentes e o que fazer para concluir estão em `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`;
-- nenhuma produção funcional, nenhuma API Ninjas/Better Auth/Asaas, nenhuma alteração em migration já aplicada.
+- ambiente de homologação Railway provisionado (environment ID `8a742a2f-f84a-4222-887f-5684c12fbc79`, nome `homologacao`) como ambiente novo — não é o `production` original renomeado, que permanece inalterado (environment ID `3f809456-55b0-4eba-b7a2-f91b53e69bcb`);
+- PostgreSQL `fitos-postgres-hml` criado e persistente; `DATABASE_URL` do serviço web configurada exclusivamente por referência ao banco, sem nenhuma credencial versionada;
+- deploy do commit `071ba1e91c24702c44d488cae2b554741d194cc0` no serviço `fitos-web-hml` — deployment `1c5a6a50-9369-46d3-b888-c286d8a70337`, status `SUCCESS`, URL `https://fitos-web-hml-homologacao.up.railway.app`;
+- smoke test executado: página inicial (200), `/api/health` (200), `/api/ready` (200), logs sem dados reais ou segredos;
+- backup gerenciado do PostgreSQL não habilitado (plano Hobby do workspace Railway) — risco residual conhecido, registrado, não bloqueante;
+- **gate técnico ainda aberto: não há evidência direta de que as migrations foram efetivamente aplicadas no `fitos-postgres-hml`** (apenas evidência indireta — deployment `SUCCESS` e `/api/ready` respondendo 200). Esta é a única pendência que bloqueia a aprovação final da FIT-008 — ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`, seção 5;
+- nenhuma produção funcional criada ou alterada, nenhuma API Ninjas/Better Auth/Asaas, nenhuma alteração em migration já aplicada, nenhum seed automático.
 
 ## Sequenciamento obrigatório
 
@@ -71,7 +75,7 @@ As Histórias não são paralelas:
 4. FIT-007 é implementada e submetida a PR. *(concluído — PR #19 mergeado)*
 5. Produto/Design revisa e autoriza o merge. *(concluído)*
 6. Somente após o merge, FIT-008 pode iniciar. *(concluído — autorizado após o merge do PR #19)*
-7. FIT-008 é implementada e submetida a PR. *(feito nesta rodada — parcialmente: código/config completos, provisionamento Railway pendente, ver acima)*
+7. FIT-008 é implementada e submetida a PR. *(feito — PR #20; código, configuração e provisionamento Railway completos; bloqueada exclusivamente pela comprovação de migrations, ver acima)*
 8. Produto/Design revisa e autoriza o merge.
 
 ## Critérios de sucesso da Sprint
