@@ -1,0 +1,365 @@
+// Modelo físico inicial do FitOS (FIT-007).
+// Fonte conceitual: docs/06-engenharia/arquitetura/MODELO-DE-DADOS-CONCEITUAL.md
+// Regras de tenancy: docs/06-engenharia/arquitetura/MODELO-MULTITENANT.md
+//
+// Cada tabela de domínio do personal carrega tenantId explicitamente (nunca
+// apenas via join) para que toda consulta possa ser filtrada diretamente por
+// tenant, sem confiar em valor vindo do cliente.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StudentStatus {
+  ATIVO
+  PAUSADO
+  ARQUIVADO
+}
+
+enum ExerciseOrigin {
+  API_NINJAS
+  PERSONAL
+}
+
+enum WorkoutSessionStatus {
+  PLANEJADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  ABANDONADA
+}
+
+enum StudentChargeStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+enum SaasSubscriptionStatus {
+  ATIVA
+  INADIMPLENTE
+  CANCELADA
+}
+
+/// Identidade autenticável. Nesta História não há autenticação produtiva —
+/// User existe apenas como base física para Tenant.owner e Student.user.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  ownedTenant       Tenant?
+  studentProfile    Student?
+  authoredAssessments Assessment[] @relation("AssessmentAuthor")
+  auditEvents       AuditEvent[]
+
+  @@map("users")
+}
+
+/// Unidade de isolamento multi-tenant: 1 personal trainer = 1 tenant.
+/// `ownerId` é único, então cada User é dono de no máximo 1 Tenant.
+model Tenant {
+  id        String   @id @default(cuid())
+  ownerId   String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  students         Student[]
+  exercises        Exercise[]
+  trainingPlans    TrainingPlan[]
+  workouts         Workout[]
+  workoutExercises WorkoutExercise[]
+  planAssignments  PlanAssignment[]
+  workoutSessions  WorkoutSession[]
+  assessments      Assessment[]
+  studentCharges   StudentCharge[]
+  saasSubscription SaasSubscription?
+  auditEvents      AuditEvent[]
+
+  @@map("tenants")
+}
+
+/// Aluno vinculado a exatamente 1 tenant. `userId` é único, então cada User
+/// (aluno) tem no máximo 1 perfil de Student — multi-personal por aluno
+/// exigiria nova decisão e migração planejada (fora do MVP).
+///
+/// `@@unique([id, tenantId])` existe para ser referenciado por chave
+/// composta a partir de PlanAssignment/WorkoutSession/Assessment/
+/// StudentCharge, impedindo que uma dessas tabelas filhas aponte para um
+/// Student de um tenant diferente do seu próprio `tenantId`.
+model Student {
+  id          String        @id @default(cuid())
+  tenantId    String
+  userId      String        @unique
+  displayName String
+  status      StudentStatus @default(ATIVO)
+  createdAt   DateTime      @default(now())
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planAssignments PlanAssignment[]
+  workoutSessions WorkoutSession[]
+  assessments     Assessment[]
+  charges         StudentCharge[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("students")
+}
+
+/// Catálogo de exercícios. `tenantId` nulo representa exercício global
+/// (importado da API Ninjas e compartilhado); `tenantId` preenchido
+/// representa exercício próprio do personal.
+///
+/// Exercise NÃO participa de FK composta com WorkoutExercise porque
+/// `tenantId` pode ser nulo (global) — uma FK composta `[exerciseId, tenantId]`
+/// exigiria igualdade exata e rejeitaria todo exercício global. A regra
+/// "treino do tenant A não usa exercício privado do tenant B" é imposta por
+/// TRIGGER em PostgreSQL (`enforce_workout_exercise_tenant`, ver migration
+/// `20260916_add_tenant_composite_constraints`), não representável no
+/// Prisma Schema. Documentado em MODELO-FISICO-DE-DADOS.md.
+///
+/// Um segundo TRIGGER (`enforce_exercise_tenant_immutability`, mesma
+/// migration) protege alterações em `Exercise.tenantId`: rejeita transferir
+/// um exercício privado para outro tenant, ou torná-lo privado de um tenant,
+/// quando isso invalidaria um `WorkoutExercise` já existente de outro
+/// tenant. Sem esse trigger, `enforce_workout_exercise_tenant` só valida a
+/// criação/alteração do vínculo em `workout_exercises`, não uma alteração
+/// posterior no próprio `Exercise`.
+model Exercise {
+  id         String         @id @default(cuid())
+  tenantId   String?
+  name       String
+  origin     ExerciseOrigin
+  externalId String?
+  createdAt  DateTime       @default(now())
+
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+
+  @@index([tenantId])
+  @@map("exercises")
+}
+
+/// Modelo de treino reutilizável, sempre pertencente a um tenant.
+///
+/// `@@unique([id, tenantId])` referenciado por chave composta a partir de
+/// Workout e PlanAssignment.
+model TrainingPlan {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workouts        Workout[]
+  planAssignments PlanAssignment[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("training_plans")
+}
+
+/// Treino dentro de um plano. `tenantId` é denormalizado do TrainingPlan
+/// para permitir filtro direto por tenant sem depender de join.
+///
+/// A relação com TrainingPlan usa chave composta `[trainingPlanId, tenantId]`
+/// → `TrainingPlan.[id, tenantId]`: o PostgreSQL rejeita fisicamente um
+/// Workout cujo `tenantId` seja diferente do `tenantId` do TrainingPlan
+/// referenciado (impede treino do tenant A vinculado a plano do tenant B).
+///
+/// `@@unique([id, tenantId])` referenciado por chave composta a partir de
+/// WorkoutExercise e WorkoutSession.
+model Workout {
+  id             String   @id @default(cuid())
+  tenantId       String
+  trainingPlanId String
+  name           String
+  position       Int
+  createdAt      DateTime @default(now())
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  trainingPlan     TrainingPlan      @relation(fields: [trainingPlanId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+  workoutSessions  WorkoutSession[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([trainingPlanId, tenantId])
+  @@map("workouts")
+}
+
+/// Item de um treino, referenciando um exercício do catálogo.
+///
+/// A relação com Workout usa chave composta `[workoutId, tenantId]` →
+/// `Workout.[id, tenantId]`: impede item de treino do tenant A apontar para
+/// um Workout do tenant B.
+///
+/// A relação com Exercise permanece por FK simples (`exerciseId` → `id`)
+/// porque Exercise.tenantId pode ser nulo (catálogo global). A regra
+/// "exercício privado só pode ser usado por treino do mesmo tenant" é
+/// imposta por TRIGGER em PostgreSQL — ver comentário no model Exercise e
+/// migration `20260916_add_tenant_composite_constraints`.
+model WorkoutExercise {
+  id         String   @id @default(cuid())
+  tenantId   String
+  workoutId  String
+  exerciseId String
+  position   Int
+  createdAt  DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([workoutId, tenantId])
+  @@map("workout_exercises")
+}
+
+/// Versão de plano atribuída a um aluno. Preserva histórico: alterar o
+/// TrainingPlan original não altera atribuições já existentes.
+///
+/// Ambas as relações (Student e TrainingPlan) usam chave composta com
+/// `tenantId`: impede atribuir a um aluno de outro tenant, e impede
+/// atribuir um plano de outro tenant.
+model PlanAssignment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String
+  trainingPlanId String
+  active         Boolean  @default(true)
+  assignedAt     DateTime @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  trainingPlan TrainingPlan @relation(fields: [trainingPlanId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@index([trainingPlanId, tenantId])
+  @@map("plan_assignments")
+}
+
+/// Execução de um treino por um aluno.
+///
+/// Ambas as relações (Student e Workout) usam chave composta com
+/// `tenantId`: impede sessão com aluno e treino de tenants diferentes.
+model WorkoutSession {
+  id         String               @id @default(cuid())
+  tenantId   String
+  studentId  String
+  workoutId  String
+  status     WorkoutSessionStatus @default(PLANEJADA)
+  occurredAt DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workout Workout @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@index([workoutId, tenantId])
+  @@map("workout_sessions")
+}
+
+/// Avaliação/evolução manual do aluno. Peso em gramas (Int) para evitar
+/// ponto flutuante binário em dado sensível a precisão.
+///
+/// A relação com Student usa chave composta com `tenantId`: impede
+/// avaliação de aluno de outro tenant.
+///
+/// `authorUserId` permanece FK simples para User — NÃO há constraint física
+/// garantindo que o autor pertença ao mesmo tenant do registro. Essa é uma
+/// lacuna conhecida (ver "Correção obrigatória 5" / MODELO-FISICO-DE-DADOS.md):
+/// User ainda não tem um modelo físico de membership/associação a tenant
+/// (personal é dono via Tenant.ownerId, aluno via Student.userId, mas não há
+/// uma tabela genérica "este User pertence a este Tenant" que pudesse ser
+/// referenciada por chave composta). Implementar essa constraint agora
+/// exigiria criar esse modelo de membership — fora do escopo mínimo desta
+/// correção — e depende, em última instância, da futura camada de
+/// autenticação/autorização.
+model Assessment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  studentId    String
+  authorUserId String
+  weightGrams  Int?
+  recordedAt   DateTime @default(now())
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student    Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  authorUser User    @relation("AssessmentAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@map("assessments")
+}
+
+/// Controle manual de cobrança do aluno. `amountCents` em centavos (Int)
+/// para evitar ponto flutuante binário em valor monetário. Não possui
+/// nenhuma FK ou trigger a partir de SaasSubscription — os dois domínios
+/// financeiros permanecem estruturalmente separados.
+///
+/// A relação com Student usa chave composta com `tenantId`: impede cobrança
+/// do tenant A vinculada a aluno do tenant B.
+model StudentCharge {
+  id        String              @id @default(cuid())
+  tenantId  String
+  studentId String
+  status    StudentChargeStatus @default(PENDENTE)
+  amountCents Int
+  dueDate   DateTime
+  createdAt DateTime            @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@map("student_charges")
+}
+
+/// Assinatura SaaS do FitOS contratada pelo personal (tenant). `tenantId`
+/// único: no máximo 1 assinatura por tenant. Estruturalmente separada de
+/// StudentCharge — nenhuma relação entre os dois modelos.
+model SaasSubscription {
+  id        String                  @id @default(cuid())
+  tenantId  String                  @unique
+  status    SaasSubscriptionStatus  @default(ATIVA)
+  provider  String
+  createdAt DateTime                @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@map("saas_subscriptions")
+}
+
+/// Evento de auditoria de alteração crítica. Nunca deve registrar senha,
+/// token, chave ou conteúdo de credencial (docs/01-produto/REGRAS-DE-NEGOCIO.md).
+///
+/// `actorUserId` permanece FK simples para User — mesma lacuna conhecida de
+/// `Assessment.authorUserId` (ver comentário lá e MODELO-FISICO-DE-DADOS.md):
+/// nenhuma constraint física garante que o ator pertença ao tenant do evento.
+model AuditEvent {
+  id           String   @id @default(cuid())
+  tenantId     String
+  actorUserId  String
+  action       String
+  entityType   String
+  entityId     String
+  occurredAt   DateTime @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser User   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@map("audit_events")
+}

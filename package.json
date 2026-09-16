@@ -9,27 +9,41 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "dependencies": {
+    "@prisma/client": "6.19.3",
     "next": "16.3.5",
+    "prisma": "6.19.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
     "@types/node": "22.20.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.5",
-    "typescript": "5.9.3",
-    "vitest": "5.0.1",
-    "@vitejs/plugin-react": "6.1.1",
     "jsdom": "30.0.1",
-    "@testing-library/react": "16.3.3",
-    "@testing-library/jest-dom": "7.0.1"
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

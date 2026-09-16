@@ -10,13 +10,13 @@ Estabelecer uma arquitetura segura, multi-tenant, observável e implantável no 
 
 Como time do FitOS, queremos registrar as decisões, limites, modelos e riscos da arquitetura, para implementar o MVP de modo consistente, seguro e evolutivo.
 
-### FIT-006 (#14) — Fundação executável do FitOS — Implementada, em revisão (SPRINT-03)
+### FIT-006 (#14) — Fundação executável do FitOS — Concluída (PR #17, merged)
 
 Como time do FitOS, queremos materializar a arquitetura aprovada em uma aplicação Next.js/TypeScript executável, com estrutura modular e fundação do Design System, para que as próximas Histórias possam implementar banco, tenancy e funcionalidades sem improvisar estrutura técnica ou visual.
 
-### FIT-007 (#15) — Banco e modelo físico multi-tenant — Não iniciada (SPRINT-03)
+### FIT-007 (#15) — Banco e modelo físico multi-tenant — Implementada, em revisão (SPRINT-03)
 
-Aguarda o merge explicitamente autorizado da FIT-006.
+Como time do FitOS, queremos transformar o modelo conceitual aprovado em um schema PostgreSQL/Prisma inicial, com isolamento multi-tenant e migrations rastreáveis, para garantir uma base de dados consistente antes das funcionalidades do MVP.
 
 ### FIT-008 (#16) — Ambientes FitOS no Railway — Não iniciada (SPRINT-03)
 
@@ -44,8 +44,8 @@ Aguarda o merge explicitamente autorizado da FIT-007.
 ## Critérios de sucesso
 
 - decisões confirmadas distinguem-se de propostas;
-- nenhum fluxo permite acesso entre tenants;
-- cobrança SaaS não se confunde com cobranças dos alunos;
+- nenhum fluxo permite acesso entre tenants — comprovado por teste automatizado na FIT-007;
+- cobrança SaaS não se confunde com cobranças dos alunos — sem relação física entre os modelos;
 - integrações externas possuem limites, segurança e fallback documentados;
 - a fundação executável (FIT-006/007/008) materializa a arquitetura aprovada sem antecipar funcionalidades de negócio;
 - Histórias posteriores podem ser refinadas sem decisões arquiteturais críticas ocultas.
