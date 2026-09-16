@@ -26,7 +26,7 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 ## Histórias
 
 - FIT-020 (#42) — Integração e prova técnica da API Ninjas. **Concluída** (PR #46, mergeado no commit `78ca0f573a67d52a46d6a9a7fca145d3bdc88762`).
-- FIT-021 (#43) — Importação e persistência do catálogo global.
+- FIT-021 (#43) — Importação e persistência do catálogo global. **Concluída** (PR #47, mergeado no commit `677ae09a3dc8ffd4bd913d69f414de8d62da8b10`).
 - FIT-022 (#44) — Gestão de exercícios próprios.
 - FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06.
 
@@ -44,6 +44,13 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - `src/modules/exercises/importExercises.ts`: `buildExternalId` (chave de deduplicação determinística — hash de nome/tipo/músculo/equipamento, deliberadamente sem dificuldade/instruções/informação de segurança, que podem ser corrigidas pelo fornecedor sem trocar o exercício), `importGlobalExercises` (upsert idempotente com o mesmo padrão de concorrência de `ensureTenantForPersonal`, falha parcial preserva o já importado, contagens recebidos/válidos/criados/atualizados/rejeitados/buscas com falha);
 - `scripts/import-exercicios.ts` (`npm run import:exercises`): comando administrativo manual, nunca automático; protegido pela ausência de `API_NINJAS_API_KEY` (encerra sem nenhuma chamada de rede ou escrita, comprovado);
 - nenhuma importação real ocorreu — sem chave nova nem confirmação de licença comercial (ver ADR-004), o gatilho real permanece indisponível por construção;
+- decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`.
+
+## Resultado intermediário — FIT-022
+
+- migration aditiva `20260916050000_add_exercise_status`: `ExerciseStatus` (`ATIVO`/`ARQUIVADO`) e coluna `status` em `Exercise`; índice único parcial `(tenantId, lower(name)) WHERE origin = 'PERSONAL'` para duplicidade dentro do tenant — testada em banco vazio e como atualização do schema atual; nenhum trigger de isolamento alterado;
+- `src/modules/exercises/exercises.ts`: `createOwnExercise`/`getOwnExerciseForTenant`/`updateOwnExercise`/`archiveExercise`/`reactivateExercise` — sempre `tenantId` da sessão, nunca aceitam `tenantId`/`origin` como campo editável; nunca retornam exercício de outro tenant nem exercício global; arquivamento idempotente, nunca exclusão física; auditoria (`EXERCICIO_EDITADO`/`ARQUIVADO`/`REATIVADO`) sem payload integral;
+- rotas `POST /api/exercises`, `PATCH /api/exercises/[id]`, `POST /api/exercises/[id]/arquivar`, `POST /api/exercises/[id]/reativar` — todas via `requirePersonal()` (aluno nunca administra exercícios); nenhuma rota de listagem/detalhe nesta História (escopo exclusivo da FIT-023, que também entrega a UI);
 - decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`.
 
 ## Sequenciamento obrigatório
