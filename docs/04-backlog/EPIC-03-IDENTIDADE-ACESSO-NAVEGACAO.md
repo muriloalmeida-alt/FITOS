@@ -14,11 +14,11 @@ Como time do FitOS, queremos validar tecnicamente o Better Auth e, se aprovado, 
 
 Como time do FitOS, queremos que cada personal autenticado receba exatamente um tenant, criado automaticamente e de forma idempotente, para que a regra "1 personal = 1 tenant" seja garantida também no fluxo de cadastro, não apenas na constraint física.
 
-### FIT-011 (#24) — Autorização, papéis e isolamento por sessão — Em andamento (SPRINT-04)
+### FIT-011 (#24) — Autorização, papéis e isolamento por sessão — Concluída (PR #28, merged)
 
 Como time do FitOS, queremos uma camada central de autorização que derive userId/role/tenantId da sessão autenticada no servidor, para que nenhuma rota ou operação aceite tenantId vindo do cliente como fonte de autorização.
 
-### FIT-012 (#25) — Shell autenticado e navegação responsiva — Não iniciada (depende do merge da FIT-011)
+### FIT-012 (#25) — Shell autenticado e navegação responsiva — Em andamento (SPRINT-04, encerra a Sprint)
 
 Como time do FitOS, queremos a estrutura visual autenticada (shell de personal e de aluno), aplicando o Design System M3 já aprovado, para que a navegação exista de forma real e responsiva sem simular funcionalidades ainda não implementadas.
 
