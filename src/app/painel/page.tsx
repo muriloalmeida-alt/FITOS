@@ -1,64 +1,39 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
-import { provisionTenantForCurrentSession } from "@/modules/tenancy/provisionTenant";
-import { LogoutButton } from "./LogoutButton";
-import styles from "./page.module.css";
+import { getAuthContext } from "@/modules/tenancy/authContext";
+import { prisma } from "@/shared/db/prisma";
+import { PersonalHome } from "./PersonalHome";
+import { AlunoHome } from "./AlunoHome";
+import { AlunoSemVinculo } from "./AlunoSemVinculo";
 
 export const metadata: Metadata = {
   title: `Painel — ${appName}`,
 };
 
-/// Primeira página autenticada provisória (FIT-009/FIT-010): prova que a
-/// sessão é acessível no servidor, que a rota é protegida, e que o personal
-/// possui exatamente um tenant (provisionado no cadastro; reparado aqui, de
-/// forma idempotente, caso o provisionamento automático tenha falhado). Não
-/// simula nenhuma funcionalidade de negócio ainda não implementada — o
-/// shell completo de personal/aluno, com navegação real, é escopo da
-/// FIT-012.
+/// Única rota autenticada (FIT-012): o shell exibido (personal ou aluno) é
+/// decidido inteiramente no servidor, a partir do papel derivado da sessão
+/// (`getAuthContext`, FIT-011) — não existem rotas separadas por papel
+/// (`/painel/personal`, `/painel/aluno`), então não há URL para adulterar
+/// e "trocar de shell": o mesmo `/painel` sempre resolve para o shell do
+/// papel real do usuário autenticado.
 export default async function PainelPage() {
-  const session = await getServerSession();
+  const [session, ctx] = await Promise.all([getServerSession(), getAuthContext()]);
 
-  if (!session) {
+  if (!session || !ctx.authenticated) {
     redirect("/entrar");
   }
 
-  const tenant = await provisionTenantForCurrentSession();
+  if (ctx.role === "PERSONAL") {
+    const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId } });
+    return <PersonalHome name={session.user.name} email={session.user.email} tenantName={tenant?.name ?? null} />;
+  }
 
-  return (
-    <main className={styles.main}>
-      <div className={styles.content}>
-        <header className={styles.header}>
-          <span className={styles.eyebrow}>Área autenticada — FIT-009/FIT-010</span>
-          <h1 className={styles.title}>Olá, {session.user.name}</h1>
-          <p className={styles.subtitle}>
-            Esta página prova que a sessão do Better Auth é válida e acessível no servidor, e que
-            o tenant do personal é provisionado automaticamente. A navegação completa (shell de
-            personal/aluno) é entregue na FIT-012.
-          </p>
-        </header>
+  if (!ctx.studentId) {
+    return <AlunoSemVinculo />;
+  }
 
-        <Card title="Sua sessão">
-          <p>
-            E-mail: <strong>{session.user.email}</strong>
-          </p>
-          <p>
-            Papel: <strong>{session.user.role}</strong>
-          </p>
-        </Card>
-
-        {tenant ? (
-          <Card title="Seu espaço">
-            <p>
-              Nome: <strong>{tenant.name}</strong>
-            </p>
-          </Card>
-        ) : null}
-
-        <LogoutButton />
-      </div>
-    </main>
-  );
+  const student = await prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId } });
+  return <AlunoHome displayName={student.displayName} email={session.user.email} />;
 }

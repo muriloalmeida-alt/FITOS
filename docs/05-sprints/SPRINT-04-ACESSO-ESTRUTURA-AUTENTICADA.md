@@ -1,6 +1,6 @@
 # SPRINT-04 — Acesso e Estrutura Autenticada
 
-Status: em andamento — FIT-009 e FIT-010 concluídas (mergeadas); FIT-011 implementada, em revisão; FIT-012 não iniciada
+Status: em andamento — FIT-009, FIT-010 e FIT-011 concluídas (mergeadas); FIT-012 implementada, em revisão (encerra a Sprint ao ser mergeada)
 
 ## Objetivo
 
@@ -22,8 +22,8 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 
 - FIT-009 (#22) — Prova técnica e implementação da autenticação. **Concluída** (PR #26, mergeado no commit `2ded79fcd920734c2736ec7b6b61442b7c36c63c`).
 - FIT-010 (#23) — Provisionamento do tenant do personal. **Concluída** (PR #27, mergeado no commit `8a16d57e3aea093fc0f52ac72c405fb4a0097fbc`).
-- FIT-011 (#24) — Autorização, papéis e isolamento por sessão. **Implementada, em revisão** (PR próprio, sem merge).
-- FIT-012 (#25) — Shell autenticado e navegação responsiva. Não iniciada — aguarda merge da FIT-011.
+- FIT-011 (#24) — Autorização, papéis e isolamento por sessão. **Concluída** (PR #28, mergeado no commit `370ddc63d127323ad597a5a70f6c937d213608d9`).
+- FIT-012 (#25) — Shell autenticado e navegação responsiva. **Implementada, em revisão** (PR próprio, sem merge). Encerra a SPRINT-04 ao ser mergeada.
 
 ## Resultado intermediário — FIT-009
 
@@ -56,6 +56,18 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 - testes negativos comprovando isolamento entre tenants, rejeição de papel trocado, rejeição de payload/query string adulterados (`tenantId`/`studentId` de outro usuário sempre ignorados) e sessão inválida;
 - decisão documentada em `docs/06-engenharia/arquitetura/AUTORIZACAO-E-PAPEIS.md`.
 
+## Resultado intermediário — FIT-012
+
+- Rota única (`/painel`) decide no servidor, a partir da sessão e do `AuthContext` (FIT-011), qual shell renderizar — não existem rotas separadas por papel, então não há URL para adulterar e trocar de shell;
+- `AppShell` (`src/shared/ui/`): componente de navegação responsiva compartilhado (barra inferior em compact, rail lateral em ≥ 840px), sem dependência de `identity`/`tenancy`;
+- nenhuma funcionalidade futura simulada — destinos não implementados (Alunos, Treinos, Financeiro, Configurações; Treino, Progresso, Perfil de aluno) aparecem como "Em breve", desabilitados, nunca como link ou rota fictícia;
+- agrupamento "Mais" para o 5º destino do personal na navegação compacta, conforme `UX-ARCHITECTURE.md`;
+- caso "aluno sem vínculo" (FIT-011) resolvido com uma tela mínima de "sem permissão", sem shell — não um erro;
+- logout funcional a partir dos três estados (`PersonalHome`, `AlunoHome`, `AlunoSemVinculo`);
+- temas claro/escuro já funcionavam desde a fundação do projeto (tokens M3) — nenhum código novo necessário;
+- acessibilidade básica: `aria-current`, `aria-disabled`, `aria-expanded`, área de toque mínima de 48dp, foco visível herdado do estilo global;
+- nenhuma migration nova necessária; decisão documentada em `docs/06-engenharia/arquitetura/SHELL-AUTENTICADO.md`.
+
 ## Sequenciamento obrigatório
 
 As Histórias não são paralelas:
@@ -66,10 +78,10 @@ As Histórias não são paralelas:
 4. FIT-010 é implementada e submetida a PR. *(concluído — PR #27 mergeado)*
 5. Produto/Design/Gate Técnico revisa e autoriza o merge. *(concluído)*
 6. Somente após o merge, FIT-011 pode iniciar. *(concluído — autorizado após o merge do PR #27)*
-7. FIT-011 é implementada e submetida a PR. *(feito nesta rodada)*
-8. Produto/Design/Gate Técnico revisa e autoriza o merge.
-9. Somente após o merge, FIT-012 pode iniciar.
-10. FIT-012 é implementada e submetida a PR.
+7. FIT-011 é implementada e submetida a PR. *(concluído — PR #28 mergeado)*
+8. Produto/Design/Gate Técnico revisa e autoriza o merge. *(concluído)*
+9. Somente após o merge, FIT-012 pode iniciar. *(concluído — autorizado após o merge do PR #28)*
+10. FIT-012 é implementada e submetida a PR. *(feito nesta rodada)*
 11. Produto/Design/Gate Técnico revisa e autoriza o merge.
 12. Fechamento documental da SPRINT-04 no próprio PR da FIT-012 — sem PR documental separado.
 
@@ -106,4 +118,16 @@ A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado
 
 ## Fechamento
 
-Ainda não preenchido. Reservado para o PR da FIT-012, conforme a regra desta Sprint de não criar PRs exclusivamente documentais.
+Preenchido no PR da FIT-012 (conforme a regra desta Sprint de não criar PRs exclusivamente documentais), refletindo o estado no momento da submissão — a confirmação final do merge desta última História é registrada por atualização direta deste arquivo e da Issue #25 após a autorização explícita do Produto/Design/Gate Técnico.
+
+- **Histórias e PRs**: FIT-009 (#22, PR #26, `2ded79fcd920734c2736ec7b6b61442b7c36c63c`); FIT-010 (#23, PR #27, `8a16d57e3aea093fc0f52ac72c405fb4a0097fbc`); FIT-011 (#24, PR #28, `370ddc63d127323ad597a5a70f6c937d213608d9`); FIT-012 (#25, PR próprio desta rodada) — todas com merge explicitamente autorizado por SHA exato, nenhuma exceção.
+- **ADR-002 (Better Auth)**: decisão final `Aceito`, com prova técnica real (FIT-009) — `docs/06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`.
+- **EPIC-03 (#21)**: as 4 Historias planejadas (FIT-009 a FIT-012) foram entregues; o Épico permanece aberto até confirmação final do Produto de que não há mais escopo pendente para "Identidade, Acesso e Navegação" no MVP (a lista de "Fora do escopo" do Épico continua válida e não foi antecipada).
+- **Produção/infraestrutura**: nenhuma ação em Railway/homologação foi realizada nesta Sprint (mesma limitação de acesso já registrada desde a FIT-008); nenhuma migration retroativamente alterada.
+- **Governança**: nenhum commit ou push direto à `main` em nenhuma das 4 Histórias — todo código chegou a `main` exclusivamente por merge de PR explicitamente autorizado pelo SHA exato do head no momento do merge. Nenhuma credencial, token ou segredo commitado em nenhuma rodada.
+- **Risco herdado, não resolvido nesta Sprint**: migrations da FIT-007/008 sem comprovação direta de aplicação no Railway de homologação (registrado desde a FIT-008, carregado sem alteração).
+- **Risco corrigido nesta Sprint**: o registro de "nenhuma mitigação de rate limiting" na FIT-009 estava incorreto — corrigido na FIT-012 ao descobrir que o Better Auth já limita `/sign-in`/`/sign-up` por padrão (3 requisições/10s por IP, em memória) — ver `AUTENTICACAO-E-SESSAO.md` e `docs/06-engenharia/evidencias/FIT-012/README.md`.
+
+### Proposta de próxima Sprint (não iniciada)
+
+Sem autorização para começar: a EPIC-03 entrega identidade/acesso/navegação minimamente reais; o próximo Épico natural do MVP (ver `docs/04-backlog/BACKLOG-MVP.md`/`ROADMAP.md`) é a gestão real de Alunos (cadastro, perfil, vínculo com personal) — primeira funcionalidade de negócio sobre a estrutura entregue nesta Sprint. Fica como proposta para decisão do Produto, não como início de trabalho.
