@@ -73,9 +73,16 @@ export interface ActivateStudentAccountResult {
 ///    provisionamento automático de tenant da FIT-010 — o hook assume
 ///    `PERSONAL`, então o tenant criado por engano é desfeito na mesma
 ///    transação que corrige o papel para `ALUNO` e vincula o `Student`).
-/// 4. Se qualquer etapa depois da reivindicação falhar (ex.: e-mail já em
-///    uso por uma conta criada nesse intervalo), o convite volta para
-///    PENDENTE (best-effort) para que o aluno possa tentar de novo.
+/// 4. Se qualquer etapa depois da reivindicação falhar — incluindo depois
+///    que `signUpEmail` já criou o `User` (ex.: a transação de vínculo
+///    falha por erro de conexão, ou `linkResult.count !== 1`) —, essa conta
+///    já criada é desfeita explicitamente (`user.delete`, com cascade
+///    cuidando de `Session`/`Account`; qualquer `Tenant` que o hook da
+///    FIT-010 tenha provisionado é removido antes, já que a relação usa
+///    `onDelete: Restrict`) **antes** de devolver o convite a PENDENTE.
+///    Sem essa limpeza, o e-mail do aluno ficaria "ocupado" por uma conta
+///    sem `Student` vinculado, e nenhuma tentativa nova de ativação
+///    conseguiria recriar a conta (`EMAIL_EM_USO` permanente, sem saída).
 /// `authInstance` é tipado estruturalmente (apenas o formato de
 /// `api.signUpEmail` que esta função de fato usa) em vez de `typeof auth` —
 /// isso permite que os testes construam uma instância de Better Auth com
@@ -108,6 +115,7 @@ export async function activateStudentAccount(
     throw new ActivationError("TOKEN_INVALIDO", "Este link não é válido ou já expirou.");
   }
 
+  let createdUserId: string | undefined;
   try {
     const student = await client.student.findUniqueOrThrow({ where: { id: invitation.studentId } });
     if (student.userId) {
@@ -123,6 +131,7 @@ export async function activateStudentAccount(
       body: { email: student.email, password: input.password, name: student.displayName },
       returnHeaders: true,
     });
+    createdUserId = signUp.response.user.id;
 
     const [, , linkResult] = await client.$transaction([
       client.tenant.deleteMany({ where: { ownerId: signUp.response.user.id } }),
@@ -141,6 +150,16 @@ export async function activateStudentAccount(
 
     return { studentId: student.id, tenantId: student.tenantId, headers: signUp.headers };
   } catch (error) {
+    if (createdUserId) {
+      // `signUpEmail` já criou o User (e possivelmente o Tenant automático
+      // da FIT-010) antes de uma falha nas etapas seguintes — desfaz por
+      // completo, para que o e-mail fique livre e uma nova tentativa de
+      // ativação seja possível. Tenant primeiro: a relação é
+      // `onDelete: Restrict`, então o User não pode ser removido enquanto
+      // ainda possuir um tenant. Session/Account são `onDelete: Cascade`.
+      await client.tenant.deleteMany({ where: { ownerId: createdUserId } }).catch(() => {});
+      await client.user.delete({ where: { id: createdUserId } }).catch(() => {});
+    }
     await client.invitation
       .update({ where: { id: invitation.id }, data: { status: "PENDENTE", acceptedAt: null } })
       .catch(() => {});

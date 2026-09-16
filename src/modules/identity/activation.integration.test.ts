@@ -195,6 +195,54 @@ describe("activateStudentAccount (FIT-015)", () => {
     expect(invitation.status).toBe("PENDENTE");
   });
 
+  it("falha na etapa de vínculo após a conta já criada: User é desfeito, convite volta a PENDENTE, e uma nova tentativa válida funciona", async () => {
+    const { tenant, student, owner } = await createTenantWithStudent("ativar-falha-pos-signup");
+    const { rawToken } = await generateInvitation({ tenantId: tenant.id, studentId: student.id, actorUserId: owner.id }, prisma);
+
+    // Client que deixa `signUpEmail` criar a conta normalmente (ele usa a
+    // instância `testAuth`, ligada ao `prisma` real), mas força a transação
+    // de vínculo (tenant/role/Student) a falhar depois — simulando qualquer
+    // erro depois que a conta já existe (ex.: falha de conexão).
+    const failingClient = new Proxy(prisma, {
+      get(target, prop, receiver) {
+        if (prop === "$transaction") {
+          return async () => {
+            throw new Error("falha simulada na etapa de vínculo");
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    await expect(
+      activateStudentAccount(
+        { token: rawToken, password },
+        { authInstance: testAuth, client: failingClient as unknown as PrismaClient }
+      )
+    ).rejects.toThrow("falha simulada na etapa de vínculo");
+
+    // O User criado por `signUpEmail` não pode sobreviver à falha: senão o
+    // e-mail fica "ocupado" por uma conta sem Student vinculado, para sempre.
+    const orphanUser = await prisma.user.findUnique({ where: { email: student.email } });
+    expect(orphanUser).toBeNull();
+
+    const invitationAfterFailure = await prisma.invitation.findFirstOrThrow({ where: { studentId: student.id } });
+    expect(invitationAfterFailure.status).toBe("PENDENTE");
+    expect(invitationAfterFailure.acceptedAt).toBeNull();
+
+    const studentAfterFailure = await prisma.student.findUniqueOrThrow({ where: { id: student.id } });
+    expect(studentAfterFailure.userId).toBeNull();
+
+    // Uma nova tentativa (mesmo token, banco/auth reais de novo) precisa
+    // funcionar — não pode ficar travada em EMAIL_EM_USO por uma conta
+    // órfã que devia ter sido removida.
+    const retry = await activateStudentAccount({ token: rawToken, password }, { authInstance: testAuth, client: prisma });
+    expect(retry.studentId).toBe(student.id);
+
+    const linkedUser = await prisma.user.findUniqueOrThrow({ where: { email: student.email } });
+    expect(linkedUser.role).toBe("ALUNO");
+  });
+
   it("token não aparece em nenhum campo do banco — apenas o hash", async () => {
     const { tenant, student, owner } = await createTenantWithStudent("ativar-hash");
     const { rawToken, invitation } = await generateInvitation(

@@ -1,6 +1,6 @@
 # SPRINT-05 — Gestão de Alunos
 
-Status: concluída — execução autônoma integral autorizada pelo Produto.
+Status: código mergeado (4 Histórias) — aprovação formal de Produto pendente (ver "Fechamento").
 
 ## Objetivo
 
@@ -106,12 +106,14 @@ A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado
 
 ## Fechamento
 
+**Status da aprovação de Produto: pendente.** As quatro Histórias estão mergeadas e o EPIC-04 está tecnicamente completo, mas o encerramento formal da Sprint aguarda a aprovação do Produto — que, nesta rodada, identificou a correção descrita em "Correção pós-revisão de Produto" abaixo antes de aprovar. Esta seção será atualizada quando a aprovação ocorrer.
+
 As quatro Histórias do EPIC-04 foram entregues em sequência, cada uma com PR próprio, gate autônomo autoverificado e merge por SHA exato — sem nenhum push direto em `main` e sem nenhuma seed automática executada:
 
 - FIT-013 (#31) — PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`.
 - FIT-014 (#32) — PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`.
 - FIT-015 (#33) — PR #37, mergeado no commit `08b8eed5b8331c87b770b1918411c49453923959`.
-- FIT-016 (#34) — PR #38, gate autônomo aprovado; SHA de merge registrado na Issue #34 após o merge.
+- FIT-016 (#34) — PR #38, mergeado no commit `bdf1ff7fadfdb8bc3aad7006a271b631bd21cc50`.
 
 ### O que foi entregue
 
@@ -121,9 +123,17 @@ Um personal cadastra alunos (nome + e-mail), busca/lista/filtra/pagina, edita no
 
 Exercícios, treinos, avaliações físicas, cobrança/pagamento, agenda, mensagens, envio automático de convite por e-mail/WhatsApp, múltiplos personais por aluno ou transferência de aluno entre tenants, qualquer papel adicional além de PERSONAL/ALUNO. O backlog especulativo correspondente (`BACKLOG-MVP.md`, "Épico 2 — Alunos") permanece registrado, agora sob FIT-017/018/019, para retomada futura.
 
+### Correção pós-revisão de Produto (antes da aprovação do encerramento)
+
+Na revisão de aprovação desta Sprint, o Produto identificou uma falha real de recuperação em `activateStudentAccount` (`src/modules/identity/activation.ts`, FIT-015): `signUpEmail` cria o `User` (e, por causa do hook de provisionamento automático de tenant da FIT-010, também um `Tenant`) **antes** da transação que corrige o papel para `ALUNO` e vincula o `Student`. Se essa transação falhasse por qualquer motivo depois que a conta já existia, o código só revertia o convite para `PENDENTE` — sem desfazer a conta já criada. Resultado possível: um `User` com o e-mail do aluno, sem `Student` vinculado, e nenhuma nova tentativa de ativação capaz de recriar a conta (`EMAIL_EM_USO` permanente, sem saída). O teste de integração existente usava uma instância de Better Auth sem o hook de provisionamento (para não violar FK entre bancos diferentes), então cobria apenas o caminho de sucesso — nunca essa recuperação de falha.
+
+**Corrigido** em PR próprio (fora das quatro Histórias — correção sobre código já mergeado da FIT-015, antes da aprovação final do encerramento da Sprint): a conta já criada é explicitamente desfeita (tenant automático removido primeiro, por causa da FK `onDelete: Restrict`; depois o `User`, com `Session`/`Account` em cascata) sempre que qualquer etapa posterior falhar, antes de reverter o convite. Novo teste de integração comprova a recuperação completa: falha simulada na transação de vínculo → nenhum `User` órfão sobra → convite volta a `PENDENTE` → uma nova tentativa com o mesmo token ativa normalmente. Detalhe técnico completo em `docs/06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`.
+
 ### Migrations e homologação
 
-Duas migrations aditivas nesta Sprint (`20260916020000_add_student_cadastro_fields`, FIT-013; `20260916030000_add_invitations`, FIT-015), ambas aplicadas com sucesso em `fitos_dev` e `fitos_test`, nenhuma migration anterior alterada, nenhuma constraint multi-tenant removida, nenhum reset de homologação, nenhuma seed automática executada. FIT-014 e FIT-016 não precisaram de migration.
+Duas migrations aditivas nesta Sprint (`20260916020000_add_student_cadastro_fields`, FIT-013; `20260916030000_add_invitations`, FIT-015); nenhuma migration anterior alterada; nenhuma constraint multi-tenant removida; nenhuma seed automática executada. FIT-014 e FIT-016 não precisaram de migration.
+
+**Limite explícito, mantido conforme apontado pelo Produto na revisão**: as duas migrations foram comprovadas aplicando-as de fato (`prisma migrate deploy`) em `fitos_dev` e `fitos_test` — bancos locais ao ambiente de execução —, **não** no ambiente de homologação do Railway. Nenhum deploy, migration ou verificação de schema foi executado contra Railway nesta Sprint. `/api/ready` retornando 200 (quando mencionado em qualquer evidência) atesta apenas que a aplicação está no ar e conectada a **algum** banco — não comprova que o schema de homologação está no estado esperado pelas migrations desta Sprint. Antes de qualquer promoção real para homologação/produção, as migrations precisam ser aplicadas e validadas ali explicitamente, fora do escopo desta Sprint.
 
 ### Evidências
 
