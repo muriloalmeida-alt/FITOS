@@ -28,7 +28,7 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - FIT-020 (#42) — Integração e prova técnica da API Ninjas. **Concluída** (PR #46, mergeado no commit `78ca0f573a67d52a46d6a9a7fca145d3bdc88762`).
 - FIT-021 (#43) — Importação e persistência do catálogo global. **Concluída** (PR #47, mergeado no commit `677ae09a3dc8ffd4bd913d69f414de8d62da8b10`).
 - FIT-022 (#44) — Gestão de exercícios próprios. **Concluída** (PR #48, mergeado no commit `ef309e95929345ba4d0437988d721204c4b9ba05`).
-- FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06. **Concluída** (PR #<PR_FIT023>, mergeado no commit `<SHA_FIT023>`).
+- FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06. **Concluída** (PR #49, mergeado no commit `8d17fe47a76793355affb21298e9a2ed441ae8ec`).
 
 ## Resultado intermediário — FIT-020
 
