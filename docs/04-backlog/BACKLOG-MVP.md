@@ -51,7 +51,11 @@ Critérios:
 
 ## Épico 3 — Exercícios
 
-### FIT-020 — Integrar pesquisa da API Ninjas (`P0`)
+**Implementado pela EPIC-05 — Exercícios e Catálogo (#41), SPRINT-06.** As Histórias formais FIT-020 (integração e prova técnica da API Ninjas), FIT-021 (importação e persistência do catálogo global) e FIT-022 (gestão de exercícios próprios) cobrem o mesmo tema geral deste Épico especulativo — mais precisamente: FIT-020 isola a integração externa e sua prova técnica (a chamada nunca no frontend, chave nunca exposta, filtros e limites tratados); FIT-021 cobre importação/normalização/deduplicação; FIT-022 cobre o cadastro próprio. Uma quarta História real, FIT-023 (catálogo unificado, busca e detalhes), não tinha equivalente especulativo aqui — cobre a listagem/busca/filtro/paginação que une catálogo global e próprio, algo que este backlog original não havia detalhado como item separado. Os identificadores FIT-020, FIT-021 e FIT-022 abaixo permanecem apenas como registro histórico do backlog original — não foram promovidos a Issues nem reutilizados.
+
+> Nota de renumeração: os itens abaixo ocupavam FIT-020, FIT-021 e FIT-022 neste backlog especulativo. Esses identificadores foram formalmente ocupados pela EPIC-05/SPRINT-06 (Issues reais #42/#43/#44, sobre a implementação de verdade de integração, importação e exercícios próprios — o mesmo assunto deste Épico especulativo, agora executado). Como os itens abaixo nunca foram promovidos a Issue, foram renumerados para FIT-024, FIT-025 e FIT-026 para eliminar a colisão, preservando a ordem e o conteúdo originais.
+
+### FIT-024 — Integrar pesquisa da API Ninjas (`P0`)
 
 Critérios:
 - Chamada ocorre no backend.
@@ -59,14 +63,14 @@ Critérios:
 - Filtros suportados são encaminhados corretamente.
 - Falhas e limites recebem tratamento amigável.
 
-### FIT-021 — Importar e normalizar exercício (`P0`)
+### FIT-025 — Importar e normalizar exercício (`P0`)
 
 Critérios:
 - Origem e conteúdo original são preservados.
 - Seleção fica disponível no catálogo local.
 - Importações repetidas não criam duplicidades óbvias.
 
-### FIT-022 — Cadastrar exercício próprio (`P0`)
+### FIT-026 — Cadastrar exercício próprio (`P0`)
 
 Critérios:
 - Personal informa nome, tipo, músculo, equipamento e instruções.
@@ -158,7 +162,7 @@ Critérios:
 ## Ordem sugerida de entrega
 
 1. FIT-001, FIT-017 e FIT-018 (histórico especulativo — ver nota da Épico 2; execução real foi FIT-013/014/015/016, EPIC-04/SPRINT-05).
-2. FIT-020, FIT-021 e FIT-022.
+2. FIT-024, FIT-025 e FIT-026 (histórico especulativo — ver nota da Épico 3; execução real foi FIT-020/021/022/023, EPIC-05/SPRINT-06).
 3. FIT-030, FIT-032 e FIT-033.
 4. FIT-002, FIT-040 e FIT-041.
 5. FIT-050, FIT-051 e FIT-053.
