@@ -35,6 +35,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `04-backlog/EPIC-02-FUNDACAO-TECNICA.md`
 - `04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`
 - `04-backlog/EPIC-04-CADASTRO-RELACIONAMENTO-ALUNOS.md`
+- `04-backlog/EPIC-05-EXERCICIOS-E-CATALOGO.md`
 
 ## 05 — Sprints
 
@@ -44,6 +45,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md`
 - `05-sprints/SPRINT-04-ACESSO-ESTRUTURA-AUTENTICADA.md`
 - `05-sprints/SPRINT-05-GESTAO-DE-ALUNOS.md`
+- `05-sprints/SPRINT-06-CATALOGO-DE-EXERCICIOS.md`
 
 ## 06 — Engenharia
 
@@ -63,6 +65,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
+- `06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`
 - `06-engenharia/arquitetura/SEGURANCA-E-LGPD.md`
 - `06-engenharia/arquitetura/AMBIENTES-E-DEPLOY.md`
 - `06-engenharia/arquitetura/OBSERVABILIDADE.md`
@@ -72,6 +75,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/adr/ADR-001-RAILWAY-COMO-PLATAFORMA.md`
 - `06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`
 - `06-engenharia/arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md`
+- `06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`
 
 ## Aplicação (FIT-006/FIT-007/FIT-009)
 

@@ -23,7 +23,7 @@ Objetivo: permitir que o personal acesse uma conta isolada e administre sua cart
 
 Objetivo: formar a biblioteca de exercícios do FitOS.
 
-- FIT-020, FIT-021 e FIT-022.
+- Implementado pela EPIC-05 — Exercícios e Catálogo (#41, SPRINT-06) — FIT-020, FIT-021, FIT-022 e FIT-023 (ver `docs/04-backlog/EPIC-05-EXERCICIOS-E-CATALOGO.md`). Identificadores especulativos deste backlog (FIT-024, FIT-025, FIT-026) renumerados a partir do FIT-020/021/022 original — ver nota em `docs/04-backlog/BACKLOG-MVP.md`.
 - API Ninjas consultada exclusivamente pelo backend.
 
 ## Fase 3 — Treinos e planos
