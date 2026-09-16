@@ -1,0 +1,30 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  max-width: 480px;
+}
+
+.textareaField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.textareaLabel {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.textarea {
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  min-height: 96px;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+  resize: vertical;
+}

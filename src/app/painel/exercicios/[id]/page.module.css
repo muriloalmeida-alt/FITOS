@@ -1,0 +1,53 @@
+.backLink {
+  color: var(--fitos-color-primary);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.originLine {
+  margin: 0 0 var(--fitos-space-4) 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.originGlobal,
+.originPersonal,
+.statusAtivo,
+.statusArquivado {
+  font-weight: 650;
+}
+
+.originGlobal {
+  color: var(--fitos-color-secondary);
+}
+
+.originPersonal {
+  color: var(--fitos-color-primary);
+}
+
+.statusAtivo {
+  color: var(--fitos-color-primary);
+}
+
+.statusArquivado {
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.readOnlyFields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--fitos-space-1) var(--fitos-space-3);
+  font-size: 14px;
+}
+
+.readOnlyFields dt {
+  color: var(--fitos-color-on-surface-variant);
+  font-weight: 650;
+}
+
+.readOnlyFields dd {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+}
