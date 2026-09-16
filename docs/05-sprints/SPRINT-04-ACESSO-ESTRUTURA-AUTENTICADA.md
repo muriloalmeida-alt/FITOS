@@ -1,6 +1,6 @@
 # SPRINT-04 — Acesso e Estrutura Autenticada
 
-Status: em andamento — FIT-009 implementada, em revisão; FIT-010/011/012 não iniciadas
+Status: em andamento — FIT-009 concluída (mergeada); FIT-010 implementada, em revisão; FIT-011/012 não iniciadas
 
 ## Objetivo
 
@@ -20,8 +20,8 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 
 ## Histórias
 
-- FIT-009 (#22) — Prova técnica e implementação da autenticação. **Implementada, em revisão** (PR próprio, sem merge).
-- FIT-010 (#23) — Provisionamento do tenant do personal. Não iniciada — aguarda merge da FIT-009.
+- FIT-009 (#22) — Prova técnica e implementação da autenticação. **Concluída** (PR #26, mergeado no commit `2ded79fcd920734c2736ec7b6b61442b7c36c63c`).
+- FIT-010 (#23) — Provisionamento do tenant do personal. **Implementada, em revisão** (PR próprio, sem merge).
 - FIT-011 (#24) — Autorização, papéis e isolamento por sessão. Não iniciada — aguarda merge da FIT-010.
 - FIT-012 (#25) — Shell autenticado e navegação responsiva. Não iniciada — aguarda merge da FIT-011.
 
@@ -36,14 +36,24 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 - testes automatizados contra PostgreSQL real cobrindo cadastro, duplicidade, login, proteção de rota e ausência de cadastro público de aluno;
 - nenhuma credencial em log, código, PR ou documentação.
 
+## Resultado intermediário — FIT-010
+
+- `ensureTenantForPersonal` (`src/modules/tenancy/`): função idempotente e segura sob concorrência (constraint física `tenants.ownerId @unique` da FIT-007 resolve corridas) que garante exatamente um tenant por personal;
+- provisionamento automático via `databaseHooks.user.create.after` do Better Auth — o tenant já existe imediatamente após o cadastro, sem chamada adicional;
+- reparo idempotente (`provisionTenantForCurrentSession`) para o caso raro de o hook falhar — usado por `/painel`, que agora exibe o nome do tenant;
+- aluno nunca provisiona tenant (rejeitado explicitamente); usuário não autenticado nunca provisiona (retorna `null` sem tocar o banco);
+- nome do tenant: `"Espaço de {primeiro nome}"`, decisão documentada em `docs/06-engenharia/arquitetura/PROVISIONAMENTO-DE-TENANT.md`;
+- nenhuma migration nova necessária — a constraint física já existia desde a FIT-007;
+- testes cobrindo provisionamento normal, idempotência, concorrência (3 chamadas simultâneas), rejeição para aluno, reparo de personal sem tenant, personal com tenant existente, e o fluxo real de ponta a ponta (cadastro → tenant já provisionado).
+
 ## Sequenciamento obrigatório
 
 As Histórias não são paralelas:
 
-1. FIT-009 é implementada e submetida a PR. *(feito nesta rodada)*
-2. Produto/Design/Gate Técnico revisa e autoriza o merge.
-3. Somente após o merge, FIT-010 pode iniciar.
-4. FIT-010 é implementada e submetida a PR.
+1. FIT-009 é implementada e submetida a PR. *(concluído — PR #26 mergeado)*
+2. Produto/Design/Gate Técnico revisa e autoriza o merge. *(concluído)*
+3. Somente após o merge, FIT-010 pode iniciar. *(concluído — autorizado após o merge do PR #26)*
+4. FIT-010 é implementada e submetida a PR. *(feito nesta rodada)*
 5. Produto/Design/Gate Técnico revisa e autoriza o merge.
 6. Somente após o merge, FIT-011 pode iniciar.
 7. FIT-011 é implementada e submetida a PR.

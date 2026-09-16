@@ -54,6 +54,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/MODELO-FISICO-DE-DADOS.md`
 - `06-engenharia/arquitetura/AUTENTICACAO-E-AUTORIZACAO.md`
 - `06-engenharia/arquitetura/AUTENTICACAO-E-SESSAO.md`
+- `06-engenharia/arquitetura/PROVISIONAMENTO-DE-TENANT.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
 - `06-engenharia/arquitetura/SEGURANCA-E-LGPD.md`

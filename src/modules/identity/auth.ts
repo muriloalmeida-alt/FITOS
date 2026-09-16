@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@/shared/db/prisma";
+import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
 
 /// Único ponto de configuração do provedor de autenticação (Better Auth).
 /// Nenhum outro módulo deve importar `better-auth` diretamente — server
@@ -59,6 +60,33 @@ export const auth = betterAuth({
       // Deixa o Prisma gerar o id (cuid), consistente com o restante do
       // schema físico (Tenant, Student, etc. também usam @default(cuid())).
       generateId: false,
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Provisionamento automático do tenant do personal (FIT-010): este
+        // hook roda depois que o usuário já foi inserido (não faz parte da
+        // mesma transação SQL do Better Auth), então uma falha aqui nunca
+        // impede o cadastro em si — o usuário já existe. Se a criação do
+        // tenant falhar (ex.: banco indisponível no instante exato), o
+        // personal fica temporariamente sem tenant; isso é reparado de
+        // forma idempotente na próxima vez que `provisionTenantForCurrentSession`
+        // for chamado (ver `/painel` e `PROVISIONAMENTO-DE-TENANT.md`) —
+        // por isso o erro é apenas registrado, não relançado.
+        after: async (user) => {
+          if (user.role !== "PERSONAL") {
+            return;
+          }
+          try {
+            await ensureTenantForPersonal({ id: user.id, name: user.name, role: user.role });
+          } catch {
+            console.error("[FIT-010] Falha ao provisionar tenant automaticamente no cadastro", {
+              userId: user.id,
+            });
+          }
+        },
+      },
     },
   },
   // Cookies httpOnly, sameSite=lax e secure em produção são o padrão do

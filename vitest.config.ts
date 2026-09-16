@@ -14,6 +14,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      // O Next.js resolve "server-only" para um módulo vazio via a condição
+      // de export "react-server" ao empacotar Server Components; fora do
+      // bundler do Next.js (aqui, no Vitest), o pacote lança erro em
+      // qualquer import. Aponta para o próprio "empty.js" que o pacote já
+      // publica para esse fim — mesmo no-op que o Next.js usa.
+      "server-only": path.resolve(import.meta.dirname, "./node_modules/server-only/empty.js"),
     },
   },
 }));
