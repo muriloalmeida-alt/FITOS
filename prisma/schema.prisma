@@ -273,17 +273,35 @@ model Invitation {
 /// tenant. Sem esse trigger, `enforce_workout_exercise_tenant` só valida a
 /// criação/alteração do vínculo em `workout_exercises`, não uma alteração
 /// posterior no próprio `Exercise`.
+/// Campos de catálogo abaixo (`type` a `safetyInfo`, FIT-021) espelham o
+/// contrato da Exercises API (ver `src/integrations/api-ninjas/types.ts` e
+/// `docs/06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`) —
+/// todos opcionais, preenchidos para `API_NINJAS` e, quando aplicável,
+/// também usados por exercício `PERSONAL` (FIT-022). `externalId` para
+/// `API_NINJAS` é uma chave de deduplicação determinística calculada pelo
+/// FitOS (hash de nome+tipo+músculo+equipamento+dificuldade normalizados) —
+/// a API não retorna um identificador estável; para `PERSONAL` permanece
+/// `null` (múltiplas linhas com `externalId` nulo não colidem no índice
+/// único, pois o PostgreSQL trata cada `NULL` como distinto).
 model Exercise {
-  id         String         @id @default(cuid())
-  tenantId   String?
-  name       String
-  origin     ExerciseOrigin
-  externalId String?
-  createdAt  DateTime       @default(now())
+  id           String         @id @default(cuid())
+  tenantId     String?
+  name         String
+  origin       ExerciseOrigin
+  externalId   String?
+  type         String?
+  muscle       String?
+  equipments   String?
+  difficulty   String?
+  instructions String?
+  safetyInfo   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutExercises WorkoutExercise[]
 
+  @@unique([origin, externalId])
   @@index([tenantId])
   @@map("exercises")
 }

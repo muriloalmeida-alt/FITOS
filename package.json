@@ -13,7 +13,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "import:exercises": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-exercicios.ts"
   },
   "engines": {
     "node": ">=22.0.0"

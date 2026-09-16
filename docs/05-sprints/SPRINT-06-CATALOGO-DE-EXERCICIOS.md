@@ -25,10 +25,26 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 
 ## Histórias
 
-- FIT-020 (#42) — Integração e prova técnica da API Ninjas.
+- FIT-020 (#42) — Integração e prova técnica da API Ninjas. **Concluída** (PR #46, mergeado no commit `78ca0f573a67d52a46d6a9a7fca145d3bdc88762`).
 - FIT-021 (#43) — Importação e persistência do catálogo global.
 - FIT-022 (#44) — Gestão de exercícios próprios.
 - FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06.
+
+## Resultado intermediário — FIT-020
+
+- `src/integrations/api-ninjas/`: client isolado (`searchExercises`), adapter (`toExerciseDTO`), erros tipados (`ApiNinjasError`);
+- `API_NINJAS_API_KEY` documentada em `.env.example`, server-side, opcional (ausência não impede a aplicação, apenas mantém a busca externa indisponível);
+- ADR-004 classifica separadamente: client implementado (✅), contrato testado com fixture (✅), chamada real comprovada (❌), uso comercial autorizado (❌) — nenhuma chave nova foi fornecida a esta Sprint;
+- 21 testes, inteiramente com fixtures — nenhuma chamada real feita ou afirmada;
+- decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md` e `adr/ADR-004-API-NINJAS-EXERCICIOS.md`.
+
+## Resultado intermediário — FIT-021
+
+- migration aditiva `20260916040000_add_exercise_catalog_fields`: campos de catálogo em `Exercise` (`type`, `muscle`, `equipments`, `difficulty`, `instructions`, `safetyInfo`, `updatedAt`) e índice único `[origin, externalId]` — testada em banco vazio (histórico completo) e como atualização do schema atual (`fitos_dev`/`fitos_test`); nenhum trigger de isolamento alterado;
+- `src/modules/exercises/importExercises.ts`: `buildExternalId` (chave de deduplicação determinística — hash de nome/tipo/músculo/equipamento, deliberadamente sem dificuldade/instruções/informação de segurança, que podem ser corrigidas pelo fornecedor sem trocar o exercício), `importGlobalExercises` (upsert idempotente com o mesmo padrão de concorrência de `ensureTenantForPersonal`, falha parcial preserva o já importado, contagens recebidos/válidos/criados/atualizados/rejeitados/buscas com falha);
+- `scripts/import-exercicios.ts` (`npm run import:exercises`): comando administrativo manual, nunca automático; protegido pela ausência de `API_NINJAS_API_KEY` (encerra sem nenhuma chamada de rede ou escrita, comprovado);
+- nenhuma importação real ocorreu — sem chave nova nem confirmação de licença comercial (ver ADR-004), o gatilho real permanece indisponível por construção;
+- decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`.
 
 ## Sequenciamento obrigatório
 
