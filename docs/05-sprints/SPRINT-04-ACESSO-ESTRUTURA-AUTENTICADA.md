@@ -1,6 +1,6 @@
 # SPRINT-04 — Acesso e Estrutura Autenticada
 
-Status: em andamento — FIT-009 concluída (mergeada); FIT-010 implementada, em revisão; FIT-011/012 não iniciadas
+Status: em andamento — FIT-009 e FIT-010 concluídas (mergeadas); FIT-011 implementada, em revisão; FIT-012 não iniciada
 
 ## Objetivo
 
@@ -21,8 +21,8 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 ## Histórias
 
 - FIT-009 (#22) — Prova técnica e implementação da autenticação. **Concluída** (PR #26, mergeado no commit `2ded79fcd920734c2736ec7b6b61442b7c36c63c`).
-- FIT-010 (#23) — Provisionamento do tenant do personal. **Implementada, em revisão** (PR próprio, sem merge).
-- FIT-011 (#24) — Autorização, papéis e isolamento por sessão. Não iniciada — aguarda merge da FIT-010.
+- FIT-010 (#23) — Provisionamento do tenant do personal. **Concluída** (PR #27, mergeado no commit `8a16d57e3aea093fc0f52ac72c405fb4a0097fbc`).
+- FIT-011 (#24) — Autorização, papéis e isolamento por sessão. **Implementada, em revisão** (PR próprio, sem merge).
 - FIT-012 (#25) — Shell autenticado e navegação responsiva. Não iniciada — aguarda merge da FIT-011.
 
 ## Resultado intermediário — FIT-009
@@ -46,6 +46,16 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal, acess
 - nenhuma migration nova necessária — a constraint física já existia desde a FIT-007;
 - testes cobrindo provisionamento normal, idempotência, concorrência (3 chamadas simultâneas), rejeição para aluno, reparo de personal sem tenant, personal com tenant existente, e o fluxo real de ponta a ponta (cadastro → tenant já provisionado).
 
+## Resultado intermediário — FIT-011
+
+- `AuthContext` (`src/modules/tenancy/authContext.ts`): contexto de autorização único, derivado exclusivamente da sessão do servidor e das tabelas físicas `Tenant`/`Student` — nunca de `tenantId`/`studentId` enviado pelo cliente;
+- `getAuthContext`, `requireSession`, `requirePersonal`, `requireStudent`, `assertTenantAccess`, `authErrorResponse` — API completa de autorização, com 401 para não autenticado e 403 para autenticado sem permissão, usados coerentemente (nunca 404 automático para negar acesso);
+- caso "aluno sem vínculo" (sessão válida, sem `Student` correspondente) tratado como estado real (403), nunca como erro interno;
+- três rotas de prova (`/api/auth/context`, `/api/tenancy/meu-tenant`, `/api/tenancy/meu-perfil`) comprovando a camada de ponta a ponta, inclusive contra um servidor real com cadastro/login reais e cookies de sessão reais — sem nenhuma funcionalidade de negócio adicional;
+- nenhuma migration nova necessária — toda a informação usada (`role`, `Tenant`, `Student`) já existia (FIT-007/FIT-009);
+- testes negativos comprovando isolamento entre tenants, rejeição de papel trocado, rejeição de payload/query string adulterados (`tenantId`/`studentId` de outro usuário sempre ignorados) e sessão inválida;
+- decisão documentada em `docs/06-engenharia/arquitetura/AUTORIZACAO-E-PAPEIS.md`.
+
 ## Sequenciamento obrigatório
 
 As Histórias não são paralelas:
@@ -53,10 +63,10 @@ As Histórias não são paralelas:
 1. FIT-009 é implementada e submetida a PR. *(concluído — PR #26 mergeado)*
 2. Produto/Design/Gate Técnico revisa e autoriza o merge. *(concluído)*
 3. Somente após o merge, FIT-010 pode iniciar. *(concluído — autorizado após o merge do PR #26)*
-4. FIT-010 é implementada e submetida a PR. *(feito nesta rodada)*
-5. Produto/Design/Gate Técnico revisa e autoriza o merge.
-6. Somente após o merge, FIT-011 pode iniciar.
-7. FIT-011 é implementada e submetida a PR.
+4. FIT-010 é implementada e submetida a PR. *(concluído — PR #27 mergeado)*
+5. Produto/Design/Gate Técnico revisa e autoriza o merge. *(concluído)*
+6. Somente após o merge, FIT-011 pode iniciar. *(concluído — autorizado após o merge do PR #27)*
+7. FIT-011 é implementada e submetida a PR. *(feito nesta rodada)*
 8. Produto/Design/Gate Técnico revisa e autoriza o merge.
 9. Somente após o merge, FIT-012 pode iniciar.
 10. FIT-012 é implementada e submetida a PR.
