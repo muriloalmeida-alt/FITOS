@@ -1,6 +1,6 @@
 # SPRINT-06 — Catálogo de Exercícios
 
-Status: em andamento — execução autônoma integral autorizada pelo Produto.
+Status: concluída — execução autônoma integral autorizada pelo Produto, com pendência declarada de importação real (ver "Fechamento").
 
 ## Objetivo
 
@@ -27,8 +27,8 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 
 - FIT-020 (#42) — Integração e prova técnica da API Ninjas. **Concluída** (PR #46, mergeado no commit `78ca0f573a67d52a46d6a9a7fca145d3bdc88762`).
 - FIT-021 (#43) — Importação e persistência do catálogo global. **Concluída** (PR #47, mergeado no commit `677ae09a3dc8ffd4bd913d69f414de8d62da8b10`).
-- FIT-022 (#44) — Gestão de exercícios próprios.
-- FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06.
+- FIT-022 (#44) — Gestão de exercícios próprios. **Concluída** (PR #48, mergeado no commit `ef309e95929345ba4d0437988d721204c4b9ba05`).
+- FIT-023 (#45) — Catálogo unificado, busca e detalhes. Encerra a SPRINT-06. **Concluída** (PR #<PR_FIT023>, mergeado no commit `<SHA_FIT023>`).
 
 ## Resultado intermediário — FIT-020
 
@@ -51,6 +51,14 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - migration aditiva `20260916050000_add_exercise_status`: `ExerciseStatus` (`ATIVO`/`ARQUIVADO`) e coluna `status` em `Exercise`; índice único parcial `(tenantId, lower(name)) WHERE origin = 'PERSONAL'` para duplicidade dentro do tenant — testada em banco vazio e como atualização do schema atual; nenhum trigger de isolamento alterado;
 - `src/modules/exercises/exercises.ts`: `createOwnExercise`/`getOwnExerciseForTenant`/`updateOwnExercise`/`archiveExercise`/`reactivateExercise` — sempre `tenantId` da sessão, nunca aceitam `tenantId`/`origin` como campo editável; nunca retornam exercício de outro tenant nem exercício global; arquivamento idempotente, nunca exclusão física; auditoria (`EXERCICIO_EDITADO`/`ARQUIVADO`/`REATIVADO`) sem payload integral;
 - rotas `POST /api/exercises`, `PATCH /api/exercises/[id]`, `POST /api/exercises/[id]/arquivar`, `POST /api/exercises/[id]/reativar` — todas via `requirePersonal()` (aluno nunca administra exercícios); nenhuma rota de listagem/detalhe nesta História (escopo exclusivo da FIT-023, que também entrega a UI);
+- decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`.
+
+## Resultado intermediário — FIT-023
+
+- `src/modules/exercises/exercises.ts`: `listCatalogExercises`/`getCatalogExerciseForTenant` — catálogo unificado (global ativo + próprio ativo do tenant da sessão), busca por nome, filtros de músculo/tipo/dificuldade, ordenação e paginação estáveis; detalhe permanece acessível para exercício próprio arquivado (único caminho de reativação), nunca para exercício de outro tenant;
+- `src/app/painel/exercicios/` (lista, cadastro, detalhe/edição) — item "Exercícios" real na navegação do personal, entre "Alunos" e "Treinos"; origem ("Global"/"Meu exercício") sempre visível; exercício global sempre somente leitura nesta UI; consulta normal nunca chama a API Ninjas, inclusive quando nenhum exercício global foi importado (estado vazio honesto);
+- Design System M3/Manrope, temas claro/escuro, mobile/desktop — evidenciado em `docs/06-engenharia/evidencias/FIT-023/`;
+- nenhuma migration nesta História;
 - decisão documentada em `docs/06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`.
 
 ## Sequenciamento obrigatório
@@ -94,4 +102,43 @@ A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado
 
 ## Fechamento
 
-Reservado para o PR da FIT-023, conforme a regra desta Sprint de não criar PRs exclusivamente documentais.
+### O que foi entregue
+
+Um personal cadastra, edita, arquiva e reativa exercícios próprios (restritos ao próprio tenant, nome único por tenant, arquivamento idempotente e nunca físico) e consulta um catálogo unificado real — busca por nome, filtros de músculo/tipo/dificuldade, paginação e detalhe — que combina exercícios globais ativos com os próprios ativos do tenant da sessão, com a origem de cada item sempre visível ("Global"/"Meu exercício"). A consulta normal do catálogo é inteiramente contra o PostgreSQL e nunca depende da API Ninjas estar disponível, inclusive quando nenhum exercício global foi importado (estado vazio honesto, não um erro). O client/adapter da API Ninjas (FIT-020) e o pipeline de importação/deduplicação/upsert idempotente (FIT-021) estão implementados, testados por contrato com fixtures e prontos para uso — mas nenhuma chamada real foi feita nesta Sprint.
+
+### O que não foi entregue (pendência declarada, não uma falha de execução)
+
+**Nenhum exercício global foi efetivamente importado em nenhum ambiente.** Conforme a restrição de segurança e de custo desta Sprint, nenhuma chave nova da API Ninjas foi fornecida por canal seguro, e a chave mencionada em conversa anterior a esta Sprint foi tratada como permanentemente exposta — nunca usada, recuperada, transcrita ou registrada em nenhum artefato (`.env.example`, ADR-004, código e testes documentam essa restrição explicitamente). Nenhum plano comercial foi contratado, alterado ou verificado. Consequentemente, o critério de sucesso "catálogo global (quando importado) consultável mesmo com a API externa indisponível" está estruturalmente pronto e coberto por testes de fixture, mas **não** pode ser marcado como comprovado com dado real — fica registrado como pendência explícita, não como item entregue, sem bloquear o restante da Sprint (exercício próprio e catálogo unificado são reais e independentes dessa pendência).
+
+Fora de escopo por decisão de produto (igual às Sprints anteriores): montagem, prescrição ou execução de treinos; tradução por IA do conteúdo importado; upload/preview de imagem/vídeo; favoritos/recentes; qualquer papel adicional além de PERSONAL/ALUNO.
+
+### Migrations e homologação
+
+Três migrations aditivas nesta Sprint: `20260916040000_add_exercise_catalog_fields` (FIT-021), `20260916050000_add_exercise_status` (FIT-022); FIT-020 e FIT-023 não precisaram de migration. Nenhuma migration anterior foi alterada; nenhum trigger de isolamento (`enforce_workout_exercise_tenant`, `enforce_exercise_tenant_immutability`) foi removido ou modificado; nenhuma seed automática foi executada.
+
+**Mesmo limite já registrado na SPRINT-05, mantido nesta**: as duas migrations foram comprovadas aplicando-as de fato (`prisma migrate deploy`) em `fitos_dev`/`fitos_test` — bancos locais ao ambiente de execução — e também contra um banco vazio criado e descartado só para o teste (histórico completo de migrations do zero). **Nenhum deploy, migration ou verificação de schema foi executado contra o ambiente de homologação do Railway nesta Sprint** — acesso ao Railway não esteve disponível a esta sessão. Os comandos que seriam necessários antes de qualquer promoção real: `railway run --service <serviço> npx prisma migrate deploy` (ou equivalente via variável `DATABASE_URL` de homologação), seguido de `railway run --service <serviço> npx prisma migrate status` (nunca só `/api/ready`, que atesta apenas que a aplicação está no ar e conectada a **algum** banco, não que o schema está no estado esperado) e de uma consulta direta a `_prisma_migrations` confirmando as duas migrations desta Sprint aplicadas. Nenhum desses comandos foi executado.
+
+### Evidências
+
+`docs/06-engenharia/evidencias/FIT-023/` — capturado com Playwright contra o build de produção (`npm run start`), fluxo real de UI/rotas para exercício próprio (criação, edição implícita nos formulários, busca, arquivamento, reativação); o único exercício com `origin: API_NINJAS` usado nas capturas foi inserido diretamente via Prisma só para existir algo a fotografar, explicitamente rotulado como não sendo uma importação real (ver README da evidência e ADR-004). Todos os dados sintéticos (tenant, personal, os dois exercícios) foram removidos do banco imediatamente após a captura.
+
+### Riscos residuais
+
+- A FIT-003 (proteção técnica da `main`) continua pendente — `main` permanece `"protected": false`; a disciplina de branch/PR/merge autorizado é a única salvaguarda efetiva (risco já conhecido, não introduzido por esta Sprint).
+- A pendência de licença/chave da API Ninjas (acima) bloqueia apenas a importação real; não há workaround dentro do escopo desta Sprint, e nenhum foi tentado.
+- Railway/homologação não verificado nesta Sprint (acima) — mesmo risco já registrado na SPRINT-05, ainda não endereçado.
+
+### Estado final do EPIC-05
+
+Todas as quatro Histórias (FIT-020 a FIT-023) concluídas e mergeadas — EPIC-05 encerrado nesta Sprint, com a pendência de importação real declarada explicitamente (não marcada como entregue).
+
+### Confirmações
+
+- Nenhuma chave da API Ninjas foi exposta, reutilizada, recuperada, transcrita ou registrada em nenhum artefato desta Sprint — `API_NINJAS_API_KEY` é lida apenas de variável de ambiente server-side, nunca `NEXT_PUBLIC_`, nunca aparece em log, mensagem de erro ou bundle de cliente (comprovado por teste automatizado e por verificação direta do bundle de produção).
+- Nenhuma seed automática foi executada — os únicos dados criados fora de teste automatizado foram sintéticos, usados exclusivamente para evidência visual (incluindo o único exercício global sintético, inserido diretamente e claramente rotulado como tal), e removidos do banco imediatamente após a captura.
+- Nenhum push direto em `main` em nenhuma História — todo código passou por PR e merge explícito por SHA validado.
+- Nenhum ambiente de produção foi tocado — todo trabalho ocorreu em `fitos_dev`/`fitos_test` locais ao ambiente de execução; nenhum acesso ao Railway foi realizado.
+
+### Proposta breve para a SPRINT-07 (não iniciada)
+
+Conforme instrução explícita do Produto, a SPRINT-07 não foi iniciada nesta rodada. Candidatos naturais para a próxima Sprint, a critério do Produto: resolver a pendência de licença/chave da API Ninjas para viabilizar a importação real do catálogo global; ou avançar para a Fase 3 do roadmap (montagem/prescrição de treinos, `TrainingPlan`/`Workout`/`WorkoutExercise`), que agora tem um catálogo de exercícios real para referenciar.

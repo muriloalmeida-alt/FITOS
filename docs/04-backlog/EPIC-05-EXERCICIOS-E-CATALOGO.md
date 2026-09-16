@@ -1,5 +1,7 @@
 # EPIC-05 — Exercícios e Catálogo
 
+Status: concluída — todas as quatro Histórias mergeadas na SPRINT-06, com a pendência de importação real da API Ninjas declarada explicitamente no fechamento (`docs/05-sprints/SPRINT-06-CATALOGO-DE-EXERCICIOS.md`), nunca marcada como entregue.
+
 ## Resultado esperado
 
 Sobre a base de identidade, autorização e gestão de alunos entregue pelas EPIC-03/EPIC-04 (SPRINT-04/SPRINT-05), dar ao personal um catálogo de exercícios utilizável: exercícios globais importados de fonte externa autorizada, exercícios próprios restritos ao próprio tenant, busca, filtros e detalhes. A consulta normal do catálogo funciona a partir do PostgreSQL, inclusive durante indisponibilidade da API externa.

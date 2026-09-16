@@ -261,3 +261,91 @@ export async function reactivateExercise(input: ExerciseLifecycleInput, client: 
   ]);
   return updated;
 }
+
+/// Catálogo unificado (FIT-023): exercícios globais ATIVOS (visíveis a
+/// qualquer personal autenticado) + exercícios próprios ATIVOS do tenant
+/// da sessão. Nunca consulta a API Ninjas — sempre e só o banco local, por
+/// isso funciona durante indisponibilidade externa. Exercício arquivado
+/// nunca aparece aqui (mesma regra de `listStudents` para aluno inativo).
+
+export type CatalogExerciseSortOrder = "nome_asc";
+
+export interface ListCatalogExercisesInput {
+  tenantId: string;
+  search?: string;
+  muscle?: string;
+  type?: string;
+  difficulty?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListCatalogExercisesResult {
+  items: Exercise[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+const DEFAULT_CATALOG_PAGE_SIZE = 20;
+const MAX_CATALOG_PAGE_SIZE = 100;
+
+/// Condição "pertence ao catálogo visível deste tenant": global ativo, ou
+/// próprio ativo do próprio tenant. Reaproveitada por `getCatalogExerciseForTenant`
+/// abaixo com uma diferença deliberada: o detalhe também precisa mostrar um
+/// exercício próprio ARQUIVADO (para o personal decidir reativar), então a
+/// condição de status "ATIVO" só se aplica à listagem, nunca ao detalhe.
+function visibleCatalogOriginCondition(tenantId: string): Prisma.ExerciseWhereInput {
+  return {
+    OR: [
+      { origin: "API_NINJAS", tenantId: null },
+      { origin: "PERSONAL", tenantId },
+    ],
+  };
+}
+
+export async function listCatalogExercises(
+  input: ListCatalogExercisesInput,
+  client: PrismaClient = prisma
+): Promise<ListCatalogExercisesResult> {
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(MAX_CATALOG_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_CATALOG_PAGE_SIZE));
+  const search = input.search?.trim();
+
+  const where: Prisma.ExerciseWhereInput = {
+    status: "ATIVO",
+    ...visibleCatalogOriginCondition(input.tenantId),
+    ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
+    ...(input.muscle?.trim() ? { muscle: { contains: input.muscle.trim(), mode: "insensitive" as const } } : {}),
+    ...(input.type?.trim() ? { type: { contains: input.type.trim(), mode: "insensitive" as const } } : {}),
+    ...(input.difficulty?.trim() ? { difficulty: { contains: input.difficulty.trim(), mode: "insensitive" as const } } : {}),
+  };
+
+  // Ordenação estável: nome ascendente, com `id` como critério de
+  // desempate — necessário para que a paginação nunca repita ou pule um
+  // registro quando dois exercícios têm o mesmo nome (ex.: um global e um
+  // próprio homônimos).
+  const orderBy = [{ name: "asc" as const }, { id: "asc" as const }];
+
+  const [items, total] = await Promise.all([
+    client.exercise.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
+    client.exercise.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize };
+}
+
+/// Busca um exercício do catálogo visível ao tenant — global (qualquer
+/// status; na prática sempre ATIVO, importação nunca cria um global
+/// arquivado) ou próprio do tenant **em qualquer status**, incluindo
+/// ARQUIVADO: o personal precisa conseguir abrir o detalhe de um exercício
+/// próprio arquivado (para reativá-lo, por exemplo), mesmo que ele não
+/// apareça na listagem padrão. Nunca um exercício próprio de outro tenant.
+export async function getCatalogExerciseForTenant(
+  input: { tenantId: string; exerciseId: string },
+  client: PrismaClient = prisma
+): Promise<Exercise | null> {
+  return client.exercise.findFirst({
+    where: { id: input.exerciseId, ...visibleCatalogOriginCondition(input.tenantId) },
+  });
+}

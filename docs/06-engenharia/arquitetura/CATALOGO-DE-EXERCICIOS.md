@@ -89,3 +89,36 @@ Nenhuma rota de listagem/detalhe nesta História — a listagem unificada (catá
 
 - `src/modules/exercises/exercises.integration.test.ts` (Postgres real): criação (sempre `PERSONAL`/`ATIVO`/`externalId` nulo), validação de nome vazio, duplicidade no mesmo tenant (case-insensitive) rejeitada, mesmo nome em tenants diferentes permitido, isolamento cruzado (nunca retorna exercício de outro tenant nem exercício global), edição preservando `tenantId`/`origin`/`status`, edição/arquivamento/reativação de exercício de outro tenant rejeitados (`NAO_ENCONTRADO`), arquivamento/reativação idempotentes sem exclusão física, auditoria gravada em arquivar/reativar, operações sobre id inexistente.
 - `src/app/api/exercises/**/*.test.ts`: 401 sem sessão, 403 quando o autenticado é aluno (rota de criação), tenant sempre da sessão mesmo quando o corpo tenta enviar `tenantId`/`origin` diferentes, 404 quando o exercício não pertence ao tenant da sessão, 400 em validação/duplicidade.
+
+## FIT-023 — Catálogo unificado ("Exercícios" funcional no shell do personal)
+
+Torna o item "Exercícios" da navegação do personal (`src/app/painel/navigation.ts`) um destino real. Não há migration nesta História — apenas consultas e UI sobre o schema já entregue pelas FIT-021/022.
+
+### Funções de consulta (`src/modules/exercises/exercises.ts`)
+
+- `visibleCatalogOriginCondition(tenantId)` — cláusula Prisma compartilhada: `{ origin: API_NINJAS, tenantId: null }` OU `{ origin: PERSONAL, tenantId }`. Nunca inclui exercício próprio de outro tenant nem depende de nada vindo do cliente além do `tenantId` da sessão.
+- `listCatalogExercises(input, client)` — usa a condição acima **e** filtra `status: ATIVO`; aplica busca por nome (contains, case-insensitive), filtros de músculo/tipo/dificuldade, ordenação estável (`name asc, id asc` — evita que a paginação repita ou salte itens quando nomes se repetem) e paginação server-side (`page`/`pageSize`, retorna `items`/`total`/`page`/`pageSize`).
+- `getCatalogExerciseForTenant(input, client)` — usa a mesma condição de visibilidade, mas **sem** o filtro de `status`: um exercício próprio arquivado continua acessível pelo detalhe (é o único caminho para reativá-lo), mesmo não aparecendo na listagem padrão. Nunca retorna exercício de outro tenant nem exercício inexistente — `null` em ambos os casos, sem diferenciar a resposta.
+
+### Páginas (`src/app/painel/exercicios/`)
+
+- `page.tsx` — lista: `requirePersonal()` (redireciona para `/entrar` ou `/painel` conforme o tipo de `AuthError`, mesmo padrão de `alunos/page.tsx`), lê `q`/`muscle`/`type`/`difficulty`/`page` da query string, chama `listCatalogExercises({ tenantId: sessão, ... })` — o `tenantId` **nunca** vem da query string, apenas da sessão validada no servidor (testado explicitamente: uma query string com `tenantId` adulterado é ignorada). Renderiza cada item com nome, músculo e um selo de origem ("Global" ou "Meu exercício"); estado vazio ("Nenhum exercício no catálogo ainda...") distinto do estado sem-resultado-de-busca ("Nenhum resultado para essa busca.").
+- `novo/page.tsx` + `CadastrarExercicioForm.tsx` — formulário de cadastro (nome obrigatório; tipo/músculo/equipamento/instruções opcionais), chama `POST /api/exercises` (FIT-022).
+- `[id]/page.tsx` — detalhe: `getCatalogExerciseForTenant`; `notFound()` se `null` (exercício inexistente ou fora do catálogo visível ao tenant — sem diferenciar). Se `origin === PERSONAL`: formulário de edição (`EditarExercicioForm`) + card "Ciclo de vida" com "Arquivar exercício" (se `ATIVO`) ou "Reativar exercício" (se `ARQUIVADO`). Se `origin === API_NINJAS`: todos os campos em `<dl>` somente leitura, sem formulário e sem card de ciclo de vida — exercício global nunca é editável nem arquivável por esta UI.
+
+### O que esta História não faz
+
+Nenhuma consulta normal do catálogo chama a API Ninjas — a listagem e o detalhe leem exclusivamente do PostgreSQL, inclusive quando nenhum exercício global foi importado (estado vazio honesto, nunca uma tentativa de rede). Nenhuma ficha de treino, prescrição ou execução é apresentada — exercício isolado é o único escopo desta Sprint (workouts ficam para uma fase futura, conforme o Roteiro).
+
+### Design System e estados
+
+Aplica o Design System M3 aprovado (Manrope, temas claro/escuro, tokens `primary-container`/`secondary-container` para os selos de origem) — mesmos componentes (`TextField`, `Button`, `FormAlert`) e convenções de `page.module.css` já usados em `alunos/`. Estados cobertos e evidenciados: carregando (SSR, sem flash), vazio, sem resultado de busca, exercício arquivado (detalhe ainda acessível), acesso negado (aluno/sem sessão → redirecionado antes de renderizar qualquer dado), mobile e desktop, claro e escuro — ver `docs/06-engenharia/evidencias/FIT-023/README.md`.
+
+## Testes (FIT-023)
+
+- `src/modules/exercises/catalog.integration.test.ts` (Postgres real, 10 testes): catálogo combina global e próprio ativos; exclui próprio arquivado da listagem; exclui exercício de outro tenant; busca por nome e filtro por músculo; resposta vazia sem erro; paginação estável (sem repetir nem saltar itens entre páginas); detalhe encontra global, encontra próprio mesmo arquivado, nunca encontra de outro tenant, nunca encontra inexistente.
+- `src/app/painel/exercicios/page.test.tsx` (7), `[id]/page.test.tsx` (5), `novo/page.test.tsx` (3): redirecionamento sem sessão/sem papel de personal, listagem com selos de origem corretos, estado vazio vs. sem-resultado, `tenantId` da query string nunca repassado à consulta, detalhe global somente leitura sem card de ciclo de vida, detalhe próprio ativo com botão de arquivar, detalhe próprio arquivado com botão de reativar (nunca os dois ao mesmo tempo).
+
+## Situação da licença/importação real — declaração final da Sprint
+
+Nenhuma chamada real à API Ninjas foi feita em nenhuma História desta Sprint. `API_NINJAS_API_KEY` permanece sem valor em qualquer ambiente sob controle desta rodada; a chave mencionada em conversa anterior a esta Sprint foi tratada como permanentemente exposta e nunca foi usada, recuperada, transcrita ou registrada. Nenhum plano comercial foi contratado, alterado ou verificado por esta rodada. Consequentemente: **zero exercícios globais foram efetivamente importados** em qualquer ambiente — o catálogo global do FitOS está, nesta entrega, estruturalmente pronto (client, adapter, persistência, deduplicação, comando administrativo) e comprovado apenas por fixtures/testes automatizados, nunca por uma chamada real. Ver a tabela de classificação exata em `docs/06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`. O catálogo de exercícios **próprios** e a listagem unificada, por outro lado, são reais e plenamente funcionais independentemente dessa pendência — nenhuma parte da FIT-022/FIT-023 depende de importação externa.
