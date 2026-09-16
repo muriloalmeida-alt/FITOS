@@ -10,7 +10,7 @@ Sobre a base de identidade, autorização e shell entregue pela EPIC-03 (SPRINT-
 
 Como personal, quero cadastrar um aluno com nome e e-mail e encontrá-lo depois por busca, filtro e paginação, para começar a organizar minha carteira sem depender de nenhuma funcionalidade de negócio futura (treinos, avaliações, cobrança).
 
-### FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno
+### FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno — Concluída (PR #36, merged)
 
 Como personal, quero consultar e editar os dados básicos de um aluno e poder inativá-lo e reativá-lo sem perder histórico, para manter minha carteira organizada sem apagar registros.
 

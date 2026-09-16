@@ -26,9 +26,9 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 ## Histórias
 
 - FIT-013 (#31) — Cadastro e listagem de alunos. **Concluída** (PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`).
-- FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. **Implementada** (PR próprio desta rodada).
-- FIT-015 (#33) — Convite e ativação da conta do aluno. Aguarda merge da FIT-014.
-- FIT-016 (#34) — Experiência inicial do aluno. Aguarda merge da FIT-015.
+- FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. **Concluída** (PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`).
+- FIT-015 (#33) — Convite e ativação da conta do aluno. **Implementada** (PR próprio desta rodada).
+- FIT-016 (#34) — Experiência inicial do aluno. Aguarda merge da FIT-015. Encerra a SPRINT-05.
 
 ## Resultado intermediário — FIT-013
 
@@ -49,6 +49,15 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - lista padrão de alunos (FIT-013) passa a mostrar apenas `ATIVO` por padrão, com mensagem própria para o caso "todos os alunos estão inativos" (distinta de "nenhum aluno cadastrado");
 - auditoria mínima: `AuditEvent` gravado (mesma transação) em toda edição, inativação e reativação;
 - decisão documentada em `docs/06-engenharia/arquitetura/GESTAO-DE-ALUNOS.md`.
+
+## Resultado intermediário — FIT-015
+
+- `Invitation` (migration `20260916030000_add_invitations`, aditiva): apenas o hash SHA-256 do token é armazenado; `InvitationStatus` tem só `{PENDENTE, ACEITO, CANCELADO}` — "expirado" é derivado (`expiresAt < now()`), nunca persistido;
+- `generateInvitation`/`cancelInvitation` (`src/modules/students/invitations.ts`): gerar cancela qualquer convite pendente anterior do mesmo aluno; rejeita para aluno inativo ou já ativado; cancelamento idempotente; auditoria mínima;
+- `activateStudentAccount` (`src/modules/identity/activation.ts`): reivindica o convite atomicamente (`updateMany` + verificação de `count`) **antes** de qualquer chamada ao Better Auth — elimina a janela de corrida por construção, não por lógica de aplicação; desfaz o provisionamento automático de tenant (FIT-010, que assume `PERSONAL`) na mesma transação que corrige o papel para `ALUNO` e vincula o `Student`; revalida e-mail em uso imediatamente antes de criar a conta;
+- comprovado com teste de concorrência real (`Promise.allSettled`, duas ativações simultâneas com o mesmo token — exatamente uma sucede, nenhum `User` duplicado) e com o fluxo real de ponta a ponta (gerar → ativar → aluno autenticado → replay rejeitado → cancelar), contra o build de produção;
+- rota pública `/ativar-conta` (sem sessão exigida) e `ConviteSection` no perfil do aluno ativo (gerar, copiar, cancelar, renovar);
+- decisão documentada em `docs/06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`.
 
 ## Sequenciamento obrigatório
 
