@@ -1,0 +1,12 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  max-width: 480px;
+}
+
+.hint {
+  margin: calc(var(--fitos-space-2) * -1) 0 0 0;
+  font-size: 12px;
+  color: var(--fitos-color-on-surface-variant);
+}

@@ -98,6 +98,17 @@ describe("getAuthContext (FIT-011)", () => {
     const ctx = await getAuthContext(null, prisma);
     expect(ctx).toEqual({ authenticated: false });
   });
+
+  it("FIT-014: aluno inativado pelo personal -> tratado como sem vínculo (tenantId/studentId nulos), não erro", async () => {
+    const { user: owner, tenant } = await createPersonalWithTenant("dono-para-aluno-inativado");
+    const { user } = await createStudentFor(tenant.id, "aluno-inativado");
+    void owner;
+    await prisma.student.update({ where: { userId: user.id }, data: { status: "INATIVO" } });
+
+    const ctx = await getAuthContext(sessionFor(user), prisma);
+
+    expect(ctx).toEqual({ authenticated: true, userId: user.id, role: "ALUNO", tenantId: null, studentId: null });
+  });
 });
 
 describe("requireSession / requirePersonal / requireStudent (FIT-011)", () => {
@@ -123,6 +134,15 @@ describe("requireSession / requirePersonal / requireStudent (FIT-011)", () => {
     const user = await prisma.user.create({
       data: { email: `aluno-sem-vinculo-forbidden-${run}@example.test`, name: "Aluno sem vínculo", role: "ALUNO" },
     });
+
+    await expect(requireStudent(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-014: aluno inativado tentando requireStudent -> FORBIDDEN, não acessa a experiência normal", async () => {
+    const { user: owner, tenant } = await createPersonalWithTenant("dono-para-aluno-inativado-forbidden");
+    const { user } = await createStudentFor(tenant.id, "aluno-inativado-forbidden");
+    void owner;
+    await prisma.student.update({ where: { userId: user.id }, data: { status: "INATIVO" } });
 
     await expect(requireStudent(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
   });

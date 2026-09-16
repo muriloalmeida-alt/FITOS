@@ -48,7 +48,11 @@ export async function getAuthContext(sessionOverride?: ServerSession, client: Pr
   }
 
   const student = await client.student.findUnique({ where: { userId: user.id } });
-  if (!student) {
+  // FIT-014: aluno inativado pelo personal é tratado exatamente como "sem
+  // vínculo" para fins de autorização — sessão válida, mas sem acesso à
+  // experiência normal (403 em requireStudent). Mesma resposta segura para
+  // os dois casos reais: nunca existiu vínculo, ou o vínculo foi pausado.
+  if (!student || student.status === "INATIVO") {
     return { authenticated: true, userId: user.id, role: "ALUNO", tenantId: null, studentId: null };
   }
 

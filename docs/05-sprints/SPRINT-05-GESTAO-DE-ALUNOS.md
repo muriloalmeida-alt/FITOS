@@ -25,8 +25,8 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 
 ## Histórias
 
-- FIT-013 (#31) — Cadastro e listagem de alunos. **Implementada** (PR próprio desta rodada).
-- FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. Aguarda merge da FIT-013.
+- FIT-013 (#31) — Cadastro e listagem de alunos. **Concluída** (PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`).
+- FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. **Implementada** (PR próprio desta rodada).
 - FIT-015 (#33) — Convite e ativação da conta do aluno. Aguarda merge da FIT-014.
 - FIT-016 (#34) — Experiência inicial do aluno. Aguarda merge da FIT-015.
 
@@ -37,6 +37,17 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - duas regras de duplicidade de e-mail distintas: mesmo e-mail no mesmo tenant (rejeitado) vs. e-mail já usado por uma conta existente em qualquer tenant (rejeitado com mensagem genérica, sem revelar o tenant);
 - `/painel/alunos` (lista paginada, busca, filtro por status) e `/painel/alunos/novo` (cadastro) no shell do personal — item de navegação "Alunos" deixa de ser "Em breve";
 - testes cobrindo isolamento entre tenants, duplicidade, paginação estável, busca, filtro, e os estados vazios (sem alunos / sem resultado de busca);
+- decisão documentada em `docs/06-engenharia/arquitetura/GESTAO-DE-ALUNOS.md`.
+
+## Resultado intermediário — FIT-014
+
+- `getStudentForTenant`, `updateStudent`, `inactivateStudent`, `reactivateStudent` (`src/modules/students/students.ts`) — sempre restritos a `[id, tenantId da sessão]`; um `id` de outro tenant nunca é encontrado nem revelado (404 via `notFound()`, decisão deliberada e documentada);
+- edição de e-mail bloqueada depois que o aluno ativa a conta (`Student.userId` preenchido) — sem fluxo seguro de troca de e-mail nesta arquitetura, a alteração é rejeitada com mensagem clara em vez de trocar silenciosamente a credencial de login;
+- inativação e reativação idempotentes (ação repetida não é erro nem gera ruído de auditoria); nunca exclusão física — apenas a coluna `status`;
+- aluno inativado é tratado pela camada de autorização (`getAuthContext`, FIT-011) exatamente como "sem vínculo" — `requireStudent()` rejeita com `FORBIDDEN`, bloqueando a experiência normal;
+- confirmação explícita e não genérica antes de inativar (`/painel/alunos/[id]/inativar`), explicando impacto e reversibilidade;
+- lista padrão de alunos (FIT-013) passa a mostrar apenas `ATIVO` por padrão, com mensagem própria para o caso "todos os alunos estão inativos" (distinta de "nenhum aluno cadastrado");
+- auditoria mínima: `AuditEvent` gravado (mesma transação) em toda edição, inativação e reativação;
 - decisão documentada em `docs/06-engenharia/arquitetura/GESTAO-DE-ALUNOS.md`.
 
 ## Sequenciamento obrigatório

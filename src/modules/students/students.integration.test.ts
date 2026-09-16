@@ -4,7 +4,15 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
-import { createStudent, listStudents, StudentError } from "./students";
+import {
+  createStudent,
+  getStudentForTenant,
+  inactivateStudent,
+  listStudents,
+  reactivateStudent,
+  StudentError,
+  updateStudent,
+} from "./students";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
@@ -151,5 +159,174 @@ describe("listStudents (FIT-013)", () => {
 
     const allIds = [...page1.items, ...page2.items, ...page3.items].map((item) => item.id);
     expect(new Set(allIds).size).toBe(5);
+  });
+});
+
+describe("getStudentForTenant (FIT-014)", () => {
+  it("retorna null quando o aluno pertence a outro tenant", async () => {
+    const tenantA = await createTenant("perfil-isolamento-a");
+    const tenantB = await createTenant("perfil-isolamento-b");
+    const student = await createStudent({ tenantId: tenantA.id, name: "Aluno A", email: `perfil-a-${run}@example.test` }, prisma);
+
+    const fromOwnTenant = await getStudentForTenant({ tenantId: tenantA.id, studentId: student.id }, prisma);
+    const fromOtherTenant = await getStudentForTenant({ tenantId: tenantB.id, studentId: student.id }, prisma);
+
+    expect(fromOwnTenant?.id).toBe(student.id);
+    expect(fromOtherTenant).toBeNull();
+  });
+});
+
+describe("updateStudent (FIT-014)", () => {
+  it("edita o nome, normaliza e registra auditoria", async () => {
+    const tenant = await createTenant("editar-nome");
+    const student = await createStudent({ tenantId: tenant.id, name: "Nome Antigo", email: `editar-nome-${run}@example.test` }, prisma);
+
+    const updated = await updateStudent(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, name: "  Nome Novo  " },
+      prisma
+    );
+
+    expect(updated.displayName).toBe("Nome Novo");
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "ALUNO_EDITADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("edita o e-mail antes da ativação (userId nulo)", async () => {
+    const tenant = await createTenant("editar-email-pre-ativacao");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `antigo-${run}@example.test` }, prisma);
+    expect(student.userId).toBeNull();
+
+    const updated = await updateStudent(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, email: `Novo-${run}@Example.TEST` },
+      prisma
+    );
+
+    expect(updated.email).toBe(`novo-${run}@example.test`);
+  });
+
+  it("bloqueia a edição de e-mail depois da ativação (userId presente)", async () => {
+    const tenant = await createTenant("editar-email-pos-ativacao");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `ativado-${run}@example.test` }, prisma);
+    const activatedUser = await prisma.user.create({
+      data: { email: student.email, name: "Aluno", role: "ALUNO" },
+    });
+    await prisma.student.update({ where: { id: student.id }, data: { userId: activatedUser.id } });
+
+    await expect(
+      updateStudent(
+        { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, email: `outro-${run}@example.test` },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "EMAIL_BLOQUEADO_POS_ATIVACAO" });
+  });
+
+  it("permite salvar o mesmo e-mail já ativado, sem bloquear (não é uma troca)", async () => {
+    const tenant = await createTenant("editar-mesmo-email-pos-ativacao");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `mesmo-${run}@example.test` }, prisma);
+    const activatedUser = await prisma.user.create({
+      data: { email: student.email, name: "Aluno", role: "ALUNO" },
+    });
+    await prisma.student.update({ where: { id: student.id }, data: { userId: activatedUser.id } });
+
+    const updated = await updateStudent(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, name: "Novo Nome", email: student.email },
+      prisma
+    );
+
+    expect(updated.displayName).toBe("Novo Nome");
+    expect(updated.email).toBe(student.email);
+  });
+
+  it("rejeita e-mail duplicado no mesmo tenant ao editar", async () => {
+    const tenant = await createTenant("editar-duplicado");
+    await createStudent({ tenantId: tenant.id, name: "Primeiro", email: `primeiro-${run}@example.test` }, prisma);
+    const segundo = await createStudent({ tenantId: tenant.id, name: "Segundo", email: `segundo-${run}@example.test` }, prisma);
+
+    await expect(
+      updateStudent(
+        { tenantId: tenant.id, studentId: segundo.id, actorUserId: tenant.ownerId, email: `primeiro-${run}@example.test` },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "EMAIL_DUPLICADO_NO_TENANT" });
+  });
+
+  it("lança NAO_ENCONTRADO para um studentId de outro tenant (sem revelar o dado)", async () => {
+    const tenantA = await createTenant("editar-outro-tenant-a");
+    const tenantB = await createTenant("editar-outro-tenant-b");
+    const student = await createStudent({ tenantId: tenantA.id, name: "Aluno A", email: `outro-tenant-${run}@example.test` }, prisma);
+
+    await expect(
+      updateStudent({ tenantId: tenantB.id, studentId: student.id, actorUserId: tenantB.ownerId, name: "Tentativa" }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("inactivateStudent / reactivateStudent (FIT-014)", () => {
+  it("inativa um aluno ativo e registra auditoria", async () => {
+    const tenant = await createTenant("inativar");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `inativar-${run}@example.test` }, prisma);
+
+    const updated = await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    expect(updated.status).toBe("INATIVO");
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "ALUNO_INATIVADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("é idempotente: inativar um aluno já inativo não gera novo evento", async () => {
+    const tenant = await createTenant("inativar-idempotente");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `inativar-idem-${run}@example.test` }, prisma);
+    await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    const second = await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    expect(second.status).toBe("INATIVO");
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "ALUNO_INATIVADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("reativa um aluno inativo e registra auditoria", async () => {
+    const tenant = await createTenant("reativar");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `reativar-${run}@example.test` }, prisma);
+    await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    const updated = await reactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    expect(updated.status).toBe("ATIVO");
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "ALUNO_REATIVADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("é idempotente: reativar um aluno já ativo não gera novo evento", async () => {
+    const tenant = await createTenant("reativar-idempotente");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `reativar-idem-${run}@example.test` }, prisma);
+
+    const updated = await reactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    expect(updated.status).toBe("ATIVO");
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "ALUNO_REATIVADO" } });
+    expect(events).toHaveLength(0);
+  });
+
+  it("aluno inativado some da listagem padrão (status ATIVO) mas aparece com filtro explícito", async () => {
+    const tenant = await createTenant("inativo-listagem");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno Inativado", email: `inativo-lista-${run}@example.test` }, prisma);
+    await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    const somenteAtivos = await listStudents({ tenantId: tenant.id, status: "ATIVO" }, prisma);
+    const somenteInativos = await listStudents({ tenantId: tenant.id, status: "INATIVO" }, prisma);
+
+    expect(somenteAtivos.items.find((item) => item.id === student.id)).toBeUndefined();
+    expect(somenteInativos.items.find((item) => item.id === student.id)).toBeDefined();
+  });
+
+  it("lança NAO_ENCONTRADO para um studentId de outro tenant", async () => {
+    const tenantA = await createTenant("lifecycle-outro-tenant-a");
+    const tenantB = await createTenant("lifecycle-outro-tenant-b");
+    const student = await createStudent({ tenantId: tenantA.id, name: "Aluno A", email: `lifecycle-${run}@example.test` }, prisma);
+
+    await expect(
+      inactivateStudent({ tenantId: tenantB.id, studentId: student.id, actorUserId: tenantB.ownerId }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
 });
