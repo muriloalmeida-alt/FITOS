@@ -6,7 +6,7 @@ Sobre a base de identidade, autorização e shell entregue pela EPIC-03 (SPRINT-
 
 ## Histórias
 
-### FIT-013 (#31) — Cadastro e listagem de alunos
+### FIT-013 (#31) — Cadastro e listagem de alunos — Concluída (PR #35, merged)
 
 Como personal, quero cadastrar um aluno com nome e e-mail e encontrá-lo depois por busca, filtro e paginação, para começar a organizar minha carteira sem depender de nenhuma funcionalidade de negócio futura (treinos, avaliações, cobrança).
 

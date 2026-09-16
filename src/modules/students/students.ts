@@ -16,7 +16,12 @@ import { prisma } from "@/shared/db/prisma";
 
 export class StudentError extends Error {
   constructor(
-    public readonly kind: "EMAIL_DUPLICADO_NO_TENANT" | "EMAIL_JA_POSSUI_CONTA" | "VALIDACAO",
+    public readonly kind:
+      | "EMAIL_DUPLICADO_NO_TENANT"
+      | "EMAIL_JA_POSSUI_CONTA"
+      | "VALIDACAO"
+      | "EMAIL_BLOQUEADO_POS_ATIVACAO"
+      | "NAO_ENCONTRADO",
     message: string
   ) {
     super(message);
@@ -151,4 +156,163 @@ export async function listStudents(input: ListStudentsInput, client: PrismaClien
   ]);
 
   return { items, total, page, pageSize };
+}
+
+/// Busca um aluno **apenas se pertencer ao tenant informado** — nunca busca
+/// por `id` isoladamente. Retorna `null` (não lança) quando o aluno não
+/// existe ou pertence a outro tenant; o chamador (rota/página) decide
+/// tratar isso como 404, sem revelar se o `id` existe em outro tenant.
+export async function getStudentForTenant(
+  input: { tenantId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<Student | null> {
+  return client.student.findFirst({ where: { id: input.studentId, tenantId: input.tenantId } });
+}
+
+export interface UpdateStudentInput {
+  tenantId: string;
+  studentId: string;
+  actorUserId: string;
+  name?: string;
+  email?: string;
+}
+
+/// Edita nome e/ou e-mail de um aluno do próprio tenant.
+///
+/// Regra de e-mail (FIT-014): uma vez que o aluno já tem `userId` (conta
+/// ativada — FIT-015), o e-mail de autenticação nunca é alterado
+/// silenciosamente por aqui — não existe, nesta arquitetura, um fluxo
+/// seguro de troca de e-mail pós-ativação (verificação, confirmação), então
+/// a alteração é bloqueada com uma mensagem clara em vez de ser aplicada.
+/// Antes da ativação (`userId` nulo), o e-mail pode ser editado livremente,
+/// sujeito às mesmas duas verificações de duplicidade do cadastro
+/// (`createStudent`). Não há convite pendente a invalidar nesta História —
+/// o modelo de convite é escopo da FIT-015; quando existir, invalidá-lo ao
+/// trocar o e-mail pré-ativação é responsabilidade daquela História.
+export async function updateStudent(input: UpdateStudentInput, client: PrismaClient = prisma): Promise<Student> {
+  const current = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!current) {
+    throw new StudentError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+
+  const data: { displayName?: string; email?: string } = {};
+
+  if (input.name !== undefined) {
+    const name = normalizeName(input.name);
+    if (name.length === 0) {
+      throw new StudentError("VALIDACAO", "Informe o nome do aluno.");
+    }
+    data.displayName = name;
+  }
+
+  if (input.email !== undefined) {
+    const email = normalizeEmail(input.email);
+    if (!EMAIL_PATTERN.test(email)) {
+      throw new StudentError("VALIDACAO", "Informe um e-mail válido.");
+    }
+
+    if (email !== current.email) {
+      if (current.userId) {
+        throw new StudentError(
+          "EMAIL_BLOQUEADO_POS_ATIVACAO",
+          "Este aluno já ativou a conta — o e-mail de autenticação não pode ser alterado por aqui."
+        );
+      }
+
+      const existingAccount = await client.user.findUnique({ where: { email } });
+      if (existingAccount) {
+        throw new StudentError("EMAIL_JA_POSSUI_CONTA", "Este e-mail já possui uma conta no FitOS.");
+      }
+
+      data.email = email;
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    return current;
+  }
+
+  try {
+    const [, updated] = await client.$transaction([
+      client.auditEvent.create({
+        data: {
+          tenantId: input.tenantId,
+          actorUserId: input.actorUserId,
+          action: "ALUNO_EDITADO",
+          entityType: "Student",
+          entityId: input.studentId,
+        },
+      }),
+      client.student.update({ where: { id: input.studentId }, data }),
+    ]);
+    return updated;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) {
+      throw new StudentError("EMAIL_DUPLICADO_NO_TENANT", "Já existe um aluno com este e-mail na sua carteira.");
+    }
+    throw error;
+  }
+}
+
+export interface StudentLifecycleInput {
+  tenantId: string;
+  studentId: string;
+  actorUserId: string;
+}
+
+/// Inativa um aluno do próprio tenant. Idempotente: chamar novamente sobre
+/// um aluno já inativo não é um erro — apenas retorna o aluno sem
+/// alteração nem novo evento de auditoria (ação repetida não deve produzir
+/// ruído). Não há convite pendente a cancelar nesta História (modelo de
+/// convite é escopo da FIT-015). Preserva o histórico — nunca exclusão
+/// física.
+export async function inactivateStudent(input: StudentLifecycleInput, client: PrismaClient = prisma): Promise<Student> {
+  const current = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!current) {
+    throw new StudentError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (current.status === "INATIVO") {
+    return current;
+  }
+
+  const [, updated] = await client.$transaction([
+    client.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "ALUNO_INATIVADO",
+        entityType: "Student",
+        entityId: input.studentId,
+      },
+    }),
+    client.student.update({ where: { id: input.studentId }, data: { status: "INATIVO" } }),
+  ]);
+  return updated;
+}
+
+/// Reativa um aluno do próprio tenant. Idempotente pela mesma razão de
+/// `inactivateStudent`. Não restaura nenhum convite expirado ou cancelado
+/// automaticamente (não há convites nesta História).
+export async function reactivateStudent(input: StudentLifecycleInput, client: PrismaClient = prisma): Promise<Student> {
+  const current = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!current) {
+    throw new StudentError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (current.status === "ATIVO") {
+    return current;
+  }
+
+  const [, updated] = await client.$transaction([
+    client.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "ALUNO_REATIVADO",
+        entityType: "Student",
+        entityId: input.studentId,
+      },
+    }),
+    client.student.update({ where: { id: input.studentId }, data: { status: "ATIVO" } }),
+  ]);
+  return updated;
 }

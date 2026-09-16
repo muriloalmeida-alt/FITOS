@@ -42,20 +42,35 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
 
   const params = await searchParams;
   const search = firstValue(params.q)?.trim() || undefined;
+  // FIT-014: a lista padrão (sem filtro explícito) mostra apenas alunos
+  // ATIVO — aluno inativado deixa de aparecer por padrão. "todos" é um
+  // valor de filtro explícito (não um StudentStatus real) para o personal
+  // pedir a carteira completa.
   const statusParam = firstValue(params.status);
-  const status = statusParam && VALID_STATUS.includes(statusParam as StudentStatus) ? (statusParam as StudentStatus) : undefined;
+  const showingAll = statusParam === "todos";
+  const status: StudentStatus | undefined = showingAll
+    ? undefined
+    : statusParam && VALID_STATUS.includes(statusParam as StudentStatus)
+      ? (statusParam as StudentStatus)
+      : "ATIVO";
   const pageParam = Number.parseInt(firstValue(params.page) ?? "1", 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const result = await listStudents({ tenantId: ctx.tenantId, search, status, page, pageSize: PAGE_SIZE });
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
-  const hasFilter = Boolean(search || status);
+  const hasFilter = Boolean(search) || status === "INATIVO" || showingAll;
+
+  // Distingue "não há nenhum aluno" de "há alunos, mas todos inativos e a
+  // lista padrão só mostra ativos" — evita uma mensagem de estado vazio
+  // enganosa quando a carteira não está realmente vazia.
+  const onlyInactiveHidden =
+    result.total === 0 && !hasFilter ? (await listStudents({ tenantId: ctx.tenantId, page: 1, pageSize: 1 })).total > 0 : false;
 
   function pageHref(targetPage: number): string {
     const next = new URLSearchParams();
     if (search) next.set("q", search);
-    if (status) next.set("status", status);
+    if (statusParam) next.set("status", statusParam);
     next.set("page", String(targetPage));
     return `/painel/alunos?${next.toString()}`;
   }
@@ -82,10 +97,10 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
           aria-label="Buscar por nome ou e-mail"
           className={styles.searchInput}
         />
-        <select name="status" defaultValue={status ?? ""} aria-label="Filtrar por status" className={styles.statusSelect}>
-          <option value="">Todos os status</option>
-          <option value="ATIVO">Ativo</option>
-          <option value="INATIVO">Inativo</option>
+        <select name="status" defaultValue={statusParam ?? ""} aria-label="Filtrar por status" className={styles.statusSelect}>
+          <option value="">Ativos</option>
+          <option value="INATIVO">Inativos</option>
+          <option value="todos">Todos</option>
         </select>
         <Button type="submit" variant="outlined">
           Buscar
@@ -94,17 +109,23 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
 
       {result.items.length === 0 ? (
         <p className={styles.empty}>
-          {hasFilter ? "Nenhum resultado para essa busca." : "Nenhum aluno cadastrado ainda."}
+          {onlyInactiveHidden
+            ? "Todos os seus alunos estão inativos. Selecione \"Todos\" ou \"Inativos\" para vê-los."
+            : hasFilter
+              ? "Nenhum resultado para essa busca."
+              : "Nenhum aluno cadastrado ainda."}
         </p>
       ) : (
         <ul className={styles.list} aria-label="Lista de alunos">
           {result.items.map((student) => (
-            <li key={student.id} className={styles.row}>
-              <span className={styles.cellName}>{student.displayName}</span>
-              <span className={styles.cellEmail}>{student.email}</span>
-              <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
-                {student.status === "ATIVO" ? "Ativo" : "Inativo"}
-              </span>
+            <li key={student.id}>
+              <Link href={`/painel/alunos/${student.id}`} className={styles.row}>
+                <span className={styles.cellName}>{student.displayName}</span>
+                <span className={styles.cellEmail}>{student.email}</span>
+                <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
+                  {student.status === "ATIVO" ? "Ativo" : "Inativo"}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
