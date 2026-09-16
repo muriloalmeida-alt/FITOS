@@ -28,7 +28,7 @@ Autorização integral concedida pelo Produto para formalizar, implementar, test
 - FIT-013 (#31) — Cadastro e listagem de alunos. **Concluída** (PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`).
 - FIT-014 (#32) — Perfil, edição e ciclo de vida do aluno. **Concluída** (PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`).
 - FIT-015 (#33) — Convite e ativação da conta do aluno. **Concluída** (PR #37, mergeado no commit `08b8eed5b8331c87b770b1918411c49453923959`).
-- FIT-016 (#34) — Experiência inicial do aluno. **Concluída** (PR desta rodada — ver SHA no fechamento abaixo, atualizado após o merge). Encerra a SPRINT-05.
+- FIT-016 (#34) — Experiência inicial do aluno. **PR #38** (gate autônomo aprovado — ver fechamento abaixo). Encerra a SPRINT-05.
 
 ## Resultado intermediário — FIT-013
 
@@ -111,7 +111,7 @@ As quatro Histórias do EPIC-04 foram entregues em sequência, cada uma com PR p
 - FIT-013 (#31) — PR #35, mergeado no commit `48795cd8fbb53a8442a40b2b5cee17c714c110bf`.
 - FIT-014 (#32) — PR #36, mergeado no commit `04412cb163941ace5dd58d6f6fdfbad413cab944`.
 - FIT-015 (#33) — PR #37, mergeado no commit `08b8eed5b8331c87b770b1918411c49453923959`.
-- FIT-016 (#34) — PR desta rodada (número e SHA de merge preenchidos no próprio PR/Issue após o merge).
+- FIT-016 (#34) — PR #38, gate autônomo aprovado; SHA de merge registrado na Issue #34 após o merge.
 
 ### O que foi entregue
 
