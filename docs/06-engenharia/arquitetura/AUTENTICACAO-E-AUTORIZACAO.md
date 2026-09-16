@@ -13,9 +13,9 @@ Better Auth é o candidato primário; Clerk é fallback. A autorização de dom�
 - bloqueio de conta/vínculo sem apagar histórico;
 - proteção de rotas e ações no servidor.
 
-## Prova técnica obrigatória do Better Auth
+## Prova técnica do Better Auth — executada (FIT-009)
 
-Deve ocorrer em História/PR posteriores e demonstrar:
+A prova ocorreu na FIT-009 (EPIC-03/SPRINT-04) e resultou em ADR-002 = Aceito. Resultado completo e schema em `AUTENTICACAO-E-SESSAO.md`. Os itens abaixo eram os critérios exigidos por este documento antes da execução — mantidos aqui como registro do que foi pedido:
 
 1. login, logout e recuperação de personal e aluno;
 2. papéis `PERSONAL` e `ALUNO`;

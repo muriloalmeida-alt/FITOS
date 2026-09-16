@@ -16,7 +16,8 @@ Objetivo: estabelecer fonte oficial, governança e escopo do MVP.
 
 Objetivo: permitir que o personal acesse uma conta isolada e administre sua carteira.
 
-- FIT-001, FIT-010, FIT-011 e FIT-012.
+- Acesso e conta do personal/aluno: implementado pela EPIC-03 — Identidade, Acesso e Navegação (#21, SPRINT-04) — FIT-009, FIT-010, FIT-011, FIT-012 (ver `docs/04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`).
+- Gestão de alunos (cadastro, perfil, pausa/arquivamento): FIT-001, FIT-013, FIT-014 e FIT-015 (renumerados a partir dos FIT-010/011/012 originais deste backlog, que colidiam com a EPIC-03 — ver nota em `docs/04-backlog/BACKLOG-MVP.md`).
 
 ## Fase 2 — Exercícios
 
@@ -118,8 +119,12 @@ A partir da FIT-005 (SPRINT-02 — Fundação Técnica, ver `docs/05-sprints/SPR
 | Multi-tenant: 1 personal = 1 tenant; aluno vinculado a 1 personal | Confirmado | `arquitetura/MODELO-MULTITENANT.md` |
 | Assinatura FitOS (SaaS) separada do financeiro dos alunos | Confirmado | `arquitetura/ASSINATURA-SAAS.md` |
 
-Provas técnicas do Better Auth e do Asaas, fundação do projeto Next.js, provisionamento Railway, modelagem física/migrations e pipeline CI/CD são Histórias futuras, sem identificador ainda — ver "Histórias posteriores propostas" em `docs/04-backlog/EPIC-02-FUNDACAO-TECNICA.md`.
+Prova técnica do Asaas, pipeline CI/CD e observabilidade ampliada permanecem Histórias futuras, sem identificador ainda — ver "Histórias posteriores propostas" em `docs/04-backlog/EPIC-02-FUNDACAO-TECNICA.md`. A prova técnica do Better Auth passou a ser a História formal FIT-009 (#22, EPIC-03/SPRINT-04).
 
-### Fundação executável (SPRINT-03)
+### Fundação executável (SPRINT-03 — concluída)
 
-A partir da FIT-006 (#14), a Fundação Técnica passa a ter uma contraparte executável: aplicação Next.js/TypeScript, estrutura de monólito modular e Material Design 3 aplicado (ver `docs/05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md` e `docs/06-engenharia/EXECUCAO-LOCAL.md`). FIT-007 (#15, banco/Prisma) e FIT-008 (#16, ambientes Railway) seguem o mesmo sequenciamento obrigatório — cada uma só inicia após o merge explicitamente autorizado da anterior.
+A partir da FIT-006 (#14), a Fundação Técnica passou a ter uma contraparte executável: aplicação Next.js/TypeScript, estrutura de monólito modular e Material Design 3 aplicado (ver `docs/05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md` e `docs/06-engenharia/EXECUCAO-LOCAL.md`). FIT-006 (#14), FIT-007 (#15, banco/Prisma) e FIT-008 (#16, ambientes Railway) estão mergeadas — a SPRINT-03 está concluída.
+
+### Acesso e estrutura autenticada (SPRINT-04 — em andamento)
+
+A partir da FIT-009 (#22), o EPIC-03 — Identidade, Acesso e Navegação (#21) materializa a primeira experiência autenticada do FitOS: autenticação (FIT-009), provisionamento de tenant (FIT-010, #23), autorização/isolamento por sessão (FIT-011, #24) e shell autenticado responsivo (FIT-012, #25) — ver `docs/05-sprints/SPRINT-04-ACESSO-ESTRUTURA-AUTENTICADA.md`. Mesmo sequenciamento obrigatório das Sprints anteriores: cada História só inicia após o merge explicitamente autorizado da anterior.

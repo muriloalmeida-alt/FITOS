@@ -46,20 +46,101 @@ enum SaasSubscriptionStatus {
   CANCELADA
 }
 
-/// Identidade autenticável. Nesta História não há autenticação produtiva —
-/// User existe apenas como base física para Tenant.owner e Student.user.
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
+/// Papel do usuário autenticado (FIT-009). Único critério usado pela camada
+/// de autorização (FIT-011) para distinguir personal de aluno — não deve ser
+/// confundido com `Tenant.ownerId`/`Student.userId`, que continuam sendo a
+/// fonte física de "quem é dono de qual tenant" e "quem é aluno de qual
+/// tenant". `role` existe para que o Better Auth e o contexto de sessão
+/// saibam o papel antes mesmo de qualquer join com Tenant/Student.
+enum UserRole {
+  PERSONAL
+  ALUNO
+}
 
-  ownedTenant       Tenant?
-  studentProfile    Student?
+/// Identidade autenticável. A partir da FIT-009, User também é a tabela de
+/// usuário do Better Auth (`docs/06-engenharia/arquitetura/
+/// AUTENTICACAO-E-SESSAO.md`): `emailVerified`, `image` e `updatedAt` são
+/// campos exigidos pelo schema base do provedor; `role` é um campo adicional
+/// nosso (nunca aceito do cliente — sempre definido no servidor).
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  role          UserRole  @default(PERSONAL)
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedTenant         Tenant?
+  studentProfile      Student?
   authoredAssessments Assessment[] @relation("AssessmentAuthor")
-  auditEvents       AuditEvent[]
+  auditEvents         AuditEvent[]
+  sessions            Session[]
+  accounts            Account[]
 
   @@map("users")
+}
+
+/// Sessão de autenticação (Better Auth). Não é a fonte de autorização de
+/// domínio — o contexto confiável (userId/role/tenantId) é derivado
+/// server-side a partir da sessão válida, nunca aceito do cliente (ver
+/// FIT-011, `AUTORIZACAO-E-PAPEIS.md`).
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Credencial/provedor de autenticação (Better Auth). Para login por
+/// e-mail e senha (único provedor desta História), o hash da senha fica em
+/// `password` — nunca texto puro, nunca em log. `accountId` é o
+/// identificador do usuário no provedor (aqui, o próprio e-mail
+/// normalizado); `providerId` identifica o provedor ("credential").
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// Token de verificação (Better Auth) — ex.: confirmação de e-mail, redefinição
+/// de senha. Parte do schema base exigido pelo provedor; esta História não
+/// envia e-mails reais (fora do escopo — ver AUTENTICACAO-E-SESSAO.md), então
+/// a tabela existe mas não é usada ativamente ainda.
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
 }
 
 /// Unidade de isolamento multi-tenant: 1 personal trainer = 1 tenant.

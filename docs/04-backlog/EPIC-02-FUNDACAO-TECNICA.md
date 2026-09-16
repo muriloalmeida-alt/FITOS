@@ -18,7 +18,7 @@ Como time do FitOS, queremos materializar a arquitetura aprovada em uma aplicaç
 
 Como time do FitOS, queremos transformar o modelo conceitual aprovado em um schema PostgreSQL/Prisma inicial, com isolamento multi-tenant e migrations rastreáveis, para garantir uma base de dados consistente antes das funcionalidades do MVP.
 
-### FIT-008 (#16) — Ambientes FitOS no Railway — Em andamento (PR próprio, sem merge; provisionamento Railway pendente — SPRINT-03)
+### FIT-008 (#16) — Ambientes FitOS no Railway — Concluída (PR #20, merged)
 
 Como time do FitOS, queremos disponibilizar a fundação executável e seu banco em ambiente Railway de homologação, para validar deploy, configuração e observabilidade mínima sem expor dados reais.
 
@@ -50,11 +50,13 @@ Como time do FitOS, queremos disponibilizar a fundação executável e seu banco
 - a fundação executável (FIT-006/007/008) materializa a arquitetura aprovada sem antecipar funcionalidades de negócio;
 - Histórias posteriores podem ser refinadas sem decisões arquiteturais críticas ocultas.
 
+## Encerramento
+
+As três Histórias da SPRINT-03 (FIT-006, FIT-007, FIT-008) estão concluídas e mergeadas. A fundação executável, o modelo físico multi-tenant e o ambiente de homologação Railway existem. A prova técnica do Better Auth passou a ser tratada como História formal (FIT-009, EPIC-03 — `docs/04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`), não mais como item não identificado deste Épico.
+
 ## Histórias posteriores propostas (sem identificador — aguardam priorização de Produto)
 
-- Prova técnica do Better Auth.
 - Prova técnica do Asaas.
 - CI/CD e observabilidade ampliada.
-- Primeira História funcional do MVP (conforme dependências, após a SPRINT-03).
 
 Essas Histórias só recebem identificadores após priorização de Produto. O EPIC-02 permanece aberto (Issue #10) como container de acompanhamento até que essas Histórias sejam priorizadas e concluídas.

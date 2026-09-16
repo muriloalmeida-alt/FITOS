@@ -4,6 +4,8 @@ Prioridades: `P0` essencial, `P1` importante, `P2` posterior.
 
 ## Épico 1 — Fundação e acesso
 
+**Implementado pela EPIC-03 — Identidade, Acesso e Navegação (#21), SPRINT-04.** Os critérios abaixo, escritos como backlog especulativo antes da prova técnica de autenticação, foram cobertos pelas Histórias formais FIT-009 (#22, cadastro/login/logout/sessão do personal), FIT-010 (#23, provisionamento do tenant), FIT-011 (#24, isolamento e autorização por sessão) e FIT-012 (#25, shell autenticado de personal e aluno). Os identificadores FIT-001 e FIT-002 abaixo permanecem apenas como registro histórico do backlog original — não foram promovidos a Issues nem reutilizados.
+
 ### FIT-001 — Estruturar conta do personal (`P0`)
 
 Como personal, quero acessar uma área isolada para administrar minha carteira.
@@ -24,20 +26,22 @@ Critérios:
 
 ## Épico 2 — Alunos
 
-### FIT-010 — Cadastrar e editar aluno (`P0`)
+> Nota de renumeração: os itens abaixo eram originalmente FIT-010, FIT-011 e FIT-012 neste backlog especulativo. Esses identificadores foram formalmente ocupados pela EPIC-03/SPRINT-04 (Issues reais #23, #24 e #25, sobre provisionamento de tenant, autorização e shell autenticado — assunto não relacionado à gestão de alunos). Como os itens abaixo nunca foram promovidos a Issue, foram renumerados para FIT-013, FIT-014 e FIT-015 para eliminar a colisão, preservando a ordem e o conteúdo originais.
+
+### FIT-013 — Cadastrar e editar aluno (`P0`)
 
 Critérios:
 - Campos essenciais são validados.
 - Objetivo, restrições e observações podem ser registrados.
 - Cadastro aparece na lista após sucesso.
 
-### FIT-011 — Consultar perfil completo (`P0`)
+### FIT-014 — Consultar perfil completo (`P0`)
 
 Critérios:
 - Perfil reúne dados, plano atual, evolução e financeiro.
 - Ausência de informações possui estado vazio orientativo.
 
-### FIT-012 — Pausar ou arquivar aluno (`P1`)
+### FIT-015 — Pausar ou arquivar aluno (`P1`)
 
 Critérios:
 - Histórico é preservado.
@@ -151,9 +155,9 @@ Critérios:
 
 ## Ordem sugerida de entrega
 
-1. FIT-001, FIT-010 e FIT-011.
+1. FIT-001, FIT-013 e FIT-014.
 2. FIT-020, FIT-021 e FIT-022.
 3. FIT-030, FIT-032 e FIT-033.
 4. FIT-002, FIT-040 e FIT-041.
 5. FIT-050, FIT-051 e FIT-053.
-6. FIT-012, FIT-031, FIT-042, FIT-052 e FIT-060.
+6. FIT-015, FIT-031, FIT-042, FIT-052 e FIT-060.

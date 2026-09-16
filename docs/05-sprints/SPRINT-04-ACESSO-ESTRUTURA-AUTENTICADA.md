@@ -1,0 +1,89 @@
+# SPRINT-04 — Acesso e Estrutura Autenticada
+
+Status: em andamento — FIT-009 implementada, em revisão; FIT-010/011/012 não iniciadas
+
+## Objetivo
+
+Entregar a primeira experiência autenticada do FitOS: contas de personal, acesso de aluno previamente vinculado, provisionamento automático do tenant, autorização derivada da sessão no servidor, e navegação autenticada responsiva — sem antecipar nenhuma funcionalidade de negócio (Alunos, Exercícios, Treinos, Financeiro).
+
+## Épico
+
+- EPIC-03 — Identidade, Acesso e Navegação (#21, `docs/04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`), aberta nesta rodada.
+
+## Pré-condição verificada antes do início
+
+- `main` sincronizada, no commit `c7d29ec95b7953223c9ba902d801c844ffbf9404` (merge do PR #20, FIT-008).
+- FIT-006, FIT-007 e FIT-008 mergeadas — SPRINT-03 concluída em código.
+- `npm run lint`, `npm run typecheck`, `npm run test` (23/23) e `npm run build` passando na `main` antes do início desta Sprint.
+- Nenhuma migration já aplicada foi alterada retroativamente.
+- Risco herdado da FIT-008 (não bloqueante, registrado, carregado adiante): não há evidência direta de que as migrations da FIT-007/008 foram efetivamente aplicadas no PostgreSQL de homologação Railway — apenas evidência indireta (deployment `SUCCESS`, `/api/ready` respondendo 200). Ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`, seção 5. Este risco é acompanhado, não uma pendência bloqueante da SPRINT-04; não foi aberto PR documental exclusivo para tratá-lo.
+
+## Histórias
+
+- FIT-009 (#22) — Prova técnica e implementação da autenticação. **Implementada, em revisão** (PR próprio, sem merge).
+- FIT-010 (#23) — Provisionamento do tenant do personal. Não iniciada — aguarda merge da FIT-009.
+- FIT-011 (#24) — Autorização, papéis e isolamento por sessão. Não iniciada — aguarda merge da FIT-010.
+- FIT-012 (#25) — Shell autenticado e navegação responsiva. Não iniciada — aguarda merge da FIT-011.
+
+## Resultado intermediário — FIT-009
+
+- ADR-002 (Better Auth) avaliada com prova técnica real contra a stack atual (Next.js 16.3.5, React 19.3.0, Prisma 6.19.3, PostgreSQL 16) — decisão registrada em `docs/06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`;
+- `better-auth` 1.7.5 (última versão estável, não beta/rc) integrado via adapter Prisma;
+- schema físico estendido de forma aditiva (nova migration): `User` recebe `role`, `emailVerified`, `image`, `updatedAt`; novos modelos `Session`, `Account`, `Verification`;
+- cadastro (`/criar-conta`) e login (`/entrar`) de personal, com validação de formulário, prevenção de submissão duplicada e mensagens de erro que não revelam existência de conta;
+- aluno sem cadastro público — apenas login, sem rota de auto-cadastro;
+- sessão acessível no servidor; rota autenticada provisória protegida; logout funcional;
+- testes automatizados contra PostgreSQL real cobrindo cadastro, duplicidade, login, proteção de rota e ausência de cadastro público de aluno;
+- nenhuma credencial em log, código, PR ou documentação.
+
+## Sequenciamento obrigatório
+
+As Histórias não são paralelas:
+
+1. FIT-009 é implementada e submetida a PR. *(feito nesta rodada)*
+2. Produto/Design/Gate Técnico revisa e autoriza o merge.
+3. Somente após o merge, FIT-010 pode iniciar.
+4. FIT-010 é implementada e submetida a PR.
+5. Produto/Design/Gate Técnico revisa e autoriza o merge.
+6. Somente após o merge, FIT-011 pode iniciar.
+7. FIT-011 é implementada e submetida a PR.
+8. Produto/Design/Gate Técnico revisa e autoriza o merge.
+9. Somente após o merge, FIT-012 pode iniciar.
+10. FIT-012 é implementada e submetida a PR.
+11. Produto/Design/Gate Técnico revisa e autoriza o merge.
+12. Fechamento documental da SPRINT-04 no próprio PR da FIT-012 — sem PR documental separado.
+
+## Critérios de sucesso da Sprint
+
+- ADR-002 recebe decisão final antes de qualquer implementação dependente ser tratada como consolidada;
+- personal cria conta, autentica e acessa área protegida; credenciais inválidas são rejeitadas;
+- aluno não possui cadastro público;
+- tenant do personal é criado automaticamente e de forma idempotente (FIT-010);
+- contexto de autorização (userId, role, tenantId) é derivado da sessão no servidor, nunca do cliente (FIT-011);
+- isolamento entre tenants e entre alunos comprovado por testes negativos reais (FIT-011);
+- shell autenticado de personal e de aluno implementado, responsivo, com Design System M3 e temas claro/escuro, sem simular funcionalidade futura (FIT-012);
+- nenhuma credencial, token ou segredo versionado;
+- nenhuma feature de negócio (Alunos, Exercícios, Treinos, Financeiro) implementada além da estrutura mínima de acesso;
+- cada História possui PR próprio e merge explicitamente autorizado por SHA exato.
+
+## Decisões preservadas
+
+- Better Auth: ADR-002 avaliada nesta Sprint com prova técnica real (FIT-009) — ver seção acima e o PR da FIT-009 para o resultado.
+- 1 personal = 1 tenant — já garantido por constraint física (FIT-007); FIT-010 garante também o provisionamento automático no fluxo de cadastro.
+- `tenant_id` nunca confiado ao cliente — a estratégia de dados já existia (FIT-007); esta Sprint implementa a derivação real a partir da sessão autenticada, cumprindo o que a documentação da FIT-007 registrava como dependência de uma "História futura da prova técnica de autenticação".
+- Design System M3 (`docs/03-design`) aplicado integralmente, sem biblioteca visual paralela.
+
+## Não incluído
+
+- OAuth, login social, MFA, passkeys, recuperação de senha por SMS;
+- gestão completa de Alunos, Exercícios, Treinos, Financeiro;
+- assinatura SaaS produtiva, cobrança, múltiplos personais por tenant, administração de academias, superadministrador, impersonação;
+- qualquer produção funcional além do que já existe (Railway de homologação da FIT-008).
+
+## Risco de governança conhecido
+
+A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado real do repositório — `main` permanece `"protected": false`. A disciplina de branch/PR/merge autorizado permanece a única salvaguarda efetiva.
+
+## Fechamento
+
+Ainda não preenchido. Reservado para o PR da FIT-012, conforme a regra desta Sprint de não criar PRs exclusivamente documentais.

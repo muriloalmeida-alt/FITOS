@@ -1,6 +1,6 @@
-# Execução local da aplicação (FIT-006/FIT-007)
+# Execução local da aplicação (FIT-006/FIT-007/FIT-009)
 
-Este documento descreve como executar localmente a fundação executável do FitOS (FIT-006) e o banco de dados multi-tenant (FIT-007).
+Este documento descreve como executar localmente a fundação executável do FitOS (FIT-006), o banco de dados multi-tenant (FIT-007) e a autenticação (FIT-009).
 
 ## Requisitos
 
@@ -19,7 +19,7 @@ npm ci
 ## Banco de dados (FIT-007)
 
 1. Crie dois bancos PostgreSQL locais: um de desenvolvimento e um de testes (nomes livres; os exemplos abaixo usam `fitos_dev` e `fitos_test`).
-2. Copie `.env.example` para `.env` e preencha `DATABASE_URL` com a string de conexão do banco de desenvolvimento. Nenhum valor real deve ser usado — este é um ambiente local.
+2. Copie `.env.example` para `.env` e preencha `DATABASE_URL` com a string de conexão do banco de desenvolvimento, além de `BETTER_AUTH_SECRET` (qualquer valor local longo, ex. `openssl rand -base64 32`) e `BETTER_AUTH_URL` (`http://localhost:3000`) — obrigatórios a partir da FIT-009, a aplicação falha ao iniciar sem eles. Nenhum valor real deve ser usado — este é um ambiente local.
 3. Aplique as migrations no banco de desenvolvimento:
 
    ```bash
@@ -69,22 +69,30 @@ Com a aplicação em execução, `GET /api/health` retorna:
 
 `GET /api/ready` (FIT-008) confirma que o PostgreSQL configurado em `DATABASE_URL` está acessível, executando `SELECT 1` via Prisma: `200 { "status": "ready" }` quando o banco responde, `503 { "status": "unavailable" }` quando não — nunca inclui mensagem de erro, host ou credencial na resposta.
 
+## Autenticação (FIT-009)
+
+- `/criar-conta` — cadastro de personal (nome, e-mail, senha); `/entrar` — login de personal ou aluno; `/painel` — primeira página autenticada provisória, protegida.
+- `POST/GET /api/auth/*` — handler do Better Auth (cadastro, login, logout, sessão), montado por `src/app/api/auth/[...all]/route.ts`.
+- Sessão acessível no servidor via `getServerSession()` (`src/modules/identity/session.ts`); nenhum outro módulo deve importar `better-auth` diretamente — ver `docs/06-engenharia/arquitetura/AUTENTICACAO-E-SESSAO.md`.
+
 ## Estrutura de pastas
 
 ```text
 prisma/
-  schema.prisma        modelo físico multi-tenant (FIT-007)
+  schema.prisma        modelo físico multi-tenant + identidade (FIT-007/FIT-009)
   migrations/           histórico de migrations
   seed.ts               dados sintéticos de exemplo
 src/
-  app/                 rotas do App Router, layout raiz, healthcheck
+  app/                 rotas do App Router: layout raiz, healthcheck/readiness,
+                       /entrar, /criar-conta, /painel (FIT-009), api/auth
   modules/             limites de domínio (identity, tenancy, students, exercises,
                        training, execution, evolution, student-finance,
-                       saas-subscription) — a maioria ainda apenas limites
-                       estruturais/documentais; tenancy tem modelo físico e
-                       testes de isolamento (FIT-007)
+                       saas-subscription) — identity e tenancy têm implementação
+                       física e testes (FIT-009/FIT-007); os demais ainda são
+                       apenas limites estruturais/documentais
+  proxy.ts             redirecionamento otimista de rota autenticada (FIT-009)
   shared/
-    ui/                componentes-base mínimos (Button, Card)
+    ui/                componentes-base (Button, Card, TextField, FormAlert)
     design-system/     tokens M3 (docs/03-design/M3-DESIGN-TOKENS.md) em CSS
     config/             leitura de variáveis de ambiente públicas
     db/                cliente Prisma e utilitário de URL do banco de testes
@@ -96,22 +104,24 @@ src/
 
 ## Stack validada
 
-Next.js 16.3.5, React/React DOM 19.3.0, TypeScript 5.9.3, ESLint 9.39.5 + `eslint-config-next` 16.3.5 (flat config), Vitest 5.0.1, Prisma/`@prisma/client` 6.19.3, PostgreSQL 16, Node.js 22. `npm audit`: zero vulnerabilidades.
+Next.js 16.3.5, React/React DOM 19.3.0, TypeScript 5.9.3, ESLint 9.39.5 + `eslint-config-next` 16.3.5 (flat config), Vitest 5.0.1, Prisma/`@prisma/client` 6.19.3, Better Auth 1.7.5, PostgreSQL 16, Node.js 22. `npm audit`: zero vulnerabilidades.
 
-## O que a fundação prova até aqui (FIT-006 + FIT-007)
+## O que a fundação prova até aqui (FIT-006 + FIT-007 + FIT-009)
 
 - a aplicação Next.js/TypeScript inicializa, builda e serve páginas;
 - o tema Material Design 3 está aplicado, com suporte a claro/escuro;
 - a estrutura modular reflete os limites de `VISAO-ARQUITETURAL.md`;
-- há um healthcheck mínimo e testes automatizados da fundação;
+- há um healthcheck e readiness mínimos e testes automatizados da fundação;
 - o modelo físico multi-tenant existe, com migrations rastreáveis e constraints reais que impedem 1 personal ter mais de 1 tenant, um aluno pertencer a mais de 1 tenant, e um tenant ter mais de 1 assinatura SaaS;
 - consultas/updates/deletes escopados por tenant errado nunca afetam dados de outro tenant, verificado por teste automatizado contra um PostgreSQL real;
-- toda relação entre registros de domínio (Workout→TrainingPlan, WorkoutExercise→Workout, PlanAssignment→Student/TrainingPlan, WorkoutSession→Student/Workout, Assessment→Student, StudentCharge→Student) é fisicamente impedida de cruzar tenants por foreign keys compostas `(id, tenantId)`; o vínculo exercício privado/global usa um trigger, pelo motivo explicado em `MODELO-FISICO-DE-DADOS.md`.
+- toda relação entre registros de domínio (Workout→TrainingPlan, WorkoutExercise→Workout, PlanAssignment→Student/TrainingPlan, WorkoutSession→Student/Workout, Assessment→Student, StudentCharge→Student) é fisicamente impedida de cruzar tenants por foreign keys compostas `(id, tenantId)`; o vínculo exercício privado/global usa um trigger, pelo motivo explicado em `MODELO-FISICO-DE-DADOS.md`;
+- personal pode criar conta e autenticar com e-mail/senha; aluno pode autenticar mas não tem cadastro público; sessão é acessível no servidor e protege `/painel`; logout invalida a sessão — tudo testado contra PostgreSQL real (ver `AUTENTICACAO-E-SESSAO.md`).
 
 ## O que ainda não está implementado
 
-- autenticação (Better Auth/Clerk) ou cobrança (Asaas/Mercado Pago);
-- derivação real de `tenant_id` a partir de uma sessão autenticada (depende da prova técnica de autenticação);
+- provisionamento automático de tenant a partir do cadastro (FIT-010), autorização/isolamento por sessão (FIT-011) e shell autenticado real (FIT-012);
+- recuperação de senha, verificação de e-mail, rate limiting de login, OAuth/MFA/passkeys (ver "Limitações conhecidas" em `AUTENTICACAO-E-SESSAO.md`);
+- cobrança (Asaas/Mercado Pago);
 - produção funcional (apenas homologação existe, e com dados fictícios — ver `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`);
 - qualquer funcionalidade de Alunos, Exercícios, Treinos, Execução, Evolução ou Financeiro além do modelo físico.
 
