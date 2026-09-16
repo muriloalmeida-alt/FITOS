@@ -1,14 +1,17 @@
 // @vitest-environment node
 //
 // Testes de integração da ativação de conta do aluno (FIT-015) contra
-// PostgreSQL real (banco de testes). Constrói uma instância própria do
+// PostgreSQL real (banco de testes). `testAuth` é uma instância própria do
 // Better Auth apontando para o banco de testes, sem o databaseHooks de
-// provisionamento automático de tenant (esse hook, em auth.ts, usa o
-// PrismaClient compartilhado ligado ao banco de desenvolvimento — replicá-lo
-// aqui causaria uma violação de FK entre bancos diferentes). Por isso estes
-// testes não exercitam a etapa "desfazer o tenant automático" — essa
-// interação específica é comprovada via evidência real (servidor de
-// produção, auth real) em docs/06-engenharia/evidencias/FIT-015/.
+// provisionamento automático de tenant de `auth.ts` (aquele hook, em
+// produção, usa o PrismaClient compartilhado ligado ao banco de
+// desenvolvimento — replicá-lo diretamente aqui causaria uma violação de FK
+// entre bancos diferentes). `testAuthWithHook`, abaixo, reproduz o mesmo
+// hook chamando `ensureTenantForPersonal` (que aceita um `client` injetado)
+// com o `prisma` de testes — reproduzindo o percurso real de produção (o
+// tenant automático da FIT-010 sendo criado e depois desfeito) sem essa
+// violação de FK. `testAuth` continua a instância padrão para os testes que
+// não precisam desse percurso.
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
@@ -16,8 +19,19 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { activateStudentAccount, ActivationError, checkActivationToken } from "./activation";
 import { generateInvitation, hashInvitationToken } from "@/modules/students/invitations";
+import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
+
+// Caixa mutável simples para capturar o id do `User` criado por
+// `signUpEmail` durante um teste — via `databaseHooks.user.create.after`,
+// que roda de forma síncrona como parte do próprio fluxo de `signUpEmail`,
+// antes de `activateStudentAccount` ter qualquer chance de fazer a limpeza.
+// Evita ter que embrulhar `authInstance.api.signUpEmail` num objeto próprio
+// (que não teria as propriedades internas do endpoint real do Better Auth
+// exigidas pelo tipo `SignUpEmailCompatibleAuth` de `activation.ts`) — os
+// testes continuam passando a instância real (`testAuth`/`testAuthWithHook`).
+const lastSignUpUserId: { current?: string } = {};
 
 const testAuth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
@@ -26,6 +40,39 @@ const testAuth = betterAuth({
   emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128, autoSignIn: true },
   user: { additionalFields: { role: { type: "string", required: true, defaultValue: "PERSONAL", input: false } } },
   advanced: { database: { generateId: false } },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          lastSignUpUserId.current = user.id;
+        },
+      },
+    },
+  },
+});
+
+const testAuthWithHook = betterAuth({
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  secret: process.env.BETTER_AUTH_SECRET ?? "test-only-secret-do-not-use-in-production",
+  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128, autoSignIn: true },
+  user: { additionalFields: { role: { type: "string", required: true, defaultValue: "PERSONAL", input: false } } },
+  advanced: { database: { generateId: false } },
+  databaseHooks: {
+    user: {
+      create: {
+        // Mesma lógica de `auth.ts` (FIT-010), com o `prisma` de testes
+        // injetado em vez do singleton de desenvolvimento.
+        after: async (user) => {
+          lastSignUpUserId.current = user.id;
+          if (user.role !== "PERSONAL") {
+            return;
+          }
+          await ensureTenantForPersonal({ id: user.id, name: user.name, role: user.role }, prisma);
+        },
+      },
+    },
+  },
 });
 
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -241,6 +288,128 @@ describe("activateStudentAccount (FIT-015)", () => {
 
     const linkedUser = await prisma.user.findUniqueOrThrow({ where: { email: student.email } });
     expect(linkedUser.role).toBe("ALUNO");
+  });
+
+  it("percurso real de produção (com o hook de provisionamento automático de tenant da FIT-010): falha na etapa de vínculo remove tenant automático E User, convite volta a PENDENTE, nova tentativa funciona", async () => {
+    const { tenant, student, owner } = await createTenantWithStudent("ativar-falha-com-hook");
+    const { rawToken } = await generateInvitation({ tenantId: tenant.id, studentId: student.id, actorUserId: owner.id }, prisma);
+
+    // Captura o id do User criado por `signUpEmail` (via
+    // `lastSignUpUserId`, preenchido pelo `databaseHooks` de
+    // `testAuthWithHook`, que reproduz o hook real da FIT-010 contra o
+    // banco de testes) para poder consultar diretamente o tenant
+    // automático que o hook provisiona — o nome gerado (`tenantNameFor`)
+    // não contém `run`, então não seria encontrável pelo filtro de
+    // limpeza do `afterAll`.
+    lastSignUpUserId.current = undefined;
+
+    const failingTransactionClient = new Proxy(prisma, {
+      get(target, prop, receiver) {
+        if (prop === "$transaction") {
+          return async () => {
+            throw new Error("falha simulada na etapa de vínculo (percurso com hook)");
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    await expect(
+      activateStudentAccount(
+        { token: rawToken, password },
+        { authInstance: testAuthWithHook, client: failingTransactionClient as unknown as PrismaClient }
+      )
+    ).rejects.toThrow("falha simulada na etapa de vínculo (percurso com hook)");
+    const capturedUserId = lastSignUpUserId.current;
+    expect(capturedUserId).toBeDefined();
+
+    // O hook real provisionou um tenant automático para esse User (criado
+    // como PERSONAL, antes da correção de papel) — a limpeza precisa
+    // remover esse tenant, não só o User.
+    const orphanTenant = await prisma.tenant.findUnique({ where: { ownerId: capturedUserId! } });
+    expect(orphanTenant).toBeNull();
+    const orphanUser = await prisma.user.findUnique({ where: { id: capturedUserId! } });
+    expect(orphanUser).toBeNull();
+
+    const invitationAfterFailure = await prisma.invitation.findFirstOrThrow({ where: { studentId: student.id } });
+    expect(invitationAfterFailure.status).toBe("PENDENTE");
+
+    const retry = await activateStudentAccount(
+      { token: rawToken, password },
+      { authInstance: testAuthWithHook, client: prisma }
+    );
+    expect(retry.studentId).toBe(student.id);
+
+    const linkedUser = await prisma.user.findUniqueOrThrow({ where: { email: student.email } });
+    expect(linkedUser.role).toBe("ALUNO");
+    // O tenant automático desta segunda tentativa (bem-sucedida) também
+    // precisa ter sido desfeito pela transação de vínculo real.
+    const secondAttemptTenant = await prisma.tenant.findUnique({ where: { ownerId: linkedUser.id } });
+    expect(secondAttemptTenant).toBeNull();
+  });
+
+  it("falha ao desfazer a conta órfã (a própria limpeza falha): convite permanece ACEITO (nunca reaberto sem confirmar a remoção), erro original relançado, e uma nova tentativa com o mesmo token é rejeitada de forma consistente", async () => {
+    const { tenant, student, owner } = await createTenantWithStudent("ativar-falha-na-limpeza");
+    const { rawToken } = await generateInvitation({ tenantId: tenant.id, studentId: student.id, actorUserId: owner.id }, prisma);
+
+    lastSignUpUserId.current = undefined;
+
+    // `tenant.deleteMany` lança de forma síncrona sempre que chamado — isso
+    // já derruba a própria construção do array passado a `$transaction`
+    // (o primeiro elemento é justamente `client.tenant.deleteMany(...)`),
+    // então nunca chega a `client.$transaction` nem a `user.update`/
+    // `student.updateMany`. É a mesma chamada usada depois, na limpeza —
+    // por isso ela também falha ali, simulando uma limpeza que não
+    // consegue remover a conta órfã.
+    const brokenCleanupClient = new Proxy(prisma, {
+      get(target, prop) {
+        if (prop === "tenant") {
+          // Objeto independente, sem prototype ligado ao delegate real do
+          // Prisma — `client.tenant.deleteMany` é o único método de
+          // `tenant` que `activateStudentAccount` chama, então não há
+          // necessidade de herdar nada do delegate original (evita
+          // qualquer efeito colateral de tentar copiar/agarrar um
+          // getter/cache interno do Prisma).
+          return {
+            deleteMany: () => {
+              throw new Error("falha simulada ao remover o tenant órfão");
+            },
+          };
+        }
+        return Reflect.get(target, prop);
+      },
+    });
+
+    await expect(
+      activateStudentAccount(
+        { token: rawToken, password },
+        { authInstance: testAuth, client: brokenCleanupClient as unknown as PrismaClient }
+      )
+    ).rejects.toThrow("falha simulada ao remover o tenant órfão");
+    const capturedUserId = lastSignUpUserId.current;
+    expect(capturedUserId).toBeDefined();
+
+    // A limpeza falhou de propósito: o User órfão precisa continuar
+    // existindo — é exatamente esse estado que exige não reabrir o convite.
+    const orphanUser = await prisma.user.findUnique({ where: { id: capturedUserId! } });
+    expect(orphanUser).not.toBeNull();
+
+    // O convite NÃO pode voltar a PENDENTE aqui — isso enganaria a próxima
+    // tentativa (ela acharia que pode tentar de novo, e bateria em
+    // EMAIL_EM_USO sem nenhuma pista do que aconteceu). Continua ACEITO.
+    const invitationAfterFailure = await prisma.invitation.findFirstOrThrow({ where: { studentId: student.id } });
+    expect(invitationAfterFailure.status).toBe("ACEITO");
+
+    // Uma nova tentativa com o mesmo token é rejeitada de forma consistente
+    // (o convite não está PENDENTE) — nunca uma falsa promessa de que
+    // tentar de novo vai funcionar.
+    await expect(
+      activateStudentAccount({ token: rawToken, password }, { authInstance: testAuth, client: prisma })
+    ).rejects.toMatchObject({ kind: "TOKEN_INVALIDO" });
+
+    // Limpeza do próprio teste: remove a conta órfã diretamente (fora do
+    // fluxo em teste, que foi deliberadamente impedido de fazer isso).
+    await prisma.user.delete({ where: { id: capturedUserId! } });
   });
 
   it("token não aparece em nenhum campo do banco — apenas o hash", async () => {

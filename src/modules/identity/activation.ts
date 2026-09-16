@@ -79,10 +79,20 @@ export interface ActivateStudentAccountResult {
 ///    já criada é desfeita explicitamente (`user.delete`, com cascade
 ///    cuidando de `Session`/`Account`; qualquer `Tenant` que o hook da
 ///    FIT-010 tenha provisionado é removido antes, já que a relação usa
-///    `onDelete: Restrict`) **antes** de devolver o convite a PENDENTE.
-///    Sem essa limpeza, o e-mail do aluno ficaria "ocupado" por uma conta
-///    sem `Student` vinculado, e nenhuma tentativa nova de ativação
-///    conseguiria recriar a conta (`EMAIL_EM_USO` permanente, sem saída).
+///    `onDelete: Restrict`).
+///    **O convite só volta a `PENDENTE` depois de confirmar que essa
+///    limpeza funcionou** — nunca antes. Se a própria limpeza falhar (o
+///    `User` órfão não pôde ser removido), reabrir o convite seria pior do
+///    que não reabrir: uma nova tentativa encontraria o e-mail "ocupado"
+///    de novo (`EMAIL_EM_USO`) mas agora sem nenhum jeito de saber que o
+///    convite já foi "gasto" por uma ativação que nunca terminou. Nesse
+///    caso o convite permanece `ACEITO`: uma nova tentativa com o mesmo
+///    token é rejeitada de forma consistente (`TOKEN_INVALIDO`, nunca uma
+///    falsa promessa de que tentar de novo vai funcionar), o erro original
+///    é relançado (nunca engolido), e a falha de limpeza é registrada via
+///    `console.error` para investigação — recuperação real desse estado
+///    exige remover a conta órfã e gerar um novo convite (o `Student`
+///    continua sem `userId`, então um novo convite pode ser gerado).
 /// `authInstance` é tipado estruturalmente (apenas o formato de
 /// `api.signUpEmail` que esta função de fato usa) em vez de `typeof auth` —
 /// isso permite que os testes construam uma instância de Better Auth com
@@ -157,8 +167,24 @@ export async function activateStudentAccount(
       // ativação seja possível. Tenant primeiro: a relação é
       // `onDelete: Restrict`, então o User não pode ser removido enquanto
       // ainda possuir um tenant. Session/Account são `onDelete: Cascade`.
-      await client.tenant.deleteMany({ where: { ownerId: createdUserId } }).catch(() => {});
-      await client.user.delete({ where: { id: createdUserId } }).catch(() => {});
+      try {
+        await client.tenant.deleteMany({ where: { ownerId: createdUserId } });
+        await client.user.delete({ where: { id: createdUserId } });
+      } catch (cleanupError) {
+        // A limpeza falhou: o User órfão pode ainda existir. NÃO reabre o
+        // convite aqui — fazer isso mentiria para a próxima tentativa
+        // (ela bateria em EMAIL_EM_USO de novo, sem nenhuma pista de que o
+        // convite já foi "gasto"). O convite fica ACEITO (estado seguro:
+        // rejeitado de forma consistente por qualquer tentativa nova com o
+        // mesmo token) até que a conta órfã seja removida manualmente e um
+        // novo convite seja gerado. Nunca engolido silenciosamente.
+        console.error("[FIT-015] Falha ao desfazer conta órfã após ativação incompleta — convite mantido ACEITO, requer remoção manual da conta", {
+          studentId: invitation.studentId,
+          orphanUserId: createdUserId,
+          cleanupError,
+        });
+        throw error;
+      }
     }
     await client.invitation
       .update({ where: { id: invitation.id }, data: { status: "PENDENTE", acceptedAt: null } })
