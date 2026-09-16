@@ -1,0 +1,17 @@
+.alert {
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  border-radius: var(--fitos-shape-small);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 450;
+}
+
+.error {
+  background-color: var(--fitos-error-100);
+  color: var(--fitos-color-error);
+}
+
+.info {
+  background-color: var(--fitos-color-secondary-container);
+  color: var(--fitos-color-on-secondary-container);
+}

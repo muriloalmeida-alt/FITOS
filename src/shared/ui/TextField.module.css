@@ -1,0 +1,42 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.input {
+  min-height: 48px;
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  line-height: 24px;
+  transition: border-color var(--fitos-motion-state) var(--fitos-motion-standard);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--fitos-color-primary);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--fitos-color-error);
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 450;
+  color: var(--fitos-color-error);
+}

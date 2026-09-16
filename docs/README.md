@@ -33,6 +33,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 
 - `04-backlog/BACKLOG-MVP.md`
 - `04-backlog/EPIC-02-FUNDACAO-TECNICA.md`
+- `04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`
 
 ## 05 — Sprints
 
@@ -40,6 +41,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `05-sprints/SPRINT-01-PRODUCT-DESIGN.md`
 - `05-sprints/SPRINT-02-FUNDACAO-TECNICA.md`
 - `05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md`
+- `05-sprints/SPRINT-04-ACESSO-ESTRUTURA-AUTENTICADA.md`
 
 ## 06 — Engenharia
 
@@ -51,6 +53,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/MODELO-DE-DADOS-CONCEITUAL.md`
 - `06-engenharia/arquitetura/MODELO-FISICO-DE-DADOS.md`
 - `06-engenharia/arquitetura/AUTENTICACAO-E-AUTORIZACAO.md`
+- `06-engenharia/arquitetura/AUTENTICACAO-E-SESSAO.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
 - `06-engenharia/arquitetura/SEGURANCA-E-LGPD.md`
@@ -63,9 +66,9 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/adr/ADR-002-BETTER-AUTH-COMO-CANDIDATO.md`
 - `06-engenharia/arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md`
 
-## Aplicação (FIT-006/FIT-007)
+## Aplicação (FIT-006/FIT-007/FIT-009)
 
-A partir da FIT-006, o repositório também contém o código-fonte da aplicação Next.js/TypeScript do FitOS (`src/`, `package.json`). A partir da FIT-007, o repositório também contém o modelo físico de dados (`prisma/`). Execução local documentada em `06-engenharia/EXECUCAO-LOCAL.md`. O código segue a mesma governança desta documentação: toda mudança chega à `main` por PR revisado.
+A partir da FIT-006, o repositório também contém o código-fonte da aplicação Next.js/TypeScript do FitOS (`src/`, `package.json`). A partir da FIT-007, o repositório também contém o modelo físico de dados (`prisma/`). A partir da FIT-009, a aplicação tem autenticação real (Better Auth) — ver `06-engenharia/arquitetura/AUTENTICACAO-E-SESSAO.md`. Execução local documentada em `06-engenharia/EXECUCAO-LOCAL.md`. O código segue a mesma governança desta documentação: toda mudança chega à `main` por PR revisado.
 
 ## Regras rápidas
 
