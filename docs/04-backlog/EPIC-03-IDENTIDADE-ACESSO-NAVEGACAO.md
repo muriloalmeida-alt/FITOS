@@ -18,7 +18,7 @@ Como time do FitOS, queremos que cada personal autenticado receba exatamente um 
 
 Como time do FitOS, queremos uma camada central de autorização que derive userId/role/tenantId da sessão autenticada no servidor, para que nenhuma rota ou operação aceite tenantId vindo do cliente como fonte de autorização.
 
-### FIT-012 (#25) — Shell autenticado e navegação responsiva — Em andamento (SPRINT-04, encerra a Sprint)
+### FIT-012 (#25) — Shell autenticado e navegação responsiva — Concluída (PR #29, merged). Encerra a SPRINT-04.
 
 Como time do FitOS, queremos a estrutura visual autenticada (shell de personal e de aluno), aplicando o Design System M3 já aprovado, para que a navegação exista de forma real e responsiva sem simular funcionalidades ainda não implementadas.
 

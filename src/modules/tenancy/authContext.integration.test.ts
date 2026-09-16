@@ -44,7 +44,7 @@ async function createStudentFor(tenantId: string, label: string) {
     data: { email: `${label}-${run}@example.test`, name: `${label} de teste`, role: "ALUNO" },
   });
   const student = await prisma.student.create({
-    data: { tenantId, userId: user.id, displayName: `${label} de teste` },
+    data: { tenantId, userId: user.id, email: user.email, displayName: `${label} de teste` },
   });
   return { user, student };
 }

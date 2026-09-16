@@ -17,7 +17,7 @@ Objetivo: estabelecer fonte oficial, governança e escopo do MVP.
 Objetivo: permitir que o personal acesse uma conta isolada e administre sua carteira.
 
 - Acesso e conta do personal/aluno: implementado pela EPIC-03 — Identidade, Acesso e Navegação (#21, SPRINT-04) — FIT-009, FIT-010, FIT-011, FIT-012 (ver `docs/04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`).
-- Gestão de alunos (cadastro, perfil, pausa/arquivamento): FIT-001, FIT-013, FIT-014 e FIT-015 (renumerados a partir dos FIT-010/011/012 originais deste backlog, que colidiam com a EPIC-03 — ver nota em `docs/04-backlog/BACKLOG-MVP.md`).
+- Gestão de alunos (cadastro, listagem, perfil, ciclo de vida, convite e ativação): implementado pela EPIC-04 — Cadastro e Relacionamento com Alunos (SPRINT-05) — FIT-013, FIT-014, FIT-015 e FIT-016 (ver `docs/04-backlog/EPIC-04-CADASTRO-RELACIONAMENTO-ALUNOS.md`). Identificadores especulativos deste backlog (FIT-001, FIT-017, FIT-018, FIT-019) renumerados a partir do FIT-010/011/012 original — ver nota em `docs/04-backlog/BACKLOG-MVP.md`; plano/evolução/financeiro do perfil especulativo permanecem fora da SPRINT-05 (dependem das Fases 3, 4 e 6).
 
 ## Fase 2 — Exercícios
 
