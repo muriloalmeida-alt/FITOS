@@ -18,7 +18,7 @@ Como personal, quero consultar e editar os dados básicos de um aluno e poder in
 
 Como personal, quero gerar um link de convite seguro, de uso único e com validade, para que o aluno cadastrado possa definir sua própria senha e ativar o acesso — sem que o aluno tenha cadastro público independente.
 
-### FIT-016 (#34) — Experiência inicial do aluno — PR #38 (gate autônomo aprovado, merge por SHA exato em seguida)
+### FIT-016 (#34) — Experiência inicial do aluno — Concluída (PR #38, merged; correção de recuperação de falha da FIT-015 no PR #39, merged, após revisão do Produto)
 
 Como aluno, quero entrar no FitOS e ver meu nome, meu personal/espaço vinculado e o estado da minha conta, para saber que meu acesso está funcionando, mesmo antes de existir qualquer treino ou avaliação atribuída a mim.
 
