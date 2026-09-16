@@ -26,22 +26,24 @@ Critérios:
 
 ## Épico 2 — Alunos
 
-> Nota de renumeração: os itens abaixo eram originalmente FIT-010, FIT-011 e FIT-012 neste backlog especulativo. Esses identificadores foram formalmente ocupados pela EPIC-03/SPRINT-04 (Issues reais #23, #24 e #25, sobre provisionamento de tenant, autorização e shell autenticado — assunto não relacionado à gestão de alunos). Como os itens abaixo nunca foram promovidos a Issue, foram renumerados para FIT-013, FIT-014 e FIT-015 para eliminar a colisão, preservando a ordem e o conteúdo originais.
+**Parcialmente implementado pela EPIC-04 — Cadastro e Relacionamento com Alunos, SPRINT-05.** As Histórias formais FIT-013 (cadastro/listagem), FIT-014 (perfil e ciclo de vida) e FIT-015 (convite e ativação — não previsto originalmente aqui, mas necessário para que o aluno tenha acesso real) cobrem cadastro, edição de dados básicos, busca/listagem e inativação/reativação. Os critérios especulativos abaixo que citam plano atual, evolução ou financeiro no perfil **não** são cobertos pela SPRINT-05 — dependem dos Épicos de Treinos (4), Execução (5) e Financeiro (6), ainda não iniciados. Os identificadores FIT-017, FIT-018 e FIT-019 abaixo permanecem apenas como registro histórico do backlog original — não foram promovidos a Issues nem reutilizados.
 
-### FIT-013 — Cadastrar e editar aluno (`P0`)
+> Nota de renumeração: os itens abaixo eram FIT-013, FIT-014 e FIT-015 neste backlog especulativo (eles próprios já eram uma renumeração de um FIT-010/011/012 anterior — ver histórico no controle de versão). Esses identificadores foram formalmente ocupados pela EPIC-04/SPRINT-05 (Issues reais, sobre a implementação de verdade de cadastro, perfil e convite de alunos — o mesmo assunto deste Épico especulativo, agora executado). Como os itens abaixo nunca foram promovidos a Issue, foram renumerados para FIT-017, FIT-018 e FIT-019 para eliminar a colisão, preservando a ordem e o conteúdo originais.
+
+### FIT-017 — Cadastrar e editar aluno (`P0`)
 
 Critérios:
 - Campos essenciais são validados.
 - Objetivo, restrições e observações podem ser registrados.
 - Cadastro aparece na lista após sucesso.
 
-### FIT-014 — Consultar perfil completo (`P0`)
+### FIT-018 — Consultar perfil completo (`P0`)
 
 Critérios:
 - Perfil reúne dados, plano atual, evolução e financeiro.
 - Ausência de informações possui estado vazio orientativo.
 
-### FIT-015 — Pausar ou arquivar aluno (`P1`)
+### FIT-019 — Pausar ou arquivar aluno (`P1`)
 
 Critérios:
 - Histórico é preservado.
@@ -155,9 +157,9 @@ Critérios:
 
 ## Ordem sugerida de entrega
 
-1. FIT-001, FIT-013 e FIT-014.
+1. FIT-001, FIT-017 e FIT-018 (histórico especulativo — ver nota da Épico 2; execução real foi FIT-013/014/015/016, EPIC-04/SPRINT-05).
 2. FIT-020, FIT-021 e FIT-022.
 3. FIT-030, FIT-032 e FIT-033.
 4. FIT-002, FIT-040 e FIT-041.
 5. FIT-050, FIT-051 e FIT-053.
-6. FIT-015, FIT-031, FIT-042, FIT-052 e FIT-060.
+6. FIT-019, FIT-031, FIT-042, FIT-052 e FIT-060.

@@ -37,7 +37,7 @@ beforeAll(async () => {
     data: { email: `aluno-a-${run}@example.test`, name: "Aluno de teste A" },
   });
   studentA = await prisma.student.create({
-    data: { tenantId: tenantA.id, userId: studentUserA.id, displayName: "Aluno de teste A" },
+    data: { tenantId: tenantA.id, userId: studentUserA.id, email: studentUserA.email, displayName: "Aluno de teste A" },
   });
 
   const ownerB = await prisma.user.create({
@@ -50,7 +50,7 @@ beforeAll(async () => {
     data: { email: `aluno-b-${run}@example.test`, name: "Aluno de teste B" },
   });
   studentB = await prisma.student.create({
-    data: { tenantId: tenantB.id, userId: studentUserB.id, displayName: "Aluno de teste B" },
+    data: { tenantId: tenantB.id, userId: studentUserB.id, email: studentUserB.email, displayName: "Aluno de teste B" },
   });
 
   trainingPlanA = await prisma.trainingPlan.create({
@@ -150,6 +150,7 @@ describe("constraints de tenancy (1 personal = 1 tenant; aluno = 1 tenant)", () 
         data: {
           tenantId: tenantB.id,
           userId: (await prisma.student.findUniqueOrThrow({ where: { id: studentA.id } })).userId,
+          email: `vinculo-duplicado-${run}@example.test`,
           displayName: "Vínculo duplicado",
         },
       })

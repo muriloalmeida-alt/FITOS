@@ -15,10 +15,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// FIT-013: renomeado de {ATIVO, PAUSADO, ARQUIVADO} (especulação da FIT-007,
+/// nunca usada por nenhum código) para {ATIVO, INATIVO} — os dois estados
+/// reais definidos pela gestão de alunos (SPRINT-05): não há exclusão física
+/// pela interface, apenas inativação, que preserva o histórico.
 enum StudentStatus {
   ATIVO
-  PAUSADO
-  ARQUIVADO
+  INATIVO
 }
 
 enum ExerciseOrigin {
@@ -167,9 +170,19 @@ model Tenant {
   @@map("tenants")
 }
 
-/// Aluno vinculado a exatamente 1 tenant. `userId` é único, então cada User
-/// (aluno) tem no máximo 1 perfil de Student — multi-personal por aluno
-/// exigiria nova decisão e migração planejada (fora do MVP).
+/// Aluno vinculado a exatamente 1 tenant. `userId` é único quando presente,
+/// então cada User (aluno) tem no máximo 1 perfil de Student — multi-personal
+/// por aluno exigiria nova decisão e migração planejada (fora do MVP).
+///
+/// `userId` é opcional (FIT-013): o personal cadastra o aluno (nome + e-mail)
+/// antes de existir qualquer conta/sessão — o `User` só passa a existir na
+/// ativação do convite (FIT-015). `email` vive no próprio `Student` porque,
+/// até a ativação, não há `User` para guardá-lo; é o valor usado tanto para
+/// o convite quanto, depois, deve corresponder ao e-mail do `User` vinculado.
+/// Único por tenant (`@@unique([tenantId, email])`), não globalmente: dois
+/// tenants diferentes podem cadastrar o mesmo e-mail antes de qualquer
+/// ativação (a colisão real, se houver, só se manifesta na ativação, onde
+/// `User.email` é globalmente único — tratado na FIT-015).
 ///
 /// `@@unique([id, tenantId])` existe para ser referenciado por chave
 /// composta a partir de PlanAssignment/WorkoutSession/Assessment/
@@ -178,19 +191,22 @@ model Tenant {
 model Student {
   id          String        @id @default(cuid())
   tenantId    String
-  userId      String        @unique
+  userId      String?       @unique
+  email       String
   displayName String
   status      StudentStatus @default(ATIVO)
   createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Restrict)
   planAssignments PlanAssignment[]
   workoutSessions WorkoutSession[]
   assessments     Assessment[]
   charges         StudentCharge[]
 
   @@unique([id, tenantId])
+  @@unique([tenantId, email])
   @@index([tenantId])
   @@map("students")
 }

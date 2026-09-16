@@ -34,6 +34,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `04-backlog/BACKLOG-MVP.md`
 - `04-backlog/EPIC-02-FUNDACAO-TECNICA.md`
 - `04-backlog/EPIC-03-IDENTIDADE-ACESSO-NAVEGACAO.md`
+- `04-backlog/EPIC-04-CADASTRO-RELACIONAMENTO-ALUNOS.md`
 
 ## 05 — Sprints
 
@@ -42,6 +43,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `05-sprints/SPRINT-02-FUNDACAO-TECNICA.md`
 - `05-sprints/SPRINT-03-FUNDACAO-EXECUTAVEL.md`
 - `05-sprints/SPRINT-04-ACESSO-ESTRUTURA-AUTENTICADA.md`
+- `05-sprints/SPRINT-05-GESTAO-DE-ALUNOS.md`
 
 ## 06 — Engenharia
 
@@ -55,6 +57,10 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/AUTENTICACAO-E-AUTORIZACAO.md`
 - `06-engenharia/arquitetura/AUTENTICACAO-E-SESSAO.md`
 - `06-engenharia/arquitetura/PROVISIONAMENTO-DE-TENANT.md`
+- `06-engenharia/arquitetura/AUTORIZACAO-E-PAPEIS.md`
+- `06-engenharia/arquitetura/SHELL-AUTENTICADO.md`
+- `06-engenharia/arquitetura/GESTAO-DE-ALUNOS.md`
+- `06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
 - `06-engenharia/arquitetura/SEGURANCA-E-LGPD.md`

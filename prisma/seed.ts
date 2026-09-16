@@ -18,7 +18,7 @@ async function main() {
     data: { email: "aluno-a@example.test", name: "Aluno Fictício A" },
   });
   const studentA = await prisma.student.create({
-    data: { tenantId: tenantA.id, userId: studentAUser.id, displayName: "Aluno Fictício A" },
+    data: { tenantId: tenantA.id, userId: studentAUser.id, email: studentAUser.email, displayName: "Aluno Fictício A" },
   });
 
   const tenantBOwner = await prisma.user.create({
@@ -31,7 +31,7 @@ async function main() {
     data: { email: "aluno-b@example.test", name: "Aluno Fictício B" },
   });
   const studentB = await prisma.student.create({
-    data: { tenantId: tenantB.id, userId: studentBUser.id, displayName: "Aluno Fictício B" },
+    data: { tenantId: tenantB.id, userId: studentBUser.id, email: studentBUser.email, displayName: "Aluno Fictício B" },
   });
 
   await prisma.saasSubscription.createMany({

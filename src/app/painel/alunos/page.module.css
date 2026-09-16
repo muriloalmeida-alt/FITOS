@@ -1,0 +1,146 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.searchInput,
+.statusSelect {
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  min-height: 48px;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+.empty {
+  margin: var(--fitos-space-6) 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 16px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  border-radius: var(--fitos-shape-medium);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.cellName {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.cellEmail {
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.statusAtivo,
+.statusInativo {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 2px var(--fitos-space-2);
+  border-radius: var(--fitos-shape-full);
+}
+
+.statusAtivo {
+  color: var(--fitos-color-on-primary-container);
+  background-color: var(--fitos-color-primary-container);
+}
+
+.statusInativo {
+  color: var(--fitos-color-on-surface-variant);
+  background-color: var(--fitos-color-surface-container-high);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+  padding-top: var(--fitos-space-2);
+}
+
+.pageLink,
+.pageLinkDisabled {
+  font-size: 14px;
+  font-weight: 650;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--fitos-shape-small);
+}
+
+.pageLink {
+  color: var(--fitos-color-primary);
+  text-decoration: none;
+}
+
+.pageLinkDisabled {
+  color: var(--fitos-color-outline);
+}
+
+.pageIndicator {
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+@media (min-width: 840px) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .filters {
+    flex-direction: row;
+  }
+
+  .searchInput {
+    flex: 1;
+  }
+
+  .row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .cellName {
+    flex: 1 1 35%;
+  }
+
+  .cellEmail {
+    flex: 1 1 45%;
+  }
+}
