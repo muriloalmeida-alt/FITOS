@@ -6,11 +6,11 @@ Entregar a primeira experiência autenticada do FitOS: contas de personal traine
 
 ## Histórias
 
-### FIT-009 (#22) — Prova técnica e implementação da autenticação — Em andamento (SPRINT-04)
+### FIT-009 (#22) — Prova técnica e implementação da autenticação — Concluída (PR #26, merged)
 
 Como time do FitOS, queremos validar tecnicamente o Better Auth e, se aprovado, implementar a fundação de autenticação (cadastro de personal, login, logout, sessão server-side, proteção de rota), para que o produto tenha uma base de identidade real antes de qualquer funcionalidade de negócio.
 
-### FIT-010 (#23) — Provisionamento do tenant do personal — Não iniciada (depende do merge da FIT-009)
+### FIT-010 (#23) — Provisionamento do tenant do personal — Em andamento (SPRINT-04)
 
 Como time do FitOS, queremos que cada personal autenticado receba exatamente um tenant, criado automaticamente e de forma idempotente, para que a regra "1 personal = 1 tenant" seja garantida também no fluxo de cadastro, não apenas na constraint física.
 
