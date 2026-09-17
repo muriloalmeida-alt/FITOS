@@ -1,0 +1,25 @@
+.backLink {
+  color: var(--fitos-color-primary);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.statusLine {
+  margin: 0 0 var(--fitos-space-4) 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.statusAtivo,
+.statusArquivado {
+  font-weight: 650;
+}
+
+.statusAtivo {
+  color: var(--fitos-color-primary);
+}
+
+.statusArquivado {
+  color: var(--fitos-color-on-surface-variant);
+}

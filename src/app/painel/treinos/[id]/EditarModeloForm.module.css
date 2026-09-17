@@ -1,0 +1,37 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  max-width: 480px;
+}
+
+.daysField {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.daysLegend {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+  padding: 0;
+}
+
+.daysOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fitos-space-3);
+}
+
+.dayOption {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-1);
+  font-size: 14px;
+  color: var(--fitos-color-on-surface);
+  min-height: 48px;
+}
