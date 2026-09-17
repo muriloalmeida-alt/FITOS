@@ -28,7 +28,7 @@ Duas perguntas foram feitas e respondidas antes de qualquer código: (1) SPRINT-
 ## Histórias
 
 - FIT-030 (#52) — Criar modelo de treino. **Concluída** (PR #56, mergeado no commit `1f2f0aa76c47bdbd3b3ab6ebb6e89d5bf7867b69`).
-- FIT-031 (#53) — Duplicar modelo.
+- FIT-031 (#53) — Duplicar modelo. **Concluída** (PR #58, mergeado no commit `836414428994c6e720d89122ccf481d3e7f8b9fd`).
 - FIT-032 (#54) — Criar plano semanal.
 - FIT-033 (#55) — Atribuir plano ao aluno. Encerra a SPRINT-07.
 
@@ -38,6 +38,13 @@ Duas perguntas foram feitas e respondidas antes de qualquer código: (1) SPRINT-
 - `src/modules/workouts/workouts.ts`: CRUD completo de modelo de treino e de itens (adicionar/editar/remover/reordenar), sempre `tenantId` da sessão, exercício sempre do catálogo visível ao tenant;
 - páginas `/painel/treinos` (lista, criação, detalhe) — item "Treinos" da navegação deixa de ser "Em breve";
 - decisão documentada em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md` e `adr/ADR-005-VERSIONAMENTO-DE-PLANOS.md`.
+
+## Resultado intermediário — FIT-031
+
+- `cloneWorkoutWithItems` (motor de clonagem compartilhado, reaproveitado pela FIT-033) + `duplicateWorkout`: cópia independente de um modelo (nome, dias sugeridos, todos os itens na mesma ordem), nome com sufixo `" (cópia)"`, nenhuma FK com o original;
+- testado explicitamente nas duas direções: editar a cópia não afeta o original, editar o original não afeta a cópia;
+- nenhuma migration nesta História;
+- decisão documentada em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md`.
 
 ## Sequenciamento obrigatório
 
