@@ -97,6 +97,7 @@ describe("ModeloDetalhePage (FIT-030)", () => {
     expect(screen.getAllByText("Supino").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Arquivar modelo/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Reativar modelo/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Duplicar modelo/ })).toBeInTheDocument();
   });
 
   it("modelo arquivado: mostra botão de reativar, não o de arquivar", async () => {

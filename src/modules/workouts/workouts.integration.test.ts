@@ -10,6 +10,7 @@ import {
   addWorkoutExercise,
   archiveWorkout,
   createWorkout,
+  duplicateWorkout,
   getWorkoutExerciseForTenant,
   getWorkoutForTenant,
   listWorkoutExercisesForWorkout,
@@ -300,6 +301,86 @@ describe("reorderWorkoutExercises (FIT-030)", () => {
     await expect(
       reorderWorkoutExercises({ tenantId: tenant.id, workoutId: workout.id, orderedIds: [item.id, "inexistente"] }, prisma)
     ).rejects.toMatchObject({ kind: "VALIDACAO" });
+  });
+});
+
+describe("duplicateWorkout (FIT-031)", () => {
+  it("cria uma cópia independente, com o nome marcado, no mesmo plano do original", async () => {
+    const { tenant } = await createTenant("duplicar");
+    const original = await createWorkout({ tenantId: tenant.id, name: `Treino A ${run}` }, prisma);
+    const exerciseA = await createGlobalExercise("duplicar-a");
+    const exerciseB = await createGlobalExercise("duplicar-b");
+    await addWorkoutExercise(
+      { tenantId: tenant.id, workoutId: original.id, exerciseId: exerciseA.id, sets: 3, reps: 10 },
+      prisma
+    );
+    await addWorkoutExercise({ tenantId: tenant.id, workoutId: original.id, exerciseId: exerciseB.id, load: "20kg" }, prisma);
+    await updateWorkout({ tenantId: tenant.id, workoutId: original.id, suggestedDays: ["SEGUNDA"] }, prisma);
+
+    const clone = await duplicateWorkout({ tenantId: tenant.id, workoutId: original.id }, prisma);
+
+    expect(clone.id).not.toBe(original.id);
+    expect(clone.name).toBe(`Treino A ${run} (cópia)`);
+    expect(clone.trainingPlanId).toBe(original.trainingPlanId);
+    expect(clone.suggestedDays).toEqual(["SEGUNDA"]);
+
+    const cloneItems = await listWorkoutExercisesForWorkout({ tenantId: tenant.id, workoutId: clone.id }, prisma);
+    expect(cloneItems).toHaveLength(2);
+    expect(cloneItems.map((item) => item.exerciseId)).toEqual([exerciseA.id, exerciseB.id]);
+    expect(cloneItems.map((item) => item.position)).toEqual([0, 1]);
+    expect(cloneItems[0]?.sets).toBe(3);
+    expect(cloneItems[0]?.reps).toBe(10);
+    expect(cloneItems[1]?.load).toBe("20kg");
+    expect(cloneItems.every((item) => item.id !== original.id)).toBe(true);
+  });
+
+  it("editar a cópia não afeta o original, e editar o original não afeta a cópia já criada", async () => {
+    const { tenant } = await createTenant("duplicar-independente");
+    const original = await createWorkout({ tenantId: tenant.id, name: `Treino B ${run}` }, prisma);
+    const exercise = await createGlobalExercise("duplicar-independente");
+    const originalItem = await addWorkoutExercise(
+      { tenantId: tenant.id, workoutId: original.id, exerciseId: exercise.id, sets: 3 },
+      prisma
+    );
+
+    const clone = await duplicateWorkout({ tenantId: tenant.id, workoutId: original.id }, prisma);
+    const cloneItems = await listWorkoutExercisesForWorkout({ tenantId: tenant.id, workoutId: clone.id }, prisma);
+    const cloneItem = cloneItems[0]!;
+
+    await updateWorkoutExercise({ tenantId: tenant.id, workoutId: clone.id, workoutExerciseId: cloneItem.id, sets: 99 }, prisma);
+    const originalUnchanged = await getWorkoutExerciseForTenant(
+      { tenantId: tenant.id, workoutId: original.id, workoutExerciseId: originalItem.id },
+      prisma
+    );
+    expect(originalUnchanged?.sets).toBe(3);
+
+    await updateWorkoutExercise({ tenantId: tenant.id, workoutId: original.id, workoutExerciseId: originalItem.id, sets: 1 }, prisma);
+    const cloneUnchanged = await getWorkoutExerciseForTenant(
+      { tenantId: tenant.id, workoutId: clone.id, workoutExerciseId: cloneItem.id },
+      prisma
+    );
+    expect(cloneUnchanged?.sets).toBe(99);
+  });
+
+  it("duplica um modelo sem itens", async () => {
+    const { tenant } = await createTenant("duplicar-vazio");
+    const original = await createWorkout({ tenantId: tenant.id, name: `Treino C ${run}` }, prisma);
+
+    const clone = await duplicateWorkout({ tenantId: tenant.id, workoutId: original.id }, prisma);
+    const cloneItems = await listWorkoutExercisesForWorkout({ tenantId: tenant.id, workoutId: clone.id }, prisma);
+
+    expect(cloneItems).toHaveLength(0);
+    expect(clone.name).toBe(`Treino C ${run} (cópia)`);
+  });
+
+  it("rejeita duplicação de modelo de outro tenant (NAO_ENCONTRADO)", async () => {
+    const { tenant: tenantA } = await createTenant("duplicar-cruzado-a");
+    const { tenant: tenantB } = await createTenant("duplicar-cruzado-b");
+    const workoutA = await createWorkout({ tenantId: tenantA.id, name: `Treino D ${run}` }, prisma);
+
+    await expect(duplicateWorkout({ tenantId: tenantB.id, workoutId: workoutA.id }, prisma)).rejects.toMatchObject({
+      kind: "NAO_ENCONTRADO",
+    });
   });
 });
 

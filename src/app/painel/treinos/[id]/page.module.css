@@ -16,6 +16,12 @@
   font-weight: 650;
 }
 
+.duplicateHint {
+  margin: 0 0 var(--fitos-space-3) 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
 .statusAtivo {
   color: var(--fitos-color-primary);
 }

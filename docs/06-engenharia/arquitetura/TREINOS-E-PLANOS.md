@@ -67,3 +67,21 @@ Embora nenhuma linha desta História marque `isSnapshot: true` (isso só acontec
 - Rotas (`src/app/api/workouts/**/*.test.ts`, 27 testes) e páginas (`src/app/painel/treinos/**/*.test.tsx`, 11 testes): 401 sem sessão, 403 quando o autenticado é aluno, `tenantId` do corpo/query nunca repassado, 404 quando o recurso não pertence ao tenant da sessão, 400 em validação.
 
 **Nota operacional descoberta durante os testes**: como o TRIGGER de imutabilidade de snapshot rejeita `DELETE` mesmo quando disparado por `ON DELETE CASCADE`, a limpeza de dados sintéticos de um teste que cria um snapshot (`isSnapshot: true`) precisa desabilitar os dois TRIGGERs de imutabilidade antes de remover as linhas (privilégio de dono da tabela — `ALTER TABLE ... DISABLE/ENABLE TRIGGER`, não exige superusuário; `SET session_replication_role` foi tentado primeiro e rejeitado por falta de permissão). Ver o padrão exato no `afterAll` de `workouts.integration.test.ts` — mesma técnica a reaproveitar em qualquer futuro teste/script que crie um snapshot real (a partir da FIT-033).
+
+## FIT-031 — Duplicar modelo
+
+`cloneWorkoutWithItems` (função interna de `workouts.ts`) clona um `Workout` inteiro — nome, dias sugeridos e todos os `WorkoutExercise` na mesma ordem — em uma linha nova dentro de um `TrainingPlan` de destino, com ids novos e nenhuma FK entre a cópia e a origem. `duplicateWorkout` (exportada, FIT-031) é a primeira usuária: chama esse motor com `targetTrainingPlanId` igual ao do próprio modelo e `nameOverride` acrescentando `" (cópia)"` ao nome original.
+
+Este motor é deliberadamente compartilhado: a FIT-033 vai reutilizá-lo (com um `targetTrainingPlanId` diferente — o `TrainingPlan` snapshot recém-criado — e sem o sufixo de cópia) para clonar cada `Workout` de um plano no momento da atribuição, conforme ADR-005. A única validação que `cloneWorkoutWithItems` não faz é se o destino já é um snapshot — se for, o próprio TRIGGER de imutabilidade (FIT-030) rejeita a inserção; nenhuma função deste módulo expõe esse caminho ao personal (a FIT-033 sempre clona para um plano recém-criado, ainda com `isSnapshot: false`, marcando `true` só como último passo — ver ADR-005).
+
+### Rota e UI
+
+`POST /api/workouts/[id]/duplicar` — mesma checagem `requirePersonal()`. Botão "Duplicar modelo" na página de detalhe (`DuplicarModeloButton.tsx`), que navega para o detalhe da cópia recém-criada após o sucesso.
+
+### O que esta História não faz
+
+Nenhuma migration — reaproveita integralmente o schema da FIT-030. Não duplica o plano inteiro (`TrainingPlan`), só o modelo (`Workout`) — duplicar um plano completo, se necessário, é uma extensão natural fora do escopo desta História.
+
+## Testes (FIT-031)
+
+`src/modules/workouts/workouts.integration.test.ts` (4 novos testes): cópia recebe nome com sufixo, mesmo plano do original, dias sugeridos copiados, todos os itens clonados na mesma ordem com os mesmos parâmetros de prescrição; editar a cópia não afeta o original e editar o original não afeta a cópia já criada (teste explícito nas duas direções); duplicar um modelo sem itens produz uma cópia sem itens; duplicar modelo de outro tenant rejeitado (`NAO_ENCONTRADO`). Rota (3 testes) e página (1 asserção nova): mesmo padrão de autorização das demais rotas deste módulo.

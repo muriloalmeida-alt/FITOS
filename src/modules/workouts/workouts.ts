@@ -391,3 +391,90 @@ export async function reorderWorkoutExercises(
     input.orderedIds.map((id, position) => client.workoutExercise.update({ where: { id }, data: { position } }))
   );
 }
+
+/// Clona um `Workout` (com todos os seus `WorkoutExercise`, na mesma
+/// ordem) em uma linha nova dentro de `targetTrainingPlanId` — ids novos,
+/// nenhuma FK entre a cópia e a origem (`REGRAS-DE-NEGOCIO.md`: "Duplicar
+/// um modelo cria uma nova entidade sem vínculo de atualização
+/// automática"). Motor compartilhado entre `duplicateWorkout` (FIT-031,
+/// cópia explícita do personal) e o clone de atribuição da FIT-033
+/// (ADR-005) — a única diferença entre os dois usos é o plano de destino
+/// e se o nome recebe o sufixo de cópia.
+///
+/// Não valida se `targetTrainingPlanId` já é um snapshot (`isSnapshot`) —
+/// se for, o próprio TRIGGER de imutabilidade (ADR-005) rejeita a
+/// inserção; nenhuma função deste módulo expõe esse caminho ao personal.
+async function cloneWorkoutWithItems(
+  input: { tenantId: string; sourceWorkoutId: string; targetTrainingPlanId: string; nameOverride?: string },
+  client: PrismaClient
+): Promise<Workout> {
+  const source = await client.workout.findFirstOrThrow({
+    where: { id: input.sourceWorkoutId, tenantId: input.tenantId },
+  });
+  const items = await client.workoutExercise.findMany({
+    where: { workoutId: source.id, tenantId: input.tenantId },
+    orderBy: { position: "asc" },
+  });
+
+  const maxPosition = await client.workout.aggregate({
+    where: { trainingPlanId: input.targetTrainingPlanId, tenantId: input.tenantId },
+    _max: { position: true },
+  });
+  const position = (maxPosition._max.position ?? -1) + 1;
+
+  return client.$transaction(async (tx) => {
+    const clone = await tx.workout.create({
+      data: {
+        tenantId: input.tenantId,
+        trainingPlanId: input.targetTrainingPlanId,
+        name: input.nameOverride ?? source.name,
+        position,
+        suggestedDays: source.suggestedDays,
+      },
+    });
+
+    for (const [index, item] of items.entries()) {
+      await tx.workoutExercise.create({
+        data: {
+          tenantId: input.tenantId,
+          workoutId: clone.id,
+          exerciseId: item.exerciseId,
+          position: index,
+          sets: item.sets,
+          reps: item.reps,
+          durationSeconds: item.durationSeconds,
+          load: item.load,
+          restSeconds: item.restSeconds,
+          notes: item.notes,
+        },
+      });
+    }
+
+    return clone;
+  });
+}
+
+const COPY_NAME_SUFFIX = " (cópia)";
+
+/// Duplica um modelo de treino do tenant — cópia independente no mesmo
+/// plano do original, com o nome marcado como cópia até o personal
+/// editar. Nunca afeta o original (FIT-031).
+export async function duplicateWorkout(
+  input: { tenantId: string; workoutId: string },
+  client: PrismaClient = prisma
+): Promise<Workout> {
+  const source = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!source) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+
+  return cloneWorkoutWithItems(
+    {
+      tenantId: input.tenantId,
+      sourceWorkoutId: source.id,
+      targetTrainingPlanId: source.trainingPlanId,
+      nameOverride: `${source.name}${COPY_NAME_SUFFIX}`,
+    },
+    client
+  );
+}
