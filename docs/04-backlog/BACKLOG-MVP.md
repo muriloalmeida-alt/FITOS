@@ -78,6 +78,8 @@ Critérios:
 
 ## Épico 4 — Treinos e planos
 
+**Formalizado como EPIC-06 — Treinos e Planos, SPRINT-07** (`docs/04-backlog/EPIC-06-TREINOS-E-PLANOS.md`, `docs/05-sprints/SPRINT-07-TREINOS-E-PLANOS.md`). Os quatro identificadores abaixo (FIT-030 a FIT-033) foram promovidos a Issues reais exatamente como já estavam registrados aqui — sem colisão, sem renumeração. Os critérios especulativos abaixo permanecem como registro histórico do backlog original; os critérios de aceite reais, com as decisões de modelagem (prescrição, versionamento imutável na atribuição, no máximo um plano ativo por aluno), estão nas Issues e em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md`.
+
 ### FIT-030 — Criar modelo de treino (`P0`)
 
 Critérios:

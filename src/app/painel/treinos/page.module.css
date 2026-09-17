@@ -1,0 +1,67 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.empty {
+  margin: var(--fitos-space-6) 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 16px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  border-radius: var(--fitos-shape-medium);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+  text-decoration: none;
+  color: inherit;
+}
+
+.row:hover {
+  background-color: var(--fitos-color-surface-container-high);
+}
+
+.cellName {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.cellDays {
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+@media (min-width: 840px) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

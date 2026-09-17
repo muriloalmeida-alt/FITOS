@@ -57,6 +57,22 @@ enum WorkoutSessionStatus {
   ABANDONADA
 }
 
+/// Ciclo de vida do modelo de treino (FIT-030). Mesmo padrão de
+/// `ExerciseStatus` — arquivar nunca é exclusão física.
+enum WorkoutStatus {
+  ATIVO
+  ARQUIVADO
+}
+
+/// Ciclo de vida do plano semanal (FIT-030/FIT-032). Um `TrainingPlan` com
+/// `isSnapshot: true` (ver ADR-005) nunca muda de status por esta via — é
+/// uma cópia imutável criada pela atribuição (FIT-033), não um plano
+/// editável pelo personal.
+enum TrainingPlanStatus {
+  ATIVO
+  ARQUIVADO
+}
+
 enum StudentChargeStatus {
   PENDENTE
   PAGO
@@ -315,15 +331,29 @@ model Exercise {
   @@map("exercises")
 }
 
-/// Modelo de treino reutilizável, sempre pertencente a um tenant.
+/// Plano semanal: agrupa um ou mais modelos de treino (`Workout`), sempre
+/// pertencente a um tenant.
+///
+/// `isSnapshot` (FIT-033, ADR-005) distingue as duas naturezas físicas que
+/// esta mesma tabela carrega: `false` é o plano editável do personal
+/// (aparece na listagem/builder, FIT-032); `true` é uma cópia imutável
+/// criada no momento de uma atribuição (`PlanAssignment`) — nunca aparece
+/// no builder, nunca é editada. Ambas são linhas normais de
+/// `training_plans`; a distinção é só essa flag mais o TRIGGER descrito no
+/// comentário de `Workout` abaixo, que a torna imutável na prática, não só
+/// por convenção de leitura.
 ///
 /// `@@unique([id, tenantId])` referenciado por chave composta a partir de
 /// Workout e PlanAssignment.
 model TrainingPlan {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  createdAt DateTime @default(now())
+  id            String              @id @default(cuid())
+  tenantId      String
+  name          String
+  status        TrainingPlanStatus  @default(ATIVO)
+  durationWeeks Int?
+  isSnapshot    Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workouts        Workout[]
@@ -334,23 +364,42 @@ model TrainingPlan {
   @@map("training_plans")
 }
 
-/// Treino dentro de um plano. `tenantId` é denormalizado do TrainingPlan
-/// para permitir filtro direto por tenant sem depender de join.
+/// Modelo de treino ("modelo de treino" no produto) dentro de um plano.
+/// `tenantId` é denormalizado do TrainingPlan para permitir filtro direto
+/// por tenant sem depender de join.
+///
+/// Sempre pertence a exatamente um `TrainingPlan` (FK obrigatória desde a
+/// FIT-007) — "reutilizável" é resolvido por **duplicação** (FIT-031,
+/// `REGRAS-DE-NEGOCIO.md`: "Duplicar um modelo cria uma nova entidade sem
+/// vínculo de atualização automática"), nunca por uma relação
+/// muitos-para-muitos entre Workout e TrainingPlan. Ver
+/// `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md`.
 ///
 /// A relação com TrainingPlan usa chave composta `[trainingPlanId, tenantId]`
 /// → `TrainingPlan.[id, tenantId]`: o PostgreSQL rejeita fisicamente um
 /// Workout cujo `tenantId` seja diferente do `tenantId` do TrainingPlan
 /// referenciado (impede treino do tenant A vinculado a plano do tenant B).
 ///
+/// Imutabilidade pós-atribuição (FIT-033, ADR-005): quando o `TrainingPlan`
+/// referenciado tem `isSnapshot: true`, um TRIGGER (`enforce_snapshot_immutability`,
+/// ver migration `<timestamp>_add_workout_prescription_and_status`) rejeita
+/// fisicamente qualquer INSERT/UPDATE/DELETE neste Workout e em seus
+/// `WorkoutExercise` — não representável no Prisma Schema, mesma técnica já
+/// usada pelos triggers de isolamento (FIT-007) e de imutabilidade de
+/// `Exercise.tenantId`.
+///
 /// `@@unique([id, tenantId])` referenciado por chave composta a partir de
 /// WorkoutExercise e WorkoutSession.
 model Workout {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   tenantId       String
   trainingPlanId String
   name           String
   position       Int
-  createdAt      DateTime @default(now())
+  status         WorkoutStatus @default(ATIVO)
+  suggestedDays  String[]      @default([])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   trainingPlan     TrainingPlan      @relation(fields: [trainingPlanId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -374,13 +423,26 @@ model Workout {
 /// "exercício privado só pode ser usado por treino do mesmo tenant" é
 /// imposta por TRIGGER em PostgreSQL — ver comentário no model Exercise e
 /// migration `20260916_add_tenant_composite_constraints`.
+/// Parâmetros de prescrição (FIT-030, `docs/03-design/CRITICAL-SCREEN-SPECS.md`,
+/// "Builder de treino"): séries, repetições OU duração (conforme o
+/// exercício — nenhum dos dois é obrigatório ao mesmo tempo), carga
+/// (texto livre — nem sempre um número em kg: peso corporal, elástico,
+/// "RM"; mesmo padrão de `Exercise.difficulty`/`equipments`), descanso e
+/// observação. RPE/RIR e vídeo são pós-MVP, não representados aqui.
 model WorkoutExercise {
-  id         String   @id @default(cuid())
-  tenantId   String
-  workoutId  String
-  exerciseId String
-  position   Int
-  createdAt  DateTime @default(now())
+  id              String   @id @default(cuid())
+  tenantId        String
+  workoutId       String
+  exerciseId      String
+  position        Int
+  sets            Int?
+  reps            Int?
+  durationSeconds Int?
+  load            String?
+  restSeconds     Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)

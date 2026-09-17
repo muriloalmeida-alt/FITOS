@@ -30,7 +30,7 @@ Objetivo: formar a biblioteca de exercícios do FitOS.
 
 Objetivo: criar, reutilizar e atribuir prescrições versionadas.
 
-- FIT-030, FIT-031, FIT-032 e FIT-033.
+- Implementado pela EPIC-06 — Treinos e Planos (SPRINT-07) — FIT-030, FIT-031, FIT-032 e FIT-033 (ver `docs/04-backlog/EPIC-06-TREINOS-E-PLANOS.md`). Identificadores usados exatamente como já registrados no backlog — sem colisão, sem renumeração.
 
 ## Fase 4 — Experiência do aluno
 
