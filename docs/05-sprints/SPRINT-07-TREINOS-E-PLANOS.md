@@ -27,10 +27,17 @@ Duas perguntas foram feitas e respondidas antes de qualquer código: (1) SPRINT-
 
 ## Histórias
 
-- FIT-030 (#52) — Criar modelo de treino.
+- FIT-030 (#52) — Criar modelo de treino. **Concluída** (PR #56, mergeado no commit `1f2f0aa76c47bdbd3b3ab6ebb6e89d5bf7867b69`).
 - FIT-031 (#53) — Duplicar modelo.
 - FIT-032 (#54) — Criar plano semanal.
 - FIT-033 (#55) — Atribuir plano ao aluno. Encerra a SPRINT-07.
+
+## Resultado intermediário — FIT-030
+
+- migration aditiva `20260917000000_add_workout_prescription_and_status`: parâmetros de prescrição em `WorkoutExercise`, `status` em `Workout`/`TrainingPlan`, `suggestedDays`/`durationWeeks`/`isSnapshot` — testada em banco vazio e como atualização do schema atual; TRIGGERs de imutabilidade de snapshot (ADR-005) criados e testados isoladamente nesta História;
+- `src/modules/workouts/workouts.ts`: CRUD completo de modelo de treino e de itens (adicionar/editar/remover/reordenar), sempre `tenantId` da sessão, exercício sempre do catálogo visível ao tenant;
+- páginas `/painel/treinos` (lista, criação, detalhe) — item "Treinos" da navegação deixa de ser "Em breve";
+- decisão documentada em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md` e `adr/ADR-005-VERSIONAMENTO-DE-PLANOS.md`.
 
 ## Sequenciamento obrigatório
 
