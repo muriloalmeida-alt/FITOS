@@ -12,6 +12,7 @@ import { EditarModeloForm } from "./EditarModeloForm";
 import { ItensDoModelo } from "./ItensDoModelo";
 import { ArquivarModeloButton } from "./ArquivarModeloButton";
 import { ReativarModeloButton } from "./ReativarModeloButton";
+import { DuplicarModeloButton } from "./DuplicarModeloButton";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -82,6 +83,11 @@ export default async function ModeloDetalhePage({ params }: ModeloDetalhePagePro
           }))}
           catalog={catalog.items.map((exercise) => ({ id: exercise.id, name: exercise.name }))}
         />
+      </Card>
+
+      <Card title="Duplicar">
+        <p className={styles.duplicateHint}>Cria uma cópia independente deste modelo — editar a cópia nunca afeta o original.</p>
+        <DuplicarModeloButton workoutId={workout.id} />
       </Card>
 
       <Card title="Ciclo de vida">
