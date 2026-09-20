@@ -1,0 +1,139 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.empty {
+  margin: 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 14px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--fitos-space-3);
+  border-radius: var(--fitos-shape-medium);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.rowStudent {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.rowDetails {
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.rowAmount {
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--fitos-color-on-surface);
+}
+
+.rowStatus {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px var(--fitos-space-2);
+  border-radius: var(--fitos-shape-small);
+  font-size: 13px;
+  font-weight: 650;
+  background-color: var(--fitos-color-surface-container-high);
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.rowStatus[data-status="PAGO"] {
+  background-color: var(--fitos-color-tertiary-container);
+  color: var(--fitos-color-on-tertiary-container);
+}
+
+.rowStatus[data-status="ATRASADO"] {
+  background-color: var(--fitos-color-error);
+  color: var(--fitos-color-on-error);
+}
+
+.rowNotes {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+  font-style: italic;
+}
+
+.rowActions {
+  padding-top: var(--fitos-space-2);
+  display: flex;
+  gap: var(--fitos-space-2);
+}
+
+.cancelForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  padding-top: var(--fitos-space-2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  padding-top: var(--fitos-space-3);
+  border-top: 1px solid var(--fitos-color-outline-variant);
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.fieldsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--fitos-space-2);
+}
+
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.selectLabel {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.select {
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  min-height: 48px;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+@media (min-width: 600px) {
+  .fieldsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

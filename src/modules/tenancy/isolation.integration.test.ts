@@ -175,7 +175,9 @@ describe("integridade relacional composta por tenant (rejeição física de vín
         data: {
           tenantId: tenantA.id,
           studentId: studentB.id,
+          description: "Mensalidade",
           amountCents: 1000,
+          referenceMonth: new Date("2026-11-01"),
           dueDate: new Date("2026-11-01"),
         },
       })

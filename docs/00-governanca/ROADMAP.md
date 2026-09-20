@@ -42,13 +42,13 @@ Objetivo: permitir consulta e registro da execução.
 
 Objetivo: acompanhar cobranças, pagamentos e inadimplência.
 
-- FIT-050, FIT-051, FIT-052 e FIT-053.
+- FIT-050, FIT-051, FIT-052 e FIT-053 — EPIC-08 — Financeiro (#64, SPRINT-09, `docs/04-backlog/EPIC-08-FINANCEIRO.md`), aberta nesta rodada.
 
 ## Fase 6 — Consolidação operacional
 
 Objetivo: reunir alertas e indicadores úteis ao trabalho diário do personal.
 
-- FIT-060.
+- FIT-060 — EPIC-09 — Painel Operacional (#65, SPRINT-10, `docs/04-backlog/EPIC-09-PAINEL-OPERACIONAL.md`), aberta nesta rodada.
 
 ## Fora do MVP
 

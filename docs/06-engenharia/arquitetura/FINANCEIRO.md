@@ -1,0 +1,13 @@
+# Financeiro (EPIC-08)
+
+Módulo `src/modules/student-finance/`, reservado desde a FIT-007. Este documento registra as decisões de design tomadas Sprint a Sprint, na ordem em que as Histórias foram implementadas.
+
+## FIT-050 — Cadastrar cobrança
+
+- `StudentCharge.status` é sempre um dos quatro estados persistidos `pendente`/`pago`/`atrasado`/`cancelado` (`REGRAS-DE-NEGOCIO.md` seção 8; regra já registrada desde a FIT-007 no README do módulo). "A vencer" nunca é escrito — é apresentação calculada sobre `pendente` com `dueDate` futuro, resolvida na própria UI (`displayStatusLabel` em `FinanceiroSection.tsx`), nunca no domínio.
+- A transição `pendente` → `atrasado`, ao contrário de "a vencer", **é** persistida (é um dos quatro estados da regra de negócio). Sem infraestrutura de agendamento/cron nesta MVP (mesma decisão já tomada na FIT-020/023), a transição é aplicada de forma auto-contida por `refreshOverdueCharges` no início de toda leitura agregada (`listChargesForStudent`/`listChargesForTenant`) — idempotente, sem efeito visível para quem lê além do estado já correto. Comparação feita contra o início do dia de hoje: uma cobrança que vence hoje ainda não é atrasada.
+- `referenceMonth` (competência) e `dueDate` (vencimento) são campos distintos por regra de produto (mesma seção 8) — nunca coalescidos, mesmo quando o formulário os preenche a partir do mesmo mês.
+- Cancelamento (`cancelStudentCharge`) foi agrupado nesta História, não em uma FIT separada: nenhuma História do backlog reivindica essa ação, e ela é o contraponto direto do ciclo de vida da cobrança criada aqui. Exige motivo (`cancelReason`), nunca equivale a pagamento, e uma cobrança já paga nunca pode ser cancelada por esta via — o cenário de estorno de um pagamento já registrado está fora do MVP.
+- `Payment` (quitação) já existe no schema desde esta migration (`20260921000000_add_student_charge_and_payment`), mas só é usado a partir da FIT-051 — schema e código de domínio da FIT-051 chegam juntos porque `Payment` depende diretamente da extensão de `StudentCharge` feita aqui; a migration única cobre as duas Histórias.
+- Tela `/painel/financeiro` (personal, listagem consolidada de todos os alunos) escolhida em vez de um card na ficha de cada aluno — nenhuma História desta Sprint pede uma visão por aluno, e o design (`CRITICAL-SCREEN-SPECS.md` seção 7 — "Lista de recebimentos") já descreve exatamente essa visão consolidada. Torna real o item "Financeiro" da navegação do personal (antes "Em breve" desde a FIT-012).
+- Nenhuma visão financeira foi exposta ao próprio aluno: nenhuma História do backlog (FIT-050 a FIT-053) é escrita da perspectiva do aluno — implementá-la seria especulativo.

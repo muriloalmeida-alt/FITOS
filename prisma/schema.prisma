@@ -115,6 +115,7 @@ model User {
   ownedTenant         Tenant?
   studentProfile      Student?
   authoredAssessments Assessment[] @relation("AssessmentAuthor")
+  recordedPayments    Payment[]
   auditEvents         AuditEvent[]
   sessions            Session[]
   accounts            Account[]
@@ -203,6 +204,7 @@ model Tenant {
   assessments           Assessment[]
   bodyMeasurements      BodyMeasurement[]
   studentCharges        StudentCharge[]
+  payments              Payment[]
   saasSubscription      SaasSubscription?
   auditEvents           AuditEvent[]
   invitations           Invitation[]
@@ -666,21 +668,63 @@ enum BodyMeasurementType {
 ///
 /// A relação com Student usa chave composta com `tenantId`: impede cobrança
 /// do tenant A vinculada a aluno do tenant B.
+///
+/// `referenceMonth` (competência) e `dueDate` (vencimento) têm significados
+/// distintos por regra de produto (`REGRAS-DE-NEGOCIO.md` seção 8) — nunca
+/// devem ser tratados como o mesmo campo, mesmo quando coincidem no valor.
+/// `status` é sempre um dos quatro estados persistidos (`pendente`/`pago`/
+/// `atrasado`/`cancelado`, regra já registrada desde a FIT-007 no README de
+/// `src/modules/student-finance/`) — "a vencer" nunca é armazenado, é sempre
+/// apresentação calculada sobre `pendente` com `dueDate` futuro.
+/// `cancelReason`/`cancelledAt` só são preenchidos por `CANCELADO` — cancelar
+/// nunca equivale a pagar (seção 8).
 model StudentCharge {
-  id          String              @id @default(cuid())
-  tenantId    String
-  studentId   String
-  status      StudentChargeStatus @default(PENDENTE)
-  amountCents Int
-  dueDate     DateTime
-  createdAt   DateTime            @default(now())
+  id             String              @id @default(cuid())
+  tenantId       String
+  studentId      String
+  description    String
+  status         StudentChargeStatus @default(PENDENTE)
+  amountCents    Int
+  referenceMonth DateTime
+  dueDate        DateTime
+  cancelReason   String?
+  cancelledAt    DateTime?
+  createdAt      DateTime            @default(now())
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student  @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  payment Payment?
 
   @@index([tenantId])
   @@index([studentId, tenantId])
   @@map("student_charges")
+}
+
+/// Quitação de uma cobrança (FIT-051). Entidade própria — nunca campos
+/// diretamente em `StudentCharge` — porque "cobrança pode possuir zero ou
+/// um pagamento no MVP" (`MODELO-DE-DADOS.md`), preservando o histórico da
+/// quitação mesmo que, numa iteração futura, o MVP passe a suportar reversão
+/// de pagamento (o registro em si nunca é a única fonte de verdade do
+/// status — `StudentCharge.status` é). Pagamento parcial fica fora do MVP
+/// (seção 8): o valor recebido é só histórico, sem reconciliação de saldo.
+/// Toda escrita aqui gera `AuditEvent` (seção 9 lista "pagamento"
+/// explicitamente, ao contrário de `WorkoutSession`/FIT-041).
+model Payment {
+  id               String   @id @default(cuid())
+  tenantId         String
+  studentChargeId  String   @unique
+  amountCentsPaid  Int
+  paidAt           DateTime
+  method           String
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentCharge  StudentCharge @relation(fields: [studentChargeId], references: [id], onDelete: Restrict)
+  recordedByUser User          @relation(fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@map("payments")
 }
 
 /// Assinatura SaaS do FitOS contratada pelo personal (tenant). `tenantId`
