@@ -470,13 +470,22 @@ model WorkoutExercise {
 /// Ambas as relações (Student e TrainingPlan) usam chave composta com
 /// `tenantId`: impede atribuir a um aluno de outro tenant, e impede
 /// atribuir um plano de outro tenant.
+/// `trainingPlanId` (FIT-033) sempre aponta para uma cópia imutável
+/// (`TrainingPlan.isSnapshot: true`, ADR-005) criada no momento da
+/// atribuição — nunca para o plano editável do personal. `endedAt` marca
+/// o encerramento controlado (nova atribuição para o mesmo aluno, ou
+/// encerramento explícito sem substituição) — `null` enquanto `active`.
+/// No máximo uma atribuição `active: true` por aluno, garantido por um
+/// índice único parcial (não representável no Prisma Schema — ver
+/// migration `20260920010000_add_plan_assignment_lifecycle`).
 model PlanAssignment {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   tenantId       String
   studentId      String
   trainingPlanId String
-  active         Boolean  @default(true)
-  assignedAt     DateTime @default(now())
+  active         Boolean   @default(true)
+  assignedAt     DateTime  @default(now())
+  endedAt        DateTime?
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student      Student      @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)

@@ -130,3 +130,46 @@ Não implementa atribuição ao aluno nem a cópia imutável de fato usada (FIT-
 
 - `src/modules/workouts/workouts.integration.test.ts` (39 novos testes cobrindo FIT-032, entre CRUD de plano e movimentação de modelos): criação sempre `ATIVO`/não-snapshot; isolamento cruzado (plano de outro tenant nunca encontrado); plano snapshot nunca alcançável por `getTrainingPlanForTenant`; edição preservando isolamento; arquivamento/reativação idempotentes, modelos agrupados preservados; `moveWorkoutToPlan` reparenta e fecha buraco de posição na origem; mover para o mesmo plano é no-op; mover modelo/para-plano de outro tenant rejeitado; `listWorkoutsAvailableForPlan` exclui os já pertencentes ao plano; `removeWorkoutFromPlan` move para o rascunho e rejeita quando o modelo não pertence ao plano informado; `reorderWorkoutsInPlan` reordena e rejeita lista incompleta/incorreta; **regressão do bug do plano rascunho** (dois testes): listagem nunca inclui o rascunho mesmo depois de criado, e criar um plano real antes de qualquer modelo avulso não faz esse plano ser confundido com o rascunho.
 - Rotas (`src/app/api/training-plans/**/*.test.ts`) e páginas (`src/app/painel/treinos/planos/**/*.test.tsx`): mesmo padrão de autorização/isolamento das demais rotas deste módulo — 401 sem sessão, 403 aluno, `tenantId` do corpo nunca repassado, 404 fora do tenant, 400 em validação.
+
+## FIT-033 — Atribuir plano ao aluno
+
+Última História da SPRINT-07. Materializa a ADR-005 (versionamento por cópia física) que as três Histórias anteriores prepararam: `isSnapshot` (FIT-030), o TRIGGER de imutabilidade (FIT-030) e `cloneWorkoutWithItems` (FIT-031) já existiam prontos para reutilização — esta História é a primeira a de fato criar um `TrainingPlan` com `isSnapshot: true`.
+
+### `PlanAssignment.endedAt` e a unicidade física da atribuição ativa
+
+`PlanAssignment` já existia desde a FIT-007, mas sem `endedAt` — não havia como distinguir "encerrada" de "nunca existiu", nem impor no banco "no máximo uma ativa por aluno" (a aplicação teria que confiar em si mesma). A migration aditiva `20260920010000_add_plan_assignment_lifecycle` adiciona `endedAt DateTime?` (marca o encerramento controlado; `null` enquanto `active`) e o índice único parcial `plan_assignments_active_per_student_key` em `(studentId, tenantId) WHERE active = true` — mesma técnica dos demais índices únicos parciais já usados neste projeto (`exercises_personal_tenant_name_key`, FIT-022; `training_plans_tenant_draft_bucket_key`, FIT-032). Testada em banco vazio (histórico completo do zero) e como atualização do schema atual (`fitos_dev`/`fitos_test`).
+
+### `cloneWorkoutRows`: o motor de clonagem ganha uma variante de baixo nível
+
+`cloneWorkoutWithItems` (FIT-031) sempre abria sua própria transação — adequado para duplicar um único modelo, mas insuficiente aqui: atribuir um plano precisa clonar **todos** os modelos ativos do plano, cada um com seus itens, dentro da **mesma** transação que cria o `TrainingPlan` snapshot e a `PlanAssignment`. A função foi dividida em `cloneWorkoutRows(tx, {...})` (aceita o client de uma transação já aberta pelo chamador, sem decidir a posição — responsabilidade de quem chama) e um envelope que preserva o comportamento exato de `duplicateWorkout` (abre sua própria transação, sempre anexa ao final do plano de destino). Nenhum teste da FIT-031 precisou mudar — o comportamento observável é idêntico.
+
+### `assignTrainingPlanToStudent`: uma única transação, cinco passos
+
+1. Encerra controladamente (`active: false`, `endedAt: now()`) qualquer atribuição ativa anterior do mesmo aluno — existe para que a unicidade física (índice único parcial) nunca seja alcançada por exceção, e sim por construção.
+2. Cria um `TrainingPlan` novo com `isSnapshot: false` (ainda editável, do ponto de vista do TRIGGER).
+3. Clona, na mesma ordem, cada `Workout` ATIVO do plano original (com `cloneWorkoutRows`) para dentro desse plano novo.
+4. Marca o plano novo como `isSnapshot: true` — só agora, como **último passo**, porque a mesma transação vê suas próprias escritas ainda não confirmadas (MVCC) e os `INSERT`s dos passos 2–3 nunca são bloqueados pelo TRIGGER (ver o comentário exato disso já registrado na migration da FIT-030).
+5. Cria a `PlanAssignment` apontando para o plano snapshot (nunca para o original) e registra um `AuditEvent`.
+
+`unassignTrainingPlanFromStudent` encerra a atribuição ativa sem criar uma nova (idempotente: sem atribuição ativa, retorna `null`, não lança). `getActivePlanAssignmentForStudent` carrega a atribuição ativa com o plano-snapshot, seus modelos e itens já incluídos, ordenados — a visão somente leitura do aluno. `listEndedPlanAssignmentsForStudent` lista o histórico de atribuições encerradas (mais recente primeiro), usado só para distinguir "nunca teve plano" de "teve e foi encerrado" na UI, sem reconstruir o clone completo de um plano que o aluno já não segue.
+
+### Prova de imutabilidade: por que editar o original nunca altera o atribuído
+
+Não é apenas uma garantia física (o TRIGGER da ADR-005 já bloquearia a tentativa) — é um comportamento observável e comprovado por teste real (`workouts.integration.test.ts`, "editar o modelo/plano original depois da atribuição não altera o que foi atribuído") e pela evidência visual (`docs/06-engenharia/evidencias/FIT-033/README.md`, seção "Prova de imutabilidade"): o personal renomeia o modelo original pela UI real, e a visão do aluno permanece bit a bit idêntica, porque `PlanAssignment.trainingPlanId` nunca apontou para o modelo editável — apontou, desde a criação, para a cópia física.
+
+### Superfície de UI
+
+- Personal (`src/app/painel/alunos/[id]/PlanoDoAlunoSection.tsx`, no card "Programa de treino" da ficha do aluno — não na página do plano, porque o plano-origem não tem nenhum vínculo de volta com os snapshots que gerou, então "quem tem este plano atribuído" só pode ser respondido a partir do aluno, nunca a partir do plano): mostra a atribuição ativa (nome, data, "Encerrar atribuição") ou o estado vazio apropriado, e sempre a seção "Atribuir programa"/"Trocar programa" com os planos ATIVOS do tenant.
+- Aluno (`src/app/painel/treino/page.tsx`, item "Treino" da navegação deixa de ser "Em breve"): somente leitura — plano, vigência sugerida, modelos e itens com o mesmo resumo de prescrição já usado na visão do personal (FIT-030), ou um dos três estados honestos: nunca atribuído, ativo, ou encerrado (mensagem distinta de "nunca atribuído").
+- `POST /api/students/[id]/plano` (atribuir) e `DELETE /api/students/[id]/plano` (encerrar) — mesma checagem `requirePersonal()` das demais rotas deste domínio.
+
+### O que esta História não faz
+
+- Não implementa execução de treino pelo aluno (registrar série, temporizador, sessão) — Fase 4 do roadmap (`WorkoutSession` já modelado desde a FIT-007, não usado por nenhuma função desta História).
+- Não valida o `status` do aluno (`ATIVO`/`INATIVO`) na atribuição — nenhuma regra de negócio existente (`REGRAS-DE-NEGOCIO.md`) exige isso, e um aluno inativado já perde acesso à experiência normal por inteiro (`requireStudent`, FIT-011/014), tornando a validação redundante nesta camada.
+- Não expõe nenhuma edição em um `TrainingPlan`/`Workout`/`WorkoutExercise` com `isSnapshot: true` — nenhuma rota nova, nenhuma página nova toca esse caminho; a única proteção adicional além do TRIGGER é a própria ausência de UI.
+
+## Testes (FIT-033)
+
+- `src/modules/workouts/workouts.integration.test.ts` (11 novos testes): criação do snapshot com modelos/itens preservados na mesma ordem (ids diferentes do original); editar o modelo/plano original depois da atribuição não altera o que foi atribuído; isolamento cruzado (aluno de outro tenant, plano de outro tenant — ambos `NAO_ENCONTRADO`); encerra controladamente a atribuição anterior ao atribuir um novo plano ao mesmo aluno; unicidade física da atribuição ativa (índice único parcial rejeita um segundo INSERT direto); `unassignTrainingPlanFromStudent` encerra sem substituir e é idempotente; `getActivePlanAssignmentForStudent` retorna `null` sem atribuição; `listEndedPlanAssignmentsForStudent` lista mais recente primeiro; isolamento na leitura da atribuição ativa.
+- Rota (`src/app/api/students/[id]/plano/route.test.ts`, 7 testes) e página (`src/app/painel/alunos/[id]/page.test.tsx`, 3 novos casos; novo `src/app/painel/treino/page.test.tsx`, 5 casos): mesmo padrão de autorização/isolamento das demais rotas deste módulo — 401 sem sessão, 403 quando o autenticado não é o papel esperado, 404 fora do tenant, 400 em validação, e os três estados de UI (sem plano/ativo/encerrado) para o personal e para o aluno.

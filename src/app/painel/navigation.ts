@@ -23,12 +23,13 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
-/// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout). Treino e
-/// Progresso continuam "Em breve" — o FitOS não promete treino, carga,
-/// evolução, avaliação, agenda ou mensagens nesta Sprint.
+/// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"
+/// passa a ser real na FIT-033 (visão somente leitura do plano atribuído).
+/// Progresso continua "Em breve" — o FitOS não promete carga, evolução,
+/// avaliação, agenda ou mensagens nesta Sprint.
 export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
-  { key: "treino", label: "Treino", comingSoon: true },
+  { key: "treino", label: "Treino", href: "/painel/treino" },
   { key: "progresso", label: "Progresso", comingSoon: true },
   { key: "perfil", label: "Perfil", href: "/painel/perfil" },
 ];

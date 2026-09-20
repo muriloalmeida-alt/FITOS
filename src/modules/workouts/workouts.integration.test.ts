@@ -10,12 +10,15 @@ import {
   addWorkoutExercise,
   archiveTrainingPlan,
   archiveWorkout,
+  assignTrainingPlanToStudent,
   createTrainingPlan,
   createWorkout,
   duplicateWorkout,
+  getActivePlanAssignmentForStudent,
   getTrainingPlanForTenant,
   getWorkoutExerciseForTenant,
   getWorkoutForTenant,
+  listEndedPlanAssignmentsForStudent,
   listTrainingPlansForTenant,
   listWorkoutExercisesForWorkout,
   listWorkoutsAvailableForPlan,
@@ -28,6 +31,7 @@ import {
   removeWorkoutFromPlan,
   reorderWorkoutExercises,
   reorderWorkoutsInPlan,
+  unassignTrainingPlanFromStudent,
   updateTrainingPlan,
   updateWorkout,
   updateWorkoutExercise,
@@ -54,8 +58,13 @@ afterAll(async () => {
   await prisma.workout.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.$executeRawUnsafe('ALTER TABLE "workout_exercises" ENABLE TRIGGER "workout_exercises_snapshot_immutability_guard"');
   await prisma.$executeRawUnsafe('ALTER TABLE "workouts" ENABLE TRIGGER "workouts_snapshot_immutability_guard"');
+  // `plan_assignments.trainingPlanId` é `onDelete: Restrict` — precisa ser
+  // removido antes de `trainingPlan.deleteMany` (FIT-033), senão o DELETE
+  // do plano-snapshot ainda referenciado falha.
+  await prisma.planAssignment.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.trainingPlan.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.exercise.deleteMany({ where: { name: { contains: run } } });
+  await prisma.student.deleteMany({ where: { email: { contains: run } } });
   await prisma.tenant.deleteMany({ where: { name: { contains: run } } });
   await prisma.user.deleteMany({ where: { email: { contains: run } } });
   await prisma.$disconnect();
@@ -73,6 +82,30 @@ async function createGlobalExercise(label: string) {
   return prisma.exercise.create({
     data: { tenantId: null, origin: "API_NINJAS", name: `Global ${label} ${run}` },
   });
+}
+
+async function createStudent(tenantId: string, label: string) {
+  return prisma.student.create({
+    data: { tenantId, email: `aluno-${label}-${run}@example.test`, displayName: `Aluno ${label}` },
+  });
+}
+
+/// Cria um plano com dois modelos (dois itens cada), pronto para os testes
+/// de atribuição (FIT-033) — evita repetir esse setup em cada `it`.
+async function createPlanWithWorkoutsAndItems(tenantId: string, label: string) {
+  const exerciseA = await createGlobalExercise(`${label}-ex-a`);
+  const exerciseB = await createGlobalExercise(`${label}-ex-b`);
+  const plan = await createTrainingPlan({ tenantId, name: `Plano ${label} ${run}`, durationWeeks: 4 }, prisma);
+
+  const workoutA = await createWorkout({ tenantId, name: `Treino A ${label} ${run}` }, prisma);
+  await moveWorkoutToPlan({ tenantId, workoutId: workoutA.id, targetTrainingPlanId: plan.id }, prisma);
+  await addWorkoutExercise({ tenantId, workoutId: workoutA.id, exerciseId: exerciseA.id, sets: 3, reps: 10 }, prisma);
+
+  const workoutB = await createWorkout({ tenantId, name: `Treino B ${label} ${run}` }, prisma);
+  await moveWorkoutToPlan({ tenantId, workoutId: workoutB.id, targetTrainingPlanId: plan.id }, prisma);
+  await addWorkoutExercise({ tenantId, workoutId: workoutB.id, exerciseId: exerciseB.id, sets: 4, reps: 8 }, prisma);
+
+  return { plan, workoutA, workoutB, exerciseA, exerciseB };
 }
 
 describe("createWorkout (FIT-030)", () => {
@@ -685,5 +718,214 @@ describe("imutabilidade de snapshot (ADR-005) — TRIGGER físico", () => {
     await expect(
       prisma.trainingPlan.update({ where: { id: draftPlan.id }, data: { isSnapshot: false } })
     ).rejects.toThrow();
+  });
+});
+
+describe("assignTrainingPlanToStudent (FIT-033)", () => {
+  it("cria uma cópia imutável (snapshot) do plano, com modelos e itens preservados na mesma ordem", async () => {
+    const { tenant, owner } = await createTenant("atribuir-snapshot");
+    const student = await createStudent(tenant.id, "atribuir-snapshot");
+    const { plan, workoutA, workoutB } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-snapshot");
+
+    const assignment = await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    expect(assignment.studentId).toBe(student.id);
+    expect(assignment.active).toBe(true);
+    expect(assignment.endedAt).toBeNull();
+    expect(assignment.trainingPlanId).not.toBe(plan.id);
+
+    const snapshot = await prisma.trainingPlan.findUniqueOrThrow({ where: { id: assignment.trainingPlanId } });
+    expect(snapshot.isSnapshot).toBe(true);
+    expect(snapshot.name).toBe(plan.name);
+    expect(snapshot.durationWeeks).toBe(plan.durationWeeks);
+
+    const snapshotWorkouts = await prisma.workout.findMany({
+      where: { trainingPlanId: snapshot.id },
+      orderBy: { position: "asc" },
+      include: { workoutExercises: { orderBy: { position: "asc" } } },
+    });
+    expect(snapshotWorkouts).toHaveLength(2);
+    expect(snapshotWorkouts.map((w) => w.name)).toEqual([workoutA.name, workoutB.name]);
+    expect(snapshotWorkouts[0]!.id).not.toBe(workoutA.id);
+    expect(snapshotWorkouts[0]!.workoutExercises).toHaveLength(1);
+    expect(snapshotWorkouts[0]!.workoutExercises[0]!.sets).toBe(3);
+    expect(snapshotWorkouts[1]!.workoutExercises[0]!.sets).toBe(4);
+  });
+
+  it("editar o modelo/plano original depois da atribuição não altera o que foi atribuído", async () => {
+    const { tenant, owner } = await createTenant("atribuir-imutavel");
+    const student = await createStudent(tenant.id, "atribuir-imutavel");
+    const { plan, workoutA } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-imutavel");
+
+    const assignment = await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutA.id, name: `Alterado depois ${run}` }, prisma);
+    await updateTrainingPlan({ tenantId: tenant.id, trainingPlanId: plan.id, name: `Plano alterado ${run}` }, prisma);
+
+    const active = await getActivePlanAssignmentForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(active?.trainingPlan.name).not.toBe(`Plano alterado ${run}`);
+    expect(active?.trainingPlan.workouts.map((w) => w.name)).not.toContain(`Alterado depois ${run}`);
+  });
+
+  it("rejeita aluno que não pertence ao tenant informado", async () => {
+    const { tenant: tenantA, owner } = await createTenant("atribuir-aluno-cruzado-a");
+    const { tenant: tenantB } = await createTenant("atribuir-aluno-cruzado-b");
+    const studentB = await createStudent(tenantB.id, "atribuir-aluno-cruzado");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenantA.id, "atribuir-aluno-cruzado");
+
+    await expect(
+      assignTrainingPlanToStudent(
+        { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentB.id, trainingPlanId: plan.id },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("rejeita plano que não pertence ao tenant informado", async () => {
+    const { tenant: tenantA, owner } = await createTenant("atribuir-plano-cruzado-a");
+    const { tenant: tenantB } = await createTenant("atribuir-plano-cruzado-b");
+    const studentA = await createStudent(tenantA.id, "atribuir-plano-cruzado");
+    const { plan: planB } = await createPlanWithWorkoutsAndItems(tenantB.id, "atribuir-plano-cruzado");
+
+    await expect(
+      assignTrainingPlanToStudent(
+        { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentA.id, trainingPlanId: planB.id },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("encerra controladamente a atribuição ativa anterior ao atribuir um novo plano ao mesmo aluno", async () => {
+    const { tenant, owner } = await createTenant("atribuir-substituir");
+    const student = await createStudent(tenant.id, "atribuir-substituir");
+    const { plan: planUm } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-substituir-um");
+    const { plan: planDois } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-substituir-dois");
+
+    const primeira = await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: planUm.id },
+      prisma
+    );
+    const segunda = await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: planDois.id },
+      prisma
+    );
+
+    const primeiraAtualizada = await prisma.planAssignment.findUniqueOrThrow({ where: { id: primeira.id } });
+    expect(primeiraAtualizada.active).toBe(false);
+    expect(primeiraAtualizada.endedAt).not.toBeNull();
+    expect(segunda.active).toBe(true);
+
+    const ativa = await getActivePlanAssignmentForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+    expect(ativa?.id).toBe(segunda.id);
+  });
+
+  it("no máximo uma atribuição ativa por aluno é garantido fisicamente pelo índice único parcial", async () => {
+    const { tenant } = await createTenant("atribuir-unicidade-fisica");
+    const student = await createStudent(tenant.id, "atribuir-unicidade-fisica");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-unicidade-fisica");
+
+    await prisma.planAssignment.create({
+      data: { tenantId: tenant.id, studentId: student.id, trainingPlanId: plan.id, active: true },
+    });
+
+    await expect(
+      prisma.planAssignment.create({
+        data: { tenantId: tenant.id, studentId: student.id, trainingPlanId: plan.id, active: true },
+      })
+    ).rejects.toThrow();
+  });
+});
+
+describe("unassignTrainingPlanFromStudent (FIT-033)", () => {
+  it("encerra a atribuição ativa sem criar uma nova", async () => {
+    const { tenant, owner } = await createTenant("encerrar");
+    const student = await createStudent(tenant.id, "encerrar");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenant.id, "encerrar");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const ended = await unassignTrainingPlanFromStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id },
+      prisma
+    );
+
+    expect(ended?.active).toBe(false);
+    expect(ended?.endedAt).not.toBeNull();
+    const active = await getActivePlanAssignmentForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+    expect(active).toBeNull();
+  });
+
+  it("é idempotente: sem atribuição ativa, retorna null e não lança", async () => {
+    const { tenant, owner } = await createTenant("encerrar-sem-ativa");
+    const student = await createStudent(tenant.id, "encerrar-sem-ativa");
+
+    const result = await unassignTrainingPlanFromStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id },
+      prisma
+    );
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("getActivePlanAssignmentForStudent / listEndedPlanAssignmentsForStudent (FIT-033)", () => {
+  it("retorna null quando o aluno nunca teve plano atribuído (estado sem plano)", async () => {
+    const { tenant } = await createTenant("sem-plano");
+    const student = await createStudent(tenant.id, "sem-plano");
+
+    const active = await getActivePlanAssignmentForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(active).toBeNull();
+  });
+
+  it("lista as atribuições encerradas do aluno, mais recente primeiro (estado plano encerrado)", async () => {
+    const { tenant, owner } = await createTenant("historico-encerradas");
+    const student = await createStudent(tenant.id, "historico-encerradas");
+    const { plan: planUm } = await createPlanWithWorkoutsAndItems(tenant.id, "historico-encerradas-um");
+    const { plan: planDois } = await createPlanWithWorkoutsAndItems(tenant.id, "historico-encerradas-dois");
+
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: planUm.id },
+      prisma
+    );
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: planDois.id },
+      prisma
+    );
+    await unassignTrainingPlanFromStudent({ tenantId: tenant.id, actorUserId: owner.id, studentId: student.id }, prisma);
+
+    const ended = await listEndedPlanAssignmentsForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(ended).toHaveLength(2);
+    expect(ended[0]!.trainingPlan.name).toBe(planDois.name);
+    expect(ended[1]!.trainingPlan.name).toBe(planUm.name);
+    expect(ended.every((a) => a.active === false)).toBe(true);
+  });
+
+  it("isolamento: nunca retorna atribuição de aluno de outro tenant", async () => {
+    const { tenant: tenantA, owner } = await createTenant("atribuicao-isolamento-a");
+    const { tenant: tenantB } = await createTenant("atribuicao-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "atribuicao-isolamento");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenantA.id, "atribuicao-isolamento");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentA.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const seenFromOtherTenant = await getActivePlanAssignmentForStudent(
+      { tenantId: tenantB.id, studentId: studentA.id },
+      prisma
+    );
+
+    expect(seenFromOtherTenant).toBeNull();
   });
 });

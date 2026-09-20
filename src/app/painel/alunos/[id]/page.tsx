@@ -6,11 +6,17 @@ import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getStudentForTenant } from "@/modules/students/students";
 import { daysUntil, deriveAccessStatus, getLatestInvitationForStudent } from "@/modules/students/invitations";
+import {
+  getActivePlanAssignmentForStudent,
+  listEndedPlanAssignmentsForStudent,
+  listTrainingPlansForTenant,
+} from "@/modules/workouts/workouts";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { EditarAlunoForm } from "./EditarAlunoForm";
 import { ReativarAlunoButton } from "./ReativarAlunoButton";
 import { ConviteSection } from "./ConviteSection";
+import { PlanoDoAlunoSection } from "./PlanoDoAlunoSection";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -47,6 +53,12 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
   const diasRestantes =
     accessStatus === "CONVITE_PENDENTE" && latestInvitation ? daysUntil(latestInvitation.expiresAt) : null;
 
+  const [activeAssignment, endedAssignments, availablePlans] = await Promise.all([
+    getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listEndedPlanAssignmentsForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listTrainingPlansForTenant({ tenantId: ctx.tenantId }),
+  ]);
+
   return (
     <AppShell title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Link href="/painel/alunos" className={styles.backLink}>
@@ -73,6 +85,19 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
           <ConviteSection studentId={student.id} accessStatus={accessStatus} diasRestantes={diasRestantes} />
         </Card>
       ) : null}
+
+      <Card title="Programa de treino">
+        <PlanoDoAlunoSection
+          studentId={student.id}
+          activeAssignment={
+            activeAssignment
+              ? { planName: activeAssignment.trainingPlan.name, assignedAt: activeAssignment.assignedAt.toISOString() }
+              : null
+          }
+          hasEndedAssignments={endedAssignments.length > 0}
+          availablePlans={availablePlans.map((plan) => ({ id: plan.id, name: plan.name }))}
+        />
+      </Card>
 
       <Card title="Ciclo de vida">
         {student.status === "ATIVO" ? (

@@ -33,8 +33,8 @@ Murilo enviou um pacote único de execução integral (`PROMPT_MESTRE.md` e arqu
 
 - FIT-030 (#52) — Criar modelo de treino. **Concluída** (PR #56, mergeado no commit `1f2f0aa76c47bdbd3b3ab6ebb6e89d5bf7867b69`).
 - FIT-031 (#53) — Duplicar modelo. **Concluída** (PR #58, mergeado no commit `836414428994c6e720d89122ccf481d3e7f8b9fd`).
-- FIT-032 (#54) — Criar plano semanal. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-033 (#55) — Atribuir plano ao aluno. Encerra a SPRINT-07.
+- FIT-032 (#54) — Criar plano semanal. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — commit `d0b39f7`, ver diário de execução).
+- FIT-033 (#55) — Atribuir plano ao aluno. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato). Encerra a SPRINT-07.
 
 ## Resultado intermediário — FIT-030
 
@@ -59,6 +59,15 @@ Murilo enviou um pacote único de execução integral (`PROMPT_MESTRE.md` e arqu
 - gate preliminar do pacote de execução integral (auditoria FIT-020 a FIT-023) executado — nenhuma reimplementação necessária, pendência de importação real mantida exatamente como declarada na SPRINT-06;
 - decisão documentada em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md`.
 
+## Resultado intermediário — FIT-033
+
+- migration aditiva `20260920010000_add_plan_assignment_lifecycle`: `PlanAssignment.endedAt` + índice único parcial `plan_assignments_active_per_student_key` em `(studentId, tenantId) WHERE active = true` — testada em banco vazio e como atualização do schema atual;
+- `assignTrainingPlanToStudent`: encerra controladamente a atribuição ativa anterior do aluno (se houver), clona o plano inteiro (todos os modelos ATIVOS, na mesma ordem, com seus itens) para um `TrainingPlan` novo, marca `isSnapshot: true` só como último passo da transação, cria a `PlanAssignment` e registra `AuditEvent` — materializa a ADR-005, que as três Histórias anteriores prepararam sem usar de fato;
+- `unassignTrainingPlanFromStudent`/`getActivePlanAssignmentForStudent`/`listEndedPlanAssignmentsForStudent`: encerramento sem substituir, leitura da atribuição ativa com o snapshot completo, e histórico de atribuições encerradas;
+- card "Programa de treino" na ficha do aluno (personal atribui/troca/encerra) e página `/painel/treino` (aluno visualiza, somente leitura) — item "Treino" da navegação do aluno deixa de ser "Em breve";
+- imutabilidade comprovada por teste real (editar o modelo original depois da atribuição não altera o que o aluno vê) e por evidência visual (`docs/06-engenharia/evidencias/FIT-033/README.md`);
+- decisão documentada em `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md` e `adr/ADR-005-VERSIONAMENTO-DE-PLANOS.md` (nome real de função corrigido de `buildDeepClone`, prospectivo, para `cloneWorkoutRows`, o nome de fato implementado).
+
 ## Sequenciamento obrigatório
 
 Histórico (modelo anterior ao pacote de execução integral de 20/09/2026, efetivamente seguido por FIT-030 e FIT-031):
@@ -81,7 +90,7 @@ A partir da FIT-032 (pacote de execução integral, `PROMPT_MESTRE.md`): sem PR 
 - aluno visualiza o próprio plano atribuído, somente leitura;
 - isolamento entre tenants comprovado por testes negativos reais em toda operação nova;
 - nenhuma credencial ou dado real versionado;
-- cada História possui PR próprio, gate autônomo registrado e merge explicitamente por SHA exato.
+- cada História possui gate autônomo registrado — por PR próprio e merge por SHA exato (FIT-030/031, modelo histórico) ou por checkpoint na branch única do programa de execução integral (FIT-032/033, ver "Governança a partir de 20/09/2026" acima).
 
 ## Não incluído
 

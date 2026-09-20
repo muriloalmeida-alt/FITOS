@@ -1,7 +1,15 @@
 import "server-only";
-import { Prisma, type Workout, type WorkoutExercise, type TrainingPlan, type PrismaClient } from "@prisma/client";
+import {
+  Prisma,
+  type Workout,
+  type WorkoutExercise,
+  type TrainingPlan,
+  type PlanAssignment,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
+import { getStudentForTenant } from "@/modules/students/students";
 
 /// Modelo de treino (FIT-030). `tenantId` nunca é um parâmetro
 /// opcional/inferido — todo chamador já deve tê-lo derivado do contexto de
@@ -403,62 +411,73 @@ export async function reorderWorkoutExercises(
 /// ordem) em uma linha nova dentro de `targetTrainingPlanId` — ids novos,
 /// nenhuma FK entre a cópia e a origem (`REGRAS-DE-NEGOCIO.md`: "Duplicar
 /// um modelo cria uma nova entidade sem vínculo de atualização
-/// automática"). Motor compartilhado entre `duplicateWorkout` (FIT-031,
-/// cópia explícita do personal) e o clone de atribuição da FIT-033
-/// (ADR-005) — a única diferença entre os dois usos é o plano de destino
-/// e se o nome recebe o sufixo de cópia.
+/// automática"). Motor de baixo nível, aceita o client de uma transação já
+/// aberta pelo chamador (`tx`) — necessário para a FIT-033, que precisa
+/// clonar todos os modelos de um plano inteiro na mesma transação que cria
+/// o plano-snapshot e a atribuição. `position` é responsabilidade do
+/// chamador (cada uso tem sua própria regra: `duplicateWorkout` sempre
+/// anexa ao final do plano original; o clone de plano preserva a posição
+/// original de cada modelo).
 ///
 /// Não valida se `targetTrainingPlanId` já é um snapshot (`isSnapshot`) —
 /// se for, o próprio TRIGGER de imutabilidade (ADR-005) rejeita a
 /// inserção; nenhuma função deste módulo expõe esse caminho ao personal.
-async function cloneWorkoutWithItems(
-  input: { tenantId: string; sourceWorkoutId: string; targetTrainingPlanId: string; nameOverride?: string },
-  client: PrismaClient
+async function cloneWorkoutRows(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; sourceWorkoutId: string; targetTrainingPlanId: string; position: number; nameOverride?: string }
 ): Promise<Workout> {
-  const source = await client.workout.findFirstOrThrow({
+  const source = await tx.workout.findFirstOrThrow({
     where: { id: input.sourceWorkoutId, tenantId: input.tenantId },
   });
-  const items = await client.workoutExercise.findMany({
+  const items = await tx.workoutExercise.findMany({
     where: { workoutId: source.id, tenantId: input.tenantId },
     orderBy: { position: "asc" },
   });
 
+  const clone = await tx.workout.create({
+    data: {
+      tenantId: input.tenantId,
+      trainingPlanId: input.targetTrainingPlanId,
+      name: input.nameOverride ?? source.name,
+      position: input.position,
+      suggestedDays: source.suggestedDays,
+    },
+  });
+
+  for (const [index, item] of items.entries()) {
+    await tx.workoutExercise.create({
+      data: {
+        tenantId: input.tenantId,
+        workoutId: clone.id,
+        exerciseId: item.exerciseId,
+        position: index,
+        sets: item.sets,
+        reps: item.reps,
+        durationSeconds: item.durationSeconds,
+        load: item.load,
+        restSeconds: item.restSeconds,
+        notes: item.notes,
+      },
+    });
+  }
+
+  return clone;
+}
+
+/// Envelope de `cloneWorkoutRows` usado por `duplicateWorkout` (FIT-031) —
+/// abre sua própria transação e calcula a posição de destino (sempre o
+/// final do plano informado).
+async function cloneWorkoutWithItems(
+  input: { tenantId: string; sourceWorkoutId: string; targetTrainingPlanId: string; nameOverride?: string },
+  client: PrismaClient
+): Promise<Workout> {
   const maxPosition = await client.workout.aggregate({
     where: { trainingPlanId: input.targetTrainingPlanId, tenantId: input.tenantId },
     _max: { position: true },
   });
   const position = (maxPosition._max.position ?? -1) + 1;
 
-  return client.$transaction(async (tx) => {
-    const clone = await tx.workout.create({
-      data: {
-        tenantId: input.tenantId,
-        trainingPlanId: input.targetTrainingPlanId,
-        name: input.nameOverride ?? source.name,
-        position,
-        suggestedDays: source.suggestedDays,
-      },
-    });
-
-    for (const [index, item] of items.entries()) {
-      await tx.workoutExercise.create({
-        data: {
-          tenantId: input.tenantId,
-          workoutId: clone.id,
-          exerciseId: item.exerciseId,
-          position: index,
-          sets: item.sets,
-          reps: item.reps,
-          durationSeconds: item.durationSeconds,
-          load: item.load,
-          restSeconds: item.restSeconds,
-          notes: item.notes,
-        },
-      });
-    }
-
-    return clone;
-  });
+  return client.$transaction((tx) => cloneWorkoutRows(tx, { ...input, position }));
 }
 
 const COPY_NAME_SUFFIX = " (cópia)";
@@ -729,4 +748,187 @@ export async function reorderWorkoutsInPlan(
   await client.$transaction(
     input.orderedWorkoutIds.map((id, position) => client.workout.update({ where: { id }, data: { position } }))
   );
+}
+
+/// Atribuição de plano ao aluno (FIT-033, ADR-005). `PlanAssignment.trainingPlanId`
+/// sempre aponta para uma cópia imutável (`isSnapshot: true`) criada no
+/// momento da atribuição — nunca para o plano editável do personal. Editar
+/// o plano/modelos originais depois da atribuição nunca altera o que o
+/// aluno vê (comprovado por teste real, não só pelo TRIGGER de
+/// imutabilidade — ver `workouts.integration.test.ts`).
+
+export interface AssignTrainingPlanInput {
+  tenantId: string;
+  actorUserId: string;
+  studentId: string;
+  trainingPlanId: string;
+}
+
+/// Atribui um plano do tenant a um aluno do mesmo tenant. Passos, todos na
+/// mesma transação: (1) encerra controladamente (`active: false`,
+/// `endedAt`) qualquer atribuição ativa anterior do mesmo aluno; (2) cria
+/// um `TrainingPlan` novo com `isSnapshot: false` e clona, na mesma ordem,
+/// todos os modelos ATIVOS do plano original (e seus itens) usando o
+/// mesmo motor de clonagem da FIT-031 (`cloneWorkoutRows`); (3) marca esse
+/// plano novo como `isSnapshot: true` — só agora, como último passo, para
+/// que o TRIGGER de imutabilidade (ADR-005) nunca bloqueie os INSERTs dos
+/// passos anteriores (mesma transação vê suas próprias escritas ainda não
+/// confirmadas); (4) cria a nova `PlanAssignment`; (5) registra um
+/// `AuditEvent`. No máximo uma atribuição ativa por aluno é garantido
+/// fisicamente pelo índice único parcial `plan_assignments_active_per_student_key`
+/// (migration `20260920010000_add_plan_assignment_lifecycle`) — o passo
+/// (1) existe para que essa garantia nunca seja alcançada por exceção.
+export async function assignTrainingPlanToStudent(
+  input: AssignTrainingPlanInput,
+  client: PrismaClient = prisma
+): Promise<PlanAssignment> {
+  const student = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!student) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  const plan = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.trainingPlanId }, client);
+  if (!plan) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+
+  const sourceWorkouts = await client.workout.findMany({
+    where: { tenantId: input.tenantId, trainingPlanId: plan.id, status: "ATIVO" },
+    orderBy: { position: "asc" },
+  });
+
+  return client.$transaction(async (tx) => {
+    const now = new Date();
+
+    await tx.planAssignment.updateMany({
+      where: { tenantId: input.tenantId, studentId: input.studentId, active: true },
+      data: { active: false, endedAt: now },
+    });
+
+    const snapshot = await tx.trainingPlan.create({
+      data: { tenantId: input.tenantId, name: plan.name, durationWeeks: plan.durationWeeks },
+    });
+
+    for (const [index, workout] of sourceWorkouts.entries()) {
+      await cloneWorkoutRows(tx, {
+        tenantId: input.tenantId,
+        sourceWorkoutId: workout.id,
+        targetTrainingPlanId: snapshot.id,
+        position: index,
+      });
+    }
+
+    await tx.trainingPlan.update({ where: { id: snapshot.id }, data: { isSnapshot: true } });
+
+    const assignment = await tx.planAssignment.create({
+      data: {
+        tenantId: input.tenantId,
+        studentId: input.studentId,
+        trainingPlanId: snapshot.id,
+        active: true,
+        assignedAt: now,
+      },
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "PLANO_ATRIBUIDO",
+        entityType: "PlanAssignment",
+        entityId: assignment.id,
+      },
+    });
+
+    return assignment;
+  });
+}
+
+/// Encerra, sem substituir, a atribuição ativa de um aluno (se houver).
+/// Idempotente: sem atribuição ativa, não faz nada e retorna `null`.
+export async function unassignTrainingPlanFromStudent(
+  input: { tenantId: string; actorUserId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<PlanAssignment | null> {
+  const student = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!student) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+
+  const active = await client.planAssignment.findFirst({
+    where: { tenantId: input.tenantId, studentId: input.studentId, active: true },
+  });
+  if (!active) {
+    return null;
+  }
+
+  return client.$transaction(async (tx) => {
+    const ended = await tx.planAssignment.update({
+      where: { id: active.id },
+      data: { active: false, endedAt: new Date() },
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "PLANO_ENCERRADO",
+        entityType: "PlanAssignment",
+        entityId: ended.id,
+      },
+    });
+
+    return ended;
+  });
+}
+
+export type ActivePlanAssignmentForStudent = PlanAssignment & {
+  trainingPlan: TrainingPlan & {
+    workouts: (Workout & {
+      workoutExercises: (WorkoutExercise & { exercise: { name: string; muscle: string | null } })[];
+    })[];
+  };
+};
+
+/// Carrega a atribuição ativa do aluno (se houver), com o plano-snapshot,
+/// seus modelos e itens já incluídos, ordenados — visão somente leitura
+/// usada pela página `/painel/treino` do aluno. `null` quando o aluno não
+/// tem atribuição ativa (estado "sem plano").
+export async function getActivePlanAssignmentForStudent(
+  input: { tenantId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<ActivePlanAssignmentForStudent | null> {
+  return client.planAssignment.findFirst({
+    where: { tenantId: input.tenantId, studentId: input.studentId, active: true },
+    include: {
+      trainingPlan: {
+        include: {
+          workouts: {
+            orderBy: { position: "asc" },
+            include: {
+              workoutExercises: {
+                orderBy: { position: "asc" },
+                include: { exercise: { select: { name: true, muscle: true } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  }) as Promise<ActivePlanAssignmentForStudent | null>;
+}
+
+/// Histórico de atribuições encerradas do aluno, mais recente primeiro —
+/// usado para o estado "plano encerrado" (a atribuição existiu, mas não é
+/// mais a ativa). Não inclui o plano-snapshot completo (só o suficiente
+/// para exibir "qual plano, quando encerrou"), evitando reconstruir todo o
+/// clone de itens para um plano que o aluno já não segue.
+export async function listEndedPlanAssignmentsForStudent(
+  input: { tenantId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<(PlanAssignment & { trainingPlan: { name: string } })[]> {
+  return client.planAssignment.findMany({
+    where: { tenantId: input.tenantId, studentId: input.studentId, active: false },
+    orderBy: { endedAt: "desc" },
+    include: { trainingPlan: { select: { name: true } } },
+  });
 }
