@@ -155,15 +155,53 @@ export type StudentChargeWithStudentAndPayment = StudentChargeWithPayment & {
 /// separada por aluno nesta tela, e a visão consolidada é o que o design
 /// (`CRITICAL-SCREEN-SPECS.md` seção 7 — "Lista de recebimentos") pede.
 export async function listChargesForTenant(
-  input: { tenantId: string },
+  input: { tenantId: string; referenceMonth?: Date },
   client: PrismaClient = prisma
 ): Promise<StudentChargeWithStudentAndPayment[]> {
   await refreshOverdueCharges({ tenantId: input.tenantId }, client);
   return client.studentCharge.findMany({
-    where: { tenantId: input.tenantId },
+    where: { tenantId: input.tenantId, ...(input.referenceMonth ? { referenceMonth: input.referenceMonth } : {}) },
     orderBy: { referenceMonth: "desc" },
     include: { ...CHARGE_WITH_PAYMENT_INCLUDE, student: { select: { id: true, displayName: true } } },
   });
+}
+
+export interface FinancialSummary {
+  previstoCents: number;
+  recebidoCents: number;
+  pendenteCents: number;
+  atrasadoCents: number;
+}
+
+/// Resumo financeiro da competência (FIT-053): previsto (soma de tudo
+/// não cancelado), recebido (soma dos pagamentos), pendente e atrasado.
+/// "Atrasado" é sempre coerente com o vencimento no momento da consulta
+/// — `refreshOverdueCharges` roda antes de qualquer soma.
+export async function getFinancialSummary(
+  input: { tenantId: string; referenceMonth: Date },
+  client: PrismaClient = prisma
+): Promise<FinancialSummary> {
+  await refreshOverdueCharges({ tenantId: input.tenantId }, client);
+  const charges = await client.studentCharge.findMany({
+    where: { tenantId: input.tenantId, referenceMonth: input.referenceMonth },
+    include: { payment: { select: { amountCentsPaid: true } } },
+  });
+
+  const summary: FinancialSummary = { previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 0 };
+  for (const charge of charges) {
+    if (charge.status === "CANCELADO") {
+      continue;
+    }
+    summary.previstoCents += charge.amountCents;
+    if (charge.status === "PAGO" && charge.payment) {
+      summary.recebidoCents += charge.payment.amountCentsPaid;
+    } else if (charge.status === "PENDENTE") {
+      summary.pendenteCents += charge.amountCents;
+    } else if (charge.status === "ATRASADO") {
+      summary.atrasadoCents += charge.amountCents;
+    }
+  }
+  return summary;
 }
 
 /// Cancela uma cobrança — exige motivo, nunca equivale a pagamento

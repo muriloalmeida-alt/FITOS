@@ -1,6 +1,6 @@
 # SPRINT-09 — Gestão Financeira
 
-Status: em andamento, checkpoint por História na branch única `feat/conclusao-integral-mvp` (governança do pacote de execução integral, ver `docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`); sem PR nem merge intermediário. A Sprint só é considerada encerrada **de fato** após a aprovação do PR final do programa por GPT/Codex.
+Status: Histórias concluídas (FIT-050/051/052/053), checkpoint por História na branch única `feat/conclusao-integral-mvp` (governança do pacote de execução integral, ver `docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`); sem PR nem merge intermediário. A Sprint só é considerada encerrada **de fato** após a aprovação do PR final do programa por GPT/Codex — os checkpoints internos autorizam a continuação para a SPRINT-10, não equivalem a essa aprovação.
 
 ## Objetivo
 
@@ -23,7 +23,7 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 - FIT-050 (#66) — Cadastrar cobrança. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-051 (#67) — Registrar pagamento. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-052 (#68) — Gerar mensalidades recorrentes. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-053 (#69) — Exibir resumo financeiro. Encerra a SPRINT-09.
+- FIT-053 (#69) — Exibir resumo financeiro. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato). Encerra a SPRINT-09.
 
 ## Resultado intermediário — FIT-050
 
@@ -47,9 +47,16 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 - seção "Cobranças recorrentes" em `/painel/financeiro` (`RecorrenciasSection.tsx`);
 - decisões de escopo (competência sequencial, nunca escolhida livremente; `dueDayOfMonth` limitado a 1-28) registradas em `FINANCEIRO.md`.
 
+## Resultado intermediário — FIT-053
+
+- `getFinancialSummary` (`src/modules/student-finance/charges.ts`): soma previsto/recebido/pendente/atrasado por competência, sempre precedida por `refreshOverdueCharges`;
+- filtro de competência explícito (`?mes=YYYY-MM`, formulário `GET` sem JavaScript) compartilhado entre "Visão geral" e a lista de "Cobranças" em `/painel/financeiro`; "Atrasado" ganha destaque visual como o indicador de "lançamentos que exigem ação";
+- nenhuma migration nova — leitura agregada pura sobre o que já existia;
+- decisões de escopo registradas em `docs/06-engenharia/arquitetura/FINANCEIRO.md`.
+
 ## Sequenciamento
 
-FIT-050 → FIT-051 → FIT-052 → FIT-053, cada uma com seu próprio commit/checkpoint na branch única, gate autônomo registrado no diário de execução.
+FIT-050 → FIT-051 → FIT-052 → FIT-053, cada uma com seu próprio commit/checkpoint na branch única, gate autônomo registrado no diário de execução. O fechamento documental da SPRINT-09 acontece no checkpoint da FIT-053 (este documento).
 
 ## Critérios de sucesso da Sprint
 
@@ -74,3 +81,7 @@ FIT-050 → FIT-051 → FIT-052 → FIT-053, cada uma com seu próprio commit/ch
 ## Risco de governança conhecido
 
 A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado real do repositório — `main` permanece `"protected": false`. A disciplina de branch/checkpoint permanece a única salvaguarda efetiva.
+
+## Fechamento
+
+As quatro Histórias (FIT-050, FIT-051, FIT-052, FIT-053) estão concluídas, cada uma com seu gate autônomo (testes/lint/typecheck/build limpos, evidência visual real) registrado no diário de execução. Todos os critérios de sucesso da Sprint listados acima foram atendidos. Nenhum PR exclusivamente documental foi aberto — este fechamento, como o de toda Sprint anterior, está incluído no PR final único do programa de execução integral (`feat/conclusao-integral-mvp`), a ser aberto ao final de todo o programa (SPRINT-11) para revisão externa por GPT/Codex. A Sprint só é considerada encerrada **de fato** após essa aprovação — este checkpoint autoriza a continuação para a SPRINT-10 (Painel Operacional), não equivale à aprovação.

@@ -11,8 +11,10 @@ import {
   createStudentCharge,
   endChargeRecurrence,
   generateNextChargeForRecurrence,
+  getFinancialSummary,
   listActiveRecurrencesForTenant,
   listChargesForStudent,
+  listChargesForTenant,
   refreshOverdueCharges,
   registerPayment,
 } from "./charges";
@@ -381,5 +383,69 @@ describe("createChargeRecurrence / generateNextChargeForRecurrence / endChargeRe
     await expect(
       endChargeRecurrence({ tenantId: tenantB.id, recurrenceId: recurrence.id }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("getFinancialSummary / listChargesForTenant com filtro de competência (FIT-053)", () => {
+  it("soma previsto/recebido/pendente/atrasado só da competência informada, excluindo canceladas", async () => {
+    const { tenant, owner } = await createTenant("resumo");
+    const student = await createStudent(tenant.id, "resumo");
+    const outubro = new Date("2026-10-15");
+    const setembro = new Date("2026-09-15");
+
+    const paga = await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Paga", amountReais: 100, referenceMonth: outubro, dueDate: outubro },
+      prisma
+    );
+    await registerPayment({ tenantId: tenant.id, actorUserId: owner.id, chargeId: paga.id, amountReceivedReais: 100, paidAt: new Date(), method: "PIX" }, prisma);
+
+    await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Pendente", amountReais: 50, referenceMonth: outubro, dueDate: new Date("2026-12-01") },
+      prisma
+    );
+
+    const vencida = await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Vencida", amountReais: 30, referenceMonth: outubro, dueDate: new Date("2026-01-01") },
+      prisma
+    );
+
+    const cancelada = await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Cancelada", amountReais: 999, referenceMonth: outubro, dueDate: outubro },
+      prisma
+    );
+    await cancelStudentCharge({ tenantId: tenant.id, chargeId: cancelada.id, reason: "motivo" }, prisma);
+
+    // Outra competência — nunca deve entrar na soma de outubro.
+    await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Setembro", amountReais: 500, referenceMonth: setembro, dueDate: setembro },
+      prisma
+    );
+
+    const referenceMonth = new Date(Date.UTC(2026, 9, 1));
+    const summary = await getFinancialSummary({ tenantId: tenant.id, referenceMonth }, prisma);
+
+    expect(summary.recebidoCents).toBe(10000);
+    expect(summary.pendenteCents).toBe(5000);
+    expect(summary.atrasadoCents).toBe(3000);
+    expect(summary.previstoCents).toBe(10000 + 5000 + 3000);
+
+    const listaOutubro = await listChargesForTenant({ tenantId: tenant.id, referenceMonth }, prisma);
+    expect(listaOutubro).toHaveLength(4);
+    expect(vencida.id in Object.fromEntries(listaOutubro.map((c) => [c.id, true]))).toBe(true);
+  });
+
+  it("isolamento: resumo de um tenant nunca inclui cobrança de outro", async () => {
+    const { tenant: tenantA } = await createTenant("resumo-isolamento-a");
+    const { tenant: tenantB } = await createTenant("resumo-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "resumo-isolamento");
+    const referenceMonth = new Date(Date.UTC(2026, 10, 1));
+    await createStudentCharge(
+      { tenantId: tenantA.id, studentId: studentA.id, description: "Mensalidade", amountReais: 100, referenceMonth, dueDate: referenceMonth },
+      prisma
+    );
+
+    const summaryDeOutroTenant = await getFinancialSummary({ tenantId: tenantB.id, referenceMonth }, prisma);
+
+    expect(summaryDeOutroTenant).toEqual({ previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 0 });
   });
 });

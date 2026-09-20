@@ -29,3 +29,10 @@ Módulo `src/modules/student-finance/`, reservado desde a FIT-007. Este document
 - Sem infraestrutura de agendamento/cron nesta MVP (mesma decisão já tomada na FIT-020/023): gerar a próxima competência é sempre uma ação explícita do personal ("Gerar cobrança do mês"), nunca automática.
 - Encerrar uma recorrência (`endChargeRecurrence`) nunca é uma exclusão física — mesma filosofia de arquivamento do restante da aplicação (`Workout`/`Exercise`/`TrainingPlan`). Lançamentos já gerados nunca são afetados; idempotente para uma já encerrada.
 - `StudentCharge.recurrence` usa `onDelete: Restrict` (nunca `SetNull`): como `StudentCharge.tenantId` é obrigatório, uma FK composta com `SetNull` violaria essa restrição na prática — e de qualquer forma recorrências nunca são fisicamente excluídas, apenas encerradas.
+
+## FIT-053 — Exibir resumo financeiro
+
+- `getFinancialSummary` soma por competência (nunca todo o histórico): previsto = tudo exceto `cancelado`; recebido = soma de `Payment.amountCentsPaid` das `pago`; pendente/atrasado = soma direta dos respectivos status. `refreshOverdueCharges` roda antes de qualquer soma, garantindo que "atrasado" sempre reflita o vencimento no momento exato da consulta.
+- Filtro de competência explícito (`?mes=YYYY-MM`, formulário `GET` sem JavaScript, mesmo padrão de `/painel/alunos`) é compartilhado entre "Visão geral" e a lista de "Cobranças" — nunca dois filtros independentes na mesma tela. Mês inválido/ausente cai no mês atual, nunca numa tela em branco.
+- "Atrasado" ganha destaque visual (fundo de erro) na "Visão geral" — é literalmente o indicador de "lançamentos que exigem ação" pedido pelo critério de aceite; não existe uma lista separada de "itens que exigem atenção".
+- Nenhuma migration nova: o resumo é leitura agregada pura sobre `StudentCharge`/`Payment` já existentes desde a FIT-050/051.
