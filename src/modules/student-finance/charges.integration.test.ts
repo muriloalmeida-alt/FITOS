@@ -5,7 +5,17 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
-import { cancelStudentCharge, createStudentCharge, listChargesForStudent, refreshOverdueCharges, registerPayment } from "./charges";
+import {
+  cancelStudentCharge,
+  createChargeRecurrence,
+  createStudentCharge,
+  endChargeRecurrence,
+  generateNextChargeForRecurrence,
+  listActiveRecurrencesForTenant,
+  listChargesForStudent,
+  refreshOverdueCharges,
+  registerPayment,
+} from "./charges";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
@@ -15,6 +25,7 @@ afterAll(async () => {
   await prisma.payment.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.auditEvent.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.studentCharge.deleteMany({ where: { tenant: { name: { contains: run } } } });
+  await prisma.chargeRecurrence.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.student.deleteMany({ where: { email: { contains: run } } });
   await prisma.tenant.deleteMany({ where: { name: { contains: run } } });
   await prisma.user.deleteMany({ where: { email: { contains: run } } });
@@ -259,6 +270,116 @@ describe("registerPayment (FIT-051)", () => {
     );
     await expect(
       registerPayment({ tenantId: tenantB.id, actorUserId: ownerB.id, chargeId: charge2.id, amountReceivedReais: 150, paidAt: new Date(), method: "PIX" }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("createChargeRecurrence / generateNextChargeForRecurrence / endChargeRecurrence (FIT-052)", () => {
+  it("cria a recorrência sem gerar nenhum lançamento", async () => {
+    const { tenant } = await createTenant("recorrencia-criar");
+    const student = await createStudent(tenant.id, "recorrencia-criar");
+
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+
+    expect(recurrence.status).toBe("ATIVA");
+    expect(recurrence.amountCents).toBe(15000);
+    const charges = await prisma.studentCharge.findMany({ where: { recurrenceId: recurrence.id } });
+    expect(charges).toHaveLength(0);
+  });
+
+  it("gera lançamentos independentes, cada um com sua própria competência, sem afetar os já gerados ao mudar a recorrência", async () => {
+    const { tenant } = await createTenant("recorrencia-gerar");
+    const student = await createStudent(tenant.id, "recorrencia-gerar");
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+
+    const primeira = await generateNextChargeForRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+    const segunda = await generateNextChargeForRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+
+    expect(primeira.referenceMonth.getTime()).not.toBe(segunda.referenceMonth.getTime());
+    expect(segunda.referenceMonth.getTime()).toBeGreaterThan(primeira.referenceMonth.getTime());
+    expect(primeira.amountCents).toBe(15000);
+    expect(primeira.recurrenceId).toBe(recurrence.id);
+
+    // Alterar diretamente a recorrência não pode mudar o que já foi gerado
+    // ("lançamentos independentes por competência").
+    await prisma.chargeRecurrence.update({ where: { id: recurrence.id }, data: { amountCents: 99999 } });
+    const primeiraAindaIgual = await prisma.studentCharge.findUniqueOrThrow({ where: { id: primeira.id } });
+    expect(primeiraAindaIgual.amountCents).toBe(15000);
+  });
+
+  it("impede geração duplicada da mesma competência por construção (índice único)", async () => {
+    const { tenant } = await createTenant("recorrencia-duplicada");
+    const student = await createStudent(tenant.id, "recorrencia-duplicada");
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+    const gerada = await generateNextChargeForRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+
+    // Simula uma segunda geração para a mesma competência já gerada,
+    // contornando a lógica de aplicação — a garantia real é o índice único.
+    await expect(
+      prisma.studentCharge.create({
+        data: {
+          tenantId: tenant.id,
+          studentId: student.id,
+          description: recurrence.description,
+          amountCents: recurrence.amountCents,
+          referenceMonth: gerada.referenceMonth,
+          dueDate: gerada.dueDate,
+          recurrenceId: recurrence.id,
+        },
+      })
+    ).rejects.toThrow();
+  });
+
+  it("rejeita gerar cobrança para recorrência encerrada, e nunca afeta lançamentos já gerados", async () => {
+    const { tenant } = await createTenant("recorrencia-encerrar");
+    const student = await createStudent(tenant.id, "recorrencia-encerrar");
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+    const gerada = await generateNextChargeForRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+
+    const encerrada = await endChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+    expect(encerrada.status).toBe("ENCERRADA");
+
+    await expect(
+      generateNextChargeForRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma)
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+
+    const geradaAindaExiste = await prisma.studentCharge.findUniqueOrThrow({ where: { id: gerada.id } });
+    expect(geradaAindaExiste.status).toBe("PENDENTE");
+
+    // Idempotente.
+    const encerradaDeNovo = await endChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+    expect(encerradaDeNovo.status).toBe("ENCERRADA");
+  });
+
+  it("isolamento: nunca lista, gera ou encerra recorrência de outro tenant", async () => {
+    const { tenant: tenantA } = await createTenant("recorrencia-isolamento-a");
+    const { tenant: tenantB } = await createTenant("recorrencia-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "recorrencia-isolamento");
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenantA.id, studentId: studentA.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+
+    const listaDeOutroTenant = await listActiveRecurrencesForTenant({ tenantId: tenantB.id }, prisma);
+    expect(listaDeOutroTenant.find((r) => r.id === recurrence.id)).toBeUndefined();
+
+    await expect(
+      generateNextChargeForRecurrence({ tenantId: tenantB.id, recurrenceId: recurrence.id }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+    await expect(
+      endChargeRecurrence({ tenantId: tenantB.id, recurrenceId: recurrence.id }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
 });

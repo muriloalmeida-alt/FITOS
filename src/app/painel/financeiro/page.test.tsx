@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 const requirePersonal = vi.fn();
 const listStudents = vi.fn();
 const listChargesForTenant = vi.fn();
+const listActiveRecurrencesForTenant = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -26,7 +27,11 @@ vi.mock("@/modules/student-finance/charges", async () => {
   const actual = await vi.importActual<typeof import("@/modules/student-finance/charges")>(
     "@/modules/student-finance/charges"
   );
-  return { ...actual, listChargesForTenant: (...args: unknown[]) => listChargesForTenant(...args) };
+  return {
+    ...actual,
+    listChargesForTenant: (...args: unknown[]) => listChargesForTenant(...args),
+    listActiveRecurrencesForTenant: (...args: unknown[]) => listActiveRecurrencesForTenant(...args),
+  };
 });
 
 vi.mock("next/navigation", () => ({
@@ -69,6 +74,7 @@ describe("FinanceiroPage (FIT-050)", () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     listStudents.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 });
     listChargesForTenant.mockResolvedValue([]);
+    listActiveRecurrencesForTenant.mockResolvedValue([]);
     const { default: FinanceiroPage } = await import("./page");
 
     render(await FinanceiroPage());
@@ -97,6 +103,7 @@ describe("FinanceiroPage (FIT-050)", () => {
         payment: null,
       },
     ]);
+    listActiveRecurrencesForTenant.mockResolvedValue([]);
     const { default: FinanceiroPage } = await import("./page");
 
     render(await FinanceiroPage());
@@ -104,5 +111,25 @@ describe("FinanceiroPage (FIT-050)", () => {
     expect(screen.getAllByText("Aluno A").length).toBeGreaterThan(0);
     expect(screen.getByText(/Mensalidade outubro/)).toBeInTheDocument();
     expect(screen.getByText("R$ 150,00")).toBeInTheDocument();
+  });
+
+  it("lista cobranças recorrentes ativas", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listStudents.mockResolvedValue({
+      items: [{ id: "s1", displayName: "Aluno A" }],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+    listChargesForTenant.mockResolvedValue([]);
+    listActiveRecurrencesForTenant.mockResolvedValue([
+      { id: "r1", description: "Mensalidade", amountCents: 15000, dueDayOfMonth: 5, student: { id: "s1", displayName: "Aluno A" } },
+    ]);
+    const { default: FinanceiroPage } = await import("./page");
+
+    render(await FinanceiroPage());
+
+    expect(screen.getByText(/vence todo dia 5/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gerar cobrança do mês" })).toBeInTheDocument();
   });
 });

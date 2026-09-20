@@ -205,6 +205,7 @@ model Tenant {
   bodyMeasurements      BodyMeasurement[]
   studentCharges        StudentCharge[]
   payments              Payment[]
+  chargeRecurrences     ChargeRecurrence[]
   saasSubscription      SaasSubscription?
   auditEvents           AuditEvent[]
   invitations           Invitation[]
@@ -240,13 +241,14 @@ model Student {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user            User?            @relation(fields: [userId], references: [id], onDelete: Restrict)
-  planAssignments PlanAssignment[]
-  workoutSessions WorkoutSession[]
-  assessments     Assessment[]
-  charges         StudentCharge[]
-  invitations     Invitation[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  planAssignments   PlanAssignment[]
+  workoutSessions   WorkoutSession[]
+  assessments       Assessment[]
+  charges           StudentCharge[]
+  chargeRecurrences ChargeRecurrence[]
+  invitations       Invitation[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -689,15 +691,50 @@ model StudentCharge {
   dueDate        DateTime
   cancelReason   String?
   cancelledAt    DateTime?
+  recurrenceId   String?
   createdAt      DateTime            @default(now())
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student Student  @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
-  payment Payment?
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student    Student           @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  payment    Payment?
+  recurrence ChargeRecurrence? @relation(fields: [recurrenceId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
+  @@unique([recurrenceId, referenceMonth])
   @@index([tenantId])
   @@index([studentId, tenantId])
   @@map("student_charges")
+}
+
+enum ChargeRecurrenceStatus {
+  ATIVA
+  ENCERRADA
+}
+
+/// Cobrança recorrente (FIT-052): "cobrança recorrente gera lançamentos
+/// independentes por competência" (`REGRAS-DE-NEGOCIO.md` seção 8) — cada
+/// `StudentCharge` gerado é uma cópia física independente, nunca uma
+/// referência viva; alterar `amountCents`/`description` aqui nunca muda um
+/// `StudentCharge` já gerado. Sem infraestrutura de agendamento/cron nesta
+/// MVP (mesma decisão da FIT-020/023): a geração é sempre uma ação
+/// explícita do personal, nunca automática.
+model ChargeRecurrence {
+  id            String                 @id @default(cuid())
+  tenantId      String
+  studentId     String
+  description   String
+  amountCents   Int
+  dueDayOfMonth Int
+  status        ChargeRecurrenceStatus @default(ATIVA)
+  createdAt     DateTime               @default(now())
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student         @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  charges StudentCharge[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@map("charge_recurrences")
 }
 
 /// Quitação de uma cobrança (FIT-051). Entidade própria — nunca campos

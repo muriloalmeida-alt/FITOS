@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
-import { AppShell } from "@/shared/ui";
+import { AppShell, Card } from "@/shared/ui";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listStudents } from "@/modules/students/students";
-import { listChargesForTenant } from "@/modules/student-finance/charges";
+import { listActiveRecurrencesForTenant, listChargesForTenant } from "@/modules/student-finance/charges";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
 import { FinanceiroSection } from "./FinanceiroSection";
+import { RecorrenciasSection } from "./RecorrenciasSection";
 
 export const metadata: Metadata = {
   title: `Financeiro — ${appName}`,
@@ -26,27 +27,45 @@ export default async function FinanceiroPage() {
     throw error;
   }
 
-  const [studentsResult, charges] = await Promise.all([
+  const [studentsResult, charges, recurrences] = await Promise.all([
     listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 100 }),
     listChargesForTenant({ tenantId: ctx.tenantId }),
+    listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
   ]);
+
+  const students = studentsResult.items.map((s) => ({ id: s.id, displayName: s.displayName }));
 
   return (
     <AppShell title="Financeiro" navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
-      <FinanceiroSection
-        students={studentsResult.items.map((s) => ({ id: s.id, displayName: s.displayName }))}
-        charges={charges.map((c) => ({
-          id: c.id,
-          description: c.description,
-          amountCents: c.amountCents,
-          referenceMonth: c.referenceMonth.toISOString(),
-          dueDate: c.dueDate.toISOString(),
-          status: c.status,
-          cancelReason: c.cancelReason,
-          student: c.student,
-          payment: c.payment ? { amountCentsPaid: c.payment.amountCentsPaid, paidAt: c.payment.paidAt.toISOString(), method: c.payment.method } : null,
-        }))}
-      />
+      <Card title="Cobranças">
+        <FinanceiroSection
+          students={students}
+          charges={charges.map((c) => ({
+            id: c.id,
+            description: c.description,
+            amountCents: c.amountCents,
+            referenceMonth: c.referenceMonth.toISOString(),
+            dueDate: c.dueDate.toISOString(),
+            status: c.status,
+            cancelReason: c.cancelReason,
+            student: c.student,
+            payment: c.payment ? { amountCentsPaid: c.payment.amountCentsPaid, paidAt: c.payment.paidAt.toISOString(), method: c.payment.method } : null,
+          }))}
+        />
+      </Card>
+
+      <Card title="Cobranças recorrentes">
+        <RecorrenciasSection
+          students={students}
+          recurrences={recurrences.map((r) => ({
+            id: r.id,
+            description: r.description,
+            amountCents: r.amountCents,
+            dueDayOfMonth: r.dueDayOfMonth,
+            student: r.student,
+          }))}
+        />
+      </Card>
     </AppShell>
   );
 }

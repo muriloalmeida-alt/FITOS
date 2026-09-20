@@ -22,7 +22,7 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 
 - FIT-050 (#66) — Cadastrar cobrança. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-051 (#67) — Registrar pagamento. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-052 (#68) — Gerar mensalidades recorrentes.
+- FIT-052 (#68) — Gerar mensalidades recorrentes. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-053 (#69) — Exibir resumo financeiro. Encerra a SPRINT-09.
 
 ## Resultado intermediário — FIT-050
@@ -38,6 +38,14 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 - defesa física contra dois pagamentos para a mesma cobrança (`payments.studentChargeId` único, mesmo padrão de `WorkoutSessionResult`/FIT-041); cobrança já paga ou cancelada nunca pode ser paga de novo;
 - UI: "Registrar pagamento" e "Cancelar" mutuamente exclusivos na mesma linha do cartão de cobrança; histórico do pagamento (data, valor, forma) sempre visível na cobrança paga;
 - nenhuma migration nova (tabela `payments` já existia desde a FIT-050); decisões de escopo (pagamento parcial fora do MVP; auditoria explícita) registradas em `FINANCEIRO.md`.
+
+## Resultado intermediário — FIT-052
+
+- migration aditiva `20260921010000_add_charge_recurrence`: nova tabela `charge_recurrences`; `StudentCharge` ganha `recurrenceId` e o índice único `(recurrenceId, referenceMonth)` — defesa física contra geração duplicada da mesma competência;
+- `createChargeRecurrence`/`generateNextChargeForRecurrence`/`endChargeRecurrence`/`listActiveRecurrencesForTenant` (`src/modules/student-finance/charges.ts`): cada geração cria um `StudentCharge` físico independente — comprovado por teste real que alterar a recorrência depois nunca muda um lançamento já gerado; encerrar a recorrência nunca é exclusão física e nunca afeta lançamentos já gerados;
+- sem infraestrutura de agendamento/cron (mesma decisão da FIT-020/023): "Gerar cobrança do mês" é sempre uma ação explícita do personal;
+- seção "Cobranças recorrentes" em `/painel/financeiro` (`RecorrenciasSection.tsx`);
+- decisões de escopo (competência sequencial, nunca escolhida livremente; `dueDayOfMonth` limitado a 1-28) registradas em `FINANCEIRO.md`.
 
 ## Sequenciamento
 

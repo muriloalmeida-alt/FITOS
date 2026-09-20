@@ -19,3 +19,13 @@ Módulo `src/modules/student-finance/`, reservado desde a FIT-007. Este document
 - `AuditEvent` (`action: "PAGAMENTO_REGISTRADO"`) é escrito em toda chamada — `REGRAS-DE-NEGOCIO.md` seção 9 lista "pagamento" explicitamente entre as entidades auditadas (ao contrário de `WorkoutSession`/FIT-041, que não é auditada).
 - Uma cobrança `cancelada` nunca pode ser paga, e uma já `paga` nunca pode ser paga de novo — os dois casos retornam `ESTADO_INVALIDO`, nunca uma exceção genérica.
 - UI: "Registrar pagamento" e "Cancelar" são ações mutuamente exclusivas na mesma linha (um único `activeAction` de estado em `FinanceiroSection.tsx`) — nunca os dois formulários abertos ao mesmo tempo para a mesma cobrança.
+
+## FIT-052 — Gerar mensalidades recorrentes
+
+- `ChargeRecurrence` é a definição da recorrência (aluno, descrição, valor, dia de vencimento); `generateNextChargeForRecurrence` cria um `StudentCharge` físico independente a cada chamada — "cobrança recorrente gera lançamentos independentes por competência" (`REGRAS-DE-NEGOCIO.md` seção 8). Alterar `amountCents`/`description` na recorrência depois nunca muda um lançamento já gerado (comprovado por teste real).
+- Competência do próximo lançamento: a do mês da criação, se nada foi gerado ainda; senão, o mês seguinte ao mais recente já gerado para aquela recorrência — nunca um mês escolhido livremente nesta MVP.
+- `dueDayOfMonth` é limitado a 1-28 (nunca 29/30/31): assim todo mês tem esse dia por construção, sem nenhuma regra de "cair no dia mais próximo do fim do mês" que nenhum documento pediu.
+- Defesa física contra geração duplicada da mesma competência: índice único `student_charges_recurrenceId_referenceMonth_key` (`recurrenceId`, `referenceMonth`) — `NULL` nunca colide com `NULL` nessa constraint, então cobranças sem recorrência (a maioria) nunca são afetadas.
+- Sem infraestrutura de agendamento/cron nesta MVP (mesma decisão já tomada na FIT-020/023): gerar a próxima competência é sempre uma ação explícita do personal ("Gerar cobrança do mês"), nunca automática.
+- Encerrar uma recorrência (`endChargeRecurrence`) nunca é uma exclusão física — mesma filosofia de arquivamento do restante da aplicação (`Workout`/`Exercise`/`TrainingPlan`). Lançamentos já gerados nunca são afetados; idempotente para uma já encerrada.
+- `StudentCharge.recurrence` usa `onDelete: Restrict` (nunca `SetNull`): como `StudentCharge.tenantId` é obrigatório, uma FK composta com `SetNull` violaria essa restrição na prática — e de qualquer forma recorrências nunca são fisicamente excluídas, apenas encerradas.

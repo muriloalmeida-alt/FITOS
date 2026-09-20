@@ -1,5 +1,5 @@
 import "server-only";
-import { type StudentCharge, type PrismaClient } from "@prisma/client";
+import { type StudentCharge, type ChargeRecurrence, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getStudentForTenant } from "@/modules/students/students";
 
@@ -265,4 +265,122 @@ export async function registerPayment(input: RegisterPaymentInput, client: Prism
 
     return updated;
   });
+}
+
+const MAX_DUE_DAY_OF_MONTH = 28;
+
+/// `dueDayOfMonth` limitado a 1-28 (nunca 29/30/31): assim todo mês tem
+/// esse dia por construção, sem nenhuma regra de "cair no dia mais próximo"
+/// que nenhum documento pediu — mais simples e sempre correto.
+function normalizeDueDayOfMonth(dueDayOfMonth: number): number {
+  if (!Number.isInteger(dueDayOfMonth) || dueDayOfMonth < 1 || dueDayOfMonth > MAX_DUE_DAY_OF_MONTH) {
+    throw new StudentChargeError("VALIDACAO", `O dia de vencimento deve ser um número inteiro entre 1 e ${MAX_DUE_DAY_OF_MONTH}.`);
+  }
+  return dueDayOfMonth;
+}
+
+function dueDateForReferenceMonth(referenceMonth: Date, dueDayOfMonth: number): Date {
+  return new Date(Date.UTC(referenceMonth.getUTCFullYear(), referenceMonth.getUTCMonth(), dueDayOfMonth));
+}
+
+export interface CreateChargeRecurrenceInput {
+  tenantId: string;
+  studentId: string;
+  description: string;
+  amountReais: number;
+  dueDayOfMonth: number;
+}
+
+/// Cria a definição da recorrência (FIT-052) — ainda não gera nenhum
+/// `StudentCharge`; a primeira geração é sempre uma ação explícita
+/// separada (`generateNextChargeForRecurrence`).
+export async function createChargeRecurrence(
+  input: CreateChargeRecurrenceInput,
+  client: PrismaClient = prisma
+): Promise<ChargeRecurrence> {
+  const student = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!student) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+
+  const description = normalizeDescription(input.description);
+  const amountCents = centsFromReais(input.amountReais);
+  const dueDayOfMonth = normalizeDueDayOfMonth(input.dueDayOfMonth);
+
+  return client.chargeRecurrence.create({
+    data: { tenantId: input.tenantId, studentId: input.studentId, description, amountCents, dueDayOfMonth },
+  });
+}
+
+/// Recorrências ativas do tenant — base da UI de "cobranças recorrentes".
+export async function listActiveRecurrencesForTenant(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<(ChargeRecurrence & { student: { id: string; displayName: string } })[]> {
+  return client.chargeRecurrence.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVA" },
+    orderBy: { createdAt: "desc" },
+    include: { student: { select: { id: true, displayName: true } } },
+  });
+}
+
+/// Gera o próximo lançamento independente da recorrência (FIT-052) — "a
+/// cobrança recorrente gera lançamentos independentes por competência"
+/// (`REGRAS-DE-NEGOCIO.md` seção 8): o `StudentCharge` criado aqui é uma
+/// cópia física dos valores atuais da recorrência, nunca uma referência
+/// viva — alterar a recorrência depois nunca muda este lançamento.
+/// Competência: a primeira nunca gerada ainda (mês da criação, se nenhuma
+/// foi gerada; senão, o mês seguinte à mais recente já gerada). Defesa
+/// física contra geração duplicada: `student_charges_recurrenceId_referenceMonth_key`
+/// — mesmo com essa checagem prévia, a unicidade é a garantia real.
+export async function generateNextChargeForRecurrence(
+  input: { tenantId: string; recurrenceId: string },
+  client: PrismaClient = prisma
+): Promise<StudentCharge> {
+  const recurrence = await client.chargeRecurrence.findFirst({ where: { id: input.recurrenceId, tenantId: input.tenantId } });
+  if (!recurrence) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Recorrência não encontrada.");
+  }
+  if (recurrence.status === "ENCERRADA") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Uma recorrência encerrada não gera novas cobranças.");
+  }
+
+  const lastGenerated = await client.studentCharge.findFirst({
+    where: { recurrenceId: recurrence.id },
+    orderBy: { referenceMonth: "desc" },
+  });
+
+  const now = new Date();
+  const referenceMonth = lastGenerated
+    ? new Date(Date.UTC(lastGenerated.referenceMonth.getUTCFullYear(), lastGenerated.referenceMonth.getUTCMonth() + 1, 1))
+    : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+  return client.studentCharge.create({
+    data: {
+      tenantId: recurrence.tenantId,
+      studentId: recurrence.studentId,
+      description: recurrence.description,
+      amountCents: recurrence.amountCents,
+      referenceMonth,
+      dueDate: dueDateForReferenceMonth(referenceMonth, recurrence.dueDayOfMonth),
+      recurrenceId: recurrence.id,
+    },
+  });
+}
+
+/// Encerra a recorrência — nunca uma exclusão física (mesma filosofia de
+/// arquivamento do restante da aplicação). Lançamentos já gerados nunca
+/// são afetados; idempotente para uma já encerrada.
+export async function endChargeRecurrence(
+  input: { tenantId: string; recurrenceId: string },
+  client: PrismaClient = prisma
+): Promise<ChargeRecurrence> {
+  const recurrence = await client.chargeRecurrence.findFirst({ where: { id: input.recurrenceId, tenantId: input.tenantId } });
+  if (!recurrence) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Recorrência não encontrada.");
+  }
+  if (recurrence.status === "ENCERRADA") {
+    return recurrence;
+  }
+  return client.chargeRecurrence.update({ where: { id: recurrence.id }, data: { status: "ENCERRADA" } });
 }
