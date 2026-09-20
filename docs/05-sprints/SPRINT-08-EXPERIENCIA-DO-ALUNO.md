@@ -19,8 +19,8 @@ Transformar a consulta passiva do aluno (FIT-033: só visualizar o plano atribu�
 
 ## Histórias
 
-- FIT-040 (#61) — Treino do aluno. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-041 (#62) — Registrar sessão.
+- FIT-040 (#61) — Treino do aluno. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — commit `f51c91d`).
+- FIT-041 (#62) — Registrar sessão. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-042 (#63) — Avaliação e evolução básica. Encerra a SPRINT-08.
 
 ## Resultado intermediário — FIT-040
@@ -29,6 +29,14 @@ Transformar a consulta passiva do aluno (FIT-033: só visualizar o plano atribu�
 - card "Treino de hoje" em `AlunoHome.tsx` (`/painel`) substitui o placeholder "em breve" da FIT-016 — exercícios, prescrição e instruções (`Exercise.instructions`, existente desde a FIT-021/022, nunca lido por nenhuma tela até agora);
 - nenhuma migration — reaproveita `Workout.suggestedDays` (FIT-030) e a atribuição ativa (FIT-033);
 - decisão de design registrada (algoritmo de "hoje") em `docs/06-engenharia/arquitetura/EXPERIENCIA-DO-ALUNO.md` e no diário de execução.
+
+## Resultado intermediário — FIT-041
+
+- migration aditiva `20260920020000_add_workout_session_results`: `WorkoutSession.startedAt`/`endedAt` (substitui `occurredAt`, nunca usado), nova tabela `WorkoutSessionResult`, índices únicos aditivos em `workout_exercises`/`workout_sessions` (necessários para a FK composta), e o índice único parcial `workout_sessions_in_progress_per_student_key` (no máximo uma sessão em andamento por aluno);
+- `src/modules/execution/sessions.ts` (módulo reservado desde a FIT-007, primeira implementação): `startOrResumeWorkoutSession` (iniciar/continuar são a mesma função; abandona automaticamente a sessão em andamento de outro treino), `recordSessionResult` (upsert — defesa física contra dupla submissão), `completeWorkoutSession`/`abandonWorkoutSession`, `getInProgressSessionForStudent`/`getSessionForStudent`;
+- `/painel/treino/sessao`: retoma sessão em andamento, ou mostra "Começar treino" para o treino de hoje, ou um dos três estados honestos; `SessaoExecucao.tsx` com o temporizador de descanso acessível (`aria-live`) e não bloqueante, "Repetir prescrito", e tratamento de falha de conexão (fetch em `try/catch`, mensagem + nova tentativa);
+- card "Treino de hoje" (`/painel`, FIT-040) ganha o link "Começar treino"/"Continuar treino em andamento";
+- decisões de escopo registradas (nenhum `AuditEvent` para sessão; `PLANEJADA` nunca produzido; "repetir prescrito" como leitura de "repetir último valor") em `docs/06-engenharia/arquitetura/EXPERIENCIA-DO-ALUNO.md`.
 
 ## Sequenciamento
 

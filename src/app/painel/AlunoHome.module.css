@@ -55,3 +55,8 @@
 .notes {
   font-style: italic;
 }
+
+.startSessionLink {
+  display: block;
+  margin-top: var(--fitos-space-3);
+}

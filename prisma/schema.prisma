@@ -103,14 +103,14 @@ enum UserRole {
 /// campos exigidos pelo schema base do provedor; `role` é um campo adicional
 /// nosso (nunca aceito do cliente — sempre definido no servidor).
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String   @id @default(cuid())
+  email         String   @unique
   name          String
-  role          UserRole  @default(PERSONAL)
-  emailVerified Boolean   @default(false)
+  role          UserRole @default(PERSONAL)
+  emailVerified Boolean  @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   ownedTenant         Tenant?
   studentProfile      Student?
@@ -191,19 +191,20 @@ model Tenant {
   name      String
   createdAt DateTime @default(now())
 
-  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  students         Student[]
-  exercises        Exercise[]
-  trainingPlans    TrainingPlan[]
-  workouts         Workout[]
-  workoutExercises WorkoutExercise[]
-  planAssignments  PlanAssignment[]
-  workoutSessions  WorkoutSession[]
-  assessments      Assessment[]
-  studentCharges   StudentCharge[]
-  saasSubscription SaasSubscription?
-  auditEvents      AuditEvent[]
-  invitations      Invitation[]
+  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  students              Student[]
+  exercises             Exercise[]
+  trainingPlans         TrainingPlan[]
+  workouts              Workout[]
+  workoutExercises      WorkoutExercise[]
+  planAssignments       PlanAssignment[]
+  workoutSessions       WorkoutSession[]
+  workoutSessionResults WorkoutSessionResult[]
+  assessments           Assessment[]
+  studentCharges        StudentCharge[]
+  saasSubscription      SaasSubscription?
+  auditEvents           AuditEvent[]
+  invitations           Invitation[]
 
   @@map("tenants")
 }
@@ -356,15 +357,15 @@ model Exercise {
 /// `@@unique([id, tenantId])` referenciado por chave composta a partir de
 /// Workout e PlanAssignment.
 model TrainingPlan {
-  id            String              @id @default(cuid())
+  id            String             @id @default(cuid())
   tenantId      String
   name          String
-  status        TrainingPlanStatus  @default(ATIVO)
+  status        TrainingPlanStatus @default(ATIVO)
   durationWeeks Int?
-  isSnapshot    Boolean             @default(false)
-  isDraftBucket Boolean             @default(false)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  isSnapshot    Boolean            @default(false)
+  isDraftBucket Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workouts        Workout[]
@@ -459,6 +460,9 @@ model WorkoutExercise {
   workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
 
+  workoutSessionResults WorkoutSessionResult[]
+
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([workoutId, tenantId])
   @@map("workout_exercises")
@@ -497,26 +501,78 @@ model PlanAssignment {
   @@map("plan_assignments")
 }
 
-/// Execução de um treino por um aluno.
+/// Execução de um treino por um aluno (FIT-041).
 ///
 /// Ambas as relações (Student e Workout) usam chave composta com
 /// `tenantId`: impede sessão com aluno e treino de tenants diferentes.
+/// `workoutId` sempre aponta para um `Workout` do plano-snapshot da
+/// atribuição ativa no momento em que a sessão foi iniciada (ADR-005) —
+/// nunca o modelo editável do personal; como o snapshot é imutável, o
+/// histórico de execução nunca é recalculado, mesmo que o aluno seja
+/// reatribuído a outro plano depois (`REGRAS-DE-NEGOCIO.md`, seção 6).
+///
+/// `PLANEJADA` (`REGRAS-DE-NEGOCIO.md`) nunca é atingido nesta MVP: não
+/// existe um fluxo de "agendar sessão" separado de "iniciar" — o próprio
+/// "iniciar" já cria a sessão em `EM_ANDAMENTO`. O valor do enum
+/// permanece (é a nomenclatura do produto), mas nenhuma função deste
+/// módulo o produz — decisão de escopo registrada em
+/// `docs/06-engenharia/arquitetura/EXPERIENCIA-DO-ALUNO.md`.
+///
+/// No máximo uma sessão `EM_ANDAMENTO` por aluno, garantido por um índice
+/// único parcial (não representável no Prisma Schema — ver migration
+/// `20260920020000_add_workout_session_results`).
 model WorkoutSession {
-  id         String               @id @default(cuid())
-  tenantId   String
-  studentId  String
-  workoutId  String
-  status     WorkoutSessionStatus @default(PLANEJADA)
-  occurredAt DateTime?
+  id        String               @id @default(cuid())
+  tenantId  String
+  studentId String
+  workoutId String
+  status    WorkoutSessionStatus @default(EM_ANDAMENTO)
+  startedAt DateTime             @default(now())
+  endedAt   DateTime?
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workout Workout @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
+  results WorkoutSessionResult[]
+
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([studentId, tenantId])
   @@index([workoutId, tenantId])
   @@map("workout_sessions")
+}
+
+/// Resultado executado de um item do treino, dentro de uma sessão
+/// (FIT-041). Um registro por `WorkoutExercise` por sessão — "editar" um
+/// resultado já registrado é um upsert (nunca uma segunda linha), o que
+/// também é a própria defesa física contra dupla submissão: reenviar o
+/// mesmo registro nunca duplica, apenas substitui os valores.
+///
+/// Campos "completed" são deliberadamente independentes dos prescritos em
+/// `WorkoutExercise` (nunca os sobrescreve) — "o aluno pode informar
+/// valores executados diferentes dos prescritos" (`REGRAS-DE-NEGOCIO.md`,
+/// seção 6).
+model WorkoutSessionResult {
+  id                       String   @id @default(cuid())
+  tenantId                 String
+  workoutSessionId         String
+  workoutExerciseId        String
+  setsCompleted            Int?
+  repsCompleted            Int?
+  durationSecondsCompleted Int?
+  loadUsed                 String?
+  recordedAt               DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workoutSession  WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([workoutSessionId, workoutExerciseId])
+  @@index([tenantId])
+  @@index([workoutSessionId, tenantId])
+  @@map("workout_session_results")
 }
 
 /// Avaliação/evolução manual do aluno. Peso em gramas (Int) para evitar
@@ -560,13 +616,13 @@ model Assessment {
 /// A relação com Student usa chave composta com `tenantId`: impede cobrança
 /// do tenant A vinculada a aluno do tenant B.
 model StudentCharge {
-  id        String              @id @default(cuid())
-  tenantId  String
-  studentId String
-  status    StudentChargeStatus @default(PENDENTE)
+  id          String              @id @default(cuid())
+  tenantId    String
+  studentId   String
+  status      StudentChargeStatus @default(PENDENTE)
   amountCents Int
-  dueDate   DateTime
-  createdAt DateTime            @default(now())
+  dueDate     DateTime
+  createdAt   DateTime            @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -580,11 +636,11 @@ model StudentCharge {
 /// único: no máximo 1 assinatura por tenant. Estruturalmente separada de
 /// StudentCharge — nenhuma relação entre os dois modelos.
 model SaasSubscription {
-  id        String                  @id @default(cuid())
-  tenantId  String                  @unique
-  status    SaasSubscriptionStatus  @default(ATIVA)
+  id        String                 @id @default(cuid())
+  tenantId  String                 @unique
+  status    SaasSubscriptionStatus @default(ATIVA)
   provider  String
-  createdAt DateTime                @default(now())
+  createdAt DateTime               @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -598,13 +654,13 @@ model SaasSubscription {
 /// `Assessment.authorUserId` (ver comentário lá e MODELO-FISICO-DE-DADOS.md):
 /// nenhuma constraint física garante que o ator pertença ao tenant do evento.
 model AuditEvent {
-  id           String   @id @default(cuid())
-  tenantId     String
-  actorUserId  String
-  action       String
-  entityType   String
-  entityId     String
-  occurredAt   DateTime @default(now())
+  id          String   @id @default(cuid())
+  tenantId    String
+  actorUserId String
+  action      String
+  entityType  String
+  entityId    String
+  occurredAt  DateTime @default(now())
 
   tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actorUser User   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)

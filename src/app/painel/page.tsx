@@ -5,6 +5,7 @@ import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getTodayScheduleForStudent } from "@/modules/workouts/workouts";
+import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
@@ -40,12 +41,13 @@ export default async function PainelPage() {
     return student?.status === "INATIVO" ? <AlunoInativo /> : <AlunoSemVinculo />;
   }
 
-  const [student, schedule] = await Promise.all([
+  const [student, schedule, inProgressSession] = await Promise.all([
     prisma.student.findUniqueOrThrow({
       where: { id: ctx.studentId },
       include: { tenant: { include: { owner: true } } },
     }),
     getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
+    getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
   ]);
   return (
     <AlunoHome
@@ -53,6 +55,7 @@ export default async function PainelPage() {
       tenantName={student.tenant.name}
       personalName={student.tenant.owner.name}
       schedule={schedule}
+      hasInProgressSession={inProgressSession !== null}
     />
   );
 }

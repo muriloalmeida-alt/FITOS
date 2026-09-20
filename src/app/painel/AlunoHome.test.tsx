@@ -11,8 +11,16 @@ vi.mock("@/modules/identity/auth-client", () => ({
   signOut: vi.fn(),
 }));
 
-function renderHome(schedule: StudentTodaySchedule) {
-  render(<AlunoHome displayName="Pedro" tenantName="Espaço de Joana" personalName="Joana" schedule={schedule} />);
+function renderHome(schedule: StudentTodaySchedule, hasInProgressSession = false) {
+  render(
+    <AlunoHome
+      displayName="Pedro"
+      tenantName="Espaço de Joana"
+      personalName="Joana"
+      schedule={schedule}
+      hasInProgressSession={hasInProgressSession}
+    />
+  );
 }
 
 describe("AlunoHome (FIT-040 — treino de hoje)", () => {
@@ -77,5 +85,24 @@ describe("AlunoHome (FIT-040 — treino de hoje)", () => {
     } as unknown as StudentTodaySchedule);
 
     expect(screen.getByText("Este treino ainda não tem exercícios.")).toBeInTheDocument();
+  });
+
+  it("mostra 'Começar treino' quando há treino previsto para hoje e nenhuma sessão em andamento", () => {
+    renderHome({ state: "TREINO_HOJE", workout: { id: "w1", name: "Treino A", workoutExercises: [] } } as unknown as StudentTodaySchedule, false);
+
+    expect(screen.getByRole("link", { name: "Começar treino" })).toBeInTheDocument();
+  });
+
+  it("mostra 'Continuar treino em andamento' quando há sessão em andamento, mesmo em dia de descanso", () => {
+    renderHome({ state: "DESCANSO" }, true);
+
+    expect(screen.getByRole("link", { name: "Continuar treino em andamento" })).toBeInTheDocument();
+  });
+
+  it("não mostra nenhum link para sessão sem treino de hoje e sem sessão em andamento", () => {
+    renderHome({ state: "SEM_PLANO" }, false);
+
+    expect(screen.queryByRole("link", { name: "Começar treino" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continuar treino em andamento" })).not.toBeInTheDocument();
   });
 });

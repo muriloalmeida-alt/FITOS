@@ -1,4 +1,5 @@
-import { AppShell, Card } from "@/shared/ui";
+import Link from "next/link";
+import { AppShell, Button, Card } from "@/shared/ui";
 import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
 import { LogoutButton } from "./LogoutButton";
 import { ALUNO_NAV_ITEMS } from "./navigation";
@@ -9,6 +10,7 @@ interface AlunoHomeProps {
   tenantName: string;
   personalName: string;
   schedule: StudentTodaySchedule;
+  hasInProgressSession: boolean;
 }
 
 interface PrescriptionSummaryInput {
@@ -81,7 +83,9 @@ function TreinoDeHoje({ schedule }: { schedule: StudentTodaySchedule }) {
 /// tudo da sessão e da atribuição ativa no servidor (`/painel/page.tsx`),
 /// nunca de algo que o cliente poderia influenciar. Quatro estados
 /// honestos (ver `getTodayScheduleForStudent`) — nenhum treino é simulado.
-export function AlunoHome({ displayName, tenantName, personalName, schedule }: AlunoHomeProps) {
+export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession }: AlunoHomeProps) {
+  const podeIrParaSessao = hasInProgressSession || schedule.state === "TREINO_HOJE";
+
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${displayName}`} navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       <Card title="Seu vínculo">
@@ -98,6 +102,13 @@ export function AlunoHome({ displayName, tenantName, personalName, schedule }: A
 
       <Card title="Treino de hoje">
         <TreinoDeHoje schedule={schedule} />
+        {podeIrParaSessao ? (
+          <Link href="/painel/treino/sessao" className={styles.startSessionLink}>
+            <Button type="button" variant="filled">
+              {hasInProgressSession ? "Continuar treino em andamento" : "Começar treino"}
+            </Button>
+          </Link>
+        ) : null}
       </Card>
     </AppShell>
   );
