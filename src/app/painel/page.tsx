@@ -4,8 +4,10 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
-import { getTodayScheduleForStudent } from "@/modules/workouts/workouts";
+import { getTodayScheduleForStudent, listWorkoutsForTenant } from "@/modules/workouts/workouts";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
+import { listStudents } from "@/modules/students/students";
+import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
@@ -29,8 +31,24 @@ export default async function PainelPage() {
   }
 
   if (ctx.role === "PERSONAL") {
-    const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId } });
-    return <PersonalHome name={session.user.name} email={session.user.email} tenantName={tenant?.name ?? null} />;
+    const now = new Date();
+    const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const [tenant, activeStudents, activeWorkouts, financialSummary] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
+      listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 1 }),
+      listWorkoutsForTenant({ tenantId: ctx.tenantId }),
+      getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
+    ]);
+    return (
+      <PersonalHome
+        name={session.user.name}
+        email={session.user.email}
+        tenantName={tenant?.name ?? null}
+        activeStudentsCount={activeStudents.total}
+        activeWorkoutsCount={activeWorkouts.length}
+        atrasadoCents={financialSummary.atrasadoCents}
+      />
+    );
   }
 
   if (!ctx.studentId) {
