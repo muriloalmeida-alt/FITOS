@@ -144,4 +144,4 @@ Gate final revalidado no HEAD da branch (`34c61c8`, checkpoint FIT-070) imediata
 
 Handoff completo para a revisão externa (resumo do programa, tabela de checkpoints, Issues, decisões de escopo, riscos e pendências declarados) redigido em `docs/06-engenharia/10-HANDOFF-PARA-REVISAO.md` (commit `b966f4a`), com nota de transparência própria sobre a reconstrução do template original `10_HANDOFF_PARA_REVISAO.md` (não persistido neste repositório).
 
-PR único do programa aberto a partir de `feat/conclusao-integral-mvp` contra `main`, encerrando com o comentário literal exigido pela governança: `STATUS: PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR.`. Este PR não foi aprovado nem mergeado por quem o abriu — decisão exclusiva da revisão externa e/ou do Product Owner.
+PR único do programa aberto a partir de `feat/conclusao-integral-mvp` contra `main`: **PR #73** — https://github.com/muriloalmeida-alt/FITOS/pull/73 — encerrando com o comentário literal exigido pela governança: `STATUS: PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR.`. Este PR não foi aprovado nem mergeado por quem o abriu — decisão exclusiva da revisão externa e/ou do Product Owner.
