@@ -92,4 +92,4 @@ Preenchido incrementalmente. Cada linha é adicionada ao concluir a História co
 
 | História | Commit/checkpoint | Resultado do gate | Observações |
 |---|---|---|---|
-| FIT-032 | _em andamento_ | — | Continuação do trabalho já iniciado nesta sessão antes da chegada do pacote — mesmo escopo (CRUD de plano semanal, associação ordenada de modelos, dias sugeridos e vigência, ciclo de vida) já alinhado com `03_SPRINT_07_TREINOS_E_PLANOS.md`. |
+| FIT-032 | `d0b39f7` | **Aprovado** — 389/389 testes, lint/typecheck/build/audit limpos; migration testada em banco vazio e em atualização do schema atual; evidência visual 12 capturas (mobile+desktop, claro+escuro) validadas uma a uma | Continuação do trabalho já iniciado nesta sessão antes da chegada do pacote. Bug real encontrado e corrigido durante a evidência (plano rascunho identificado por heurística) — ver `TREINOS-E-PLANOS.md`. Gate preliminar de auditoria FIT-020 a FIT-023 executado no mesmo checkpoint. |
