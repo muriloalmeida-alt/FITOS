@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AppShell, Button, Card } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { LogoutButton } from "./LogoutButton";
@@ -44,21 +43,15 @@ export function PersonalHome({ name, email, tenantName, activeStudentsCount, act
         </dl>
 
         <div className={styles.shortcuts}>
-          <Link href="/painel/alunos/novo">
-            <Button type="button" variant="filled">
-              + Novo aluno
-            </Button>
-          </Link>
-          <Link href="/painel/treinos/novo">
-            <Button type="button" variant="outlined">
-              + Novo treino
-            </Button>
-          </Link>
-          <Link href="/painel/financeiro">
-            <Button type="button" variant="outlined">
-              Ver financeiro
-            </Button>
-          </Link>
+          <Button href="/painel/alunos/novo" variant="filled">
+            + Novo aluno
+          </Button>
+          <Button href="/painel/treinos/novo" variant="outlined">
+            + Novo treino
+          </Button>
+          <Button href="/painel/financeiro" variant="outlined">
+            Ver financeiro
+          </Button>
         </div>
       </Card>
 

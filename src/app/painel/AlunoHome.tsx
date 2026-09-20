@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AppShell, Button, Card } from "@/shared/ui";
 import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
 import { LogoutButton } from "./LogoutButton";
@@ -103,11 +102,9 @@ export function AlunoHome({ displayName, tenantName, personalName, schedule, has
       <Card title="Treino de hoje">
         <TreinoDeHoje schedule={schedule} />
         {podeIrParaSessao ? (
-          <Link href="/painel/treino/sessao" className={styles.startSessionLink}>
-            <Button type="button" variant="filled">
-              {hasInProgressSession ? "Continuar treino em andamento" : "Começar treino"}
-            </Button>
-          </Link>
+          <Button href="/painel/treino/sessao" variant="filled" className={styles.startSessionLink}>
+            {hasInProgressSession ? "Continuar treino em andamento" : "Começar treino"}
+          </Button>
         ) : null}
       </Card>
     </AppShell>

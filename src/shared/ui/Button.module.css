@@ -1,4 +1,9 @@
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
   font-family: var(--fitos-font-family);
   font-size: 14px;
   font-weight: 650;
@@ -24,4 +29,9 @@
   background-color: transparent;
   color: var(--fitos-color-primary);
   border: 1px solid var(--fitos-color-outline);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--fitos-color-primary);
+  outline-offset: 1px;
 }

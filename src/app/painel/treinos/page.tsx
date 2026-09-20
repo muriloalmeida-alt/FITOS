@@ -37,11 +37,9 @@ export default async function TreinosPage() {
         <p className={styles.subtitle}>
           {workouts.length} {workouts.length === 1 ? "modelo de treino" : "modelos de treino"}
         </p>
-        <Link href="/painel/treinos/novo">
-          <Button type="button" variant="filled">
-            + Criar modelo
-          </Button>
-        </Link>
+        <Button href="/painel/treinos/novo" variant="filled">
+          + Criar modelo
+        </Button>
       </div>
 
       {workouts.length === 0 ? (

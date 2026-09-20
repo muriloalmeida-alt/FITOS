@@ -81,11 +81,9 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
         <p className={styles.subtitle}>
           {result.total} {result.total === 1 ? "aluno" : "alunos"} na sua carteira
         </p>
-        <Link href="/painel/alunos/novo">
-          <Button type="button" variant="filled">
-            + Cadastrar aluno
-          </Button>
-        </Link>
+        <Button href="/painel/alunos/novo" variant="filled">
+          + Cadastrar aluno
+        </Button>
       </div>
 
       <form method="GET" className={styles.filters} aria-label="Buscar e filtrar alunos">

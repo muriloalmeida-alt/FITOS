@@ -118,11 +118,9 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
 
       <Card title="Ciclo de vida">
         {student.status === "ATIVO" ? (
-          <Link href={`/painel/alunos/${student.id}/inativar`}>
-            <Button type="button" variant="outlined">
-              Inativar aluno
-            </Button>
-          </Link>
+          <Button href={`/painel/alunos/${student.id}/inativar`} variant="outlined">
+            Inativar aluno
+          </Button>
         ) : (
           <ReativarAlunoButton studentId={student.id} />
         )}

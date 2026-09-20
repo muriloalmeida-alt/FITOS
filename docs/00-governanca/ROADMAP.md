@@ -50,6 +50,12 @@ Objetivo: reunir alertas e indicadores úteis ao trabalho diário do personal.
 
 - FIT-060 — EPIC-09 — Painel Operacional (#65, SPRINT-10, `docs/04-backlog/EPIC-09-PAINEL-OPERACIONAL.md`), aberta nesta rodada.
 
+## Fase 7 — Consolidação visual e release
+
+Objetivo: varredura final de acessibilidade (WCAG 2.2 AA) e consistência visual sobre tudo que as Fases 1-6 já entregaram, sem nenhuma funcionalidade de produto nova. Última Fase do MVP.
+
+- FIT-070 — EPIC-10 — Consolidação Visual e Release (#71, SPRINT-11, `docs/04-backlog/EPIC-10-CONSOLIDACAO-VISUAL-RELEASE.md`), aberta nesta rodada.
+
 ## Fora do MVP
 
 - Aplicativos nativos.

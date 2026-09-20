@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Button, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
@@ -46,11 +45,9 @@ export default async function InativarAlunoPage({ params }: InativarAlunoPagePro
         </p>
         <div className={styles.actions}>
           <InativarAlunoButton studentId={student.id} />
-          <Link href={`/painel/alunos/${student.id}`}>
-            <Button type="button" variant="outlined">
-              Cancelar
-            </Button>
-          </Link>
+          <Button href={`/painel/alunos/${student.id}`} variant="outlined">
+            Cancelar
+          </Button>
         </div>
       </Card>
     </AppShell>

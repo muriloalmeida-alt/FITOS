@@ -36,11 +36,9 @@ export default async function PlanosPage() {
         <p className={styles.subtitle}>
           {plans.length} {plans.length === 1 ? "programa" : "programas"}
         </p>
-        <Link href="/painel/treinos/planos/novo">
-          <Button type="button" variant="filled">
-            + Criar programa
-          </Button>
-        </Link>
+        <Button href="/painel/treinos/planos/novo" variant="filled">
+          + Criar programa
+        </Button>
       </div>
 
       {plans.length === 0 ? (
