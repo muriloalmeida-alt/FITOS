@@ -1,0 +1,46 @@
+.empty {
+  margin: 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 14px;
+}
+
+.chartWrapper {
+  color: var(--fitos-color-primary);
+  margin-bottom: var(--fitos-space-4);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-bottom: 1px solid var(--fitos-color-outline-variant);
+}
+
+.table th {
+  color: var(--fitos-color-on-surface-variant);
+  font-weight: 650;
+}
+
+.notes {
+  font-style: italic;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

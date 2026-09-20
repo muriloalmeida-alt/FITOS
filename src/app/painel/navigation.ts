@@ -24,12 +24,12 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
 ];
 
 /// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"
-/// passa a ser real na FIT-033 (visão somente leitura do plano atribuído).
-/// Progresso continua "Em breve" — o FitOS não promete carga, evolução,
-/// avaliação, agenda ou mensagens nesta Sprint.
+/// passa a ser real na FIT-033 (visão somente leitura do plano atribuído);
+/// "Progresso" passa a ser real na FIT-042 (própria evolução, somente
+/// leitura). Agenda e Mensagens continuam fora do MVP.
 export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
   { key: "treino", label: "Treino", href: "/painel/treino" },
-  { key: "progresso", label: "Progresso", comingSoon: true },
+  { key: "progresso", label: "Progresso", href: "/painel/progresso" },
   { key: "perfil", label: "Perfil", href: "/painel/perfil" },
 ];

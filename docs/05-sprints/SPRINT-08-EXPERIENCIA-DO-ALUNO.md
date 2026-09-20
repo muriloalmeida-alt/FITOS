@@ -1,6 +1,6 @@
 # SPRINT-08 — Experiência do Aluno
 
-Status: em andamento — checkpoint por História na branch única `feat/conclusao-integral-mvp` (governança do pacote de execução integral, ver `docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`); sem PR nem merge intermediário. A Sprint só é considerada encerrada de fato após a aprovação do PR final do programa por GPT/Codex — os checkpoints internos autorizam a continuação, não equivalem a essa aprovação.
+Status: Histórias concluídas (FIT-040/041/042), checkpoint por História na branch única `feat/conclusao-integral-mvp` (governança do pacote de execução integral, ver `docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`); sem PR nem merge intermediário. A Sprint só é considerada encerrada **de fato** após a aprovação do PR final do programa por GPT/Codex — os checkpoints internos autorizam a continuação para a SPRINT-09, não equivalem a essa aprovação.
 
 ## Objetivo
 
@@ -21,7 +21,7 @@ Transformar a consulta passiva do aluno (FIT-033: só visualizar o plano atribu�
 
 - FIT-040 (#61) — Treino do aluno. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — commit `f51c91d`).
 - FIT-041 (#62) — Registrar sessão. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-042 (#63) — Avaliação e evolução básica. Encerra a SPRINT-08.
+- FIT-042 (#63) — Avaliação e evolução básica. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato). Encerra a SPRINT-08.
 
 ## Resultado intermediário — FIT-040
 
@@ -38,9 +38,16 @@ Transformar a consulta passiva do aluno (FIT-033: só visualizar o plano atribu�
 - card "Treino de hoje" (`/painel`, FIT-040) ganha o link "Começar treino"/"Continuar treino em andamento";
 - decisões de escopo registradas (nenhum `AuditEvent` para sessão; `PLANEJADA` nunca produzido; "repetir prescrito" como leitura de "repetir último valor") em `docs/06-engenharia/arquitetura/EXPERIENCIA-DO-ALUNO.md`.
 
+## Resultado intermediário — FIT-042
+
+- migration aditiva `20260920030000_add_assessment_evolution`: `Assessment` ganha `bodyFatTenthPercent`/`notes`/`deletedAt`/`deletedByUserId`; nova tabela `BodyMeasurement` (tipo em conjunto fechado, valor em milímetros), seguindo o modelo conceitual já registrado em `docs/01-produto/MODELO-DE-DADOS.md`;
+- `src/modules/evolution/assessments.ts` (módulo reservado desde a FIT-007, primeira implementação): `createAssessment` (converte kg/%/cm para as unidades de armazenamento, rejeita valores não positivos), `listAssessmentsForStudent` (cronológico, exclui excluídas logicamente), `softDeleteAssessment` (exclusão lógica, nunca física, registra `AuditEvent`);
+- card "Avaliações e evolução" na ficha do aluno (personal registra/exclui) e página `/painel/progresso` (aluno consulta a própria evolução — item "Progresso" da navegação deixa de ser "Em breve") com gráfico de peso (SVG próprio, sem biblioteca nova) e tabela sempre presente como equivalente textual;
+- decisões de escopo registradas (conjunto fechado de medidas; unidade fixa em centímetros; sem edição de avaliação; sem fotografias) em `docs/06-engenharia/arquitetura/EXPERIENCIA-DO-ALUNO.md`.
+
 ## Sequenciamento
 
-FIT-040 → FIT-041 → FIT-042, cada uma com seu próprio commit/checkpoint na branch única, gate autônomo registrado no diário de execução (`docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`). O fechamento documental da SPRINT-08 acontece no checkpoint da FIT-042.
+FIT-040 → FIT-041 → FIT-042, cada uma com seu próprio commit/checkpoint na branch única, gate autônomo registrado no diário de execução (`docs/06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`). O fechamento documental da SPRINT-08 acontece no checkpoint da FIT-042 (este documento).
 
 ## Critérios de sucesso da Sprint
 
@@ -70,4 +77,4 @@ A FIT-003 (#4, proteção técnica da `main`) continua tratada conforme o estado
 
 ## Fechamento
 
-Reservado para o checkpoint da FIT-042, incluído no PR final único do programa de execução integral (`feat/conclusao-integral-mvp`) — nenhum PR exclusivamente documental.
+As três Histórias (FIT-040, FIT-041, FIT-042) estão concluídas, cada uma com seu gate autônomo (testes/lint/typecheck/build/audit limpos, evidência visual real) registrado no diário de execução. Todos os critérios de sucesso da Sprint listados acima foram atendidos. Nenhum PR exclusivamente documental foi aberto — este fechamento, como o de toda a SPRINT-07, está incluído no PR final único do programa de execução integral (`feat/conclusao-integral-mvp`), a ser aberto ao final de todo o programa (SPRINT-11) para revisão externa por GPT/Codex. A Sprint só é considerada encerrada **de fato** após essa aprovação — este checkpoint autoriza a continuação para a SPRINT-09 (Gestão Financeira), não equivale à aprovação.

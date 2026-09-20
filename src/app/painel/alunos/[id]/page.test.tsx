@@ -7,6 +7,7 @@ const getLatestInvitationForStudent = vi.fn();
 const getActivePlanAssignmentForStudent = vi.fn();
 const listEndedPlanAssignmentsForStudent = vi.fn();
 const listTrainingPlansForTenant = vi.fn();
+const listAssessmentsForStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -41,6 +42,13 @@ vi.mock("@/modules/workouts/workouts", async () => {
     listEndedPlanAssignmentsForStudent: (...args: unknown[]) => listEndedPlanAssignmentsForStudent(...args),
     listTrainingPlansForTenant: (...args: unknown[]) => listTrainingPlansForTenant(...args),
   };
+});
+
+vi.mock("@/modules/evolution/assessments", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/evolution/assessments")>(
+    "@/modules/evolution/assessments"
+  );
+  return { ...actual, listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) };
 });
 
 vi.mock("next/navigation", () => ({
@@ -95,6 +103,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     getActivePlanAssignmentForStudent.mockResolvedValue(null);
     listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
     listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
@@ -117,6 +126,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     getActivePlanAssignmentForStudent.mockResolvedValue(null);
     listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
     listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
@@ -144,6 +154,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     getActivePlanAssignmentForStudent.mockResolvedValue(null);
     listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
     listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
@@ -168,6 +179,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     });
     listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
     listTrainingPlansForTenant.mockResolvedValue([{ id: "p1", name: "Programa A" }]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
@@ -190,6 +202,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     getActivePlanAssignmentForStudent.mockResolvedValue(null);
     listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
     listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
@@ -212,10 +225,65 @@ describe("AlunoPerfilPage (FIT-014)", () => {
       { id: "a0", active: false, trainingPlan: { name: "Programa Antigo" } },
     ]);
     listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
     const { default: AlunoPerfilPage } = await import("./page");
 
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
 
     expect(screen.getByText("Nenhum programa ativo atualmente.")).toBeInTheDocument();
+  });
+
+  it("mostra o estado vazio de avaliações quando não há nenhuma registrada (FIT-042)", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    getStudentForTenant.mockResolvedValue({
+      id: "s1",
+      displayName: "Fulano",
+      email: "fulano@example.test",
+      status: "ATIVO",
+      userId: null,
+    });
+    getLatestInvitationForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue(null);
+    listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
+    listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
+    const { default: AlunoPerfilPage } = await import("./page");
+
+    render(await AlunoPerfilPage({ params: makeParams("s1") }));
+
+    expect(screen.getByText("Nenhuma avaliação registrada ainda.")).toBeInTheDocument();
+  });
+
+  it("mostra o histórico de avaliações convertido para as unidades de exibição (FIT-042)", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    getStudentForTenant.mockResolvedValue({
+      id: "s1",
+      displayName: "Fulano",
+      email: "fulano@example.test",
+      status: "ATIVO",
+      userId: null,
+    });
+    getLatestInvitationForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue(null);
+    listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
+    listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([
+      {
+        id: "a1",
+        recordedAt: new Date("2026-09-01T00:00:00.000Z"),
+        weightGrams: 82500,
+        bodyFatTenthPercent: 185,
+        notes: "Evolução consistente",
+        measurements: [{ type: "CINTURA", valueMillimeters: 855 }],
+      },
+    ]);
+    const { default: AlunoPerfilPage } = await import("./page");
+
+    render(await AlunoPerfilPage({ params: makeParams("s1") }));
+
+    expect(screen.getByText(/82\.5kg/)).toBeInTheDocument();
+    expect(screen.getByText(/18\.5% de gordura/)).toBeInTheDocument();
+    expect(screen.getByText(/Cintura: 85\.5cm/)).toBeInTheDocument();
+    expect(screen.getByText("Evolução consistente")).toBeInTheDocument();
   });
 });

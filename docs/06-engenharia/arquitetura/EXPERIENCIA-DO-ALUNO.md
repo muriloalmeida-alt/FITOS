@@ -90,3 +90,48 @@ Todo `fetch` da UI de execução está em `try/catch` — além do padrão já e
 - Rotas (`src/app/api/workout-sessions/**/*.test.ts`, 16 testes): 401 sem sessão, 403 quando não é aluno, `tenantId`/`studentId` do corpo nunca repassados, 404/400 conforme o erro do domínio.
 - Componentes (`ComecarTreinoButton.test.tsx`, 3 casos; `SessaoExecucao.test.tsx`, 9 casos, incluindo o temporizador com `vi.useFakeTimers`): fluxo completo de salvar resultado, "Repetir prescrito", concluir/abandonar navegando para `/painel`, e as mensagens de erro tanto para resposta não-ok quanto para falha de rede (fetch lançando).
 - `src/app/painel/treino/sessao/page.test.tsx` (6 casos): os três caminhos da página (retomar, começar, estados honestos).
+
+## FIT-042 — Avaliação e evolução básica
+
+Encerra a SPRINT-08. Materializa `Assessment` (existente desde a FIT-007, sem uso até agora) e uma nova tabela `BodyMeasurement`, seguindo o modelo conceitual já registrado em `docs/01-produto/MODELO-DE-DADOS.md`: "Avaliação: aluno, data, peso, gordura opcional, observações" + "Medida corporal: avaliação, tipo, valor, unidade" — dois modelos físicos, não campos soltos em `Assessment`.
+
+### Unidades de armazenamento
+
+Mesma filosofia de `weightGrams` (evitar ponto flutuante binário em dado sensível a precisão): `bodyFatTenthPercent` guarda o percentual de gordura ×10 (18,5% → 185); `BodyMeasurement.valueMillimeters` guarda cada medida em milímetros. A conversão kg/cm ↔ gramas/milímetros acontece inteiramente em `src/modules/evolution/assessments.ts` (`gramsFromKg`/`tenthPercentFromPercent`/`millimetersFromCm`) — a UI e as rotas de API só manipulam as unidades legíveis (kg, %, cm); nenhuma conversão no cliente.
+
+### `BodyMeasurementType`: conjunto fechado, decisão de escopo
+
+Nenhum documento canônico especifica os tipos exatos de medida ("medidas corporais" é genérico em `PRD-01-MVP.md`; "medidas permitidas" no texto da História sugere um conjunto fechado, não texto livre). Adotado: `CINTURA`, `QUADRIL`, `PEITO`, `BRACO`, `COXA`, `PANTURRILHA` — seis medidas comuns na prática de personal trainers brasileiros, revisável pelo Produto. Unidade fixada em centímetros (nenhum pedido de produto para unidade variável, embora o modelo conceitual liste "unidade" como um conceito à parte de "valor").
+
+### Peso e medidas nunca negativos; avaliação nunca editada
+
+"Peso e medidas não podem aceitar valores negativos" (`REGRAS-DE-NEGOCIO.md`, seção 7) — validado em `createAssessment`, mesmo padrão de validação só na aplicação já usado para os demais parâmetros numéricos deste projeto (sem CHECK constraint física — nenhum precedente no schema para isso). Uma avaliação, uma vez criada, nunca é editada — `assessments.ts` não expõe nenhuma função de update, só criação e exclusão lógica, mesma filosofia de "preserva histórico" de toda esta base.
+
+### Exclusão lógica e auditoria
+
+"Exclusões de avaliações devem ser lógicas e auditáveis" (mesma seção 7) — `softDeleteAssessment` marca `deletedAt`/`deletedByUserId`, nunca remove a linha, e grava um `AuditEvent` (`AVALIACAO_EXCLUIDA`) — seção 9 de `REGRAS-DE-NEGOCIO.md` lista "avaliação" explicitamente entre as entidades auditadas, ao contrário de `WorkoutSession` (FIT-041, sem `AuditEvent`).
+
+### Gráfico acessível, sem biblioteca nova
+
+`EvolucaoChart.tsx`: um SVG desenhado à mão (nenhuma dependência nova adicionada — nenhuma Sprint anterior deste projeto adicionou uma biblioteca de gráficos, e uma linha simples não justifica a primeira). `role="img"` + `aria-label` resumem a tendência para leitor de tela; a tabela completa (sempre presente, nunca condicionada ao gráfico) é o equivalente textual detalhado exigido pela História — o gráfico só aparece com duas ou mais avaliações com peso (uma única não mostra tendência).
+
+### Fotografias fora do escopo
+
+`REGRAS-DE-NEGOCIO.md` (seção 7) também cita "Fotografias são opcionais e exigem autorização explícita do aluno" — nenhuma Issue desta Sprint pede a feature; implementar o fluxo de autorização sem um pedido de produto para ela seria especulativo (mesma decisão já registrada em `docs/04-backlog/EPIC-07-EXPERIENCIA-DO-ALUNO.md`).
+
+### UI
+
+- `src/app/painel/alunos/[id]/AvaliacoesSection.tsx`: card "Avaliações e evolução" na ficha do aluno — histórico (mais recente primeiro) com botão "Excluir" por avaliação, e o formulário de registro (peso, gordura, seis campos de medida, observação).
+- `src/app/painel/progresso/`: item "Progresso" da navegação do aluno deixa de ser "Em breve" — somente leitura da própria evolução (gráfico + tabela).
+
+### O que esta História não faz
+
+- Não implementa edição de avaliação já registrada (só criação e exclusão lógica).
+- Não implementa fotografias de evolução (ver acima).
+- Não implementa unidade variável (imperial) para medidas.
+
+## Testes (FIT-042)
+
+- `src/modules/evolution/assessments.integration.test.ts` (8 novos testes, Postgres real): criação converte corretamente kg/%/cm para as unidades de armazenamento; aceita avaliação totalmente vazia (nenhum campo opcional); rejeita peso/gordura/medida não positivos; rejeita aluno de outro tenant; listagem cronológica exclui avaliação excluída logicamente; isolamento cruzado; exclusão lógica marca `deletedAt`/`deletedByUserId`, registra `AuditEvent`, é idempotente, e nunca remove a linha; rejeita excluir avaliação de outro tenant.
+- Rotas (`src/app/api/students/[id]/avaliacoes/**/*.test.ts`, 8 testes): 401 sem sessão, tipo de medida inválido rejeitado antes de chamar o domínio, valores numéricos inválidos rejeitados, `tenantId`/`actorUserId` da sessão nunca do corpo, 404 conforme o erro do domínio.
+- `AvaliacoesSection.test.tsx` (5 casos) e `ProgressoPage`/`page.test.tsx` da ficha do aluno (2 novos casos + `EvolucaoChart` testado via `ProgressoPage`, 5 casos no total): estado vazio, histórico renderizado com as unidades corretas, registro e exclusão via `fetch`, e o gráfico aparecendo só a partir de duas avaliações com peso.
