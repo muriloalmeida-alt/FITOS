@@ -7,6 +7,7 @@ import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listWorkoutsForTenant } from "@/modules/workouts/workouts";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
+import { TreinosSubNav } from "./TreinosSubNav";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -14,9 +15,8 @@ export const metadata: Metadata = {
 };
 
 /// Lista de modelos de treino do tenant (FIT-030). Planos semanais
-/// (agrupando modelos, dias e vigência) chegam na FIT-032 — por ora esta
-/// tela mostra só os modelos, que já podem ser criados, editados,
-/// arquivados e reativados.
+/// (agrupando modelos, dias e vigência) ficam em `/painel/treinos/planos`
+/// (FIT-032) — ver `TreinosSubNav`.
 export default async function TreinosPage() {
   let ctx;
   try {
@@ -32,6 +32,7 @@ export default async function TreinosPage() {
 
   return (
     <AppShell title="Treinos" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <TreinosSubNav active="modelos" />
       <div className={styles.header}>
         <p className={styles.subtitle}>
           {workouts.length} {workouts.length === 1 ? "modelo de treino" : "modelos de treino"}

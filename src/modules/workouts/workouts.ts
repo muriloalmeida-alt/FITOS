@@ -36,13 +36,16 @@ const MAX_LOAD_LENGTH = 80;
 const MAX_NOTES_LENGTH = 500;
 const DRAFT_TRAINING_PLAN_NAME = "Meus modelos";
 
-function normalizeRequiredName(name: string): string {
+function normalizeRequiredName(
+  name: string,
+  entityLabel: "o nome do modelo de treino" | "o nome do plano" = "o nome do modelo de treino"
+): string {
   const trimmed = name.trim();
   if (trimmed.length === 0) {
-    throw new WorkoutError("VALIDACAO", "Informe o nome do modelo de treino.");
+    throw new WorkoutError("VALIDACAO", `Informe ${entityLabel}.`);
   }
   if (trimmed.length > MAX_NAME_LENGTH) {
-    throw new WorkoutError("VALIDACAO", `O nome do modelo deve ter no máximo ${MAX_NAME_LENGTH} caracteres.`);
+    throw new WorkoutError("VALIDACAO", `${entityLabel[0]!.toUpperCase()}${entityLabel.slice(1)} deve ter no máximo ${MAX_NAME_LENGTH} caracteres.`);
   }
   return trimmed;
 }
@@ -74,17 +77,21 @@ function normalizeOptionalText(value: string | undefined, label: string, maxLeng
   return trimmed;
 }
 
-/// Único plano "rascunho" por tenant (o primeiro `TrainingPlan` não-snapshot
-/// criado) — cria um na primeira chamada. Nunca retorna/cria um snapshot.
+/// Único plano "rascunho" por tenant, identificado explicitamente por
+/// `isDraftBucket: true` (nunca por heurística de `createdAt`: um personal
+/// que cria um plano real, FIT-032, antes de qualquer modelo avulso não
+/// pode fazer esse plano real ser confundido com o rascunho — um índice
+/// único parcial em `(tenantId) WHERE isDraftBucket = true` garante no
+/// máximo um por tenant). Cria um na primeira chamada. Nunca retorna/cria
+/// um snapshot.
 async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
   const existing = await client.trainingPlan.findFirst({
-    where: { tenantId, isSnapshot: false },
-    orderBy: { createdAt: "asc" },
+    where: { tenantId, isDraftBucket: true },
   });
   if (existing) {
     return existing;
   }
-  return client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME } });
+  return client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
 }
 
 export interface CreateWorkoutInput {
@@ -476,5 +483,250 @@ export async function duplicateWorkout(
       nameOverride: `${source.name}${COPY_NAME_SUFFIX}`,
     },
     client
+  );
+}
+
+/// Plano semanal (FIT-032). Agrupa um ou mais modelos de treino
+/// (`Workout`). Só opera sobre planos com `isSnapshot: false` — um plano
+/// snapshot (cópia imutável de atribuição, FIT-033/ADR-005) nunca é
+/// alcançável por nenhuma função abaixo, mesma proteção em profundidade já
+/// aplicada a `getWorkoutForTenant` na prática (o TRIGGER de imutabilidade
+/// seria a rede de segurança se algo tentasse mesmo assim).
+
+export interface CreateTrainingPlanInput {
+  tenantId: string;
+  name: string;
+  durationWeeks?: number;
+}
+
+export async function createTrainingPlan(
+  input: CreateTrainingPlanInput,
+  client: PrismaClient = prisma
+): Promise<TrainingPlan> {
+  const name = normalizeRequiredName(input.name, "o nome do plano");
+  const durationWeeks = normalizeOptionalPositiveInt(input.durationWeeks, "A vigência sugerida") ?? null;
+
+  return client.trainingPlan.create({ data: { tenantId: input.tenantId, name, durationWeeks } });
+}
+
+/// Busca um plano **apenas se pertencer ao tenant informado e não for um
+/// snapshot** — mesmo padrão de isolamento das demais funções deste
+/// módulo. `null` tanto para "não existe" quanto para "é de outro tenant"
+/// quanto para "é um snapshot", sem diferenciar a resposta.
+export async function getTrainingPlanForTenant(
+  input: { tenantId: string; trainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<TrainingPlan | null> {
+  return client.trainingPlan.findFirst({
+    where: { id: input.trainingPlanId, tenantId: input.tenantId, isSnapshot: false },
+  });
+}
+
+/// Lista os planos ATIVOS (não-snapshot) do tenant, visíveis ao personal.
+/// Nunca inclui o plano rascunho implícito (`isDraftBucket: true`) — é um
+/// detalhe de implementação, não um programa que o personal decidiu
+/// criar; não faria sentido aparecer em uma lista intitulada "Programas"
+/// sem que o personal jamais tenha clicado em "Criar programa".
+export async function listTrainingPlansForTenant(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<TrainingPlan[]> {
+  return client.trainingPlan.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVO", isSnapshot: false, isDraftBucket: false },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+}
+
+export interface UpdateTrainingPlanInput {
+  tenantId: string;
+  trainingPlanId: string;
+  name?: string;
+  durationWeeks?: number | null;
+}
+
+export async function updateTrainingPlan(
+  input: UpdateTrainingPlanInput,
+  client: PrismaClient = prisma
+): Promise<TrainingPlan> {
+  const current = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.trainingPlanId }, client);
+  if (!current) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+
+  const data: { name?: string; durationWeeks?: number | null } = {};
+  if (input.name !== undefined) {
+    data.name = normalizeRequiredName(input.name, "o nome do plano");
+  }
+  if (input.durationWeeks !== undefined) {
+    data.durationWeeks =
+      input.durationWeeks === null ? null : normalizeOptionalPositiveInt(input.durationWeeks, "A vigência sugerida") ?? null;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return current;
+  }
+
+  return client.trainingPlan.update({ where: { id: input.trainingPlanId }, data });
+}
+
+export interface TrainingPlanLifecycleInput {
+  tenantId: string;
+  trainingPlanId: string;
+}
+
+/// Arquiva um plano do tenant. Idempotente. Nunca exclusão física — os
+/// modelos agrupados permanecem intactos e continuam pertencendo ao
+/// plano arquivado (arquivar o plano não move nem arquiva os modelos).
+export async function archiveTrainingPlan(
+  input: TrainingPlanLifecycleInput,
+  client: PrismaClient = prisma
+): Promise<TrainingPlan> {
+  const current = await getTrainingPlanForTenant(
+    { tenantId: input.tenantId, trainingPlanId: input.trainingPlanId },
+    client
+  );
+  if (!current) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+  if (current.status === "ARQUIVADO") {
+    return current;
+  }
+  return client.trainingPlan.update({ where: { id: input.trainingPlanId }, data: { status: "ARQUIVADO" } });
+}
+
+/// Reativa um plano do tenant. Idempotente pela mesma razão de
+/// `archiveTrainingPlan`.
+export async function reactivateTrainingPlan(
+  input: TrainingPlanLifecycleInput,
+  client: PrismaClient = prisma
+): Promise<TrainingPlan> {
+  const current = await getTrainingPlanForTenant(
+    { tenantId: input.tenantId, trainingPlanId: input.trainingPlanId },
+    client
+  );
+  if (!current) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+  if (current.status === "ATIVO") {
+    return current;
+  }
+  return client.trainingPlan.update({ where: { id: input.trainingPlanId }, data: { status: "ATIVO" } });
+}
+
+/// Lista os modelos de treino ATIVOS de um plano específico, em ordem de
+/// posição.
+export async function listWorkoutsInPlan(
+  input: { tenantId: string; trainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<Workout[]> {
+  return client.workout.findMany({
+    where: { tenantId: input.tenantId, trainingPlanId: input.trainingPlanId, status: "ATIVO" },
+    orderBy: { position: "asc" },
+  });
+}
+
+/// Lista os modelos de treino ATIVOS do tenant que **não** pertencem ao
+/// plano informado — candidatos ao picker de "adicionar modelo ao plano".
+export async function listWorkoutsAvailableForPlan(
+  input: { tenantId: string; excludeTrainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<Workout[]> {
+  return client.workout.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVO", trainingPlanId: { not: input.excludeTrainingPlanId } },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+}
+
+/// Move um modelo de treino para outro plano do mesmo tenant — reparenta
+/// `trainingPlanId`, fecha o buraco de posição deixado no plano de
+/// origem e o insere na última posição do plano de destino. Único
+/// mecanismo de "adicionar"/"remover" modelo de um plano: como `Workout`
+/// sempre pertence a exatamente um `TrainingPlan` (nunca uma relação
+/// muitos-para-muitos, ver `docs/06-engenharia/arquitetura/TREINOS-E-PLANOS.md`),
+/// "adicionar ao plano B" é, por construção, "mover do plano A para o
+/// plano B".
+export async function moveWorkoutToPlan(
+  input: { tenantId: string; workoutId: string; targetTrainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<Workout> {
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+  const targetPlan = await getTrainingPlanForTenant(
+    { tenantId: input.tenantId, trainingPlanId: input.targetTrainingPlanId },
+    client
+  );
+  if (!targetPlan) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano de destino não encontrado.");
+  }
+
+  if (workout.trainingPlanId === targetPlan.id) {
+    return workout;
+  }
+
+  const maxPosition = await client.workout.aggregate({
+    where: { trainingPlanId: targetPlan.id, tenantId: input.tenantId },
+    _max: { position: true },
+  });
+  const newPosition = (maxPosition._max.position ?? -1) + 1;
+
+  return client.$transaction(async (tx) => {
+    const moved = await tx.workout.update({
+      where: { id: workout.id },
+      data: { trainingPlanId: targetPlan.id, position: newPosition },
+    });
+    await tx.workout.updateMany({
+      where: { trainingPlanId: workout.trainingPlanId, tenantId: input.tenantId, position: { gt: workout.position } },
+      data: { position: { decrement: 1 } },
+    });
+    return moved;
+  });
+}
+
+/// "Remover modelo do plano" — move-o de volta para o plano rascunho
+/// implícito do tenant (nunca o exclui nem o arquiva; o modelo continua
+/// existindo e utilizável, só deixa de estar agrupado neste plano).
+/// Exige que o modelo pertença de fato a `trainingPlanId` no momento da
+/// chamada — evita remover por engano um modelo que já não está mais
+/// neste plano específico (`NAO_ENCONTRADO`, mesma resposta de qualquer
+/// outra tentativa fora de contexto).
+export async function removeWorkoutFromPlan(
+  input: { tenantId: string; workoutId: string; trainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<Workout> {
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout || workout.trainingPlanId !== input.trainingPlanId) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado neste plano.");
+  }
+
+  const draftPlan = await ensureDraftTrainingPlanForTenant(input.tenantId, client);
+  return moveWorkoutToPlan({ tenantId: input.tenantId, workoutId: input.workoutId, targetTrainingPlanId: draftPlan.id }, client);
+}
+
+/// Reordena os modelos dentro de um plano conforme `orderedWorkoutIds` —
+/// precisa ser exatamente o mesmo conjunto de modelos já pertencentes ao
+/// plano (mesma validação de `reorderWorkoutExercises`).
+export async function reorderWorkoutsInPlan(
+  input: { tenantId: string; trainingPlanId: string; orderedWorkoutIds: string[] },
+  client: PrismaClient = prisma
+): Promise<void> {
+  const current = await client.workout.findMany({
+    where: { trainingPlanId: input.trainingPlanId, tenantId: input.tenantId },
+    select: { id: true },
+  });
+  const currentIds = new Set(current.map((item) => item.id));
+  const orderedUnique = new Set(input.orderedWorkoutIds);
+
+  if (
+    orderedUnique.size !== input.orderedWorkoutIds.length ||
+    orderedUnique.size !== currentIds.size ||
+    ![...orderedUnique].every((id) => currentIds.has(id))
+  ) {
+    throw new WorkoutError("VALIDACAO", "A nova ordem precisa conter exatamente os modelos já existentes no plano.");
+  }
+
+  await client.$transaction(
+    input.orderedWorkoutIds.map((id, position) => client.workout.update({ where: { id }, data: { position } }))
   );
 }

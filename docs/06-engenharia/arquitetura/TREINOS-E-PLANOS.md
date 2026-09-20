@@ -85,3 +85,48 @@ Nenhuma migration — reaproveita integralmente o schema da FIT-030. Não duplic
 ## Testes (FIT-031)
 
 `src/modules/workouts/workouts.integration.test.ts` (4 novos testes): cópia recebe nome com sufixo, mesmo plano do original, dias sugeridos copiados, todos os itens clonados na mesma ordem com os mesmos parâmetros de prescrição; editar a cópia não afeta o original e editar o original não afeta a cópia já criada (teste explícito nas duas direções); duplicar um modelo sem itens produz uma cópia sem itens; duplicar modelo de outro tenant rejeitado (`NAO_ENCONTRADO`). Rota (3 testes) e página (1 asserção nova): mesmo padrão de autorização das demais rotas deste módulo.
+
+## FIT-032 — Plano semanal
+
+`TrainingPlan` já existia desde a FIT-007/FIT-030 (bootstrapping do plano "rascunho" implícito); esta História entrega o CRUD real, exposto ao personal, e a operação de agrupar modelos dentro de um plano.
+
+### Não há um segundo conceito de plano
+
+O plano "rascunho" implícito (`ensureDraftTrainingPlanForTenant`, FIT-030) e os planos reais criados por `createTrainingPlan` (FIT-032) são a **mesma tabela, o mesmo modelo, a mesma regra de negócio** — não uma migração de dado de um sistema para outro. A partir da FIT-032, o personal pode criar outros planos reais, e um modelo pode ser movido entre planos (incluindo entre o rascunho e um plano nomeado) — ver `moveWorkoutToPlan` abaixo. `status` e `durationWeeks` já existiam em `TrainingPlan` desde a migration da FIT-030 (`20260917000000_add_workout_prescription_and_status`), criados propositalmente adiantados para esta História.
+
+### Bug encontrado durante a captura de evidência: identificação do rascunho por heurística
+
+A primeira versão desta História identificava o plano rascunho como "o primeiro `TrainingPlan` não-snapshot criado, por `createdAt`" — sem um campo dedicado. A captura de evidência visual expôs o problema: se o personal cria um plano real (via `/painel/treinos/planos/novo`) *antes* de criar qualquer modelo avulso, esse plano real passa a ser "o primeiro criado" e seria confundido com o rascunho na próxima chamada de `createWorkout` — um modelo avulso cairia silenciosamente dentro do programa nomeado do personal, e o próprio rascunho (renomeado incorretamente) apareceria na listagem de "Programas" como se tivesse sido criado deliberadamente (o que de fato aconteceu na primeira rodada de captura, com "Meus modelos" listado como programa).
+
+Corrigido com a migration aditiva `20260920000000_add_training_plan_draft_bucket`: `TrainingPlan.isDraftBucket Boolean @default(false)`, identificação explícita (nunca heurística), com índice único parcial `training_plans_tenant_draft_bucket_key` em `(tenantId) WHERE isDraftBucket = true` garantindo no máximo um por tenant (mesma técnica dos demais índices únicos parciais já usados neste projeto — FIT-022). `ensureDraftTrainingPlanForTenant` passa a buscar/criar por essa flag; `listTrainingPlansForTenant` passa a excluir `isDraftBucket: true` — o rascunho nunca aparece na listagem voltada ao personal. A mesma migration também limpa o drift de `DEFAULT` físico em `updatedAt` já identificado em migrations anteriores (sem efeito de comportamento).
+
+Dois testes de regressão em `workouts.integration.test.ts` cobrem exatamente o cenário do bug (plano real criado antes de qualquer modelo avulso; listagem nunca inclui o rascunho).
+
+### "Adicionar"/"remover" modelo do plano é, por construção, mover
+
+Como `Workout` sempre pertence a exatamente um `TrainingPlan` (nunca uma relação muitos-para-muitos — ver a seção "Por que 'reutilizável' não é uma relação muitos-para-muitos" acima), `moveWorkoutToPlan` é o único mecanismo de associação: "adicionar ao plano B" reparenta `trainingPlanId` para B, fecha o buraco de posição deixado no plano de origem A e insere na última posição de B. `removeWorkoutFromPlan` é `moveWorkoutToPlan` com o plano de destino fixado no plano rascunho do tenant — o modelo nunca é excluído nem arquivado, só deixa de estar agrupado naquele plano específico.
+
+### Funções (`src/modules/workouts/workouts.ts`)
+
+- `createTrainingPlan`, `getTrainingPlanForTenant`, `listTrainingPlansForTenant`, `updateTrainingPlan`, `archiveTrainingPlan`, `reactivateTrainingPlan` — mesmo padrão de `Workout` (FIT-030): `tenantId` sempre da sessão, nunca payload de cliente; nunca alcançam um plano `isSnapshot: true` (proteção em profundidade — o TRIGGER da ADR-005 seria a rede de segurança física se algo tentasse).
+- `listWorkoutsInPlan` — modelos ATIVOS de um plano, em ordem.
+- `listWorkoutsAvailableForPlan` — modelos ATIVOS do tenant que não pertencem ao plano informado (candidatos ao picker de "adicionar").
+- `moveWorkoutToPlan` — reparenta; no-op se o modelo já está no plano de destino.
+- `removeWorkoutFromPlan` — exige que o modelo pertença de fato ao plano informado na chamada (`NAO_ENCONTRADO` caso contrário, mesmo padrão de isolamento das demais funções) antes de mover para o rascunho.
+- `reorderWorkoutsInPlan` — mesma validação de conjunto exato de `reorderWorkoutExercises` (FIT-030), agora para os modelos de um plano.
+
+### Páginas (`src/app/painel/treinos/planos/`)
+
+- `page.tsx` — lista de planos ATIVOS do tenant.
+- `novo/page.tsx` + `CriarPlanoForm.tsx` — criação (nome obrigatório, vigência sugerida opcional).
+- `[id]/page.tsx` — detalhe: `EditarPlanoForm` (nome + vigência), `ModelosDoPrograma` (lista ordenada com mover ▲/▼/remover, picker para adicionar um modelo existente do tenant), card "Ciclo de vida" (arquivar/reativar).
+- `TreinosSubNav.tsx` — sub-navegação "Modelos"/"Programas" dentro da seção Treinos, conforme `UX-ARCHITECTURE.md` ("3. Treinos → Programas / Modelos"); adicionada tanto em `/painel/treinos` quanto em `/painel/treinos/planos`.
+
+### O que esta História não faz
+
+Não implementa atribuição ao aluno nem a cópia imutável de fato usada (FIT-033 — o motor `cloneWorkoutWithItems`/o TRIGGER de imutabilidade já existem desde FIT-030/031, prontos para reutilização).
+
+## Testes (FIT-032)
+
+- `src/modules/workouts/workouts.integration.test.ts` (39 novos testes cobrindo FIT-032, entre CRUD de plano e movimentação de modelos): criação sempre `ATIVO`/não-snapshot; isolamento cruzado (plano de outro tenant nunca encontrado); plano snapshot nunca alcançável por `getTrainingPlanForTenant`; edição preservando isolamento; arquivamento/reativação idempotentes, modelos agrupados preservados; `moveWorkoutToPlan` reparenta e fecha buraco de posição na origem; mover para o mesmo plano é no-op; mover modelo/para-plano de outro tenant rejeitado; `listWorkoutsAvailableForPlan` exclui os já pertencentes ao plano; `removeWorkoutFromPlan` move para o rascunho e rejeita quando o modelo não pertence ao plano informado; `reorderWorkoutsInPlan` reordena e rejeita lista incompleta/incorreta; **regressão do bug do plano rascunho** (dois testes): listagem nunca inclui o rascunho mesmo depois de criado, e criar um plano real antes de qualquer modelo avulso não faz esse plano ser confundido com o rascunho.
+- Rotas (`src/app/api/training-plans/**/*.test.ts`) e páginas (`src/app/painel/treinos/planos/**/*.test.tsx`): mesmo padrão de autorização/isolamento das demais rotas deste módulo — 401 sem sessão, 403 aluno, `tenantId` do corpo nunca repassado, 404 fora do tenant, 400 em validação.

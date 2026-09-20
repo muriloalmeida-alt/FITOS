@@ -8,16 +8,27 @@ import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { createOwnExercise } from "@/modules/exercises/exercises";
 import {
   addWorkoutExercise,
+  archiveTrainingPlan,
   archiveWorkout,
+  createTrainingPlan,
   createWorkout,
   duplicateWorkout,
+  getTrainingPlanForTenant,
   getWorkoutExerciseForTenant,
   getWorkoutForTenant,
+  listTrainingPlansForTenant,
   listWorkoutExercisesForWorkout,
+  listWorkoutsAvailableForPlan,
   listWorkoutsForTenant,
+  listWorkoutsInPlan,
+  moveWorkoutToPlan,
+  reactivateTrainingPlan,
   reactivateWorkout,
   removeWorkoutExercise,
+  removeWorkoutFromPlan,
   reorderWorkoutExercises,
+  reorderWorkoutsInPlan,
+  updateTrainingPlan,
   updateWorkout,
   updateWorkoutExercise,
   WorkoutError,
@@ -381,6 +392,257 @@ describe("duplicateWorkout (FIT-031)", () => {
     await expect(duplicateWorkout({ tenantId: tenantB.id, workoutId: workoutA.id }, prisma)).rejects.toMatchObject({
       kind: "NAO_ENCONTRADO",
     });
+  });
+});
+
+describe("createTrainingPlan / getTrainingPlanForTenant / listTrainingPlansForTenant (FIT-032)", () => {
+  it("cria um plano com nome e vigência sugerida, sempre ATIVO e não-snapshot", async () => {
+    const { tenant } = await createTenant("criar-plano");
+
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano A ${run}`, durationWeeks: 4 }, prisma);
+
+    expect(plan.status).toBe("ATIVO");
+    expect(plan.isSnapshot).toBe(false);
+    expect(plan.durationWeeks).toBe(4);
+    expect(plan.tenantId).toBe(tenant.id);
+  });
+
+  it("rejeita nome vazio", async () => {
+    const { tenant } = await createTenant("plano-nome-vazio");
+    await expect(createTrainingPlan({ tenantId: tenant.id, name: "   " }, prisma)).rejects.toMatchObject({
+      kind: "VALIDACAO",
+    });
+  });
+
+  it("isolamento: nunca retorna plano de outro tenant", async () => {
+    const { tenant: tenantA } = await createTenant("plano-isolamento-a");
+    const { tenant: tenantB } = await createTenant("plano-isolamento-b");
+    const plan = await createTrainingPlan({ tenantId: tenantA.id, name: `Plano isolado ${run}` }, prisma);
+
+    const foundByOwner = await getTrainingPlanForTenant({ tenantId: tenantA.id, trainingPlanId: plan.id }, prisma);
+    const foundByOther = await getTrainingPlanForTenant({ tenantId: tenantB.id, trainingPlanId: plan.id }, prisma);
+
+    expect(foundByOwner?.id).toBe(plan.id);
+    expect(foundByOther).toBeNull();
+  });
+
+  it("nunca retorna um plano snapshot", async () => {
+    const { tenant } = await createTenant("plano-snapshot-oculto");
+    const snapshot = await prisma.trainingPlan.create({
+      data: { tenantId: tenant.id, name: `Snapshot ${run}`, isSnapshot: true },
+    });
+
+    const found = await getTrainingPlanForTenant({ tenantId: tenant.id, trainingPlanId: snapshot.id }, prisma);
+    expect(found).toBeNull();
+  });
+
+  it("lista apenas planos ATIVOS e não-snapshot do próprio tenant", async () => {
+    const { tenant } = await createTenant("listagem-planos");
+    const active = await createTrainingPlan({ tenantId: tenant.id, name: `Ativo ${run}` }, prisma);
+    const toArchive = await createTrainingPlan({ tenantId: tenant.id, name: `Arquivado ${run}` }, prisma);
+    await archiveTrainingPlan({ tenantId: tenant.id, trainingPlanId: toArchive.id }, prisma);
+
+    const list = await listTrainingPlansForTenant({ tenantId: tenant.id }, prisma);
+
+    expect(list.map((p) => p.id)).toContain(active.id);
+    expect(list.map((p) => p.id)).not.toContain(toArchive.id);
+  });
+
+  it("nunca inclui o plano rascunho implícito, mesmo depois de criado", async () => {
+    const { tenant } = await createTenant("listagem-sem-rascunho");
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+
+    const list = await listTrainingPlansForTenant({ tenantId: tenant.id }, prisma);
+
+    expect(list.map((p) => p.id)).not.toContain(workout.trainingPlanId);
+  });
+
+  it("regressão: criar um plano real antes de qualquer modelo avulso não faz esse plano ser confundido com o rascunho", async () => {
+    const { tenant } = await createTenant("regressao-rascunho");
+
+    // Cria um plano real ANTES de qualquer modelo avulso — com a heurística
+    // antiga (primeiro TrainingPlan por createdAt), este seria erroneamente
+    // tratado como o "rascunho" na próxima criação de modelo avulso.
+    const realPlan = await createTrainingPlan({ tenantId: tenant.id, name: `Programa real ${run}` }, prisma);
+
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo avulso ${run}` }, prisma);
+
+    expect(workout.trainingPlanId).not.toBe(realPlan.id);
+
+    const draftPlan = await prisma.trainingPlan.findUniqueOrThrow({ where: { id: workout.trainingPlanId } });
+    expect(draftPlan.isDraftBucket).toBe(true);
+
+    // O plano real nunca é marcado como rascunho e continua visível na
+    // listagem voltada ao personal; o rascunho nunca aparece nela.
+    const list = await listTrainingPlansForTenant({ tenantId: tenant.id }, prisma);
+    expect(list.map((p) => p.id)).toEqual([realPlan.id]);
+  });
+});
+
+describe("updateTrainingPlan (FIT-032)", () => {
+  it("edita nome e vigência sugerida", async () => {
+    const { tenant } = await createTenant("editar-plano");
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Original ${run}` }, prisma);
+
+    const updated = await updateTrainingPlan(
+      { tenantId: tenant.id, trainingPlanId: plan.id, name: `Editado ${run}`, durationWeeks: 6 },
+      prisma
+    );
+
+    expect(updated.name).toBe(`Editado ${run}`);
+    expect(updated.durationWeeks).toBe(6);
+  });
+
+  it("rejeita edição de plano de outro tenant (NAO_ENCONTRADO)", async () => {
+    const { tenant: tenantA } = await createTenant("editar-plano-cruzado-a");
+    const { tenant: tenantB } = await createTenant("editar-plano-cruzado-b");
+    const plan = await createTrainingPlan({ tenantId: tenantA.id, name: `Do tenant A ${run}` }, prisma);
+
+    await expect(
+      updateTrainingPlan({ tenantId: tenantB.id, trainingPlanId: plan.id, name: "Tentativa" }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("archiveTrainingPlan / reactivateTrainingPlan (FIT-032)", () => {
+  it("arquivamento e reativação são idempotentes e nunca excluem fisicamente; modelos agrupados permanecem intactos", async () => {
+    const { tenant } = await createTenant("ciclo-de-vida-plano");
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Ciclo ${run}` }, prisma);
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workout.id, targetTrainingPlanId: plan.id }, prisma);
+
+    const archivedOnce = await archiveTrainingPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    const archivedTwice = await archiveTrainingPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    expect(archivedOnce.status).toBe("ARQUIVADO");
+    expect(archivedTwice.status).toBe("ARQUIVADO");
+
+    const reactivatedOnce = await reactivateTrainingPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    const reactivatedTwice = await reactivateTrainingPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    expect(reactivatedOnce.status).toBe("ATIVO");
+    expect(reactivatedTwice.status).toBe("ATIVO");
+
+    const stillInPlan = await listWorkoutsInPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    expect(stillInPlan.map((w) => w.id)).toContain(workout.id);
+  });
+});
+
+describe("moveWorkoutToPlan / removeWorkoutFromPlan / reorderWorkoutsInPlan (FIT-032)", () => {
+  it("move um modelo do plano rascunho para um plano novo, fechando o buraco de posição na origem", async () => {
+    const { tenant } = await createTenant("mover-modelo");
+    const workoutA = await createWorkout({ tenantId: tenant.id, name: `A ${run}` }, prisma);
+    const workoutB = await createWorkout({ tenantId: tenant.id, name: `B ${run}` }, prisma);
+    const draftPlanId = workoutA.trainingPlanId;
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano ${run}` }, prisma);
+
+    const moved = await moveWorkoutToPlan(
+      { tenantId: tenant.id, workoutId: workoutA.id, targetTrainingPlanId: plan.id },
+      prisma
+    );
+
+    expect(moved.trainingPlanId).toBe(plan.id);
+    expect(moved.position).toBe(0);
+
+    const remainingInDraft = await listWorkoutsInPlan({ tenantId: tenant.id, trainingPlanId: draftPlanId }, prisma);
+    expect(remainingInDraft.map((w) => w.id)).toEqual([workoutB.id]);
+    expect(remainingInDraft[0]?.position).toBe(0);
+  });
+
+  it("mover para o mesmo plano é um no-op", async () => {
+    const { tenant } = await createTenant("mover-noop");
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+
+    const result = await moveWorkoutToPlan(
+      { tenantId: tenant.id, workoutId: workout.id, targetTrainingPlanId: workout.trainingPlanId },
+      prisma
+    );
+
+    expect(result.id).toBe(workout.id);
+    expect(result.position).toBe(workout.position);
+  });
+
+  it("rejeita mover modelo de outro tenant, ou para plano de outro tenant (NAO_ENCONTRADO)", async () => {
+    const { tenant: tenantA } = await createTenant("mover-cruzado-a");
+    const { tenant: tenantB } = await createTenant("mover-cruzado-b");
+    const workoutA = await createWorkout({ tenantId: tenantA.id, name: `A ${run}` }, prisma);
+    const planB = await createTrainingPlan({ tenantId: tenantB.id, name: `Plano B ${run}` }, prisma);
+
+    await expect(
+      moveWorkoutToPlan({ tenantId: tenantB.id, workoutId: workoutA.id, targetTrainingPlanId: planB.id }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+
+    const planA = await createTrainingPlan({ tenantId: tenantA.id, name: `Plano A ${run}` }, prisma);
+    await expect(
+      moveWorkoutToPlan({ tenantId: tenantA.id, workoutId: workoutA.id, targetTrainingPlanId: planA.id }, prisma)
+    ).resolves.toMatchObject({ trainingPlanId: planA.id });
+  });
+
+  it("listWorkoutsAvailableForPlan exclui os modelos já pertencentes ao plano informado", async () => {
+    const { tenant } = await createTenant("disponiveis-para-plano");
+    const workoutInPlan = await createWorkout({ tenantId: tenant.id, name: `Dentro ${run}` }, prisma);
+    const workoutOutside = await createWorkout({ tenantId: tenant.id, name: `Fora ${run}` }, prisma);
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano ${run}` }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workoutInPlan.id, targetTrainingPlanId: plan.id }, prisma);
+
+    const available = await listWorkoutsAvailableForPlan({ tenantId: tenant.id, excludeTrainingPlanId: plan.id }, prisma);
+
+    expect(available.map((w) => w.id)).toContain(workoutOutside.id);
+    expect(available.map((w) => w.id)).not.toContain(workoutInPlan.id);
+  });
+
+  it("removeWorkoutFromPlan move o modelo de volta para o plano rascunho do tenant", async () => {
+    const { tenant } = await createTenant("remover-do-plano");
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+    const draftPlanId = workout.trainingPlanId;
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano ${run}` }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workout.id, targetTrainingPlanId: plan.id }, prisma);
+
+    const removed = await removeWorkoutFromPlan(
+      { tenantId: tenant.id, workoutId: workout.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    expect(removed.trainingPlanId).toBe(draftPlanId);
+  });
+
+  it("removeWorkoutFromPlan rejeita quando o modelo não pertence ao plano informado", async () => {
+    const { tenant } = await createTenant("remover-do-plano-errado");
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+    const otherPlan = await createTrainingPlan({ tenantId: tenant.id, name: `Outro plano ${run}` }, prisma);
+
+    await expect(
+      removeWorkoutFromPlan({ tenantId: tenant.id, workoutId: workout.id, trainingPlanId: otherPlan.id }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("reorderWorkoutsInPlan reordena os modelos dentro do plano", async () => {
+    const { tenant } = await createTenant("reordenar-plano");
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano ${run}` }, prisma);
+    const workoutA = await createWorkout({ tenantId: tenant.id, name: `A ${run}` }, prisma);
+    const workoutB = await createWorkout({ tenantId: tenant.id, name: `B ${run}` }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workoutA.id, targetTrainingPlanId: plan.id }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workoutB.id, targetTrainingPlanId: plan.id }, prisma);
+
+    await reorderWorkoutsInPlan(
+      { tenantId: tenant.id, trainingPlanId: plan.id, orderedWorkoutIds: [workoutB.id, workoutA.id] },
+      prisma
+    );
+
+    const reordered = await listWorkoutsInPlan({ tenantId: tenant.id, trainingPlanId: plan.id }, prisma);
+    expect(reordered.map((w) => w.id)).toEqual([workoutB.id, workoutA.id]);
+  });
+
+  it("reorderWorkoutsInPlan rejeita lista que não corresponde exatamente aos modelos do plano", async () => {
+    const { tenant } = await createTenant("reordenar-plano-invalido");
+    const plan = await createTrainingPlan({ tenantId: tenant.id, name: `Plano ${run}` }, prisma);
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+    await moveWorkoutToPlan({ tenantId: tenant.id, workoutId: workout.id, targetTrainingPlanId: plan.id }, prisma);
+
+    await expect(
+      reorderWorkoutsInPlan(
+        { tenantId: tenant.id, trainingPlanId: plan.id, orderedWorkoutIds: [workout.id, "inexistente"] },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "VALIDACAO" });
   });
 });
 

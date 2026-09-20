@@ -343,6 +343,16 @@ model Exercise {
 /// comentário de `Workout` abaixo, que a torna imutável na prática, não só
 /// por convenção de leitura.
 ///
+/// `isDraftBucket` (FIT-032) identifica o plano "rascunho" implícito
+/// auto-provisionado por `ensureDraftTrainingPlanForTenant` (bootstrapping
+/// desde a FIT-030) — no máximo um por tenant. Precisa ser um campo
+/// explícito, não uma heurística por `createdAt`: se o personal criar um
+/// plano real (FIT-032) antes de qualquer modelo avulso, "o primeiro plano
+/// criado" deixaria de ser o rascunho, e um novo modelo avulso cairia
+/// silenciosamente dentro do plano nomeado do personal. Nunca aparece na
+/// listagem voltada ao personal (`listTrainingPlansForTenant`) — é um
+/// detalhe de implementação, não um programa que o personal decidiu criar.
+///
 /// `@@unique([id, tenantId])` referenciado por chave composta a partir de
 /// Workout e PlanAssignment.
 model TrainingPlan {
@@ -352,6 +362,7 @@ model TrainingPlan {
   status        TrainingPlanStatus  @default(ATIVO)
   durationWeeks Int?
   isSnapshot    Boolean             @default(false)
+  isDraftBucket Boolean             @default(false)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 

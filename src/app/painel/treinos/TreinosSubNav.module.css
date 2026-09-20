@@ -1,0 +1,27 @@
+.subNav {
+  display: flex;
+  gap: var(--fitos-space-2);
+  margin-bottom: var(--fitos-space-4);
+}
+
+.link,
+.linkActive {
+  font-size: 14px;
+  font-weight: 650;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--fitos-shape-full);
+  text-decoration: none;
+}
+
+.link {
+  color: var(--fitos-color-on-surface-variant);
+  background-color: var(--fitos-color-surface-container);
+}
+
+.linkActive {
+  color: var(--fitos-color-on-secondary-container);
+  background-color: var(--fitos-color-secondary-container);
+}
