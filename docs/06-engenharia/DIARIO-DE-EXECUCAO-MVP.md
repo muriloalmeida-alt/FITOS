@@ -145,3 +145,12 @@ Gate final revalidado no HEAD da branch (`34c61c8`, checkpoint FIT-070) imediata
 Handoff completo para a revisão externa (resumo do programa, tabela de checkpoints, Issues, decisões de escopo, riscos e pendências declarados) redigido em `docs/06-engenharia/10-HANDOFF-PARA-REVISAO.md` (commit `b966f4a`), com nota de transparência própria sobre a reconstrução do template original `10_HANDOFF_PARA_REVISAO.md` (não persistido neste repositório).
 
 PR único do programa aberto a partir de `feat/conclusao-integral-mvp` contra `main`: **PR #73** — https://github.com/muriloalmeida-alt/FITOS/pull/73 — encerrando com o comentário literal exigido pela governança: `STATUS: PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR.`. Este PR não foi aprovado nem mergeado por quem o abriu — decisão exclusiva da revisão externa e/ou do Product Owner.
+
+## Correções pós-abertura do PR #73 (pedidas pela revisão externa)
+
+Duas correções solicitadas sobre o PR/handoff, ambas aplicadas antes de qualquer aprovação/merge (commit `c618345`):
+
+1. **Classificação de privacidade/LGPD corrigida**: a linha "Segurança e privacidade: não" do PR estava incompleta — o programa introduziu dados corporais (peso, % de gordura, medidas — FIT-042), tratados aqui como potencialmente sensíveis nos termos do art. 5º, II da LGPD ("dado referente à saúde"), e dados financeiros (FIT-050 a FIT-053). Corrigida para "sim", com detalhamento dos controles já vigentes (acesso autenticado/isolado por tenant, `AuditEvent` para exclusão de avaliação e para pagamento) em `10-HANDOFF-PARA-REVISAO.md`, seção "Correções aplicadas após revisão externa". Confirmação jurídica formal da classificação permanece pendência declarada em `DECISOES-PENDENTES.md`, não alterada por esta correção.
+2. **Gate automatizado adicionado**: `.github/workflows/ci.yml` — até então não havia nenhum workflow de CI no repositório, e "573/573 testes com PostgreSQL" era apenas uma afirmação desta sessão, sem meio de reprodução independente. O workflow sobe um serviço PostgreSQL 16 real, aplica as 15 migrations do zero e executa typecheck/lint/test/build/audit a cada push/PR. Validado localmente antes do commit: banco `fitos_test` zerado, migrations reaplicadas do zero, sequência completa do workflow executada com as mesmas variáveis de ambiente do job — 573/573 testes, typecheck/lint/build limpos, 0 vulnerabilidades, idêntico ao gate já registrado nos checkpoints.
+
+PR #73 atualizado (título/descrição) para refletir ambas as correções.
