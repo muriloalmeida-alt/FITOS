@@ -87,6 +87,70 @@ describe("FinanceiroSection (FIT-050)", () => {
     );
   });
 
+  it("registra pagamento exigindo data, valor e forma de pagamento", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: "c1", status: "PAGO" }) }) as unknown as typeof fetch;
+    render(
+      <FinanceiroSection
+        students={[]}
+        charges={[
+          {
+            id: "c1",
+            description: "Mensalidade",
+            amountCents: 15000,
+            referenceMonth: "2026-10-01T00:00:00.000Z",
+            dueDate: "2026-10-05T00:00:00.000Z",
+            status: "PENDENTE",
+            cancelReason: null,
+            student: { id: "s1", displayName: "Aluno A" },
+            payment: null,
+          },
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Registrar pagamento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pagamento" }));
+    expect(await screen.findByText("Informe data, valor recebido e forma de pagamento.")).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Valor recebido (R$)"), { target: { value: "150" } });
+    fireEvent.change(screen.getByLabelText("Data do pagamento"), { target: { value: "2026-10-04" } });
+    fireEvent.change(screen.getByLabelText("Forma de pagamento"), { target: { value: "PIX" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar pagamento" }));
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/cobrancas/c1/pagamentos",
+        expect.objectContaining({ method: "POST" })
+      )
+    );
+  });
+
+  it("mostra data, valor e forma de pagamento para cobrança já paga", () => {
+    render(
+      <FinanceiroSection
+        students={[]}
+        charges={[
+          {
+            id: "c1",
+            description: "Mensalidade",
+            amountCents: 15000,
+            referenceMonth: "2026-10-01T00:00:00.000Z",
+            dueDate: "2026-10-05T00:00:00.000Z",
+            status: "PAGO",
+            cancelReason: null,
+            student: { id: "s1", displayName: "Aluno A" },
+            payment: { amountCentsPaid: 15000, paidAt: "2026-10-04T00:00:00.000Z", method: "PIX" },
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText(/Pago em 04\/10\/2026.*R\$ 150,00.*PIX/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Registrar pagamento" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).not.toBeInTheDocument();
+  });
+
   it("exibe 'A vencer' para pendente com vencimento futuro, e o status real para os demais", () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);

@@ -21,7 +21,7 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 ## Histórias
 
 - FIT-050 (#66) — Cadastrar cobrança. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
-- FIT-051 (#67) — Registrar pagamento.
+- FIT-051 (#67) — Registrar pagamento. **Concluída** (checkpoint na branch `feat/conclusao-integral-mvp` — ver diário de execução para o commit exato).
 - FIT-052 (#68) — Gerar mensalidades recorrentes.
 - FIT-053 (#69) — Exibir resumo financeiro. Encerra a SPRINT-09.
 
@@ -31,6 +31,13 @@ Dar ao personal controle manual sobre cobrança e recebimento: cadastrar cobran�
 - `src/modules/student-finance/charges.ts` (módulo reservado desde a FIT-007, primeira implementação): `createStudentCharge` (sempre inicia `pendente`, converte reais para centavos), `cancelStudentCharge` (exige motivo, nunca equivale a pagamento — agrupado nesta História por não ter FIT própria), `refreshOverdueCharges` (transição real `pendente` → `atrasado`, auto-contida, sem job em segundo plano), `listChargesForStudent`/`listChargesForTenant`;
 - página `/painel/financeiro` (personal, listagem consolidada de todos os alunos, nunca por aluno individual) — item "Financeiro" da navegação deixa de ser "Em breve";
 - decisões de escopo registradas (cancelamento agrupado na FIT-050; "atrasado" persistido vs. "a vencer" calculado; nenhuma visão financeira exposta ao aluno) em `docs/06-engenharia/arquitetura/FINANCEIRO.md`.
+
+## Resultado intermediário — FIT-051
+
+- `registerPayment` (`src/modules/student-finance/charges.ts`): grava `Payment` (entidade própria), marca a cobrança como `pago` e registra `AuditEvent` (`PAGAMENTO_REGISTRADO`) — tudo na mesma transação;
+- defesa física contra dois pagamentos para a mesma cobrança (`payments.studentChargeId` único, mesmo padrão de `WorkoutSessionResult`/FIT-041); cobrança já paga ou cancelada nunca pode ser paga de novo;
+- UI: "Registrar pagamento" e "Cancelar" mutuamente exclusivos na mesma linha do cartão de cobrança; histórico do pagamento (data, valor, forma) sempre visível na cobrança paga;
+- nenhuma migration nova (tabela `payments` já existia desde a FIT-050); decisões de escopo (pagamento parcial fora do MVP; auditoria explícita) registradas em `FINANCEIRO.md`.
 
 ## Sequenciamento
 

@@ -66,10 +66,22 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<{ chargeId: string; type: "cancel" | "pay" } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [paymentAmountReais, setPaymentAmountReais] = useState("");
+  const [paymentPaidAt, setPaymentPaidAt] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [rowError, setRowError] = useState<string | null>(null);
-  const [isCanceling, setIsCanceling] = useState(false);
+  const [isRowSubmitting, setIsRowSubmitting] = useState(false);
+
+  function closeRowAction() {
+    setActiveAction(null);
+    setCancelReason("");
+    setPaymentAmountReais("");
+    setPaymentPaidAt("");
+    setPaymentMethod("");
+    setRowError(null);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,7 +125,7 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
   }
 
   async function handleConfirmCancel(chargeId: string) {
-    if (isCanceling) {
+    if (isRowSubmitting) {
       return;
     }
     setRowError(null);
@@ -121,24 +133,57 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
       setRowError("Informe o motivo do cancelamento.");
       return;
     }
-    setIsCanceling(true);
+    setIsRowSubmitting(true);
     try {
       const response = await fetch(`/api/cobrancas/${chargeId}/cancelar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: cancelReason }),
       });
-      setIsCanceling(false);
+      setIsRowSubmitting(false);
       if (!response.ok) {
         const body = await response.json().catch(() => null);
         setRowError(body?.message ?? "Não foi possível cancelar a cobrança. Tente novamente.");
         return;
       }
-      setCancelingId(null);
-      setCancelReason("");
+      closeRowAction();
       router.refresh();
     } catch {
-      setIsCanceling(false);
+      setIsRowSubmitting(false);
+      setRowError("Falha de conexão. Verifique sua internet e tente novamente.");
+    }
+  }
+
+  async function handleConfirmPayment(chargeId: string) {
+    if (isRowSubmitting) {
+      return;
+    }
+    setRowError(null);
+    if (paymentAmountReais.trim() === "" || paymentPaidAt.trim() === "" || paymentMethod.trim() === "") {
+      setRowError("Informe data, valor recebido e forma de pagamento.");
+      return;
+    }
+    setIsRowSubmitting(true);
+    try {
+      const response = await fetch(`/api/cobrancas/${chargeId}/pagamentos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amountReceivedReais: Number(paymentAmountReais),
+          paidAt: paymentPaidAt,
+          method: paymentMethod,
+        }),
+      });
+      setIsRowSubmitting(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setRowError(body?.message ?? "Não foi possível registrar o pagamento. Tente novamente.");
+        return;
+      }
+      closeRowAction();
+      router.refresh();
+    } catch {
+      setIsRowSubmitting(false);
       setRowError("Falha de conexão. Verifique sua internet e tente novamente.");
     }
   }
@@ -162,9 +207,14 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
               {charge.status === "CANCELADO" && charge.cancelReason ? (
                 <span className={styles.rowNotes}>Motivo: {charge.cancelReason}</span>
               ) : null}
+              {charge.status === "PAGO" && charge.payment ? (
+                <span className={styles.rowNotes}>
+                  Pago em {formatDate(charge.payment.paidAt)} · {formatCentsBRL(charge.payment.amountCentsPaid)} · {charge.payment.method}
+                </span>
+              ) : null}
 
               {charge.status === "PENDENTE" || charge.status === "ATRASADO" ? (
-                cancelingId === charge.id ? (
+                activeAction?.chargeId === charge.id && activeAction.type === "cancel" ? (
                   <div className={styles.cancelForm}>
                     <TextField
                       label="Motivo do cancelamento"
@@ -172,29 +222,60 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
                       type="text"
                       value={cancelReason}
                       onChange={(event) => setCancelReason(event.target.value)}
-                      disabled={isCanceling}
+                      disabled={isRowSubmitting}
                     />
                     <div className={styles.rowActions}>
-                      <Button type="button" variant="filled" onClick={() => handleConfirmCancel(charge.id)} disabled={isCanceling}>
-                        {isCanceling ? "Cancelando…" : "Confirmar cancelamento"}
+                      <Button type="button" variant="filled" onClick={() => handleConfirmCancel(charge.id)} disabled={isRowSubmitting}>
+                        {isRowSubmitting ? "Cancelando…" : "Confirmar cancelamento"}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        onClick={() => {
-                          setCancelingId(null);
-                          setCancelReason("");
-                          setRowError(null);
-                        }}
-                        disabled={isCanceling}
-                      >
+                      <Button type="button" variant="outlined" onClick={closeRowAction} disabled={isRowSubmitting}>
+                        Voltar
+                      </Button>
+                    </div>
+                  </div>
+                ) : activeAction?.chargeId === charge.id && activeAction.type === "pay" ? (
+                  <div className={styles.cancelForm}>
+                    <TextField
+                      label="Valor recebido (R$)"
+                      name="paymentAmountReais"
+                      type="number"
+                      min={0.01}
+                      step={0.01}
+                      value={paymentAmountReais}
+                      onChange={(event) => setPaymentAmountReais(event.target.value)}
+                      disabled={isRowSubmitting}
+                    />
+                    <TextField
+                      label="Data do pagamento"
+                      name="paymentPaidAt"
+                      type="date"
+                      value={paymentPaidAt}
+                      onChange={(event) => setPaymentPaidAt(event.target.value)}
+                      disabled={isRowSubmitting}
+                    />
+                    <TextField
+                      label="Forma de pagamento"
+                      name="paymentMethod"
+                      type="text"
+                      value={paymentMethod}
+                      onChange={(event) => setPaymentMethod(event.target.value)}
+                      disabled={isRowSubmitting}
+                    />
+                    <div className={styles.rowActions}>
+                      <Button type="button" variant="filled" onClick={() => handleConfirmPayment(charge.id)} disabled={isRowSubmitting}>
+                        {isRowSubmitting ? "Registrando…" : "Confirmar pagamento"}
+                      </Button>
+                      <Button type="button" variant="outlined" onClick={closeRowAction} disabled={isRowSubmitting}>
                         Voltar
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className={styles.rowActions}>
-                    <Button type="button" variant="outlined" onClick={() => setCancelingId(charge.id)}>
+                    <Button type="button" variant="filled" onClick={() => setActiveAction({ chargeId: charge.id, type: "pay" })}>
+                      Registrar pagamento
+                    </Button>
+                    <Button type="button" variant="outlined" onClick={() => setActiveAction({ chargeId: charge.id, type: "cancel" })}>
                       Cancelar
                     </Button>
                   </div>

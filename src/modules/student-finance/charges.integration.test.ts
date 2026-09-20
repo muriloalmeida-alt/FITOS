@@ -5,13 +5,15 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
-import { cancelStudentCharge, createStudentCharge, listChargesForStudent, refreshOverdueCharges } from "./charges";
+import { cancelStudentCharge, createStudentCharge, listChargesForStudent, refreshOverdueCharges, registerPayment } from "./charges";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 afterAll(async () => {
+  await prisma.payment.deleteMany({ where: { tenant: { name: { contains: run } } } });
+  await prisma.auditEvent.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.studentCharge.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.student.deleteMany({ where: { email: { contains: run } } });
   await prisma.tenant.deleteMany({ where: { name: { contains: run } } });
@@ -187,6 +189,76 @@ describe("cancelStudentCharge (FIT-050)", () => {
 
     await expect(
       cancelStudentCharge({ tenantId: tenantB.id, chargeId: charge.id, reason: "motivo" }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("registerPayment (FIT-051)", () => {
+  it("registra o pagamento, marca a cobrança como paga e audita a ação", async () => {
+    const { tenant, owner } = await createTenant("pagar");
+    const student = await createStudent(tenant.id, "pagar");
+    const charge = await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, referenceMonth: new Date(), dueDate: new Date() },
+      prisma
+    );
+
+    const paga = await registerPayment(
+      { tenantId: tenant.id, actorUserId: owner.id, chargeId: charge.id, amountReceivedReais: 150, paidAt: new Date("2026-10-04"), method: "PIX" },
+      prisma
+    );
+
+    expect(paga.status).toBe("PAGO");
+    const payment = await prisma.payment.findUnique({ where: { studentChargeId: charge.id } });
+    expect(payment?.amountCentsPaid).toBe(15000);
+    expect(payment?.method).toBe("PIX");
+    expect(payment?.recordedByUserId).toBe(owner.id);
+    const audit = await prisma.auditEvent.findFirst({ where: { entityType: "StudentCharge", entityId: charge.id } });
+    expect(audit?.action).toBe("PAGAMENTO_REGISTRADO");
+    expect(audit?.actorUserId).toBe(owner.id);
+  });
+
+  it("rejeita data/valor ausentes e um segundo pagamento para a mesma cobrança", async () => {
+    const { tenant, owner } = await createTenant("pagar-invalido");
+    const student = await createStudent(tenant.id, "pagar-invalido");
+    const charge = await createStudentCharge(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, referenceMonth: new Date(), dueDate: new Date() },
+      prisma
+    );
+
+    await expect(
+      registerPayment({ tenantId: tenant.id, actorUserId: owner.id, chargeId: charge.id, amountReceivedReais: 0, paidAt: new Date(), method: "PIX" }, prisma)
+    ).rejects.toMatchObject({ kind: "VALIDACAO" });
+
+    await registerPayment(
+      { tenantId: tenant.id, actorUserId: owner.id, chargeId: charge.id, amountReceivedReais: 150, paidAt: new Date(), method: "PIX" },
+      prisma
+    );
+
+    await expect(
+      registerPayment({ tenantId: tenant.id, actorUserId: owner.id, chargeId: charge.id, amountReceivedReais: 150, paidAt: new Date(), method: "PIX" }, prisma)
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+  });
+
+  it("rejeita pagar cobrança cancelada e cobrança de outro tenant", async () => {
+    const { tenant: tenantA, owner: ownerA } = await createTenant("pagar-cancelada-a");
+    const { tenant: tenantB, owner: ownerB } = await createTenant("pagar-cancelada-b");
+    const studentA = await createStudent(tenantA.id, "pagar-cancelada");
+    const charge = await createStudentCharge(
+      { tenantId: tenantA.id, studentId: studentA.id, description: "Mensalidade", amountReais: 150, referenceMonth: new Date(), dueDate: new Date() },
+      prisma
+    );
+    await cancelStudentCharge({ tenantId: tenantA.id, chargeId: charge.id, reason: "motivo" }, prisma);
+
+    await expect(
+      registerPayment({ tenantId: tenantA.id, actorUserId: ownerA.id, chargeId: charge.id, amountReceivedReais: 150, paidAt: new Date(), method: "PIX" }, prisma)
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+
+    const charge2 = await createStudentCharge(
+      { tenantId: tenantA.id, studentId: studentA.id, description: "Mensalidade 2", amountReais: 150, referenceMonth: new Date(), dueDate: new Date() },
+      prisma
+    );
+    await expect(
+      registerPayment({ tenantId: tenantB.id, actorUserId: ownerB.id, chargeId: charge2.id, amountReceivedReais: 150, paidAt: new Date(), method: "PIX" }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
 });

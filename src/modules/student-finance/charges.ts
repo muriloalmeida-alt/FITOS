@@ -191,3 +191,78 @@ export async function cancelStudentCharge(
     data: { status: "CANCELADO", cancelReason: reason, cancelledAt: new Date() },
   });
 }
+
+const MAX_METHOD_LENGTH = 60;
+
+function normalizeMethod(method: string): string {
+  const trimmed = method.trim();
+  if (trimmed.length === 0) {
+    throw new StudentChargeError("VALIDACAO", "A forma de pagamento é obrigatória.");
+  }
+  if (trimmed.length > MAX_METHOD_LENGTH) {
+    throw new StudentChargeError("VALIDACAO", `A forma de pagamento deve ter no máximo ${MAX_METHOD_LENGTH} caracteres.`);
+  }
+  return trimmed;
+}
+
+export interface RegisterPaymentInput {
+  tenantId: string;
+  actorUserId: string;
+  chargeId: string;
+  amountReceivedReais: number;
+  paidAt: Date;
+  method: string;
+}
+
+/// Registra o pagamento de uma cobrança (FIT-051) — data e valor recebido
+/// são obrigatórios (`REGRAS-DE-NEGOCIO.md` seção 8). Pagamento parcial
+/// fica fora do MVP: o valor recebido é só histórico (`Payment`, entidade
+/// própria — nunca campos em `StudentCharge`), sem reconciliação de saldo
+/// restante — a cobrança sempre passa a `pago` num único pagamento, nunca
+/// "parcialmente paga". Registra `AuditEvent` (seção 9 lista "pagamento"
+/// explicitamente, ao contrário de `WorkoutSession`/FIT-041). Defesa física
+/// contra dois pagamentos para a mesma cobrança: `payments.studentChargeId`
+/// é `@unique` — mesmo padrão de `WorkoutSessionResult` (FIT-041).
+export async function registerPayment(input: RegisterPaymentInput, client: PrismaClient = prisma): Promise<StudentCharge> {
+  const charge = await client.studentCharge.findFirst({ where: { id: input.chargeId, tenantId: input.tenantId } });
+  if (!charge) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Cobrança não encontrada.");
+  }
+  if (charge.status === "PAGO") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Esta cobrança já está paga.");
+  }
+  if (charge.status === "CANCELADO") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Uma cobrança cancelada não pode ser paga.");
+  }
+
+  const amountCentsPaid = centsFromReais(input.amountReceivedReais);
+  assertValidDate(input.paidAt, "Data do pagamento");
+  const method = normalizeMethod(input.method);
+
+  return client.$transaction(async (tx) => {
+    await tx.payment.create({
+      data: {
+        tenantId: input.tenantId,
+        studentChargeId: charge.id,
+        amountCentsPaid,
+        paidAt: input.paidAt,
+        method,
+        recordedByUserId: input.actorUserId,
+      },
+    });
+
+    const updated = await tx.studentCharge.update({ where: { id: charge.id }, data: { status: "PAGO" } });
+
+    await tx.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "PAGAMENTO_REGISTRADO",
+        entityType: "StudentCharge",
+        entityId: charge.id,
+      },
+    });
+
+    return updated;
+  });
+}
