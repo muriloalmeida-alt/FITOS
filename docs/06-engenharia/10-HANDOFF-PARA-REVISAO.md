@@ -114,6 +114,36 @@ Uma regressão visual introduzida pela própria correção (sublinhado padrão d
 - **Demais decisões pendentes de Produto/Engenharia** (planos e preços, carência/suspensão/reativação, limites por plano, provedor S3, e-mail transacional, backup/retenção, domínios, retenção LGPD, termos comerciais da API Ninjas) — nenhuma delas pertence ao escopo funcional das SPRINT-07 a SPRINT-11; listadas para completude em `docs/06-engenharia/arquitetura/DECISOES-PENDENTES.md`, inalterada por este programa.
 - **`outlineVariant` no `AppShell`** — achado de contraste não corrigido, ver seção de decisões de escopo acima.
 
+## Correções aplicadas após revisão externa
+
+Duas correções pedidas pela revisão externa sobre este handoff/PR, ambas aplicadas antes de qualquer aprovação ou merge.
+
+### 1. Classificação de privacidade e LGPD
+
+A linha "Segurança e privacidade: não" registrada originalmente no PR estava incompleta e foi corrigida para "sim". O programa introduziu, sim, novas categorias de dados pessoais do aluno:
+
+- **Dados corporais (FIT-042, `src/modules/evolution/`)**: peso, percentual de gordura corporal e medidas corporais (`Assessment`/`BodyMeasurement`). `SEGURANCA-E-LGPD.md` já nomeia "evolução" explicitamente entre as categorias tratadas pelo sistema, e `REGRAS-DE-NEGOCIO.md` (seção 10) exige "acesso autenticado" para "dados corporais". Por serem dados referentes à condição física, coletados com finalidade de acompanhamento de saúde/desempenho, são tratados aqui como **potencialmente sensíveis** nos termos do art. 5º, II da LGPD ("dado pessoal sobre saúde") — classificação prudente para orientar controle de acesso, não uma conclusão jurídica definitiva. Confirmação formal com responsável jurídico permanece necessária antes de qualquer uso comercial/produtivo real, alinhada à pendência já registrada em `DECISOES-PENDENTES.md` ("Retenção e exclusão LGPD").
+- **Dados financeiros (FIT-050 a FIT-053, `src/modules/student-finance/`)**: valor da cobrança, competência, vencimento, forma e data de pagamento. Dado pessoal comum (fora da lista taxativa do art. 5º, II), mas ainda assim dado pessoal identificável ligado ao aluno, sujeito aos mesmos princípios de minimização e finalidade.
+
+Controles que já protegiam esses dados desde os checkpoints originais (nada novo implementado nesta correção — apenas ausente da classificação de impacto do PR até agora):
+- Acesso sempre autenticado e isolado por tenant (herdado da FIT-011); o aluno só lê a própria evolução/financeiro, nunca a de outro aluno (`listAssessmentsForStudent`, `listChargesForStudent`).
+- `AuditEvent` grava autor e data para exclusão de avaliação (`AVALIACAO_EXCLUIDA`) e para registro de pagamento (`PAGAMENTO_REGISTRADO`), conforme `REGRAS-DE-NEGOCIO.md` seção 9.
+- Nenhuma fotografia de evolução foi implementada neste programa (fora de escopo desta FIT-042) — o cenário que exigiria autorização explícita do aluno (seção 7) não chegou a existir.
+
+Permanece como pendência declarada — **não** uma lacuna introduzida por este programa: exportação/portabilidade e exclusão formal de dados pessoais (art. 18 LGPD) continuam sem implementação, já listadas em `DECISOES-PENDENTES.md` antes deste programa começar.
+
+Ação tomada: a linha "Segurança e privacidade" do PR (#73) foi atualizada de "não" para "sim", com este detalhamento linkado.
+
+### 2. Gate automatizado e evidência reproduzível
+
+Até esta correção, "573/573 testes com PostgreSQL real" era uma afirmação registrada neste handoff e no diário, produzida por execução local nesta sessão de trabalho — sem nenhum gate automatizado no repositório (não havia `.github/workflows/`) que permitisse a qualquer pessoa, incluindo a própria revisão externa, reproduzir esse resultado de forma independente.
+
+Adicionado `.github/workflows/ci.yml`: workflow do GitHub Actions que, a cada push/PR, sobe um serviço PostgreSQL 16 real (`postgres:16`, banco `fitos_test`), aplica as 15 migrations do zero com `npx prisma migrate deploy`, e então executa `npm run typecheck`, `npm run lint`, `npm run test` (suíte completa, incluindo os testes de integração que tocam PostgreSQL real), `npm run build` e `npm audit --production` — a mesma sequência já usada em todos os gates deste programa, agora executável por qualquer pessoa com acesso ao repositório, sem depender de nenhum ambiente local específico.
+
+Validado antes de comitar o workflow: reproduzido localmente o cenário exato do job de CI — banco `fitos_test` zerado (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), as 15 migrations aplicadas do zero, e toda a sequência de comandos do workflow executada com as mesmas variáveis de ambiente que o job usa. Resultado: 15/15 migrations aplicadas sem erro, **573/573 testes**, typecheck/lint/build limpos, `npm audit --production` → 0 vulnerabilidades — idêntico ao gate já registrado, com o caminho de execução do CI comprovado antes da primeira execução real no GitHub Actions.
+
+A evidência reproduzível passa a ser o próprio run do GitHub Actions deste PR (aba "Checks", job "Gate (typecheck, lint, testes com PostgreSQL real, build, audit)") — qualquer revisor pode abrir o log completo ou disparar o mesmo workflow novamente, em vez de depender apenas do relato desta sessão.
+
 ## O que este PR não é
 
 Este PR não foi aprovado, mergeado ou declarado "concluído" por quem o abriu. Conforme a governança adotada desde o início deste programa (`DIARIO-DE-EXECUCAO-MVP.md`, seção "Governança adotada a partir deste ponto"), a decisão de aprovar e mergear pertence exclusivamente à revisão externa (GPT/Codex) e/ou ao Product Owner (Murilo Almeida).
