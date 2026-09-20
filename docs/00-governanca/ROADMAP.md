@@ -36,7 +36,7 @@ Objetivo: criar, reutilizar e atribuir prescrições versionadas.
 
 Objetivo: permitir consulta e registro da execução.
 
-- FIT-002, FIT-040, FIT-041 e FIT-042.
+- Implementado pela EPIC-07 — Experiência do Aluno (#60, SPRINT-08) — FIT-040, FIT-041 e FIT-042 (ver `docs/04-backlog/EPIC-07-EXPERIENCIA-DO-ALUNO.md`). `FIT-002` (também listado no backlog original desta Fase) já foi implementado e superado pela FIT-009/010/011/012 (EPIC-03) — não reutilizado, ver nota em `docs/04-backlog/BACKLOG-MVP.md`.
 
 ## Fase 5 — Gestão financeira
 

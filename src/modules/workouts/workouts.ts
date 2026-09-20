@@ -884,7 +884,9 @@ export async function unassignTrainingPlanFromStudent(
 export type ActivePlanAssignmentForStudent = PlanAssignment & {
   trainingPlan: TrainingPlan & {
     workouts: (Workout & {
-      workoutExercises: (WorkoutExercise & { exercise: { name: string; muscle: string | null } })[];
+      workoutExercises: (WorkoutExercise & {
+        exercise: { name: string; muscle: string | null; instructions: string | null };
+      })[];
     })[];
   };
 };
@@ -907,7 +909,7 @@ export async function getActivePlanAssignmentForStudent(
             include: {
               workoutExercises: {
                 orderBy: { position: "asc" },
-                include: { exercise: { select: { name: true, muscle: true } } },
+                include: { exercise: { select: { name: true, muscle: true, instructions: true } } },
               },
             },
           },
@@ -931,4 +933,57 @@ export async function listEndedPlanAssignmentsForStudent(
     orderBy: { endedAt: "desc" },
     include: { trainingPlan: { select: { name: true } } },
   });
+}
+
+/// Treino do dia (FIT-040). Vocabulário fixo de dia da semana, o mesmo já
+/// usado pelo formulário de dias sugeridos do personal desde a FIT-030
+/// (`EditarModeloForm.tsx`) — nunca acentuado, para casar exatamente com o
+/// que é persistido em `Workout.suggestedDays`.
+const WEEKDAY_LABELS = ["DOMINGO", "SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO"] as const;
+
+/// `Date.getDay()` já usa o fuso do servidor — mesma simplificação já
+/// aceita em `daysUntil` (FIT-015): nenhuma tela deste MVP resolve fuso
+/// por aluno/personal.
+function todayWeekdayLabel(referenceDate: Date = new Date()): string {
+  return WEEKDAY_LABELS[referenceDate.getDay()]!;
+}
+
+export type StudentTodaySchedule =
+  | { state: "SEM_PLANO" }
+  | { state: "PLANO_ENCERRADO"; planName: string }
+  | { state: "DESCANSO" }
+  | { state: "TREINO_HOJE"; workout: ActivePlanAssignmentForStudent["trainingPlan"]["workouts"][number] };
+
+/// Deriva o estado da tela "Hoje" do aluno a partir da atribuição ativa
+/// (ou do histórico, se não houver ativa). Não escreve nada — leitura pura
+/// sobre `getActivePlanAssignmentForStudent`/`listEndedPlanAssignmentsForStudent`
+/// (FIT-033), que já garantem isolamento por tenant/aluno e que o plano
+/// lido é sempre o snapshot imutável (nunca o editável do personal).
+///
+/// "Treino previsto para hoje" é, entre os modelos ATIVOS do plano (na
+/// ordem de posição), o primeiro cujo `suggestedDays` inclui o dia da
+/// semana atual — se dois modelos tiverem o mesmo dia configurado, o
+/// primeiro por posição vence (limitação aceita, sem pedido de produto
+/// para desambiguar). Nenhum modelo com o dia de hoje (inclusive quando
+/// nenhum modelo tem `suggestedDays` configurado) é "descanso" — nunca um
+/// erro, mesmo padrão de "estado vazio honesto" já usado em todo o MVP.
+export async function getTodayScheduleForStudent(
+  input: { tenantId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<StudentTodaySchedule> {
+  const active = await getActivePlanAssignmentForStudent(input, client);
+  if (!active) {
+    const ended = await listEndedPlanAssignmentsForStudent(input, client);
+    if (ended.length > 0) {
+      return { state: "PLANO_ENCERRADO", planName: ended[0]!.trainingPlan.name };
+    }
+    return { state: "SEM_PLANO" };
+  }
+
+  const today = todayWeekdayLabel();
+  const workoutToday = active.trainingPlan.workouts.find((workout) => workout.suggestedDays.includes(today));
+  if (!workoutToday) {
+    return { state: "DESCANSO" };
+  }
+  return { state: "TREINO_HOJE", workout: workoutToday };
 }

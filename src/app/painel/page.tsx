@@ -4,6 +4,7 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
+import { getTodayScheduleForStudent } from "@/modules/workouts/workouts";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
@@ -39,11 +40,19 @@ export default async function PainelPage() {
     return student?.status === "INATIVO" ? <AlunoInativo /> : <AlunoSemVinculo />;
   }
 
-  const student = await prisma.student.findUniqueOrThrow({
-    where: { id: ctx.studentId },
-    include: { tenant: { include: { owner: true } } },
-  });
+  const [student, schedule] = await Promise.all([
+    prisma.student.findUniqueOrThrow({
+      where: { id: ctx.studentId },
+      include: { tenant: { include: { owner: true } } },
+    }),
+    getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
+  ]);
   return (
-    <AlunoHome displayName={student.displayName} tenantName={student.tenant.name} personalName={student.tenant.owner.name} />
+    <AlunoHome
+      displayName={student.displayName}
+      tenantName={student.tenant.name}
+      personalName={student.tenant.owner.name}
+      schedule={schedule}
+    />
   );
 }

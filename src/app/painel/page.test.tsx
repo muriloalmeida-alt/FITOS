@@ -6,6 +6,7 @@ const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
+const getTodayScheduleForStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -27,6 +28,11 @@ vi.mock("@/shared/db/prisma", () => ({
     },
   },
 }));
+
+vi.mock("@/modules/workouts/workouts", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
+  return { ...actual, getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args) };
+});
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
@@ -86,6 +92,7 @@ describe("PainelPage (FIT-012)", () => {
       displayName: "Pedro",
       tenant: { name: "Espaço de Joana", owner: { name: "Joana" } },
     });
+    getTodayScheduleForStudent.mockResolvedValue({ state: "SEM_PLANO" });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
@@ -95,6 +102,7 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
     expect(findUniqueStudent).not.toHaveBeenCalled();
+    expect(getTodayScheduleForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1" });
   });
 
   it("aluno autenticado sem vínculo (nunca teve Student) vê a tela de sem permissão, sem shell", async () => {

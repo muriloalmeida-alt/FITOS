@@ -15,6 +15,7 @@ import {
   createWorkout,
   duplicateWorkout,
   getActivePlanAssignmentForStudent,
+  getTodayScheduleForStudent,
   getTrainingPlanForTenant,
   getWorkoutExerciseForTenant,
   getWorkoutForTenant,
@@ -92,6 +93,17 @@ async function createStudent(tenantId: string, label: string) {
 
 /// Cria um plano com dois modelos (dois itens cada), pronto para os testes
 /// de atribuição (FIT-033) — evita repetir esse setup em cada `it`.
+const WEEKDAY_LABELS = ["DOMINGO", "SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO"] as const;
+
+function todayLabel(): string {
+  return WEEKDAY_LABELS[new Date().getDay()]!;
+}
+
+function otherWeekdayLabel(): string {
+  const today = todayLabel();
+  return WEEKDAY_LABELS.find((day) => day !== today)!;
+}
+
 async function createPlanWithWorkoutsAndItems(tenantId: string, label: string) {
   const exerciseA = await createGlobalExercise(`${label}-ex-a`);
   const exerciseB = await createGlobalExercise(`${label}-ex-b`);
@@ -927,5 +939,97 @@ describe("getActivePlanAssignmentForStudent / listEndedPlanAssignmentsForStudent
     );
 
     expect(seenFromOtherTenant).toBeNull();
+  });
+});
+
+describe("getTodayScheduleForStudent (FIT-040)", () => {
+  it("estado SEM_PLANO: aluno nunca teve atribuição", async () => {
+    const { tenant } = await createTenant("hoje-sem-plano");
+    const student = await createStudent(tenant.id, "hoje-sem-plano");
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(schedule).toEqual({ state: "SEM_PLANO" });
+  });
+
+  it("estado PLANO_ENCERRADO: atribuição existiu mas foi encerrada, nenhuma ativa agora", async () => {
+    const { tenant, owner } = await createTenant("hoje-encerrado");
+    const student = await createStudent(tenant.id, "hoje-encerrado");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenant.id, "hoje-encerrado");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+    await unassignTrainingPlanFromStudent({ tenantId: tenant.id, actorUserId: owner.id, studentId: student.id }, prisma);
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(schedule).toEqual({ state: "PLANO_ENCERRADO", planName: plan.name });
+  });
+
+  it("estado DESCANSO: atribuição ativa, mas nenhum modelo previsto para hoje", async () => {
+    const { tenant, owner } = await createTenant("hoje-descanso");
+    const student = await createStudent(tenant.id, "hoje-descanso");
+    const { plan, workoutA, workoutB } = await createPlanWithWorkoutsAndItems(tenant.id, "hoje-descanso");
+    const outroDia = otherWeekdayLabel();
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutA.id, suggestedDays: [outroDia] }, prisma);
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutB.id, suggestedDays: [outroDia] }, prisma);
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(schedule).toEqual({ state: "DESCANSO" });
+  });
+
+  it("estado DESCANSO: atribuição ativa, nenhum modelo com suggestedDays configurado", async () => {
+    const { tenant, owner } = await createTenant("hoje-descanso-sem-dias");
+    const student = await createStudent(tenant.id, "hoje-descanso-sem-dias");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenant.id, "hoje-descanso-sem-dias");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(schedule).toEqual({ state: "DESCANSO" });
+  });
+
+  it("estado TREINO_HOJE: modelo com o dia de hoje configurado, com exercícios e instruções incluídos", async () => {
+    const { tenant, owner } = await createTenant("hoje-treino");
+    const student = await createStudent(tenant.id, "hoje-treino");
+    const { plan, workoutA } = await createPlanWithWorkoutsAndItems(tenant.id, "hoje-treino");
+    const hoje = todayLabel();
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutA.id, suggestedDays: [hoje] }, prisma);
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(schedule.state).toBe("TREINO_HOJE");
+    if (schedule.state !== "TREINO_HOJE") throw new Error("unreachable");
+    expect(schedule.workout.name).toBe(workoutA.name);
+    expect(schedule.workout.workoutExercises).toHaveLength(1);
+    expect(schedule.workout.workoutExercises[0]!.exercise.name).toContain("hoje-treino-ex-a");
+  });
+
+  it("isolamento: nunca deriva o estado a partir de aluno de outro tenant", async () => {
+    const { tenant: tenantA, owner } = await createTenant("hoje-isolamento-a");
+    const { tenant: tenantB } = await createTenant("hoje-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "hoje-isolamento");
+    const { plan } = await createPlanWithWorkoutsAndItems(tenantA.id, "hoje-isolamento");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentA.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const schedule = await getTodayScheduleForStudent({ tenantId: tenantB.id, studentId: studentA.id }, prisma);
+
+    expect(schedule).toEqual({ state: "SEM_PLANO" });
   });
 });
