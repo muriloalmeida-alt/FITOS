@@ -127,3 +127,21 @@ Sem pausa entre Sprints, conforme mandato do pacote. Formalizados: EPIC-08 (#64)
 Sem pausa entre Sprints, conforme mandato do pacote. EPIC-09 (#65) e FIT-060 (#70) já haviam sido formalizados no mesmo lote da SPRINT-09 (ver seção acima); nenhuma formalização adicional foi necessária ao iniciar esta Sprint.
 
 **Decisão de escopo registrada — isolamento herdado, não re-testado (FIT-060)**: `PersonalHome.tsx` não escreve nenhuma consulta nova — compõe `listStudents` (FIT-013), `listWorkoutsForTenant` (FIT-030) e `getFinancialSummary` (FIT-053), cada uma já comprovada por teste de isolamento real na sua própria História. Escrever um novo teste de isolamento para FIT-060 duplicaria exatamente o que essas três Histórias já provam, sem exercitar nenhum código novo — a suíte de `page.test.tsx`/`PersonalHome.test.tsx` desta História testa composição e exibição, não isolamento (que já é garantia física das funções reutilizadas). Registrado por transparência: esta é uma decisão deliberada, não uma lacuna de cobertura.
+
+## SPRINT-11 — Consolidação Visual e Release
+
+Sem pausa entre Sprints, conforme mandato do pacote. Formalizados EPIC-10 (#71) e FIT-070 (#72) — `docs/04-backlog/EPIC-10-CONSOLIDACAO-VISUAL-RELEASE.md`, `docs/05-sprints/SPRINT-11-CONSOLIDACAO-VISUAL-RELEASE.md`, `docs/00-governanca/ROADMAP.md` (Fase 7, última Fase do MVP) atualizados.
+
+**Nota de transparência registrada — origem desta Sprint reconstruída, não copiada**: os arquivos de entrada do pacote original `07_SPRINT_11_CONSOLIDACAO_VISUAL_RELEASE.md` e `08_CONTRATO_VISUAL_OBRIGATORIO.md` existiram apenas no contexto de uma sessão anterior a esta continuação e não foram persistidos neste repositório — seu texto exato não está disponível. Em vez de inventar o conteúdo, o escopo da FIT-070 foi reconstruído a partir de documentação que É versionada no repositório (`ROADMAP.md`, `M3-DESIGN-TOKENS.md`, `CRITICAL-SCREEN-SPECS.md`), sinalizado explicitamente em `EPIC-10-CONSOLIDACAO-VISUAL-RELEASE.md`, `SPRINT-11-CONSOLIDACAO-VISUAL-RELEASE.md` e na Issue #71 para julgamento da revisão externa.
+
+**Auditoria de acessibilidade sem dependência nova**: contraste WCAG 2.2 AA de todos os pares texto/fundo dos tokens M3 comprovado por script Node de fórmula de luminância relativa/razão de contraste escrito à mão (sem adicionar `axe-core` ou equivalente) — todos os pares passam com folga (mínimo 6,37:1 claro, 7,19:1 escuro, acima do limiar 4.5:1). Detalhe completo, incluindo os dois bugs reais corrigidos (`Button` sem foco visível; `<button>` aninhado em `<a>` em 8 pontos desde a FIT-013) e o julgamento de escopo sobre `outlineVariant` no `AppShell`, em `ACESSIBILIDADE-E-CONSOLIDACAO-VISUAL.md`.
+
+**Encerra a SPRINT-11, o EPIC-10 e o programa de execução integral (SPRINT-07 a SPRINT-11)** — a Sprint, o Epic e o programa só são considerados de fato encerrados após a aprovação do PR final por GPT/Codex, não por este checkpoint.
+
+## Fechamento do programa integral
+
+Gate final revalidado no HEAD da branch (`34c61c8`, checkpoint FIT-070) imediatamente antes da abertura do PR único: `npx tsc --noEmit` sem erros; `npm run test` → 573/573 testes (96 arquivos); `npm run lint` limpo; `npm run build` completo, todas as rotas registradas; `npm audit --production` → 0 vulnerabilidades. `git fetch origin main` + `git merge-base origin/main feat/conclusao-integral-mvp` confirmam `origin/main` ainda em `a5b7fc5`, exatamente o merge-base — nenhuma sincronização necessária antes do PR final.
+
+Handoff completo para a revisão externa (resumo do programa, tabela de checkpoints, Issues, decisões de escopo, riscos e pendências declarados) redigido em `docs/06-engenharia/10-HANDOFF-PARA-REVISAO.md` (commit `b966f4a`), com nota de transparência própria sobre a reconstrução do template original `10_HANDOFF_PARA_REVISAO.md` (não persistido neste repositório).
+
+PR único do programa aberto a partir de `feat/conclusao-integral-mvp` contra `main`, encerrando com o comentário literal exigido pela governança: `STATUS: PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR.`. Este PR não foi aprovado nem mergeado por quem o abriu — decisão exclusiva da revisão externa e/ou do Product Owner.
