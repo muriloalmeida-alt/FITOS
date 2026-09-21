@@ -1,0 +1,44 @@
+.pulseLine {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.track {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand .track,
+.loading .track {
+  stroke: var(--fitos-color-chrome-accent);
+}
+
+.progress .track {
+  stroke: var(--fitos-color-tertiary);
+  transition: stroke-dashoffset var(--fitos-motion-enter) var(--fitos-motion-standard);
+}
+
+.divider .track {
+  stroke: var(--fitos-color-outline-variant);
+  stroke-width: 2;
+}
+
+.static .track {
+  stroke: var(--fitos-color-on-surface-variant);
+  opacity: 0.6;
+}
+
+.loading .track {
+  stroke-dasharray: 18 10;
+  animation: pulse-flow 2.4s linear infinite;
+}
+
+@keyframes pulse-flow {
+  to {
+    stroke-dashoffset: -56;
+  }
+}
