@@ -10,27 +10,51 @@
   justify-content: space-between;
   gap: var(--fitos-space-4);
   padding: var(--fitos-space-4) var(--fitos-space-4);
-  border-bottom: 1px solid var(--fitos-color-outline-variant);
-  background-color: var(--fitos-color-surface-container);
+  border-bottom: 1px solid var(--fitos-color-chrome-container);
+  background-color: var(--fitos-color-chrome);
+  color: var(--fitos-color-on-chrome);
+}
+
+.brand {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fitos-color-chrome-accent);
 }
 
 .title {
-  margin: 0;
+  margin: var(--fitos-space-1) 0 0 0;
   font-size: 22px;
   line-height: 28px;
   font-weight: 700;
-  color: var(--fitos-color-on-surface);
+  color: var(--fitos-color-on-chrome);
 }
 
 .subtitle {
   margin: var(--fitos-space-1) 0 0 0;
   font-size: 14px;
   line-height: 20px;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-on-chrome-variant);
 }
 
 .trailing {
   flex-shrink: 0;
+  /*
+   * `trailing` é sempre renderizado sobre o chrome fixo (azul-noturno),
+   * que não alterna com o tema — mas o único conteúdo que ele recebe hoje
+   * (`LogoutButton`, variante outlined) usa os tokens de tema
+   * (--fitos-color-primary/--fitos-color-outline), pensados para superfícies
+   * que seguem o tema claro/escuro. Sem este ajuste, o botão "Sair" no tema
+   * claro cai para 2.54:1 de contraste contra o chrome (abaixo do mínimo
+   * AA de 3:1 para bordas/texto de componente). Redefine as mesmas variáveis
+   * localmente para os equivalentes de chrome, sem alterar `Button` nem
+   * nenhum outro consumidor delas fora deste slot.
+   */
+  --fitos-color-primary: var(--fitos-color-chrome-accent);
+  --fitos-color-outline: var(--fitos-color-on-chrome-variant);
 }
 
 .body {
@@ -61,8 +85,8 @@
   justify-content: space-around;
   gap: var(--fitos-space-1);
   padding: var(--fitos-space-2);
-  background-color: var(--fitos-color-surface-container);
-  border-top: 1px solid var(--fitos-color-outline-variant);
+  background-color: var(--fitos-color-chrome);
+  border-top: 1px solid var(--fitos-color-chrome-container);
 }
 
 .moreMenu {
@@ -74,8 +98,8 @@
   gap: var(--fitos-space-1);
   padding: var(--fitos-space-2);
   border-radius: var(--fitos-shape-medium);
-  background-color: var(--fitos-color-surface-container-high);
-  border: 1px solid var(--fitos-color-outline-variant);
+  background-color: var(--fitos-color-chrome-container);
+  border: 1px solid var(--fitos-color-chrome-container);
 }
 
 .moreButton {
@@ -85,7 +109,7 @@
   border-radius: var(--fitos-shape-small);
   border: none;
   background: transparent;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-on-chrome-variant);
   font-family: var(--fitos-font-family);
   font-size: 12px;
   font-weight: 650;
@@ -100,8 +124,8 @@
   width: 220px;
   flex-shrink: 0;
   padding: var(--fitos-space-4) var(--fitos-space-2);
-  border-right: 1px solid var(--fitos-color-outline-variant);
-  background-color: var(--fitos-color-surface-container);
+  border-right: 1px solid var(--fitos-color-chrome-container);
+  background-color: var(--fitos-color-chrome);
 }
 
 .navItem,
@@ -118,12 +142,12 @@
   font-size: 12px;
   font-weight: 650;
   text-decoration: none;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-on-chrome-variant);
 }
 
 .navItemActive {
-  color: var(--fitos-color-primary);
-  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-chrome-active-fg);
+  background-color: var(--fitos-color-chrome-active-bg);
 }
 
 .navItemDisabled {
@@ -135,7 +159,7 @@
 .comingSoonBadge {
   font-size: 11px;
   font-weight: 650;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-on-chrome-variant);
 }
 
 @media (min-width: 840px) {

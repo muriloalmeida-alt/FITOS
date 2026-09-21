@@ -61,6 +61,7 @@ export function AppShell({ title, subtitle, navItems, activeKey, trailing, child
     <div className={styles.shell}>
       <header className={styles.topBar}>
         <div>
+          <span className={styles.brand}>FitOS</span>
           <h1 className={styles.title}>{title}</h1>
           {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
         </div>
