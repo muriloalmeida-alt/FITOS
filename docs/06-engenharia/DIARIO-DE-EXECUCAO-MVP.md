@@ -154,3 +154,20 @@ Duas correções solicitadas sobre o PR/handoff, ambas aplicadas antes de qualqu
 2. **Gate automatizado adicionado**: `.github/workflows/ci.yml` — até então não havia nenhum workflow de CI no repositório, e "573/573 testes com PostgreSQL" era apenas uma afirmação desta sessão, sem meio de reprodução independente. O workflow sobe um serviço PostgreSQL 16 real, aplica as 15 migrations do zero e executa typecheck/lint/test/build/audit a cada push/PR. Validado localmente antes do commit: banco `fitos_test` zerado, migrations reaplicadas do zero, sequência completa do workflow executada com as mesmas variáveis de ambiente do job — 573/573 testes, typecheck/lint/build limpos, 0 vulnerabilidades, idêntico ao gate já registrado nos checkpoints.
 
 PR #73 atualizado (título/descrição) para refletir ambas as correções.
+
+## Redesign "Evolução em movimento" (EPIC-11)
+
+Após o merge do PR #73, o Product Owner reportou que o visual do MVP não refletia o conceito de marca planejado. Recebido o pacote `FitOS_Pacote_Implementacao_Redesign_MVP_v1` (v1.0, aprovado por Produto) com a direção visual, os componentes/tokens, o inventário de telas e os ativos de mídia oficiais. Detalhamento completo em `docs/04-backlog/EPIC-11-REDESIGN-EVOLUCAO-EM-MOVIMENTO.md`.
+
+Executado em 4 Lotes, todos mergeados na `main`:
+
+- **Lote A** (fundação): chrome navy no `AppShell`, componente `PulseLine`, hero de login — PRs #75, #81.
+- **Lote B** (Personal): editorial "Sua equipe está em movimento" no Início, avatar por iniciais em Alunos — PRs #82, #83.
+- **Lote C** (Aluno): destaque teal ("Flow Teal") na evolução de peso do Progresso — PR #84.
+- **Lote D** (consolidação): decisão registrada sobre mídia de exercícios (não vinculada — sem campo de imagem no schema e heurística de nome descartada por risco) e varredura de regressão/responsividade — PR #85.
+
+EPIC-11 (#76) e todas as Histórias (FIT-081 a FIT-084) fechados. Pendência declarada, fora deste Epic: vínculo de imagens por exercício depende de decisão de Produto (campo de imagem no schema, própria migration).
+
+## Teste de disparo de deploy no Railway
+
+Registrado a pedido do Product Owner: após os 6 merges do EPIC-11 na `main`, o painel do Railway mostrava como último deploy apenas o do PR #73 (2h antes), sem nenhum novo deploy disparado pelos merges seguintes — indicando que o redeploy automático a partir de `main` não está disparando a cada push (ou nunca foi configurado para isso). Esta entrada em si é o commit de teste para o Product Owner confirmar, no painel do Railway, se um novo push em `main` dispara um novo deploy.
