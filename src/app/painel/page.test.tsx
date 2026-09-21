@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
+const findUniqueOrThrowTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
 const getTodayScheduleForStudent = vi.fn();
@@ -11,6 +12,7 @@ const listWorkoutsForTenant = vi.fn();
 const getInProgressSessionForStudent = vi.fn();
 const listStudents = vi.fn();
 const getFinancialSummary = vi.fn();
+const getIndividualOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -25,13 +27,23 @@ vi.mock("@/modules/tenancy/authContext", () => ({
 
 vi.mock("@/shared/db/prisma", () => ({
   prisma: {
-    tenant: { findUnique: (...args: unknown[]) => findUniqueTenant(...args) },
+    tenant: {
+      findUnique: (...args: unknown[]) => findUniqueTenant(...args),
+      findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowTenant(...args),
+    },
     student: {
       findUnique: (...args: unknown[]) => findUniqueStudent(...args),
       findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowStudent(...args),
     },
   },
 }));
+
+vi.mock("@/modules/individual-onboarding/onboarding", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/individual-onboarding/onboarding")>(
+    "@/modules/individual-onboarding/onboarding"
+  );
+  return { ...actual, getIndividualOnboardingProfile: (...args: unknown[]) => getIndividualOnboardingProfile(...args) };
+});
 
 vi.mock("@/modules/workouts/workouts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
@@ -179,6 +191,50 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByText("Sem vínculo ativo")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Hoje" })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
+  });
+
+  it("FIT-101: individual sem onboarding concluído é redirecionado para /onboarding", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u5",
+      role: "INDIVIDUAL",
+      tenantId: "t5",
+      studentId: null,
+    });
+    getIndividualOnboardingProfile.mockResolvedValue(null);
+    const { default: PainelPage } = await import("./page");
+
+    await expect(PainelPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/onboarding");
+    expect(findUniqueOrThrowTenant).not.toHaveBeenCalled();
+  });
+
+  it("FIT-101: individual com onboarding concluído vê o shell individual, com a configuração real", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u5",
+      role: "INDIVIDUAL",
+      tenantId: "t5",
+      studentId: null,
+    });
+    getIndividualOnboardingProfile.mockResolvedValue({
+      id: "p1",
+      tenantId: "t5",
+      objective: "GANHAR_MASSA",
+      experienceLevel: "INICIANTE",
+      weeklyAvailability: "TRES_A_QUATRO_DIAS",
+    });
+    findUniqueOrThrowTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
+    const { default: PainelPage } = await import("./page");
+
+    render(await PainelPage());
+
+    expect(screen.getByRole("heading", { name: "Hoje" })).toBeInTheDocument();
+    expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
+    expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
+    expect(findUniqueOrThrowTenant).toHaveBeenCalledWith({ where: { id: "t5" } });
   });
 
   it("aluno autenticado com vínculo inativado vê a tela de conta inativa, sem shell", async () => {

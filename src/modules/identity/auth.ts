@@ -1,9 +1,19 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import * as z from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
 import { ensureTenantForIndividual } from "@/modules/tenancy/ensureTenantForIndividual";
+
+/// Papéis que uma pessoa pode escolher livremente no cadastro público
+/// (FIT-101): `PERSONAL` (já existia, era o único valor possível) e
+/// `INDIVIDUAL` (workspace do FitOS Livre, FIT-100). Nunca `ALUNO` — esse
+/// papel só existe por convite de um personal (FIT-015); permitir que o
+/// próprio cadastro público o produza permitiria a qualquer pessoa se
+/// autoconceder acesso como aluno de qualquer tenant, contornando o fluxo
+/// de convite/ativação inteiro. Ver `ADR-007-SELECAO-DE-PAPEL-NO-CADASTRO.md`.
+const SELF_SERVICE_ROLES = z.enum(["PERSONAL", "INDIVIDUAL"]);
 
 /// Único ponto de configuração do provedor de autenticação (Better Auth).
 /// Nenhum outro módulo deve importar `better-auth` diretamente — server
@@ -38,18 +48,21 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      // Nunca aceito do cliente (`input: false`): definido pelo servidor no
-      // momento do cadastro. O cadastro público (`/criar-conta`) só cria
-      // PERSONAL; contas ALUNO dependem de um fluxo de vínculo/convite fora
-      // do escopo desta História (FIT-010/011). Contas INDIVIDUAL (FitOS
-      // Livre) ainda não têm nenhum fluxo de cadastro público — chega na
-      // FIT-101 (onboarding "Treino sozinho"); o hook abaixo já trata o
-      // papel simetricamente, mas nenhuma rota hoje o produz.
+      // FIT-101: aceito do cliente (`input: true`), mas restrito por
+      // `validator.input` a `SELF_SERVICE_ROLES` — qualquer outro valor
+      // (em especial `"ALUNO"`, mas também qualquer string arbitrária) é
+      // rejeitado com 400 antes de chegar ao banco. `/criar-conta` (modo
+      // padrão, sem escolha) e `/criar-conta?modo=individual` (FIT-101) são
+      // as duas únicas rotas públicas que chamam `signUp.email`; nenhuma
+      // delas jamais repassa um valor vindo de query string/payload do
+      // usuário além de exatamente `"PERSONAL"` ou `"INDIVIDUAL"` — a
+      // validação aqui é defesa em profundidade, não a única barreira.
       role: {
         type: "string",
         required: true,
         defaultValue: "PERSONAL",
-        input: false,
+        input: true,
+        validator: { input: SELF_SERVICE_ROLES },
       },
     },
   },

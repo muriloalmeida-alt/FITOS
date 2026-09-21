@@ -1,0 +1,53 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-6);
+  padding: var(--fitos-space-4);
+}
+
+@media (min-width: 840px) {
+  .content {
+    flex: 0 0 50%;
+    padding: var(--fitos-space-8);
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 450;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.list {
+  margin: 0;
+  padding-left: var(--fitos-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.cta {
+  align-self: flex-start;
+}

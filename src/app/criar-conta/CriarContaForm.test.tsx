@@ -62,8 +62,31 @@ describe("CriarContaForm", () => {
       name: "Fulano de Tal",
       email: "fulano@example.com",
       password: "senha12345",
+      role: "PERSONAL",
     });
     await waitFor(() => expect(push).toHaveBeenCalledWith("/painel"));
+  });
+
+  it("FIT-101: modo individual envia role=INDIVIDUAL e redireciona para /onboarding", async () => {
+    signUpEmail.mockResolvedValue({ error: null });
+    const { CriarContaForm } = await import("./CriarContaForm");
+    const user = userEvent.setup();
+    render(<CriarContaForm mode="individual" />);
+
+    await user.type(screen.getByLabelText("Nome completo"), "Praticante Sozinho");
+    await user.type(screen.getByLabelText("E-mail"), "praticante@example.com");
+    await user.type(screen.getByLabelText("Senha"), "senha12345");
+    await user.type(screen.getByLabelText("Confirmar senha"), "senha12345");
+    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+    await waitFor(() => expect(signUpEmail).toHaveBeenCalledTimes(1));
+    expect(signUpEmail).toHaveBeenCalledWith({
+      name: "Praticante Sozinho",
+      email: "praticante@example.com",
+      password: "senha12345",
+      role: "INDIVIDUAL",
+    });
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding"));
   });
 
   it("mostra mensagem genérica de erro quando o cadastro falha, sem revelar o motivo exato", async () => {

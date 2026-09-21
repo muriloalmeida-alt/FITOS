@@ -253,3 +253,22 @@ Implementado:
 - `authContext.ts` (FIT-011): novo ramo de `getAuthContext` para `INDIVIDUAL` (mesma autocura do tenant) e novo `requireIndividual()`; `requirePersonal`/`requireStudent` continuam rejeitando qualquer sessão que não seja exatamente o papel esperado, incluindo `INDIVIDUAL`.
 - `auth.ts` (Better Auth): hook de criação de usuário estendido para provisionar o workspace individual simetricamente ao tenant do personal — hoje nenhuma rota pública ainda produz `role: "INDIVIDUAL"` (chega na FIT-101, onboarding "Treino sozinho"); o hook já está pronto para quando existir.
 - Testes: `ensureTenantForIndividual.integration.test.ts` (7 testes, incluindo um cadastro real via `betterAuth()` simulando a futura FIT-101) e extensão de `authContext.integration.test.ts` cobrindo `INDIVIDUAL` em `getAuthContext`, `requireIndividual` e a rejeição por `requirePersonal`/`requireStudent`.
+
+## FIT-101 — Onboarding "Treino sozinho"
+
+Issue [FIT-101] criada (#101, sub-issue de EPIC-13 #97). Segunda História: cadastro público com escolha explícita entre "personal" e "individual", e a configuração inicial (objetivo, experiência, disponibilidade) exigida pelo pacote — sem nenhuma alegação de prescrição personalizada.
+
+**Decisão de segurança que precisou ser tomada nesta História**: até aqui, `role` no Better Auth era `input: false` — o cadastro público só podia criar `PERSONAL`, sem nenhuma forma de o cliente influenciar isso. Permitir `INDIVIDUAL` exigia mudar isso. Investigando o próprio código do Better Auth (`parseInputData`), descobri que `input: false` **descarta silenciosamente** qualquer valor enviado (nunca erro) — então simplesmente mudar para `input: true` sem mais nada teria aberto a porta para qualquer cliente se autocadastrar como `"ALUNO"` (contornando o convite/ativação inteiro, FIT-015) ou qualquer string arbitrária. Resolvido com `input: true` **+** `validator.input: z.enum(["PERSONAL", "INDIVIDUAL"])` — o próprio Better Auth já suporta essa validação nativamente, rejeitando com 400 antes de tocar o banco qualquer valor fora desse par. `"ALUNO"` continua impossível de autoatribuir, exatamente como antes. Decisão completa registrada em `ADR-007-SELECAO-DE-PAPEL-NO-CADASTRO.md`, incluída no PR para revisão explícita — é uma mudança na camada de autenticação, então documentada com o mesmo cuidado de uma prova técnica.
+
+Implementado:
+
+- `/treino-sozinho` (nova, pública): proposta de valor e CTA para `/criar-conta?modo=individual`.
+- `/criar-conta` ganhou o parâmetro `?modo=individual`: mesma tela e formulário, copy ajustada, e `CriarContaForm` agora passa `role` explícito (`"PERSONAL"` ou `"INDIVIDUAL"`, nunca lido de um campo de formulário) e redireciona para `/onboarding` em vez de `/painel` no modo individual.
+- `authClient` (`auth-client.ts`) ganhou o plugin `inferAdditionalFields<typeof auth>()` (com `import type` — nunca traz `auth.ts`, que depende de Prisma/segredos, para o bundle do cliente) para tipar `role` em `signUp.email`.
+- `IndividualProfile` (schema + migration aditiva, `tenantId @unique`): objetivo/experiência/disponibilidade — puramente informativo, não gera nenhuma prescrição automática. Módulo `individual-onboarding/onboarding.ts` (`completeIndividualOnboarding` como upsert idempotente, `getIndividualOnboardingProfile`).
+- `/onboarding` (nova, só `INDIVIDUAL`, com autocura/redirect do mesmo padrão de `/painel`) + `/api/onboarding` (GET/POST, `requireIndividual`).
+- `/painel` ganhou o ramo `INDIVIDUAL`: sem onboarding concluído, redireciona para `/onboarding`; com onboarding, mostra `IndividualHome` novo (mesmo padrão de `AppShell`, nav "Hoje/Treinos/Progresso/Perfil" com os três últimos `comingSoon` até a FIT-102 em diante) — deliberadamente sem nenhuma funcionalidade de treino fabricada antes da hora.
+- `SelectField` novo no kit de UI compartilhado (`shared/ui`), mesmo padrão de `TextField` (label/erro/altura mínima de toque 48px).
+- `zod` adicionado como dependência direta (já vinha transitivamente pelo Better Auth) — usado pelo validator acima.
+
+Testado: suíte completa (typecheck/lint/vitest/build) e, adicionalmente, um fluxo real de ponta a ponta em navegador via Playwright contra o dev server + Postgres real — `/treino-sozinho` → `/criar-conta?modo=individual` → cadastro real → `/onboarding` → `/painel` mostrando o `IndividualHome` com as respostas salvas; e uma regressão do cadastro padrão de personal (sem `modo`), confirmando que continua indo direto para `/painel`, sem nenhuma mudança de comportamento.

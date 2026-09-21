@@ -10,3 +10,4 @@ Estados: `Proposto`, `Aceito`, `Substituído` ou `Rejeitado`.
 - `ADR-004-API-NINJAS-EXERCICIOS.md`
 - `ADR-005-VERSIONAMENTO-DE-PLANOS.md`
 - `ADR-006-WORKSPACE-INDIVIDUAL.md`
+- `ADR-007-SELECAO-DE-PAPEL-NO-CADASTRO.md`
