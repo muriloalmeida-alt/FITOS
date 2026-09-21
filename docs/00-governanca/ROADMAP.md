@@ -56,6 +56,15 @@ Objetivo: varredura final de acessibilidade (WCAG 2.2 AA) e consistência visual
 
 - FIT-070 — EPIC-10 — Consolidação Visual e Release (#71, SPRINT-11, `docs/04-backlog/EPIC-10-CONSOLIDACAO-VISUAL-RELEASE.md`), aberta nesta rodada.
 
+## Fase 8 — Pós-MVP: Monetização e FitOS Livre
+
+Objetivo: após o MVP aprovado, mergeado e estabilizado (EPIC-10/EPIC-11), habilitar a assinatura SaaS do personal e o produto B2C para quem treina sem personal ou continua após o fim do vínculo profissional. Origem: pacote `FitOS_Pacote_Pos_MVP_Fases_2_1_Monetizacao_2_2_Livre_v3`.
+
+- Pré-requisito operacional: `IMP-EX-001` — carga única do catálogo de exercícios via API Ninjas (não consome numeração FIT; ver `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`).
+- EPIC-12 — Monetização — FIT-090 a FIT-099 (renumerado de FIT-070-079 do pacote; colisão e decisão registradas em `docs/04-backlog/EPIC-12-MONETIZACAO.md`).
+- EPIC-13 — FitOS Livre — FIT-100 a FIT-109 (renumerado de FIT-080-089 do pacote; depende do encerramento do EPIC-12; ver `docs/04-backlog/EPIC-13-FITOS-LIVRE.md`).
+- Gate de PR novo nesta Fase: aprovação explícita de GPT/Codex (revisão externa) além do aceite de Produto — nenhum merge sem as duas.
+
 ## Fora do MVP
 
 - Aplicativos nativos.

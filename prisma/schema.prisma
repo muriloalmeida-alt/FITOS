@@ -337,6 +337,66 @@ model Exercise {
   @@map("exercises")
 }
 
+/// IMP-EX-001 (pacote pós-MVP): trilha de execução da carga única do
+/// catálogo global a partir de um fornecedor externo. Não é uma História
+/// FIT — é um pré-requisito operacional que roda antes da Fase 2.1, e não
+/// concede nenhuma capacidade nova de usuário; existe só para impedir
+/// execução concorrente/duplicada da carga e para permitir retomada
+/// determinística após falha. Um índice único parcial por
+/// `(provider, environment)` — criado à mão na migration, mesmo padrão dos
+/// TRIGGERs de tenant descritos no comentário do model `Exercise` acima —
+/// impede duas linhas `RUNNING` (trava de concorrência) ou duas linhas
+/// `COMPLETED` (bloqueio de segunda carga) simultâneas para o mesmo par;
+/// esse é o mecanismo de trava real, a checagem em `catalogImportRun.ts`
+/// é só a primeira camada (mais amigável, mesma linha de erro clara em vez
+/// de uma violação genérica de constraint).
+enum CatalogImportEnvironment {
+  HOMOLOGACAO
+  PRODUCAO
+}
+
+enum CatalogImportStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model CatalogImportRun {
+  id              String                   @id @default(cuid())
+  provider        String                   @default("API_NINJAS")
+  environment     CatalogImportEnvironment
+  status          CatalogImportStatus      @default(PENDING)
+  importerVersion String
+  manifestHash    String
+  /// Quantidade de consultas do manifesto já processadas nesta linha —
+  /// permite retomar uma execução `FAILED` a partir da consulta seguinte,
+  /// em vez de repetir desde o início (o que duplicaria chamadas já bem
+  /// sucedidas, embora não duplique exercícios, já que o upsert é
+  /// idempotente por `externalId`).
+  checkpoint      Int                      @default(0)
+  received        Int                      @default(0)
+  inserted        Int                      @default(0)
+  updated         Int                      @default(0)
+  ignored         Int                      @default(0)
+  errors          Int                      @default(0)
+  /// Identificação de quem autorizou/executou (texto livre — nome, e-mail
+  /// ou identificador de auditoria), nunca uma credencial. Obrigatório
+  /// apenas para reimportação após COMPLETED (ver `forceReimportNote`).
+  executor        String?
+  /// Preenchido somente quando esta linha resulta de uma reimportação
+  /// forçada após um `COMPLETED` anterior (critério 5 do IMP-EX-001) — a
+  /// justificativa exigida pela decisão de Produto/auditoria.
+  forceReimportNote String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@index([provider, environment])
+  @@map("catalog_import_runs")
+}
+
 /// Plano semanal: agrupa um ou mais modelos de treino (`Workout`), sempre
 /// pertencente a um tenant.
 ///
