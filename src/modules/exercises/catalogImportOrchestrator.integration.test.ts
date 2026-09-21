@@ -44,15 +44,36 @@ describe("runCatalogImportDryRun (IMP-EX-001)", () => {
     expect(await prisma.exercise.findFirst({ where: { name: `Dry-run ${run}` } })).toBeNull();
   });
 
-  it("conta buscas falhadas sem lançar erro", async () => {
-    searchExercisesMock.mockRejectedValue(new Error("falha simulada"));
+  it("retenta com backoff uma falha transitória — não conta como falha se uma tentativa seguinte tiver sucesso", async () => {
+    let call = 0;
+    searchExercisesMock.mockImplementation(async () => {
+      call += 1;
+      if (call === 1) {
+        throw new Error("falha transitória simulada");
+      }
+      return [];
+    });
 
     const { runCatalogImportDryRun } = await import("./catalogImportOrchestrator");
     const report = await runCatalogImportDryRun();
 
-    expect(report.failedSearches).toBe(10);
-    expect(report.received).toBe(0);
+    expect(report.failedSearches).toBe(0);
+    expect(searchExercisesMock).toHaveBeenCalledTimes(10 + 1);
   });
+
+  it(
+    "conta buscas falhadas sem lançar erro (após esgotar o retry com backoff de cada consulta)",
+    async () => {
+      searchExercisesMock.mockRejectedValue(new Error("falha simulada"));
+
+      const { runCatalogImportDryRun } = await import("./catalogImportOrchestrator");
+      const report = await runCatalogImportDryRun();
+
+      expect(report.failedSearches).toBe(10);
+      expect(report.received).toBe(0);
+    },
+    20000
+  );
 });
 
 describe("runCatalogImport (IMP-EX-001)", () => {

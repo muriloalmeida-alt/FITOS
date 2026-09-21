@@ -52,13 +52,14 @@ export interface CatalogImportDryRunReport {
 /// `CatalogImportRun` (critério de aceite "dry-run não grava registros").
 export async function runCatalogImportDryRun(): Promise<CatalogImportDryRunReport> {
   const manifest = buildCatalogImportManifest();
+  const searchWithBackoff = withBackoff(searchExercises);
 
   let received = 0;
   let valid = 0;
   let failedSearches = 0;
   for (const query of manifest.queries) {
     try {
-      const items = await searchExercises(query, {});
+      const items = await searchWithBackoff(query, {});
       received += items.length;
       valid += items.filter((item) => Boolean(item.name)).length;
     } catch {
