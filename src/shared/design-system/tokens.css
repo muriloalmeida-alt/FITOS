@@ -95,6 +95,23 @@
   --fitos-color-outline-variant: #c2c8d0;
   --fitos-color-error: #ba1a1a;
   --fitos-color-on-error: #ffffff;
+
+  /*
+   * Chrome de marca — fixo, não alterna com o tema (claro/escuro).
+   * Implementa o conceito de "base em azul-noturno" de
+   * docs/03-design/BENCHMARK-IDENTIDADE-VISUAL.md: a estrutura do shell
+   * (cabeçalho e navegação) é sempre azul-noturno, como uma moldura
+   * constante ao redor do conteúdo (que segue o tema normalmente).
+   * Construído inteiramente a partir dos primitivos navy/lime já
+   * documentados em M3-DESIGN-TOKENS.md — nenhuma cor nova introduzida.
+   */
+  --fitos-color-chrome: var(--fitos-navy-900);
+  --fitos-color-chrome-container: var(--fitos-navy-700);
+  --fitos-color-on-chrome: var(--fitos-navy-50);
+  --fitos-color-on-chrome-variant: var(--fitos-navy-300);
+  --fitos-color-chrome-accent: var(--fitos-lime-300);
+  --fitos-color-chrome-active-bg: var(--fitos-lime-300);
+  --fitos-color-chrome-active-fg: var(--fitos-navy-900);
 }
 
 /* Tema escuro — segue prefers-color-scheme, sem alterar tokens primitivos */
