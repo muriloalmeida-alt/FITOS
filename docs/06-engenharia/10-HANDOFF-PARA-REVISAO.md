@@ -144,6 +144,8 @@ Validado antes de comitar o workflow: reproduzido localmente o cenário exato do
 
 A evidência reproduzível passa a ser o próprio run do GitHub Actions deste PR (aba "Checks", job "Gate (typecheck, lint, testes com PostgreSQL real, build, audit)") — qualquer revisor pode abrir o log completo ou disparar o mesmo workflow novamente, em vez de depender apenas do relato desta sessão.
 
+**Resultado real do primeiro run, no commit `156df9c` (HEAD do PR no momento desta correção)**: `conclusion: success` — https://github.com/muriloalmeida-alt/FITOS/actions/runs/35546163974/job/106172343655 — confirmado via a própria API de check runs do PR, não apenas relatado por esta sessão.
+
 ## O que este PR não é
 
 Este PR não foi aprovado, mergeado ou declarado "concluído" por quem o abriu. Conforme a governança adotada desde o início deste programa (`DIARIO-DE-EXECUCAO-MVP.md`, seção "Governança adotada a partir deste ponto"), a decisão de aprovar e mergear pertence exclusivamente à revisão externa (GPT/Codex) e/ou ao Product Owner (Murilo Almeida).
