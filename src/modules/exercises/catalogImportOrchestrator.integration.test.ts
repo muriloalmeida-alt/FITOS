@@ -7,6 +7,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
+import { ApiNinjasError } from "@/integrations/api-ninjas";
 
 const searchExercisesMock = vi.fn();
 vi.mock("@/integrations/api-ninjas", async () => {
@@ -71,6 +72,21 @@ describe("runCatalogImportDryRun (IMP-EX-001)", () => {
 
       expect(report.failedSearches).toBe(10);
       expect(report.received).toBe(0);
+      expect(report.errorKinds).toEqual({ DESCONHECIDO: 10 });
+    },
+    20000
+  );
+
+  it(
+    "classifica falhas por ApiNinjasError.kind — permite diagnosticar chave inválida vs. rate limit sem acesso a log",
+    async () => {
+      searchExercisesMock.mockRejectedValue(new ApiNinjasError("NAO_AUTORIZADO", "API Ninjas rejeitou a chave configurada (401)."));
+
+      const { runCatalogImportDryRun } = await import("./catalogImportOrchestrator");
+      const report = await runCatalogImportDryRun();
+
+      expect(report.failedSearches).toBe(10);
+      expect(report.errorKinds).toEqual({ NAO_AUTORIZADO: 10 });
     },
     20000
   );
