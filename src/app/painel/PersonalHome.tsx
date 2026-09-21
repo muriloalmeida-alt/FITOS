@@ -2,6 +2,7 @@ import { AppShell, Button, Card } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { LogoutButton } from "./LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "./navigation";
+import { PersonalHero } from "./PersonalHero";
 import styles from "./PersonalHome.module.css";
 
 interface PersonalHomeProps {
@@ -26,6 +27,8 @@ export function PersonalHome({ name, email, tenantName, activeStudentsCount, act
       activeKey="inicio"
       trailing={<LogoutButton />}
     >
+      <PersonalHero />
+
       <Card title="Visão geral">
         <dl className={styles.statsGrid}>
           <div className={styles.statTile}>
@@ -41,6 +44,10 @@ export function PersonalHome({ name, email, tenantName, activeStudentsCount, act
             <dd>{formatCentsBRL(atrasadoCents)}</dd>
           </div>
         </dl>
+
+        {activeStudentsCount === 0 ? (
+          <p className={styles.emptyHint}>Comece cadastrando seu primeiro aluno para acompanhar a evolução dele por aqui.</p>
+        ) : null}
 
         <div className={styles.shortcuts}>
           <Button href="/painel/alunos/novo" variant="filled">
