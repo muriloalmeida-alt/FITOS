@@ -14,8 +14,9 @@ import {
 /// estava funcionando no momento. Ver
 /// `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`, seção
 /// "Exceção — rota HTTP interna", para o registro completo da decisão, do
-/// risco aceito (inclusive o risco adicional do método `GET`, aceito
-/// separadamente em 21/09/2026) e do plano de retirada.
+/// risco aceito (inclusive os riscos adicionais do método `GET` e do
+/// segredo por query string, ambos aceitos separadamente em 21/09/2026) e
+/// do plano de retirada.
 ///
 /// Não é uma rota pública: sem `CATALOG_IMPORT_TRIGGER_SECRET` configurada,
 /// comporta-se como se não existisse (404 em qualquer método, nunca 503 —
@@ -27,16 +28,29 @@ function notFound(): Response {
   return new Response(null, { status: 404 });
 }
 
+/// Aceita o segredo pelo header `X-Import-Trigger-Secret` (preferível — não
+/// fica em log de acesso) OU pelo parâmetro de query `secret` (exceção
+/// adicional aceita por Murilo em 21/09/2026, para uma ferramenta de
+/// disparo — navegador/app/webhook — sem controle de header). Usar a query
+/// string trata o valor de `CATALOG_IMPORT_TRIGGER_SECRET` como
+/// permanentemente exposto (log de acesso do Next.js/Railway/qualquer
+/// proxy no caminho, histórico de navegador, `Referer`) — ver
+/// `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md` para o risco
+/// completo e a instrução de rotacionar o segredo após o uso por URL.
 function isAuthorized(request: Request): boolean {
   const expected = process.env.CATALOG_IMPORT_TRIGGER_SECRET;
   if (!expected) {
     return false;
   }
-  const provided = request.headers.get("x-import-trigger-secret");
-  if (!provided) {
-    return false;
+  const header = request.headers.get("x-import-trigger-secret");
+  if (header && secretsMatch(header, expected)) {
+    return true;
   }
-  return secretsMatch(provided, expected);
+  const queryValue = new URL(request.url).searchParams.get("secret");
+  if (queryValue && secretsMatch(queryValue, expected)) {
+    return true;
+  }
+  return false;
 }
 
 function readBoolean(value: string | null): boolean {
@@ -110,9 +124,9 @@ export async function POST(request: Request): Promise<Response> {
 /// HTTP costumam repetir automaticamente uma `GET` que falhou por rede, o
 /// que poderia acionar a carga sem intenção. Murilo decidiu aceitar esse
 /// risco porque a ferramenta disponível para chamar a rota não conseguia
-/// enviar `POST`. O segredo continua exigido via header (nunca por query
-/// string — nunca aparece em log de acesso desta aplicação), e a mesma
-/// trava de `CatalogImportRun` protege contra qualquer disparo repetido.
+/// enviar `POST`. Ver `isAuthorized` para a forma de autenticação (header
+/// preferível; `?secret=` aceito como exceção adicional). A mesma trava de
+/// `CatalogImportRun` protege contra qualquer disparo repetido.
 export async function GET(request: Request): Promise<Response> {
   if (!isAuthorized(request)) {
     return notFound();
