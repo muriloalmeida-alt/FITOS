@@ -14,7 +14,8 @@ import {
 /// estava funcionando no momento. Ver
 /// `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`, seção
 /// "Exceção — rota HTTP interna", para o registro completo da decisão, do
-/// risco aceito e do plano de retirada.
+/// risco aceito (inclusive o risco adicional do método `GET`, aceito
+/// separadamente em 21/09/2026) e do plano de retirada.
 ///
 /// Não é uma rota pública: sem `CATALOG_IMPORT_TRIGGER_SECRET` configurada,
 /// comporta-se como se não existisse (404 em qualquer método, nunca 503 —
@@ -38,25 +39,26 @@ function isAuthorized(request: Request): boolean {
   return secretsMatch(provided, expected);
 }
 
-export async function POST(request: Request): Promise<Response> {
+function readBoolean(value: string | null): boolean {
+  return value === "true" || value === "1";
+}
+
+/// `GET` e `POST` chegam aqui já normalizados para o mesmo formato — única
+/// implementação de despacho, nunca duplicada entre os dois métodos.
+async function handle(request: Request, input: Record<string, unknown>): Promise<Response> {
   if (!isAuthorized(request)) {
     return notFound();
-  }
-
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return Response.json({ ok: false, error: "VALIDACAO", message: "Corpo da requisição deve ser um objeto JSON." }, { status: 400 });
   }
 
   let parsed;
   try {
     parsed = parseCatalogImportRequest({
-      environment: (body as Record<string, unknown>).environment,
-      dryRun: Boolean((body as Record<string, unknown>).dryRun),
-      autorizadoPor: (body as Record<string, unknown>).autorizadoPor,
-      forceReimport: Boolean((body as Record<string, unknown>).forceReimport),
-      justificativa: (body as Record<string, unknown>).justificativa,
-      autorizarProducao: Boolean((body as Record<string, unknown>).autorizarProducao),
+      environment: input.environment,
+      dryRun: Boolean(input.dryRun),
+      autorizadoPor: input.autorizadoPor,
+      forceReimport: Boolean(input.forceReimport),
+      justificativa: input.justificativa,
+      autorizarProducao: Boolean(input.autorizarProducao),
     });
   } catch (error) {
     if (error instanceof CatalogImportRequestValidationError) {
@@ -90,8 +92,40 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-export function GET(): Response {
-  return notFound();
+export async function POST(request: Request): Promise<Response> {
+  if (!isAuthorized(request)) {
+    return notFound();
+  }
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return Response.json({ ok: false, error: "VALIDACAO", message: "Corpo da requisição deve ser um objeto JSON." }, { status: 400 });
+  }
+  return handle(request, body as Record<string, unknown>);
+}
+
+/// Adicionado em 21/09/2026 como exceção adicional, explícita e informada:
+/// além de já não ser um endpoint público (ver guarda-corpos acima), aceitar
+/// `GET` reintroduz um risco próprio que `POST`-only evitava — navegadores,
+/// proxies e CDNs podem pré-carregar/cachear uma URL `GET`, e ferramentas
+/// HTTP costumam repetir automaticamente uma `GET` que falhou por rede, o
+/// que poderia acionar a carga sem intenção. Murilo decidiu aceitar esse
+/// risco porque a ferramenta disponível para chamar a rota não conseguia
+/// enviar `POST`. O segredo continua exigido via header (nunca por query
+/// string — nunca aparece em log de acesso desta aplicação), e a mesma
+/// trava de `CatalogImportRun` protege contra qualquer disparo repetido.
+export async function GET(request: Request): Promise<Response> {
+  if (!isAuthorized(request)) {
+    return notFound();
+  }
+  const params = new URL(request.url).searchParams;
+  return handle(request, {
+    environment: params.get("environment"),
+    dryRun: readBoolean(params.get("dryRun")),
+    autorizadoPor: params.get("autorizadoPor"),
+    forceReimport: readBoolean(params.get("forceReimport")),
+    justificativa: params.get("justificativa"),
+    autorizarProducao: readBoolean(params.get("autorizarProducao")),
+  });
 }
 
 export function PUT(): Response {

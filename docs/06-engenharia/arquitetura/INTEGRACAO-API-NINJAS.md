@@ -23,7 +23,7 @@ Especificação completa: pacote `FitOS_Pacote_Pos_MVP_Fases_2_1_Monetizacao_2_2
 - `--dry-run`: valida credencial, contrato e volume com chamadas reais de leitura à API Ninjas, mas nunca grava no banco nem cria uma linha em `CatalogImportRun`.
 - Produção exige `--autorizar-producao` além de `--autorizado-por` — nenhuma execução em produção só com a variável de ambiente configurada.
 
-## Exceção — rota HTTP interna (`POST /api/admin/catalog-import`)
+## Exceção — rota HTTP interna (`POST`/`GET /api/admin/catalog-import`)
 
 O IMP-EX-001 (pacote pós-MVP, seção 8) proíbe explicitamente "manter endpoint público para disparar a importação". Esta seção registra uma exceção pontual a essa regra, decidida por Murilo em 21/09/2026, porque o acesso SSH/CLI ao Railway não funcionou no momento em que a carga real precisava ser executada.
 
@@ -33,12 +33,14 @@ O IMP-EX-001 (pacote pós-MVP, seção 8) proíbe explicitamente "manter endpoin
 
 - **Não é pública de fato**: sem a variável `CATALOG_IMPORT_TRIGGER_SECRET` configurada, a rota responde 404 em qualquer método — comporta-se como se não existisse. Com a variável configurada, ainda responde 404 para qualquer requisição sem o header `X-Import-Trigger-Secret` correto (comparação em tempo constante, `src/shared/lib/secretCompare.ts` — nunca revela se a variável está ausente ou se o segredo está errado, nem por status nem por tempo de resposta).
 - **Segredo próprio, nunca reaproveitado**: `CATALOG_IMPORT_TRIGGER_SECRET` é uma variável de ambiente separada de `API_NINJAS_API_KEY`/`BETTER_AUTH_SECRET` — nunca o mesmo valor para dois propósitos.
-- **Só `POST`**: `GET`/`PUT`/`PATCH`/`DELETE` respondem 404, não 405 — não confirmam que a rota existe para quem não tem o segredo.
+- **`POST` e `GET`, nunca `PUT`/`PATCH`/`DELETE`**: `PUT`/`PATCH`/`DELETE` respondem 404, não 405 — não confirmam que a rota existe para quem não tem o segredo. `GET` foi adicionado em 21/09/2026 como **exceção adicional**, decidida por Murilo depois que a ferramenta disponível para chamar a rota não conseguia enviar `POST` — risco aceito à parte, descrito abaixo. Parâmetros chegam pela query string no `GET` (`?environment=homologacao&dryRun=true&autorizadoPor=...`) e pelo corpo JSON no `POST`; o segredo continua exigido só pelo header `X-Import-Trigger-Secret` nos dois casos — nunca por query string, para nunca aparecer em log de acesso.
 - **Nunca linkada em nenhuma navegação/UI da aplicação** — só é alcançável por quem souber a URL e tiver o segredo.
 - **Mesma validação e mesma trava do comando administrativo**: `parseCatalogImportRequest` (`src/modules/exercises/catalogImportRequest.ts`) e o ciclo de vida de `CatalogImportRun` (índices únicos parciais) são exatamente os mesmos — a rota não abre um caminho mais permissivo que o comando, só um transporte diferente.
 - **Nenhum segredo na resposta**: erros inesperados retornam `{ ok: false, error: "ERRO_INTERNO" }` genérico (nunca a mensagem original) — testado explicitamente (`route.test.ts`).
 
 **Risco aceito, não eliminado**: quem tiver o segredo pode acionar a carga real (gastando as chamadas do plano contratado da API Ninjas) sem precisar de sessão autenticada na aplicação — por isso o segredo deve ser tratado com o mesmo cuidado de uma credencial de produção, nunca colado em conversa/chat, e gerado por canal seguro.
+
+**Risco adicional aceito do `GET`**: diferente de `POST`, uma URL `GET` pode ser pré-carregada por navegador, cacheada por proxy/CDN, ou reenviada automaticamente por alguma ferramenta HTTP após uma falha de rede — qualquer uma dessas situações acionaria a carga sem intenção de quem a chamou. Murilo foi informado desse risco especificamente (distinto do risco geral do endpoint) e decidiu aceitá-lo em 21/09/2026 porque a alternativa (só `POST`) não funcionava com a ferramenta disponível no momento. A mesma trava de `CatalogImportRun` (execução única/concorrente) limita o dano de um disparo repetido, mas não elimina o consumo de uma chamada de rede indevida.
 
 **Plano de retirada**: remover a rota (ou, no mínimo, desconfigurar `CATALOG_IMPORT_TRIGGER_SECRET` no Railway) assim que a carga real for concluída e confirmada, ou assim que o acesso SSH/CLI ao Railway for restabelecido — o que ocorrer primeiro. Esta rota não deve ser reaproveitada para nenhum outro job futuro sem uma nova decisão de Produto registrada.
 
