@@ -72,4 +72,4 @@ Shell navy do Personal preservado; Motion Lime só na ação principal/progresso
 
 ## Estado do Épico
 
-Aberto. Formalização inicial em 21/09/2026, iniciando pelo pré-requisito `IMP-EX-001`.
+Aberto, **pausado na FIT-091**. FIT-090 (#94, catálogo de planos comerciais) implementada. FIT-091 (#96, prova técnica do Asaas) bloqueada: `api.asaas.com`/`api-sandbox.asaas.com` recusados por política de rede desta sessão (403 no `CONNECT`, não é questão de credencial) — ver atualização em `ADR-003-ASAAS-COMO-CANDIDATO.md`. FIT-092 em diante depende da FIT-091. Decisão de Murilo (21/09/2026): seguir para o EPIC-13 (#97) enquanto a prova técnica não pode ser feita a partir desta sessão.
