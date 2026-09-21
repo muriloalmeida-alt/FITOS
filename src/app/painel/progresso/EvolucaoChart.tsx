@@ -33,8 +33,20 @@ export function EvolucaoChart({ points }: { points: WeightPoint[] }) {
   const last = points[points.length - 1]!;
   const label = `Gráfico de evolução do peso: de ${first.weightKg}kg em ${new Date(first.recordedAt).toLocaleDateString("pt-BR")} para ${last.weightKg}kg em ${new Date(last.recordedAt).toLocaleDateString("pt-BR")}`;
 
+  // Área sob a linha, com o mesmo currentColor da linha (herdado de
+  // .chartWrapper) — puramente decorativa, o texto de aria-label e a
+  // tabela abaixo continuam sendo a fonte de informação real.
+  const areaPoints = [`${PADDING},${HEIGHT - PADDING}`, ...coords, `${WIDTH - PADDING},${HEIGHT - PADDING}`].join(" ");
+
   return (
     <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} role="img" aria-label={label}>
+      <defs>
+        <linearGradient id="evolucao-chart-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={areaPoints} fill="url(#evolucao-chart-area)" stroke="none" />
       <polyline points={coords.join(" ")} fill="none" stroke="currentColor" strokeWidth={2} />
     </svg>
   );
