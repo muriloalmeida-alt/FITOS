@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Button, Card } from "@/shared/ui";
+import { AppShell, Avatar, Button, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getStudentForTenant } from "@/modules/students/students";
@@ -69,12 +69,15 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
       </Link>
 
       <Card title="Dados do aluno">
-        <p className={styles.statusLine}>
-          Status:{" "}
-          <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
-            {student.status === "ATIVO" ? "Ativo" : "Inativo"}
-          </span>
-        </p>
+        <div className={styles.identity}>
+          <Avatar name={student.displayName} />
+          <p className={styles.statusLine}>
+            Status:{" "}
+            <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
+              {student.status === "ATIVO" ? "Ativo" : "Inativo"}
+            </span>
+          </p>
+        </div>
         <EditarAlunoForm
           studentId={student.id}
           initialName={student.displayName}

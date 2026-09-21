@@ -5,8 +5,15 @@
   text-decoration: none;
 }
 
-.statusLine {
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
   margin: 0 0 var(--fitos-space-4) 0;
+}
+
+.statusLine {
+  margin: 0;
   font-size: 14px;
   color: var(--fitos-color-on-surface-variant);
 }

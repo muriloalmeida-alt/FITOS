@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { StudentStatus } from "@prisma/client";
-import { AppShell, Button } from "@/shared/ui";
+import { AppShell, Avatar, Button } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listStudents } from "@/modules/students/students";
@@ -118,8 +118,11 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
           {result.items.map((student) => (
             <li key={student.id}>
               <Link href={`/painel/alunos/${student.id}`} className={styles.row}>
-                <span className={styles.cellName}>{student.displayName}</span>
-                <span className={styles.cellEmail}>{student.email}</span>
+                <Avatar name={student.displayName} />
+                <span className={styles.cellText}>
+                  <span className={styles.cellName}>{student.displayName}</span>
+                  <span className={styles.cellEmail}>{student.email}</span>
+                </span>
                 <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
                   {student.status === "ATIVO" ? "Ativo" : "Inativo"}
                 </span>

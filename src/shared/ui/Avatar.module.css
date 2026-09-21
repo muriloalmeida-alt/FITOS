@@ -1,0 +1,14 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--fitos-shape-full);
+  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-on-primary-container);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--fitos-font-family);
+}
