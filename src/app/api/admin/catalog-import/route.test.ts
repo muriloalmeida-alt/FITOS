@@ -217,6 +217,46 @@ describe("GET /api/admin/catalog-import (exceção adicional, 21/09/2026 — fer
   });
 });
 
+describe("Segredo via query string ?secret= (exceção adicional, 21/09/2026 — ferramenta sem controle de header)", () => {
+  beforeEach(() => {
+    process.env.CATALOG_IMPORT_TRIGGER_SECRET = SECRET;
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+    delete process.env.CATALOG_IMPORT_TRIGGER_SECRET;
+  });
+
+  it("aceita o segredo certo via ?secret=, sem nenhum header", async () => {
+    runCatalogImportDryRun.mockResolvedValue({ manifestVersion: "v1", queries: 10, received: 0, valid: 0, failedSearches: 0 });
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ environment: "homologacao", dryRun: "true", secret: SECRET }, {}));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("retorna 404 quando ?secret= está errado, mesmo sem header", async () => {
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ environment: "homologacao", dryRun: "true", secret: "errado" }, {}));
+
+    expect(response.status).toBe(404);
+    expect(runCatalogImportDryRun).not.toHaveBeenCalled();
+  });
+
+  it("também funciona em POST com ?secret= na URL, sem header", async () => {
+    runCatalogImportDryRun.mockResolvedValue({ manifestVersion: "v1", queries: 10, received: 0, valid: 0, failedSearches: 0 });
+    const { POST } = await import("./route");
+
+    const url = new URL("http://localhost/api/admin/catalog-import");
+    url.searchParams.set("secret", SECRET);
+    const response = await POST(new Request(url, { method: "POST", body: JSON.stringify({ environment: "homologacao", dryRun: true }) }));
+
+    expect(response.status).toBe(200);
+  });
+});
+
 describe("PUT/PATCH/DELETE (nunca disponíveis, mesmo com o segredo certo)", () => {
   beforeEach(() => {
     process.env.CATALOG_IMPORT_TRIGGER_SECRET = SECRET;
