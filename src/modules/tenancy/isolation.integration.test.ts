@@ -25,6 +25,8 @@ let workoutB: { id: string };
 let privateExerciseA: { id: string };
 let privateExerciseB: { id: string };
 let globalExercise: { id: string };
+let tenantIndividual: { id: string };
+let privateExerciseIndividual: { id: string };
 
 beforeAll(async () => {
   const ownerA = await prisma.user.create({
@@ -74,11 +76,23 @@ beforeAll(async () => {
   globalExercise = await prisma.exercise.create({
     data: { tenantId: null, name: `Exercício global ${run}`, origin: "API_NINJAS" },
   });
+
+  const ownerIndividual = await prisma.user.create({
+    data: { email: `owner-individual-${run}@example.test`, name: "Praticante de teste", role: "INDIVIDUAL" },
+  });
+  tenantIndividual = await prisma.tenant.create({
+    data: { ownerId: ownerIndividual.id, name: `Tenant individual de teste ${run}`, type: "INDIVIDUAL" },
+  });
+  privateExerciseIndividual = await prisma.exercise.create({
+    data: { tenantId: tenantIndividual.id, name: `Exercício privado individual ${run}`, origin: "PERSONAL" },
+  });
 });
 
 afterAll(async () => {
   await prisma.workoutExercise.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
-  await prisma.exercise.deleteMany({ where: { id: { in: [privateExerciseA.id, privateExerciseB.id, globalExercise.id] } } });
+  await prisma.exercise.deleteMany({
+    where: { id: { in: [privateExerciseA.id, privateExerciseB.id, globalExercise.id, privateExerciseIndividual.id] } },
+  });
   await prisma.workoutSession.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
   await prisma.workout.deleteMany({ where: { id: { in: [workoutA.id, workoutB.id] } } });
   await prisma.planAssignment.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
@@ -86,7 +100,7 @@ afterAll(async () => {
   await prisma.assessment.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
   await prisma.studentCharge.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
   await prisma.student.deleteMany({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
-  await prisma.tenant.deleteMany({ where: { id: { in: [tenantA.id, tenantB.id] } } });
+  await prisma.tenant.deleteMany({ where: { id: { in: [tenantA.id, tenantB.id, tenantIndividual.id] } } });
   await prisma.user.deleteMany({
     where: { email: { contains: run } },
   });
@@ -312,6 +326,50 @@ describe("imutabilidade de tenantId em exercícios já referenciados", () => {
 
     await prisma.workoutExercise.delete({ where: { id: link.id } });
     await prisma.exercise.delete({ where: { id: exercise.id } });
+  });
+});
+
+// `Tenant.type` (FIT-100) é só um rótulo descritivo — nenhuma constraint,
+// trigger ou consulta de isolamento distingue PERSONAL de INDIVIDUAL, e é
+// exatamente isso que esta suíte prova: as mesmas garantias físicas que já
+// protegiam dois tenants PERSONAL entre si (suítes acima) valem igual para
+// um tenant INDIVIDUAL contra um PERSONAL.
+describe("isolamento entre tenant INDIVIDUAL e tenant PERSONAL (FIT-100)", () => {
+  it("consulta escopada pelo tenant PERSONAL nunca retorna exercício privado do tenant INDIVIDUAL", async () => {
+    const exercisesOfA = await prisma.exercise.findMany({ where: { tenantId: tenantA.id } });
+
+    expect(exercisesOfA.map((e) => e.id)).not.toContain(privateExerciseIndividual.id);
+  });
+
+  it("rejeita item de treino do tenant PERSONAL usando exercício privado do tenant INDIVIDUAL", async () => {
+    await expect(
+      prisma.workoutExercise.create({
+        data: { tenantId: tenantA.id, workoutId: workoutA.id, exerciseId: privateExerciseIndividual.id, position: 1 },
+      })
+    ).rejects.toThrow();
+  });
+
+  it("rejeita transferir para o tenant PERSONAL um exercício privado do tenant INDIVIDUAL já referenciado", async () => {
+    const trainingPlanIndividual = await prisma.trainingPlan.create({
+      data: { tenantId: tenantIndividual.id, name: `Plano de teste individual ${run}` },
+    });
+    const workoutIndividual = await prisma.workout.create({
+      data: { tenantId: tenantIndividual.id, trainingPlanId: trainingPlanIndividual.id, name: "Treino individual", position: 1 },
+    });
+    const link = await prisma.workoutExercise.create({
+      data: { tenantId: tenantIndividual.id, workoutId: workoutIndividual.id, exerciseId: privateExerciseIndividual.id, position: 1 },
+    });
+
+    await expect(
+      prisma.exercise.update({ where: { id: privateExerciseIndividual.id }, data: { tenantId: tenantA.id } })
+    ).rejects.toThrow();
+
+    const unchanged = await prisma.exercise.findUniqueOrThrow({ where: { id: privateExerciseIndividual.id } });
+    expect(unchanged.tenantId).toBe(tenantIndividual.id);
+
+    await prisma.workoutExercise.delete({ where: { id: link.id } });
+    await prisma.workout.delete({ where: { id: workoutIndividual.id } });
+    await prisma.trainingPlan.delete({ where: { id: trainingPlanIndividual.id } });
   });
 });
 

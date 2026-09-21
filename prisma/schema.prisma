@@ -95,6 +95,11 @@ enum SaasSubscriptionStatus {
 enum UserRole {
   PERSONAL
   ALUNO
+  /// FIT-100 (EPIC-13): dono de um workspace `INDIVIDUAL` (FitOS Livre) —
+  /// treina sozinho, sem personal. Nunca `ALUNO`, mesmo depois de encerrar
+  /// um vínculo com um personal (FIT-106) — são papéis diferentes, ver
+  /// `05_TRANSICAO_PERSONAL_PARA_LIVRE.md` do pacote pós-MVP.
+  INDIVIDUAL
 }
 
 /// Identidade autenticável. A partir da FIT-009, User também é a tabela de
@@ -184,13 +189,27 @@ model Verification {
   @@map("verifications")
 }
 
-/// Unidade de isolamento multi-tenant: 1 personal trainer = 1 tenant.
-/// `ownerId` é único, então cada User é dono de no máximo 1 Tenant.
+/// Tipo de workspace (FIT-100, EPIC-13). `PERSONAL` é o único tipo que
+/// existia até esta História — todo `Tenant` já criado permanece
+/// `PERSONAL` pelo `@default`, migration puramente aditiva, nenhuma linha
+/// existente muda de sentido. `INDIVIDUAL` é o workspace do FitOS Livre:
+/// administrado pelo próprio praticante, sem carteira de alunos.
+enum TenantType {
+  PERSONAL
+  INDIVIDUAL
+}
+
+/// Unidade de isolamento multi-tenant. Até a FIT-100, "1 personal trainer =
+/// 1 tenant" (`MODELO-MULTITENANT.md`); a partir daqui, um `Tenant` também
+/// pode ser `INDIVIDUAL` (FitOS Livre) — mesma unidade de isolamento, dono
+/// e nome, mas sem alunos/carteira/financeiro. Nenhuma regra de isolamento
+/// muda: continua sendo `tenantId` derivado da sessão, nunca do cliente.
 model Tenant {
-  id        String   @id @default(cuid())
-  ownerId   String   @unique
+  id        String     @id @default(cuid())
+  ownerId   String     @unique
   name      String
-  createdAt DateTime @default(now())
+  type      TenantType @default(PERSONAL)
+  createdAt DateTime   @default(now())
 
   owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students              Student[]
