@@ -37,6 +37,8 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `04-backlog/EPIC-04-CADASTRO-RELACIONAMENTO-ALUNOS.md`
 - `04-backlog/EPIC-05-EXERCICIOS-E-CATALOGO.md`
 - `04-backlog/EPIC-06-TREINOS-E-PLANOS.md`
+- `04-backlog/EPIC-12-MONETIZACAO.md`
+- `04-backlog/EPIC-13-FITOS-LIVRE.md`
 
 ## 05 — Sprints
 

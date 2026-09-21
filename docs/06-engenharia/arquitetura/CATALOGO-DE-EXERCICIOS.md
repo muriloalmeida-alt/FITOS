@@ -49,7 +49,7 @@ A Exercises API não retorna um identificador estável. `buildExternalId(dto)` c
 
 ### Comando administrativo
 
-`scripts/import-exercicios.ts` (`npm run import:exercises`) — execução manual apenas, nunca automática (sem gatilho no build, seed, deploy ou acesso à página). Protegido pela ausência de credencial: sem `API_NINJAS_API_KEY`, encerra imediatamente com mensagem explícita, sem nenhuma chamada de rede nem escrita no banco (comprovado: `npm run import:exercises` sem a variável configurada). O script roda com `NODE_OPTIONS=--conditions=react-server` para resolver o marcador `server-only` (usado por `client.ts`, FIT-020) para seu stub vazio fora do bundler do Next.js — mesma resolução que o Next.js aplica em Server Components, replicada aqui para uma execução Node pura.
+`scripts/import-exercicios.ts` (à época desta Sprint, `npm run import:exercises`; renomeado para `npm run catalog:import-api-ninjas` e estendido com trava/retomada/dry-run pela IMP-EX-001 do pacote pós-MVP — ver `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md` — mesmo arquivo evoluído, não duplicado) — execução manual apenas, nunca automática (sem gatilho no build, seed, deploy ou acesso à página). Protegido pela ausência de credencial: sem `API_NINJAS_API_KEY`, encerra imediatamente com mensagem explícita, sem nenhuma chamada de rede nem escrita no banco. O script roda com `NODE_OPTIONS=--conditions=react-server` para resolver o marcador `server-only` (usado por `client.ts`, FIT-020) para seu stub vazio fora do bundler do Next.js — mesma resolução que o Next.js aplica em Server Components, replicada aqui para uma execução Node pura.
 
 ### Importação real — situação declarada
 
