@@ -69,6 +69,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/GESTAO-DE-ALUNOS.md`
 - `06-engenharia/arquitetura/CONVITE-E-ATIVACAO.md`
 - `06-engenharia/arquitetura/ASSINATURA-SAAS.md`
+- `06-engenharia/arquitetura/PLANOS-COMERCIAIS.md`
 - `06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`
 - `06-engenharia/arquitetura/CATALOGO-DE-EXERCICIOS.md`
 - `06-engenharia/arquitetura/TREINOS-E-PLANOS.md`

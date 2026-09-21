@@ -824,6 +824,49 @@ model Payment {
   @@map("payments")
 }
 
+enum PlanBillingCycle {
+  MENSAL
+  ANUAL
+}
+
+/// Oferta comercial versionada da assinatura SaaS (FIT-090, EPIC-12).
+/// `code` identifica o produto ("essencial"/"profissional") de forma
+/// estável entre versões; `version` incrementa a cada republicação.
+/// Nenhuma versão já publicada é editável em `priceCents`/`studentLimit`/
+/// `trialDays`/`discountPercent` — mudar preço/limite sempre cria uma nova
+/// versão (`publishPlanVersion`, `src/modules/billing/plans.ts`), nunca um
+/// `update` sobre uma linha existente. Isso é o que garante "preservação
+/// das condições já contratadas": quando `SaasSubscription` (FIT-092)
+/// passar a referenciar `CommercialPlan.id`, essa referência aponta para
+/// uma versão imutável para sempre, mesmo que uma versão nova seja
+/// publicada depois.
+///
+/// Índice único parcial `WHERE active = true` (adicionado à mão na
+/// migration, mesmo padrão já usado para `CatalogImportRun` — não
+/// representável em `schema.prisma`) garante no máximo uma versão vendável
+/// por `(code, billingCycle)` ao mesmo tempo: "plano inativo não é
+/// vendável" nunca depende só da consulta de listagem filtrar `active`,
+/// tem garantia física.
+model CommercialPlan {
+  id              String           @id @default(cuid())
+  code            String
+  version         Int              @default(1)
+  name            String
+  billingCycle    PlanBillingCycle
+  priceCents      Int
+  currency        String           @default("BRL")
+  studentLimit    Int
+  trialDays       Int              @default(0)
+  discountPercent Int?
+  active          Boolean          @default(true)
+  effectiveFrom   DateTime         @default(now())
+  effectiveTo     DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@unique([code, billingCycle, version])
+  @@map("commercial_plans")
+}
+
 /// Assinatura SaaS do FitOS contratada pelo personal (tenant). `tenantId`
 /// único: no máximo 1 assinatura por tenant. Estruturalmente separada de
 /// StudentCharge — nenhuma relação entre os dois modelos.
