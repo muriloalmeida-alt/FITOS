@@ -5,7 +5,8 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// "Arquitetura — aluno"). "Início"/"Hoje" é real desde a FIT-012; "Alunos"
 /// passa a ser real na FIT-013 (cadastro e listagem); "Exercícios" passa a
 /// ser real na FIT-023 (catálogo unificado); "Treinos" passa a ser real na
-/// FIT-030 (modelos de treino — planos semanais chegam na FIT-032). Os
+/// FIT-030 (modelos de treino — planos semanais chegam na FIT-032);
+/// "Financeiro" passa a ser real na FIT-050 (cadastrar cobrança). Os
 /// demais destinos continuam como rótulo "Em breve" — nenhuma tela ou rota
 /// fictícia foi criada para eles.
 ///
@@ -19,16 +20,17 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "treinos", label: "Treinos", href: "/painel/treinos" },
-  { key: "financeiro", label: "Financeiro", comingSoon: true },
+  { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
-/// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout). Treino e
-/// Progresso continuam "Em breve" — o FitOS não promete treino, carga,
-/// evolução, avaliação, agenda ou mensagens nesta Sprint.
+/// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"
+/// passa a ser real na FIT-033 (visão somente leitura do plano atribuído);
+/// "Progresso" passa a ser real na FIT-042 (própria evolução, somente
+/// leitura). Agenda e Mensagens continuam fora do MVP.
 export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
-  { key: "treino", label: "Treino", comingSoon: true },
-  { key: "progresso", label: "Progresso", comingSoon: true },
+  { key: "treino", label: "Treino", href: "/painel/treino" },
+  { key: "progresso", label: "Progresso", href: "/painel/progresso" },
   { key: "perfil", label: "Perfil", href: "/painel/perfil" },
 ];

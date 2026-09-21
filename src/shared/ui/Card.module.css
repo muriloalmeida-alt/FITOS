@@ -1,6 +1,6 @@
 .card {
   background-color: var(--fitos-color-surface-container);
-  border: 1px solid var(--fitos-color-outline-variant);
+  border: 1px solid var(--fitos-color-outline);
   border-radius: var(--fitos-shape-medium);
   padding: var(--fitos-space-6);
 }

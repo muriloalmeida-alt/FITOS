@@ -36,19 +36,25 @@ Objetivo: criar, reutilizar e atribuir prescrições versionadas.
 
 Objetivo: permitir consulta e registro da execução.
 
-- FIT-002, FIT-040, FIT-041 e FIT-042.
+- Implementado pela EPIC-07 — Experiência do Aluno (#60, SPRINT-08) — FIT-040, FIT-041 e FIT-042 (ver `docs/04-backlog/EPIC-07-EXPERIENCIA-DO-ALUNO.md`). `FIT-002` (também listado no backlog original desta Fase) já foi implementado e superado pela FIT-009/010/011/012 (EPIC-03) — não reutilizado, ver nota em `docs/04-backlog/BACKLOG-MVP.md`.
 
 ## Fase 5 — Gestão financeira
 
 Objetivo: acompanhar cobranças, pagamentos e inadimplência.
 
-- FIT-050, FIT-051, FIT-052 e FIT-053.
+- FIT-050, FIT-051, FIT-052 e FIT-053 — EPIC-08 — Financeiro (#64, SPRINT-09, `docs/04-backlog/EPIC-08-FINANCEIRO.md`), aberta nesta rodada.
 
 ## Fase 6 — Consolidação operacional
 
 Objetivo: reunir alertas e indicadores úteis ao trabalho diário do personal.
 
-- FIT-060.
+- FIT-060 — EPIC-09 — Painel Operacional (#65, SPRINT-10, `docs/04-backlog/EPIC-09-PAINEL-OPERACIONAL.md`), aberta nesta rodada.
+
+## Fase 7 — Consolidação visual e release
+
+Objetivo: varredura final de acessibilidade (WCAG 2.2 AA) e consistência visual sobre tudo que as Fases 1-6 já entregaram, sem nenhuma funcionalidade de produto nova. Última Fase do MVP.
+
+- FIT-070 — EPIC-10 — Consolidação Visual e Release (#71, SPRINT-11, `docs/04-backlog/EPIC-10-CONSOLIDACAO-VISUAL-RELEASE.md`), aberta nesta rodada.
 
 ## Fora do MVP
 

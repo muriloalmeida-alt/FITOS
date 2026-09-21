@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+
+jobs:
+  gate:
+    name: Gate (typecheck, lint, testes com PostgreSQL real, build, audit)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fitos_ci
+          POSTGRES_PASSWORD: fitos_ci_only
+          POSTGRES_DB: fitos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fitos_ci -d fitos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: "postgresql://fitos_ci:fitos_ci_only@localhost:5432/fitos_test"
+      BETTER_AUTH_SECRET: "chave-de-teste-somente-para-ci-nao-usar-em-outro-ambiente"
+      BETTER_AUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_APP_NAME: "FitOS"
+      NEXT_PUBLIC_APP_ENV: "development"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar client Prisma
+        run: npx prisma generate
+
+      - name: Aplicar migrations no PostgreSQL do job (fitos_test)
+        run: npx prisma migrate deploy
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes (unitários + integração real contra PostgreSQL)
+        run: npm run test
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Auditoria de dependências (produção)
+        run: npm audit --production

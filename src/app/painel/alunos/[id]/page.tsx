@@ -6,11 +6,19 @@ import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getStudentForTenant } from "@/modules/students/students";
 import { daysUntil, deriveAccessStatus, getLatestInvitationForStudent } from "@/modules/students/invitations";
+import {
+  getActivePlanAssignmentForStudent,
+  listEndedPlanAssignmentsForStudent,
+  listTrainingPlansForTenant,
+} from "@/modules/workouts/workouts";
+import { listAssessmentsForStudent } from "@/modules/evolution/assessments";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { EditarAlunoForm } from "./EditarAlunoForm";
 import { ReativarAlunoButton } from "./ReativarAlunoButton";
 import { ConviteSection } from "./ConviteSection";
+import { PlanoDoAlunoSection } from "./PlanoDoAlunoSection";
+import { AvaliacoesSection } from "./AvaliacoesSection";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -47,6 +55,13 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
   const diasRestantes =
     accessStatus === "CONVITE_PENDENTE" && latestInvitation ? daysUntil(latestInvitation.expiresAt) : null;
 
+  const [activeAssignment, endedAssignments, availablePlans, assessments] = await Promise.all([
+    getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listEndedPlanAssignmentsForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listTrainingPlansForTenant({ tenantId: ctx.tenantId }),
+    listAssessmentsForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+  ]);
+
   return (
     <AppShell title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Link href="/painel/alunos" className={styles.backLink}>
@@ -74,13 +89,38 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
         </Card>
       ) : null}
 
+      <Card title="Programa de treino">
+        <PlanoDoAlunoSection
+          studentId={student.id}
+          activeAssignment={
+            activeAssignment
+              ? { planName: activeAssignment.trainingPlan.name, assignedAt: activeAssignment.assignedAt.toISOString() }
+              : null
+          }
+          hasEndedAssignments={endedAssignments.length > 0}
+          availablePlans={availablePlans.map((plan) => ({ id: plan.id, name: plan.name }))}
+        />
+      </Card>
+
+      <Card title="Avaliações e evolução">
+        <AvaliacoesSection
+          studentId={student.id}
+          assessments={assessments.map((assessment) => ({
+            id: assessment.id,
+            recordedAt: assessment.recordedAt.toISOString(),
+            weightKg: assessment.weightGrams !== null ? assessment.weightGrams / 1000 : null,
+            bodyFatPercent: assessment.bodyFatTenthPercent !== null ? assessment.bodyFatTenthPercent / 10 : null,
+            notes: assessment.notes,
+            measurements: assessment.measurements.map((m) => ({ type: m.type, valueCm: m.valueMillimeters / 10 })),
+          }))}
+        />
+      </Card>
+
       <Card title="Ciclo de vida">
         {student.status === "ATIVO" ? (
-          <Link href={`/painel/alunos/${student.id}/inativar`}>
-            <Button type="button" variant="outlined">
-              Inativar aluno
-            </Button>
-          </Link>
+          <Button href={`/painel/alunos/${student.id}/inativar`} variant="outlined">
+            Inativar aluno
+          </Button>
         ) : (
           <ReativarAlunoButton studentId={student.id} />
         )}

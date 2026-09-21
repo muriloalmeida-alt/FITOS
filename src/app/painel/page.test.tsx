@@ -6,6 +6,11 @@ const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
+const getTodayScheduleForStudent = vi.fn();
+const listWorkoutsForTenant = vi.fn();
+const getInProgressSessionForStudent = vi.fn();
+const listStudents = vi.fn();
+const getFinancialSummary = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -27,6 +32,32 @@ vi.mock("@/shared/db/prisma", () => ({
     },
   },
 }));
+
+vi.mock("@/modules/workouts/workouts", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
+  return {
+    ...actual,
+    getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args),
+    listWorkoutsForTenant: (...args: unknown[]) => listWorkoutsForTenant(...args),
+  };
+});
+
+vi.mock("@/modules/execution/sessions", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
+  return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
+});
+
+vi.mock("@/modules/students/students", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/students/students")>("@/modules/students/students");
+  return { ...actual, listStudents: (...args: unknown[]) => listStudents(...args) };
+});
+
+vi.mock("@/modules/student-finance/charges", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/student-finance/charges")>(
+    "@/modules/student-finance/charges"
+  );
+  return { ...actual, getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args) };
+});
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
@@ -61,6 +92,9 @@ describe("PainelPage (FIT-012)", () => {
       studentId: null,
     });
     findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
+    listStudents.mockResolvedValue({ items: [], total: 3, page: 1, pageSize: 1 });
+    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }]);
+    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 0 });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
@@ -70,6 +104,33 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByText("Configurações")).toBeInTheDocument();
     expect(screen.queryByText("Sua conta")).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
+  });
+
+  it("personal vê alunos ativos, treinos ativos e o atrasado do mês atual, nunca dados fictícios", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u1",
+      role: "PERSONAL",
+      tenantId: "t1",
+      studentId: null,
+    });
+    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
+    listStudents.mockResolvedValue({ items: [], total: 5, page: 1, pageSize: 1 });
+    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }, { id: "w3" }]);
+    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 3000 });
+    const { default: PainelPage } = await import("./page");
+
+    render(await PainelPage());
+
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
+    expect(listStudents).toHaveBeenCalledWith({ tenantId: "t1", status: "ATIVO", pageSize: 1 });
+    expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t1" });
+    const call = getFinancialSummary.mock.calls[0]![0];
+    expect(call.tenantId).toBe("t1");
+    expect(call.referenceMonth.getUTCDate()).toBe(1);
   });
 
   it("aluno autenticado e vinculado vê o shell de aluno, com o vínculo real", async () => {
@@ -86,6 +147,8 @@ describe("PainelPage (FIT-012)", () => {
       displayName: "Pedro",
       tenant: { name: "Espaço de Joana", owner: { name: "Joana" } },
     });
+    getTodayScheduleForStudent.mockResolvedValue({ state: "SEM_PLANO" });
+    getInProgressSessionForStudent.mockResolvedValue(null);
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
@@ -95,6 +158,8 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
     expect(findUniqueStudent).not.toHaveBeenCalled();
+    expect(getTodayScheduleForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1" });
+    expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1" });
   });
 
   it("aluno autenticado sem vínculo (nunca teve Student) vê a tela de sem permissão, sem shell", async () => {

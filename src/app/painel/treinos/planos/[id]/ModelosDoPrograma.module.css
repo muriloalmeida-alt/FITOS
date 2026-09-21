@@ -1,0 +1,120 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.empty {
+  margin: 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 14px;
+}
+
+.link {
+  color: var(--fitos-color-primary);
+  font-weight: 650;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  padding: var(--fitos-space-3);
+  border-radius: var(--fitos-shape-medium);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workoutName {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  text-decoration: none;
+}
+
+.days {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-2);
+}
+
+.moveButton {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+  font-size: 16px;
+}
+
+.moveButton:disabled {
+  color: var(--fitos-color-outline);
+  border-color: var(--fitos-color-outline-variant);
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  padding-top: var(--fitos-space-3);
+  border-top: 1px solid var(--fitos-color-outline-variant);
+}
+
+.addFormTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.selectLabel {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.select {
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  min-height: 48px;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+@media (min-width: 600px) {
+  .row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

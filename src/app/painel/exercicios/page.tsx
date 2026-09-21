@@ -67,11 +67,9 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
         <p className={styles.subtitle}>
           {result.total} {result.total === 1 ? "exercício" : "exercícios"} no catálogo
         </p>
-        <Link href="/painel/exercicios/novo">
-          <Button type="button" variant="filled">
-            + Cadastrar exercício
-          </Button>
-        </Link>
+        <Button href="/painel/exercicios/novo" variant="filled">
+          + Cadastrar exercício
+        </Button>
       </div>
 
       <form method="GET" className={styles.filters} aria-label="Buscar e filtrar exercícios">

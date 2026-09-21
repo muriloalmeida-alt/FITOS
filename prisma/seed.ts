@@ -46,13 +46,17 @@ async function main() {
       {
         tenantId: tenantA.id,
         studentId: studentA.id,
+        description: "Mensalidade",
         amountCents: 15000,
+        referenceMonth: new Date("2026-10-01"),
         dueDate: new Date("2026-10-05"),
       },
       {
         tenantId: tenantB.id,
         studentId: studentB.id,
+        description: "Mensalidade",
         amountCents: 18000,
+        referenceMonth: new Date("2026-10-01"),
         dueDate: new Date("2026-10-10"),
       },
     ],

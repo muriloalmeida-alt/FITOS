@@ -1,0 +1,79 @@
+.filterForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--fitos-space-2);
+  margin-bottom: var(--fitos-space-4);
+}
+
+.filterLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+  margin-bottom: var(--fitos-space-1);
+}
+
+.filterInput {
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  min-height: 48px;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--fitos-space-3);
+  margin: 0;
+}
+
+.summaryTile {
+  padding: var(--fitos-space-3);
+  border-radius: var(--fitos-shape-medium);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.summaryTile dt {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.summaryTile dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--fitos-color-on-surface);
+}
+
+.summaryTile[data-tone="positive"] {
+  background-color: var(--fitos-color-tertiary-container);
+  border-color: transparent;
+}
+
+.summaryTile[data-tone="positive"] dt,
+.summaryTile[data-tone="positive"] dd {
+  color: var(--fitos-color-on-tertiary-container);
+}
+
+.summaryTile[data-tone="negative"] {
+  background-color: var(--fitos-color-error);
+  border-color: transparent;
+}
+
+.summaryTile[data-tone="negative"] dt,
+.summaryTile[data-tone="negative"] dd {
+  color: var(--fitos-color-on-error);
+}
+
+@media (min-width: 600px) {
+  .summaryGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

@@ -53,6 +53,7 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 
 - `06-engenharia/PROMPT-CLAUDE-CODE.md`
 - `06-engenharia/EXECUCAO-LOCAL.md`
+- `06-engenharia/DIARIO-DE-EXECUCAO-MVP.md`
 - `06-engenharia/arquitetura/README.md`
 - `06-engenharia/arquitetura/VISAO-ARQUITETURAL.md`
 - `06-engenharia/arquitetura/MODELO-MULTITENANT.md`
