@@ -48,6 +48,6 @@
     "deepmerge-ts": "8.0.2"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "NODE_OPTIONS=--conditions=react-server tsx prisma/seed.ts"
   }
 }

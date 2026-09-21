@@ -239,3 +239,17 @@ Execução real da carga (fora do `--dry-run`) permanece pendente — depende do
 Depois do PR #92 (retry-com-backoff no dry-run), o Product Owner testou de novo e reportou "o mesmo erro" — ou seja, mesmo com 3 tentativas por consulta, as falhas continuaram. Como `runCatalogImportDryRun` só devolvia uma contagem agregada (`failedSearches`), sem nenhuma indicação da causa, e esta sessão não tem acesso ao log do Railway, não havia como diferenciar chave inválida (401), plano sem permissão (403) e rate limit (429) só pelo número.
 
 Corrigido: `CatalogImportDryRunReport` ganhou `errorKinds` — contagem por `ApiNinjasError.kind` (`NAO_AUTORIZADO`, `PROIBIDO`, `LIMITE_EXCEDIDO`, `ERRO_SERVIDOR`, `TIMEOUT`, `RESPOSTA_INVALIDA`, ou `DESCONHECIDO` para erro fora do client da API Ninjas) — nenhum campo novo inclui a chave nem o corpo bruto da resposta, mesma garantia já existente em `ApiNinjasError`. Testes novos cobrindo a classificação. Suíte completa: 628/628, typecheck/lint/build limpos. Próximo passo: pedir o JSON de resposta do próximo teste — agora ele deve dizer exatamente qual é o problema.
+
+## Início do EPIC-12 (Monetização): FIT-090 — planos comerciais
+
+Murilo autorizou seguir com o EPIC-12 e o EPIC-13 até o fim, história por história, sem pausar para confirmação a cada etapa — mantendo de pé o gate de merge do pacote (todo PR continua `NÃO MERGEAR` até confirmação) e o bloqueio real da FIT-091 (prova técnica do Asaas exige credencial de sandbox real, não pode ser mockada).
+
+Issue [FIT-090] criada (#94, sub-issue de EPIC-12 #87). Implementado:
+
+- `CommercialPlan` (`prisma/migrations/20260921224616_add_commercial_plan`): catálogo de planos comerciais versionado, sem relação com tenant. Índice único parcial `WHERE active = true` por `(code, billingCycle)` — mesmo padrão de `catalog_import_runs` — garante fisicamente no máximo uma versão vendável por par ao mesmo tempo.
+- `src/modules/saas-subscription/plans.ts`: `publishPlanVersion` (única forma de escrita — nunca edita uma versão existente, sempre desativa a anterior e cria a próxima), `listSellablePlans`/`getSellablePlan` (só `active: true`), `getPlanVersionById` (qualquer versão, para referência histórica futura da FIT-092).
+- Seed sintético (`prisma/seed.ts`) publica a hipótese comercial do pacote (Essencial/Profissional, mensal/anual) — sinalizado explicitamente como hipótese, não preço definitivo. Precisou adicionar `NODE_OPTIONS=--conditions=react-server` ao script `db:seed` (mesmo ajuste já feito para `catalog:import-api-ninjas`), já que `plans.ts` importa `server-only`.
+- Testes: `plans.integration.test.ts` (12 testes) — versionamento, republicação sem editar a anterior, índice único parcial testado diretamente (duas linhas `active: true` para o mesmo par são rejeitadas), validação de entrada, listagem só de versões vendáveis. Suíte completa: 640/640, typecheck/lint/build limpos.
+- Docs: `PLANOS-COMERCIAIS.md` (novo), `ASSINATURA-SAAS.md` e README do módulo atualizados.
+
+Nenhuma UI nem integração com Asaas nesta história — chegam na FIT-091/092.

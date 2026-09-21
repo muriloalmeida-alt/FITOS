@@ -9,6 +9,10 @@
 
 Entidades, estados e webhooks da assinatura não podem alterar diretamente `StudentCharge`.
 
+## Planos comerciais (FIT-090)
+
+Catálogo de ofertas versionado — ver `PLANOS-COMERCIAIS.md` para o detalhe completo. `SaasSubscription` ainda não referencia `CommercialPlan` nesta história; a FK entra na FIT-092.
+
 ## Candidato
 
 Asaas é candidato primário; Mercado Pago é fallback. A aprovação depende de prova em sandbox.

@@ -4,10 +4,47 @@
  * entre tenants localmente.
  */
 import { PrismaClient } from "@prisma/client";
+import { publishPlanVersion } from "../src/modules/saas-subscription/plans";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  // Hipótese comercial do pacote pós-MVP (01_FASE_2_1_MONETIZACAO.md,
+  // FIT-090) — não é preço definitivo, só dado sintético para exercitar o
+  // catálogo de planos antes da FIT-092 (checkout).
+  await publishPlanVersion(
+    { code: "essencial", name: "Essencial", billingCycle: "MENSAL", priceCents: 3990, studentLimit: 15, trialDays: 14 },
+    prisma
+  );
+  await publishPlanVersion(
+    {
+      code: "essencial",
+      name: "Essencial (anual)",
+      billingCycle: "ANUAL",
+      priceCents: 3990 * 12,
+      studentLimit: 15,
+      trialDays: 14,
+      discountPercent: 10,
+    },
+    prisma
+  );
+  await publishPlanVersion(
+    { code: "profissional", name: "Profissional", billingCycle: "MENSAL", priceCents: 7990, studentLimit: 50, trialDays: 14 },
+    prisma
+  );
+  await publishPlanVersion(
+    {
+      code: "profissional",
+      name: "Profissional (anual)",
+      billingCycle: "ANUAL",
+      priceCents: 7990 * 12,
+      studentLimit: 50,
+      trialDays: 14,
+      discountPercent: 10,
+    },
+    prisma
+  );
+
   const tenantAOwner = await prisma.user.create({
     data: { email: "personal-a@example.test", name: "Personal Fictício A" },
   });
