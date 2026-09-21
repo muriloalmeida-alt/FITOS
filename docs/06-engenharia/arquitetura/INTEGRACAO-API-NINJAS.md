@@ -10,7 +10,7 @@ A versão original deste documento (Fase 0) descrevia um fluxo de consulta "sob 
 2. a importação roda uma única vez por ambiente (IMP-EX-001) e grava no catálogo local (`Exercise`, `origin: API_NINJAS`, `tenantId: null`);
 3. toda consulta normal (Personal, Aluno, futuramente FitOS Livre) lê exclusivamente do PostgreSQL — indisponibilidade, mudança de preço ou encerramento da API Ninjas não afeta o uso normal;
 4. exercício selecionado referencia o ID interno (`Exercise.id`); nenhum treino depende da API externa em execução;
-5. não existe cron, sincronização periódica, consulta sob demanda ou endpoint público que dispare a importação — reimportação só ocorre por reexecução manual do comando, e uma segunda execução após sucesso (`COMPLETED`) é recusada por padrão (ver seção abaixo).
+5. não existe cron, sincronização periódica ou consulta sob demanda; a importação é sempre acionada manualmente — pelo comando administrativo (padrão) ou, por uma exceção de governança registrada e datada, por uma rota HTTP interna e protegida (ver seção "Exceção — rota HTTP interna" abaixo) — nunca automaticamente. Uma segunda execução após sucesso (`COMPLETED`) é recusada por padrão em ambos os casos (ver seção abaixo).
 
 ## IMP-EX-001 — carga única do catálogo
 
@@ -22,6 +22,25 @@ Especificação completa: pacote `FitOS_Pacote_Pos_MVP_Fases_2_1_Monetizacao_2_2
 - Reimportação após `COMPLETED`: recusada por padrão; exige `--force-reimport --justificativa=... --autorizado-por=...` (critério 5 do IMP-EX-001 — autorização de Produto e justificativa auditada, gravadas em `CatalogImportRun.forceReimportNote`).
 - `--dry-run`: valida credencial, contrato e volume com chamadas reais de leitura à API Ninjas, mas nunca grava no banco nem cria uma linha em `CatalogImportRun`.
 - Produção exige `--autorizar-producao` além de `--autorizado-por` — nenhuma execução em produção só com a variável de ambiente configurada.
+
+## Exceção — rota HTTP interna (`POST /api/admin/catalog-import`)
+
+O IMP-EX-001 (pacote pós-MVP, seção 8) proíbe explicitamente "manter endpoint público para disparar a importação". Esta seção registra uma exceção pontual a essa regra, decidida por Murilo em 21/09/2026, porque o acesso SSH/CLI ao Railway não funcionou no momento em que a carga real precisava ser executada.
+
+**Decisão**: criar `src/app/api/admin/catalog-import/route.ts`, reaproveitando a mesma orquestração do comando administrativo (`src/modules/exercises/catalogImportOrchestrator.ts` — extraída nesta rodada para ser a única implementação usada pelas duas entradas, comando e rota, nunca duplicada).
+
+**Guarda-corpos, para reduzir o risco aceito**:
+
+- **Não é pública de fato**: sem a variável `CATALOG_IMPORT_TRIGGER_SECRET` configurada, a rota responde 404 em qualquer método — comporta-se como se não existisse. Com a variável configurada, ainda responde 404 para qualquer requisição sem o header `X-Import-Trigger-Secret` correto (comparação em tempo constante, `src/shared/lib/secretCompare.ts` — nunca revela se a variável está ausente ou se o segredo está errado, nem por status nem por tempo de resposta).
+- **Segredo próprio, nunca reaproveitado**: `CATALOG_IMPORT_TRIGGER_SECRET` é uma variável de ambiente separada de `API_NINJAS_API_KEY`/`BETTER_AUTH_SECRET` — nunca o mesmo valor para dois propósitos.
+- **Só `POST`**: `GET`/`PUT`/`PATCH`/`DELETE` respondem 404, não 405 — não confirmam que a rota existe para quem não tem o segredo.
+- **Nunca linkada em nenhuma navegação/UI da aplicação** — só é alcançável por quem souber a URL e tiver o segredo.
+- **Mesma validação e mesma trava do comando administrativo**: `parseCatalogImportRequest` (`src/modules/exercises/catalogImportRequest.ts`) e o ciclo de vida de `CatalogImportRun` (índices únicos parciais) são exatamente os mesmos — a rota não abre um caminho mais permissivo que o comando, só um transporte diferente.
+- **Nenhum segredo na resposta**: erros inesperados retornam `{ ok: false, error: "ERRO_INTERNO" }` genérico (nunca a mensagem original) — testado explicitamente (`route.test.ts`).
+
+**Risco aceito, não eliminado**: quem tiver o segredo pode acionar a carga real (gastando as chamadas do plano contratado da API Ninjas) sem precisar de sessão autenticada na aplicação — por isso o segredo deve ser tratado com o mesmo cuidado de uma credencial de produção, nunca colado em conversa/chat, e gerado por canal seguro.
+
+**Plano de retirada**: remover a rota (ou, no mínimo, desconfigurar `CATALOG_IMPORT_TRIGGER_SECRET` no Railway) assim que a carga real for concluída e confirmada, ou assim que o acesso SSH/CLI ao Railway for restabelecido — o que ocorrer primeiro. Esta rota não deve ser reaproveitada para nenhum outro job futuro sem uma nova decisão de Produto registrada.
 
 ## Controles
 

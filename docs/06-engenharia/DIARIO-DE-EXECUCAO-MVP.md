@@ -193,3 +193,20 @@ Pré-requisito operacional executado primeiro, por decisão de Murilo. A infraes
 - Docs atualizadas: `INTEGRACAO-API-NINJAS.md` (corrigido o "fluxo" desatualizado — a busca do usuário nunca chamou a API ao vivo, só o job administrativo; reescrito para refletir o código real desde a FIT-023), `ADR-004` (nota de atualização), `CATALOGO-DE-EXERCICIOS.md`/`exercises/README.md` (nome novo do comando).
 
 PR ainda não aberto nesta entrada — próximo passo: formalizar a Issue prerequisito e o Épico no GitHub, depois abrir o PR com o status `PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR`.
+
+## Fechamento do IMP-EX-001: Issues #87/#88, PR #89 mergeado
+
+EPIC-12 (#87) e IMP-EX-001 (#88, sub-issue de #87) criados e vinculados no GitHub. PR #89 aberto com o status `PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR`, CI verde (597/597 testes) e sem conflito de merge. Murilo confirmou que a revisão externa (GPT/Codex) já havia sido feita fora desta conversa e autorizou o merge — PR #89 mergeado (squash, `f64d46a`) na `main`.
+
+## Exceção de governança: rota HTTP interna para a carga do catálogo
+
+Ao tentar executar a carga real no Railway, o Product Owner reportou que o acesso SSH/CLI ao Railway não estava funcionando. O IMP-EX-001 (pacote pós-MVP) proíbe explicitamente "endpoint público para disparar a importação" — antes de implementar qualquer rota, essa restrição foi apresentada a Murilo junto com alternativas sem esse risco (`railway run` local, terminal em navegador do painel Railway). Murilo decidiu, de forma explícita e informada sobre o risco, seguir com a rota HTTP mesmo assim.
+
+Implementado como exceção registrada (detalhe completo em `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`, seção "Exceção — rota HTTP interna"):
+
+- `src/modules/exercises/catalogImportOrchestrator.ts` (novo): única implementação da orquestração da carga (antes só existia dentro do script) — usada pelo comando administrativo **e** pela rota HTTP, nunca duplicada.
+- `src/modules/exercises/catalogImportRequest.ts` (novo): validação compartilhada das mesmas regras (`environment`, `autorizadoPor`, `autorizarProducao`, `forceReimport`/`justificativa`) entre as duas entradas.
+- `src/app/api/admin/catalog-import/route.ts` (novo): `POST` autenticado por segredo próprio (`CATALOG_IMPORT_TRIGGER_SECRET`, header `X-Import-Trigger-Secret`, comparação em tempo constante) — sem a variável configurada, ou com o segredo errado, responde 404 em qualquer método (nunca 405/503, nunca revela se a rota existe). Nunca linkada em nenhuma UI.
+- `scripts/import-exercicios.ts` simplificado para usar os dois módulos novos (CLI ficou mais fino, sem lógica duplicada).
+- Testes novos: `catalogImportRequest.test.ts`, `catalogImportOrchestrator.integration.test.ts`, `route.test.ts` (404 sem segredo/com segredo errado/GET-PUT-PATCH-DELETE, 400 em validação, 409 em trava/segunda carga, 500 genérico sem vazar detalhe interno). Suíte completa: 617/617, typecheck/lint/build limpos. Smoke test manual contra servidor real (`npm run start`) confirmou os códigos de resposta esperados end-to-end.
+- Plano de retirada documentado: remover a rota/variável assim que a carga real for concluída e confirmada, ou assim que o SSH/CLI do Railway voltar a funcionar.
