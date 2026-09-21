@@ -33,6 +33,8 @@ describe("PersonalHome (FIT-060)", () => {
     expect(novoTreino).toHaveAttribute("href", "/painel/treinos/novo");
     const verFinanceiro = screen.getByRole("link", { name: "Ver financeiro" });
     expect(verFinanceiro).toHaveAttribute("href", "/painel/financeiro");
+
+    expect(screen.queryByText(/Comece cadastrando seu primeiro aluno/)).not.toBeInTheDocument();
   });
 
   it("exibe zero honesto quando não há nada atrasado, alunos ou treinos", () => {
@@ -50,5 +52,6 @@ describe("PersonalHome (FIT-060)", () => {
     expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
     expect(screen.getAllByText("0")).toHaveLength(2);
     expect(screen.queryByText("Seu espaço")).not.toBeInTheDocument();
+    expect(screen.getByText(/Comece cadastrando seu primeiro aluno/)).toBeInTheDocument();
   });
 });
