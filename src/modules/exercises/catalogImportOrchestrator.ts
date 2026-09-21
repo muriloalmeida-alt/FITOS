@@ -1,7 +1,7 @@
 import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { searchExercises } from "@/integrations/api-ninjas";
+import { ApiNinjasError, searchExercises } from "@/integrations/api-ninjas";
 import type { ExerciseDTO, SearchExercisesInput } from "@/integrations/api-ninjas";
 import { buildCatalogImportManifest, hashCatalogImportManifest } from "./catalogImportManifest";
 import { importGlobalExercises } from "./importExercises";
@@ -45,6 +45,15 @@ export interface CatalogImportDryRunReport {
   received: number;
   valid: number;
   failedSearches: number;
+  /// Contagem por `ApiNinjasError.kind` (ex.: `NAO_AUTORIZADO` = chave
+  /// rejeitada, `LIMITE_EXCEDIDO` = rate limit, `PROIBIDO` = sem permissão
+  /// no plano) — nenhum campo aqui inclui a chave nem o corpo bruto da
+  /// resposta (mesma garantia de `ApiNinjasError`), só a classificação já
+  /// existente do erro. Sem isso, `failedSearches` sozinho não permite
+  /// distinguir "chave errada" de "rate limit" de qualquer outra causa —
+  /// a única forma de diagnosticar seria acessar o log do Railway, que
+  /// esta sessão não alcança.
+  errorKinds: Record<string, number>;
 }
 
 /// `--dry-run`: valida credencial/contrato/volume com chamadas reais de
@@ -57,17 +66,20 @@ export async function runCatalogImportDryRun(): Promise<CatalogImportDryRunRepor
   let received = 0;
   let valid = 0;
   let failedSearches = 0;
+  const errorKinds: Record<string, number> = {};
   for (const query of manifest.queries) {
     try {
       const items = await searchWithBackoff(query, {});
       received += items.length;
       valid += items.filter((item) => Boolean(item.name)).length;
-    } catch {
+    } catch (error) {
       failedSearches += 1;
+      const kind = error instanceof ApiNinjasError ? error.kind : "DESCONHECIDO";
+      errorKinds[kind] = (errorKinds[kind] ?? 0) + 1;
     }
   }
 
-  return { manifestVersion: manifest.version, queries: manifest.queries.length, received, valid, failedSearches };
+  return { manifestVersion: manifest.version, queries: manifest.queries.length, received, valid, failedSearches, errorKinds };
 }
 
 export interface RunCatalogImportInput {
