@@ -204,6 +204,9 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     expect(screen.getByText("Avaliações e evolução")).toBeInTheDocument();
     expect(screen.getByText(/82\.5kg/)).toBeInTheDocument();
     expect(screen.getByText("Evolução consistente")).toBeInTheDocument();
+    // FIT-108: histórico visível, mas nenhuma ação de escrita (atribuir/trocar/encerrar).
+    expect(screen.queryByRole("button", { name: "Encerrar atribuição" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Trocar programa" })).not.toBeInTheDocument();
   });
 
   it("mostra a seção de convite apenas para aluno ativo, com o status derivado correto", async () => {

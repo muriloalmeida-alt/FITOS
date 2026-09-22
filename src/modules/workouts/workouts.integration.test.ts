@@ -814,6 +814,29 @@ describe("assignTrainingPlanToStudent (FIT-033)", () => {
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
 
+  it("rejeita atribuir plano a aluno inativo ou com vínculo encerrado (FIT-108)", async () => {
+    const { tenant, owner } = await createTenant("atribuir-status-invalido");
+    const studentInativo = await createStudent(tenant.id, "atribuir-inativo");
+    const studentEncerrado = await createStudent(tenant.id, "atribuir-encerrado");
+    await prisma.student.update({ where: { id: studentInativo.id }, data: { status: "INATIVO" } });
+    await prisma.student.update({ where: { id: studentEncerrado.id }, data: { status: "VINCULO_ENCERRADO" } });
+    const { plan } = await createPlanWithWorkoutsAndItems(tenant.id, "atribuir-status-invalido");
+
+    await expect(
+      assignTrainingPlanToStudent(
+        { tenantId: tenant.id, actorUserId: owner.id, studentId: studentInativo.id, trainingPlanId: plan.id },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+
+    await expect(
+      assignTrainingPlanToStudent(
+        { tenantId: tenant.id, actorUserId: owner.id, studentId: studentEncerrado.id, trainingPlanId: plan.id },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+  });
+
   it("encerra controladamente a atribuição ativa anterior ao atribuir um novo plano ao mesmo aluno", async () => {
     const { tenant, owner } = await createTenant("atribuir-substituir");
     const student = await createStudent(tenant.id, "atribuir-substituir");

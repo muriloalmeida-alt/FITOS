@@ -94,6 +94,27 @@ describe("POST /api/students/[id]/plano", () => {
 
     expect(response.status).toBe(404);
   });
+
+  it("retorna 400 quando o aluno está inativo ou com vínculo encerrado (FIT-108)", async () => {
+    const { WorkoutError } = await vi.importActual<typeof import("@/modules/workouts/workouts")>(
+      "@/modules/workouts/workouts"
+    );
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    assignTrainingPlanToStudent.mockRejectedValue(
+      new WorkoutError("ESTADO_INVALIDO", "Não é possível atribuir um plano a um aluno inativo ou com vínculo encerrado.")
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/students/s1/plano", {
+        method: "POST",
+        body: JSON.stringify({ trainingPlanId: "p1" }),
+      }),
+      { params: Promise.resolve({ id: "s1" }) }
+    );
+
+    expect(response.status).toBe(400);
+  });
 });
 
 describe("DELETE /api/students/[id]/plano", () => {

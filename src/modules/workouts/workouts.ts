@@ -31,7 +31,7 @@ import { getStudentForTenant } from "@/modules/students/students";
 
 export class WorkoutError extends Error {
   constructor(
-    public readonly kind: "VALIDACAO" | "NAO_ENCONTRADO" | "EXERCICIO_INVALIDO",
+    public readonly kind: "VALIDACAO" | "NAO_ENCONTRADO" | "EXERCICIO_INVALIDO" | "ESTADO_INVALIDO",
     message: string
   ) {
     super(message);
@@ -778,6 +778,13 @@ export interface AssignTrainingPlanInput {
 /// fisicamente pelo índice único parcial `plan_assignments_active_per_student_key`
 /// (migration `20260920010000_add_plan_assignment_lifecycle`) — o passo
 /// (1) existe para que essa garantia nunca seja alcançada por exceção.
+///
+/// Rejeita (`ESTADO_INVALIDO`, FIT-108) atribuir um plano a um aluno cujo
+/// `status` não é `ATIVO` — nunca uma nova prescrição para um vínculo
+/// pausado ou encerrado. Distinto da leitura do lado do aluno (já
+/// bloqueada desde a FIT-014/106 em `requireStudent()`): esta é a
+/// proteção do lado da escrita, do personal, para o mesmo vínculo —
+/// "proteger prescrições" (`ADR-009-ENCERRAMENTO-DE-VINCULO.md`).
 export async function assignTrainingPlanToStudent(
   input: AssignTrainingPlanInput,
   client: PrismaClient = prisma
@@ -785,6 +792,9 @@ export async function assignTrainingPlanToStudent(
   const student = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
   if (!student) {
     throw new WorkoutError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (student.status !== "ATIVO") {
+    throw new WorkoutError("ESTADO_INVALIDO", "Não é possível atribuir um plano a um aluno inativo ou com vínculo encerrado.");
   }
   const plan = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.trainingPlanId }, client);
   if (!plan) {
