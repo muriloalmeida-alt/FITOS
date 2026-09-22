@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import * as z from "zod";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
@@ -28,7 +29,16 @@ const testAuth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: { type: "string", required: true, defaultValue: "PERSONAL", input: false },
+      // Mesma configuração de `auth.ts` (FIT-101/ADR-007): aceita
+      // exatamente PERSONAL/INDIVIDUAL do cliente, rejeita qualquer outro
+      // valor (em especial ALUNO) com 400 antes de tocar o banco.
+      role: {
+        type: "string",
+        required: true,
+        defaultValue: "PERSONAL",
+        input: true,
+        validator: { input: z.enum(["PERSONAL", "INDIVIDUAL"]) },
+      },
     },
   },
   advanced: { database: { generateId: false } },
@@ -67,20 +77,42 @@ describe("cadastro de personal (FIT-009)", () => {
     expect(count).toBe(1);
   });
 
-  it("ignora tentativa do cliente de definir role=ALUNO no cadastro (role sempre PERSONAL)", async () => {
+  it("rejeita tentativa do cliente de se autocadastrar como ALUNO (papel restrito a convite/ativação, FIT-015)", async () => {
     const email = `personal-role-adulterado-${run}@example.test`;
 
+    await expect(
+      testAuth.api.signUpEmail({
+        body: { name: "Tentativa de role adulterado", email, password, role: "ALUNO" },
+      })
+    ).rejects.toThrow();
+
+    const count = await prisma.user.count({ where: { email } });
+    expect(count).toBe(0);
+  });
+
+  it("rejeita qualquer valor de role fora de PERSONAL/INDIVIDUAL (ex.: string arbitrária)", async () => {
+    const email = `personal-role-invalido-${run}@example.test`;
+
+    await expect(
+      testAuth.api.signUpEmail({
+        body: { name: "Tentativa de role inválido", email, password, role: "ADMIN" },
+      })
+    ).rejects.toThrow();
+
+    const count = await prisma.user.count({ where: { email } });
+    expect(count).toBe(0);
+  });
+
+  it("FIT-101: aceita role=INDIVIDUAL explicitamente no cadastro (escolha simétrica a PERSONAL)", async () => {
+    const email = `individual-role-explicito-${run}@example.test`;
+
     const result = await testAuth.api.signUpEmail({
-      body: {
-        name: "Tentativa de role adulterado",
-        email,
-        password,
-        // @ts-expect-error -- campo não aceito do cliente (input: false); testando que é ignorado
-        role: "ALUNO",
-      },
+      body: { name: "Praticante sem personal", email, password, role: "INDIVIDUAL" },
     });
 
-    expect(result.user.role).toBe("PERSONAL");
+    expect(result.user.role).toBe("INDIVIDUAL");
+    const stored = await prisma.user.findUniqueOrThrow({ where: { email } });
+    expect(stored.role).toBe("INDIVIDUAL");
   });
 
   it("nunca armazena a senha em texto puro", async () => {

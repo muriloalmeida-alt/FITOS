@@ -8,10 +8,12 @@ import { getTodayScheduleForStudent, listWorkoutsForTenant } from "@/modules/wor
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { listStudents } from "@/modules/students/students";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
+import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
 import { AlunoInativo } from "./AlunoInativo";
+import { IndividualHome } from "./IndividualHome";
 
 export const metadata: Metadata = {
   title: `Painel — ${appName}`,
@@ -47,6 +49,23 @@ export default async function PainelPage() {
         activeStudentsCount={activeStudents.total}
         activeWorkoutsCount={activeWorkouts.length}
         atrasadoCents={financialSummary.atrasadoCents}
+      />
+    );
+  }
+
+  if (ctx.role === "INDIVIDUAL") {
+    const profile = await getIndividualOnboardingProfile(ctx.tenantId);
+    if (!profile) {
+      redirect("/onboarding");
+    }
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } });
+    return (
+      <IndividualHome
+        name={session.user.name}
+        tenantName={tenant.name}
+        objective={profile.objective}
+        experienceLevel={profile.experienceLevel}
+        weeklyAvailability={profile.weeklyAvailability}
       />
     );
   }

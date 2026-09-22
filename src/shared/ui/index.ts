@@ -1,6 +1,7 @@
 export { Button } from "./Button";
 export { Card } from "./Card";
 export { TextField } from "./TextField";
+export { SelectField } from "./SelectField";
 export { FormAlert } from "./FormAlert";
 export { AppShell, type AppShellNavItem } from "./AppShell";
 export { PulseLine, type PulseLineVariant } from "./PulseLine";

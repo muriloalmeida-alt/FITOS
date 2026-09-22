@@ -34,7 +34,16 @@ function validate(values: { name: string; email: string; password: string; confi
   return errors;
 }
 
-export function CriarContaForm() {
+interface CriarContaFormProps {
+  /// "individual" é a escolha explícita do onboarding "Treino sozinho"
+  /// (FIT-101, `/criar-conta?modo=individual`) — qualquer outro valor
+  /// (incluindo ausente) permanece o cadastro de personal de sempre.
+  /// Nunca lido de um campo de formulário: o literal já vem fixado pela
+  /// própria página server-side a partir da query string (ver ADR-007).
+  mode?: "personal" | "individual";
+}
+
+export function CriarContaForm({ mode = "personal" }: CriarContaFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,6 +73,7 @@ export function CriarContaForm() {
       name: name.trim(),
       email: normalizedEmail,
       password,
+      role: mode === "individual" ? "INDIVIDUAL" : "PERSONAL",
     });
     setIsSubmitting(false);
 
@@ -72,7 +82,7 @@ export function CriarContaForm() {
       return;
     }
 
-    router.push("/painel");
+    router.push(mode === "individual" ? "/onboarding" : "/painel");
   }
 
   return (

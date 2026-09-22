@@ -54,4 +54,8 @@ Um usuário entra diretamente no FitOS Livre ou migra de um vínculo encerrado, 
 
 ## Estado do Épico
 
-**Em andamento.** `FIT-100` (#99, sub-issue de #97) implementada: `Tenant.type`/`UserRole.INDIVIDUAL` (migration aditiva), `ensureTenantForIndividual`, `authContext.ts`/`requireIndividual()`, testes de autorização e isolamento — ver `ADR-006-WORKSPACE-INDIVIDUAL.md`. PR aberto, pendente de revisão/merge. `FIT-101` em diante seguem conforme a Dependência acima; `FIT-105` permanece bloqueada enquanto o EPIC-12 estiver pausado na `FIT-091`.
+**Em andamento.** `FIT-100` (#99, sub-issue de #97) implementada: `Tenant.type`/`UserRole.INDIVIDUAL` (migration aditiva), `ensureTenantForIndividual`, `authContext.ts`/`requireIndividual()`, testes de autorização e isolamento — ver `ADR-006-WORKSPACE-INDIVIDUAL.md`. PR aberto, pendente de revisão/merge.
+
+`FIT-101` (#101, sub-issue de #97) implementada: `/treino-sozinho` (entrada), `/criar-conta?modo=individual` (cadastro com escolha explícita de papel — ver `ADR-007-SELECAO-DE-PAPEL-NO-CADASTRO.md`), `IndividualProfile` (onboarding: objetivo/experiência/disponibilidade), `/onboarding` e o novo ramo `INDIVIDUAL` em `/painel` (`IndividualHome`). Fluxo completo validado em navegador real (Playwright contra o dev server), além da suíte automatizada. PR aberto (stacked sobre o de FIT-100), pendente de revisão/merge.
+
+`FIT-102` em diante seguem conforme a Dependência acima; `FIT-105` permanece bloqueada enquanto o EPIC-12 estiver pausado na `FIT-091`.

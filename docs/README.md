@@ -83,6 +83,8 @@ Este diretório é a fonte oficial das decisões de Produto, Design e entrega do
 - `06-engenharia/arquitetura/adr/ADR-003-ASAAS-COMO-CANDIDATO.md`
 - `06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`
 - `06-engenharia/arquitetura/adr/ADR-005-VERSIONAMENTO-DE-PLANOS.md`
+- `06-engenharia/arquitetura/adr/ADR-006-WORKSPACE-INDIVIDUAL.md`
+- `06-engenharia/arquitetura/adr/ADR-007-SELECAO-DE-PAPEL-NO-CADASTRO.md`
 
 ## Aplicação (FIT-006/FIT-007/FIT-009)
 

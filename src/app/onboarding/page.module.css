@@ -1,0 +1,41 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fitos-space-4);
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-6);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+  border-radius: var(--fitos-shape-large);
+  padding: var(--fitos-space-8) var(--fitos-space-6);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 450;
+  color: var(--fitos-color-on-surface-variant);
+}

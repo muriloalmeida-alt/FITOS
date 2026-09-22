@@ -228,8 +228,50 @@ model Tenant {
   saasSubscription      SaasSubscription?
   auditEvents           AuditEvent[]
   invitations           Invitation[]
+  individualProfile     IndividualProfile?
 
   @@map("tenants")
+}
+
+enum IndividualObjective {
+  GANHAR_MASSA
+  PERDER_PESO
+  CONDICIONAMENTO_GERAL
+  SAUDE_E_BEM_ESTAR
+  OUTRO
+}
+
+enum ExperienceLevel {
+  INICIANTE
+  INTERMEDIARIO
+  AVANCADO
+}
+
+enum WeeklyAvailability {
+  UM_A_DOIS_DIAS
+  TRES_A_QUATRO_DIAS
+  CINCO_OU_MAIS_DIAS
+}
+
+/// Configuração inicial do workspace individual (FIT-101, EPIC-13):
+/// objetivo, experiência e disponibilidade informados no onboarding
+/// "Treino sozinho". Existe no máximo 1 por tenant (`tenantId @unique`) —
+/// preenchê-lo de novo (reabrir o onboarding) sempre atualiza o mesmo
+/// registro, nunca cria um segundo. Puramente informativo nesta História:
+/// não gera nenhuma prescrição automática (a FIT-102 decide como o
+/// catálogo/builder usa isso, se usar).
+model IndividualProfile {
+  id                 String             @id @default(cuid())
+  tenantId           String             @unique
+  objective          IndividualObjective
+  experienceLevel    ExperienceLevel
+  weeklyAvailability WeeklyAvailability
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("individual_profiles")
 }
 
 /// Aluno vinculado a exatamente 1 tenant. `userId` é único quando presente,
