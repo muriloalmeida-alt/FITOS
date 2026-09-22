@@ -13,6 +13,7 @@ import { ItensDoMeuTreino } from "./ItensDoMeuTreino";
 import { ArquivarMeuTreinoButton } from "./ArquivarMeuTreinoButton";
 import { ReativarMeuTreinoButton } from "./ReativarMeuTreinoButton";
 import { DuplicarMeuTreinoButton } from "./DuplicarMeuTreinoButton";
+import { ComecarMeuTreinoButton } from "./ComecarMeuTreinoButton";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -67,6 +68,12 @@ export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalheP
         </p>
         <EditarMeuTreinoForm workoutId={workout.id} initialName={workout.name} />
       </Card>
+
+      {workout.status === "ATIVO" ? (
+        <Card title="Executar">
+          <ComecarMeuTreinoButton workoutId={workout.id} />
+        </Card>
+      ) : null}
 
       <Card title="Exercícios do treino">
         <ItensDoMeuTreino

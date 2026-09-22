@@ -58,10 +58,17 @@ export default async function PainelPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [tenant, workouts] = await Promise.all([
+    const [tenant, workouts, selfStudent] = await Promise.all([
       prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } }),
       listWorkoutsForTenant({ tenantId: ctx.tenantId }),
+      // Nunca cria o Student de auto-referência aqui (FIT-103): só
+      // existe depois que o praticante começou algum treino — se ainda
+      // não existe, é impossível haver uma sessão em andamento.
+      prisma.student.findUnique({ where: { userId: ctx.userId } }),
     ]);
+    const inProgressSession = selfStudent
+      ? await getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: selfStudent.id })
+      : null;
     return (
       <IndividualHome
         name={session.user.name}
@@ -70,6 +77,7 @@ export default async function PainelPage() {
         experienceLevel={profile.experienceLevel}
         weeklyAvailability={profile.weeklyAvailability}
         workoutsCount={workouts.length}
+        inProgressWorkoutName={inProgressSession?.workout.name ?? null}
       />
     );
   }

@@ -1,0 +1,5 @@
+.empty {
+  margin: 0 0 var(--fitos-space-3) 0;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 14px;
+}
