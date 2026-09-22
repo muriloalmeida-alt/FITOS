@@ -227,6 +227,7 @@ describe("PainelPage (FIT-012)", () => {
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
     });
     findUniqueOrThrowTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
+    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }]);
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
@@ -234,7 +235,9 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByRole("heading", { name: "Hoje" })).toBeInTheDocument();
     expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
     expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
+    expect(screen.getByText("1 treino criado")).toBeInTheDocument();
     expect(findUniqueOrThrowTenant).toHaveBeenCalledWith({ where: { id: "t5" } });
+    expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t5" });
   });
 
   it("aluno autenticado com vínculo inativado vê a tela de conta inativa, sem shell", async () => {

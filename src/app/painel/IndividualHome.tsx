@@ -9,6 +9,7 @@ interface IndividualHomeProps {
   objective: IndividualObjective;
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
+  workoutsCount: number;
 }
 
 const OBJECTIVE_LABELS: Record<IndividualObjective, string> = {
@@ -31,12 +32,17 @@ const AVAILABILITY_LABELS: Record<WeeklyAvailability, string> = {
   CINCO_OU_MAIS_DIAS: "5 dias ou mais por semana",
 };
 
-/// "Hoje" do workspace individual (FIT-101). Deliberadamente sem nenhuma
-/// funcionalidade de treino ainda — criar/executar treino é a FIT-102 em
-/// diante; esta tela só confirma que o espaço existe e mostra a
-/// configuração do onboarding, sem fabricar um builder que ainda não foi
-/// implementado.
-export function IndividualHome({ name, tenantName, objective, experienceLevel, weeklyAvailability }: IndividualHomeProps) {
+/// "Hoje" do workspace individual (FIT-101/FIT-102). Criar treino já é
+/// real (builder em `/painel/meus-treinos`, FIT-102) — executar (registrar
+/// séries/carga/descanso de verdade) continua em breve, chega na FIT-103.
+export function IndividualHome({
+  name,
+  tenantName,
+  objective,
+  experienceLevel,
+  weeklyAvailability,
+  workoutsCount,
+}: IndividualHomeProps) {
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${name}`} navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       <Card title="Seu espaço">
@@ -57,8 +63,17 @@ export function IndividualHome({ name, tenantName, objective, experienceLevel, w
         </Button>
       </Card>
 
+      <Card title="Meus treinos">
+        <p>
+          {workoutsCount} {workoutsCount === 1 ? "treino criado" : "treinos criados"}
+        </p>
+        <Button href="/painel/meus-treinos" variant="filled">
+          Ver meus treinos
+        </Button>
+      </Card>
+
       <Card title="Em breve">
-        <p>Criar e executar seus próprios treinos chega nas próximas atualizações do FitOS Livre.</p>
+        <p>Executar o treino de verdade (registrar séries, carga e descanso) chega nas próximas atualizações do FitOS Livre.</p>
       </Card>
     </AppShell>
   );

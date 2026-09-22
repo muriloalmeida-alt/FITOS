@@ -37,13 +37,13 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
 /// mesma arquitetura de `04_FASE_2_2_FITOS_LIVRE.md` do pacote pós-MVP:
-/// "Hoje, Treinos, Progresso, Perfil". Só "Hoje" é real nesta História —
-/// "Treinos" (builder, FIT-102), "Progresso" (FIT-104) e "Perfil" ainda
+/// "Hoje, Treinos, Progresso, Perfil". "Hoje" (FIT-100) e "Treinos"
+/// (builder, FIT-102) já são reais; "Progresso" (FIT-104) e "Perfil" ainda
 /// não têm nenhuma rota, mesma solução interina de `comingSoon` já usada
 /// acima para o personal.
 export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
-  { key: "treinos", label: "Treinos", comingSoon: true },
+  { key: "treinos", label: "Treinos", href: "/painel/meus-treinos" },
   { key: "progresso", label: "Progresso", comingSoon: true },
   { key: "perfil", label: "Perfil", comingSoon: true },
 ];
