@@ -44,6 +44,12 @@ describe("LandingPage (FIT-110)", () => {
     expect(screen.getByLabelText("Já tem um código de convite?")).toBeInTheDocument();
   });
 
+  it("FIT-112: o CTA do cartão 'Sou Personal' já leva direto à etapa 2 (?modo=personal), sem repetir a decisão", () => {
+    render(<LandingPage />);
+    const links = screen.getAllByRole("link", { name: /Criar conta grátis/ });
+    expect(links.some((link) => link.getAttribute("href") === "/criar-conta?modo=personal")).toBe(true);
+  });
+
   it("renderiza a seção Personal/aluno e o CTA final", () => {
     render(<LandingPage />);
     expect(screen.getByText(/O acesso do seu aluno é sempre restrito ao seu espaço/)).toBeInTheDocument();
