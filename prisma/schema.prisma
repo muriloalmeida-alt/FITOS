@@ -249,6 +249,7 @@ model Tenant {
   auditEvents           AuditEvent[]
   invitations           Invitation[]
   individualProfile     IndividualProfile?
+  personalProfile       PersonalProfile?
   goals                 Goal[]
 
   @@map("tenants")
@@ -293,6 +294,44 @@ model IndividualProfile {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("individual_profiles")
+}
+
+enum PersonalStudentRangeEstimate {
+  COMECANDO_AGORA
+  ATE_20
+  DE_21_A_50
+  MAIS_DE_50
+}
+
+/// Perfil profissional do Personal (FIT-113, EPIC-14, seção 7 do pacote):
+/// dados complementares ao cadastro (FIT-009) — celular, CREF opcional,
+/// faixa aproximada de alunos e o aceite dos termos. Existe no máximo 1
+/// por tenant (`tenantId @unique`), mesmo padrão de `IndividualProfile`:
+/// `null` significa "onboarding ainda não concluído" — `/painel` (FIT-012)
+/// redireciona para `/onboarding-personal` enquanto for esse o caso,
+/// exatamente como já faz para `IndividualProfile` nulo. Deliberadamente
+/// sem `businessName` próprio: "nome do espaço/negócio" já existe como
+/// `Tenant.name` (FIT-010) — este onboarding só oferece editá-lo, nunca
+/// duplica a coluna.
+model PersonalProfile {
+  id                   String                       @id @default(cuid())
+  tenantId             String                       @unique
+  phone                String
+  cref                 String?
+  studentRangeEstimate PersonalStudentRangeEstimate
+  /// Sempre preenchido no momento da submissão (não um campo booleano) —
+  /// rastreabilidade de quando o aceite ocorreu. Não existe hoje nenhuma
+  /// página real de Termos de Uso/Política de Privacidade (mesma pendência
+  /// já documentada no rodapé da landing, FIT-110) — o texto apresentado
+  /// ao lado do aceite é honesto sobre isso ("em preparação"), nunca um
+  /// link morto.
+  termsAcceptedAt DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("personal_profiles")
 }
 
 /// Aluno vinculado a exatamente 1 tenant. `userId` é único quando presente,

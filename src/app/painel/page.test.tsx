@@ -13,6 +13,7 @@ const getInProgressSessionForStudent = vi.fn();
 const listStudents = vi.fn();
 const getFinancialSummary = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
+const getPersonalOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -43,6 +44,13 @@ vi.mock("@/modules/individual-onboarding/onboarding", async () => {
     "@/modules/individual-onboarding/onboarding"
   );
   return { ...actual, getIndividualOnboardingProfile: (...args: unknown[]) => getIndividualOnboardingProfile(...args) };
+});
+
+vi.mock("@/modules/personal-onboarding/onboarding", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>(
+    "@/modules/personal-onboarding/onboarding"
+  );
+  return { ...actual, getPersonalOnboardingProfile: (...args: unknown[]) => getPersonalOnboardingProfile(...args) };
 });
 
 vi.mock("@/modules/workouts/workouts", async () => {
@@ -94,6 +102,22 @@ describe("PainelPage (FIT-012)", () => {
     expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
+  it("FIT-113: personal sem perfil profissional concluído é redirecionado para /onboarding-personal", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u1",
+      role: "PERSONAL",
+      tenantId: "t1",
+      studentId: null,
+    });
+    getPersonalOnboardingProfile.mockResolvedValue(null);
+    const { default: PainelPage } = await import("./page");
+
+    await expect(PainelPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/onboarding-personal");
+  });
+
   it("personal autenticado vê o shell de personal, com o tenant real", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
     getAuthContext.mockResolvedValue({
@@ -103,6 +127,7 @@ describe("PainelPage (FIT-012)", () => {
       tenantId: "t1",
       studentId: null,
     });
+    getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1" });
     findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
     listStudents.mockResolvedValue({ items: [], total: 3, page: 1, pageSize: 1 });
     listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }]);
@@ -127,6 +152,7 @@ describe("PainelPage (FIT-012)", () => {
       tenantId: "t1",
       studentId: null,
     });
+    getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1" });
     findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
     listStudents.mockResolvedValue({ items: [], total: 5, page: 1, pageSize: 1 });
     listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }, { id: "w3" }]);

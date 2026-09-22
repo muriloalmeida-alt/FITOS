@@ -9,6 +9,7 @@ import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { listStudents } from "@/modules/students/students";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
+import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { PersonalHome } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
@@ -33,6 +34,10 @@ export default async function PainelPage() {
   }
 
   if (ctx.role === "PERSONAL") {
+    const personalProfile = await getPersonalOnboardingProfile(ctx.tenantId);
+    if (!personalProfile) {
+      redirect("/onboarding-personal");
+    }
     const now = new Date();
     const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const [tenant, activeStudents, activeWorkouts, financialSummary] = await Promise.all([
