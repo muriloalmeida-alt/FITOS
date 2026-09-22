@@ -19,9 +19,19 @@ datasource db {
 /// nunca usada por nenhum código) para {ATIVO, INATIVO} — os dois estados
 /// reais definidos pela gestão de alunos (SPRINT-05): não há exclusão física
 /// pela interface, apenas inativação, que preserva o histórico.
+///
+/// `VINCULO_ENCERRADO` (FIT-106) é deliberadamente um terceiro estado, não
+/// um sinônimo de `INATIVO`: `INATIVO` é uma pausa reversível decidida
+/// unilateralmente pelo personal (`reactivateStudent` sempre existe para
+/// ela); "encerrar vínculo" é definitivo — nenhuma função deste domínio
+/// jamais reabre um vínculo encerrado (ver `ADR-009-ENCERRAMENTO-DE-VINCULO.md`
+/// para a decisão completa, incluindo por que o controle de acesso
+/// granular do aluno após o encerramento — FIT-107/FIT-108 — não é
+/// decidido aqui).
 enum StudentStatus {
   ATIVO
   INATIVO
+  VINCULO_ENCERRADO
 }
 
 /// FIT-015: apenas as transições reais, disparadas por uma ação (gerar,
@@ -119,6 +129,7 @@ model User {
 
   ownedTenant         Tenant?
   studentProfile      Student?
+  endedStudentBonds   Student[]    @relation("StudentBondEndedBy")
   authoredAssessments Assessment[] @relation("AssessmentAuthor")
   recordedPayments    Payment[]
   auditEvents         AuditEvent[]
@@ -294,17 +305,21 @@ model IndividualProfile {
 /// StudentCharge, impedindo que uma dessas tabelas filhas aponte para um
 /// Student de um tenant diferente do seu próprio `tenantId`.
 model Student {
-  id          String        @id @default(cuid())
-  tenantId    String
-  userId      String?       @unique
-  email       String
-  displayName String
-  status      StudentStatus @default(ATIVO)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  tenantId      String
+  userId        String?       @unique
+  email         String
+  displayName   String
+  status        StudentStatus @default(ATIVO)
+  endedAt       DateTime?
+  endReason     String?
+  endedByUserId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user              User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  endedByUser       User?              @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
   planAssignments   PlanAssignment[]
   workoutSessions   WorkoutSession[]
   assessments       Assessment[]

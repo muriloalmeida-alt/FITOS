@@ -60,8 +60,12 @@ export async function getAuthContext(sessionOverride?: ServerSession, client: Pr
   // FIT-014: aluno inativado pelo personal é tratado exatamente como "sem
   // vínculo" para fins de autorização — sessão válida, mas sem acesso à
   // experiência normal (403 em requireStudent). Mesma resposta segura para
-  // os dois casos reais: nunca existiu vínculo, ou o vínculo foi pausado.
-  if (!student || student.status === "INATIVO") {
+  // os três casos reais: nunca existiu vínculo, o vínculo foi pausado
+  // (INATIVO, reversível), ou o vínculo foi encerrado (VINCULO_ENCERRADO,
+  // FIT-106, definitivo). O acesso granular do ex-aluno ao que a FIT-104
+  // preserva (medidas, metas, execuções) depois do encerramento é decisão
+  // deliberadamente fora desta História — ver `ADR-009-ENCERRAMENTO-DE-VINCULO.md`.
+  if (!student || student.status !== "ATIVO") {
     return { authenticated: true, userId: user.id, role: "ALUNO", tenantId: null, studentId: null };
   }
 
