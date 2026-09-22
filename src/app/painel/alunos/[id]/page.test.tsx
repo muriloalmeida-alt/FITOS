@@ -167,6 +167,45 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     expect(screen.queryByText("Acesso e convite")).not.toBeInTheDocument();
   });
 
+  it("FIT-107: vínculo encerrado continua mostrando o histórico completo do aluno para o personal (sem perda)", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    getStudentForTenant.mockResolvedValue({
+      id: "s1",
+      displayName: "Fulano",
+      email: "fulano@example.test",
+      status: "VINCULO_ENCERRADO",
+      userId: "user-1",
+      endedAt: new Date("2026-09-22T00:00:00.000Z"),
+      endReason: "Mudança de cidade",
+    });
+    getLatestInvitationForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue({
+      trainingPlan: { name: "Plano de hipertrofia" },
+      assignedAt: new Date("2026-08-01T00:00:00.000Z"),
+    });
+    listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
+    listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([
+      {
+        id: "a1",
+        recordedAt: new Date("2026-09-01T00:00:00.000Z"),
+        weightGrams: 82500,
+        bodyFatTenthPercent: 185,
+        notes: "Evolução consistente",
+        measurements: [{ type: "CINTURA", valueMillimeters: 855 }],
+      },
+    ]);
+    const { default: AlunoPerfilPage } = await import("./page");
+
+    render(await AlunoPerfilPage({ params: makeParams("s1") }));
+
+    expect(screen.getByText("Programa de treino")).toBeInTheDocument();
+    expect(screen.getByText("Plano de hipertrofia")).toBeInTheDocument();
+    expect(screen.getByText("Avaliações e evolução")).toBeInTheDocument();
+    expect(screen.getByText(/82\.5kg/)).toBeInTheDocument();
+    expect(screen.getByText("Evolução consistente")).toBeInTheDocument();
+  });
+
   it("mostra a seção de convite apenas para aluno ativo, com o status derivado correto", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     getStudentForTenant.mockResolvedValue({
