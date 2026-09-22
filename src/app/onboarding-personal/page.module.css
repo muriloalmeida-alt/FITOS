@@ -1,0 +1,103 @@
+.main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fitos-space-4);
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+  border-radius: var(--fitos-shape-large);
+  padding: var(--fitos-space-8) var(--fitos-space-6);
+}
+
+.stepIndicator {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fitos-color-primary);
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fitos-space-2);
+  font-size: 14px;
+  color: var(--fitos-color-on-surface);
+}
+
+.termsPending {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.checkboxError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fitos-color-error);
+}
+
+.reviewList {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--fitos-space-1) var(--fitos-space-3);
+  font-size: 14px;
+}
+
+.reviewList dt {
+  color: var(--fitos-color-on-surface-variant);
+  font-weight: 650;
+}
+
+.reviewList dd {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+}
+
+.backButton {
+  background: none;
+  border: none;
+  padding: var(--fitos-space-2);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  cursor: pointer;
+}
+
+.backButton:disabled {
+  color: var(--fitos-color-outline);
+  cursor: not-allowed;
+}
