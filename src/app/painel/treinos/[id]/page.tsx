@@ -5,7 +5,7 @@ import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getWorkoutForTenant, listWorkoutExercisesForWorkout } from "@/modules/workouts/workouts";
-import { listCatalogExercises } from "@/modules/exercises/exercises";
+import { listCatalogExercisesForPicker } from "@/modules/exercises/exercises";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { EditarModeloForm } from "./EditarModeloForm";
@@ -22,8 +22,6 @@ export const metadata: Metadata = {
 interface ModeloDetalhePageProps {
   params: Promise<{ id: string }>;
 }
-
-const CATALOG_PAGE_SIZE_FOR_PICKER = 100;
 
 /// Detalhe do modelo de treino (FIT-030). Busca sempre pelo tenant da
 /// sessão (`getWorkoutForTenant`) — um modelo de outro tenant nunca é
@@ -48,7 +46,7 @@ export default async function ModeloDetalhePage({ params }: ModeloDetalhePagePro
 
   const [items, catalog] = await Promise.all([
     listWorkoutExercisesForWorkout({ tenantId: ctx.tenantId, workoutId: id }),
-    listCatalogExercises({ tenantId: ctx.tenantId, pageSize: CATALOG_PAGE_SIZE_FOR_PICKER }),
+    listCatalogExercisesForPicker({ tenantId: ctx.tenantId }),
   ]);
 
   return (
@@ -81,7 +79,7 @@ export default async function ModeloDetalhePage({ params }: ModeloDetalhePagePro
             restSeconds: item.restSeconds,
             notes: item.notes,
           }))}
-          catalog={catalog.items.map((exercise) => ({ id: exercise.id, name: exercise.name }))}
+          catalog={catalog}
         />
       </Card>
 

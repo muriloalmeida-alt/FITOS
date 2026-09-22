@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 const requireIndividual = vi.fn();
 const getWorkoutForTenant = vi.fn();
 const listWorkoutExercisesForWorkout = vi.fn();
-const listCatalogExercises = vi.fn();
+const listCatalogExercisesForPicker = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -28,7 +28,7 @@ vi.mock("@/modules/workouts/workouts", async () => {
 
 vi.mock("@/modules/exercises/exercises", async () => {
   const actual = await vi.importActual<typeof import("@/modules/exercises/exercises")>("@/modules/exercises/exercises");
-  return { ...actual, listCatalogExercises: (...args: unknown[]) => listCatalogExercises(...args) };
+  return { ...actual, listCatalogExercisesForPicker: (...args: unknown[]) => listCatalogExercisesForPicker(...args) };
 });
 
 vi.mock("next/navigation", () => ({
@@ -83,7 +83,7 @@ describe("MeuTreinoDetalhePage (FIT-102)", () => {
         exercise: { name: "Supino", muscle: "peito" },
       },
     ]);
-    listCatalogExercises.mockResolvedValue({ items: [{ id: "e1", name: "Supino" }], total: 1, page: 1, pageSize: 100 });
+    listCatalogExercisesForPicker.mockResolvedValue([{ id: "e1", name: "Supino", muscle: "peito" }]);
 
     const { default: MeuTreinoDetalhePage } = await import("./page");
     render(await MeuTreinoDetalhePage({ params: makeParams("w1") }));
@@ -99,7 +99,7 @@ describe("MeuTreinoDetalhePage (FIT-102)", () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
     getWorkoutForTenant.mockResolvedValue({ id: "w2", name: "Treino B", status: "ARQUIVADO" });
     listWorkoutExercisesForWorkout.mockResolvedValue([]);
-    listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 100 });
+    listCatalogExercisesForPicker.mockResolvedValue([]);
 
     const { default: MeuTreinoDetalhePage } = await import("./page");
     render(await MeuTreinoDetalhePage({ params: makeParams("w2") }));

@@ -2,6 +2,7 @@ export { Button } from "./Button";
 export { Card } from "./Card";
 export { TextField } from "./TextField";
 export { SelectField } from "./SelectField";
+export { ExerciseAutocomplete, type ExerciseAutocompleteOption } from "./ExerciseAutocomplete";
 export { FormAlert } from "./FormAlert";
 export { AppShell, type AppShellNavItem } from "./AppShell";
 export { PulseLine, type PulseLineVariant } from "./PulseLine";

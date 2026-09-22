@@ -93,29 +93,6 @@
   color: var(--fitos-color-on-surface);
 }
 
-.selectField {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-1);
-}
-
-.selectLabel {
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--fitos-color-on-surface);
-}
-
-.select {
-  font-family: var(--fitos-font-family);
-  font-size: 16px;
-  min-height: 48px;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  border-radius: var(--fitos-shape-small);
-  border: 1px solid var(--fitos-color-outline);
-  background-color: var(--fitos-color-surface);
-  color: var(--fitos-color-on-surface);
-}
-
 .paramsGrid {
   display: grid;
   grid-template-columns: 1fr;
