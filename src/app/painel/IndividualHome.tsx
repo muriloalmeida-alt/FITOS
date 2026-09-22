@@ -10,6 +10,7 @@ interface IndividualHomeProps {
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
   workoutsCount: number;
+  inProgressWorkoutName: string | null;
 }
 
 const OBJECTIVE_LABELS: Record<IndividualObjective, string> = {
@@ -32,9 +33,9 @@ const AVAILABILITY_LABELS: Record<WeeklyAvailability, string> = {
   CINCO_OU_MAIS_DIAS: "5 dias ou mais por semana",
 };
 
-/// "Hoje" do workspace individual (FIT-101/FIT-102). Criar treino já é
-/// real (builder em `/painel/meus-treinos`, FIT-102) — executar (registrar
-/// séries/carga/descanso de verdade) continua em breve, chega na FIT-103.
+/// "Hoje" do workspace individual (FIT-101/FIT-102/FIT-103). Criar treino
+/// (FIT-102) e executar treino (FIT-103, registrar séries/carga/descanso
+/// de verdade) já são reais.
 export function IndividualHome({
   name,
   tenantName,
@@ -42,6 +43,7 @@ export function IndividualHome({
   experienceLevel,
   weeklyAvailability,
   workoutsCount,
+  inProgressWorkoutName,
 }: IndividualHomeProps) {
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${name}`} navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
@@ -63,6 +65,15 @@ export function IndividualHome({
         </Button>
       </Card>
 
+      {inProgressWorkoutName ? (
+        <Card title="Treino em andamento">
+          <p>{inProgressWorkoutName}</p>
+          <Button href="/painel/meus-treinos/sessao" variant="filled">
+            Continuar treino
+          </Button>
+        </Card>
+      ) : null}
+
       <Card title="Meus treinos">
         <p>
           {workoutsCount} {workoutsCount === 1 ? "treino criado" : "treinos criados"}
@@ -70,10 +81,6 @@ export function IndividualHome({
         <Button href="/painel/meus-treinos" variant="filled">
           Ver meus treinos
         </Button>
-      </Card>
-
-      <Card title="Em breve">
-        <p>Executar o treino de verdade (registrar séries, carga e descanso) chega nas próximas atualizações do FitOS Livre.</p>
       </Card>
     </AppShell>
   );

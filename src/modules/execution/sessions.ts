@@ -7,14 +7,20 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { getActivePlanAssignmentForStudent } from "@/modules/workouts/workouts";
+import { getActivePlanAssignmentForStudent, getWorkoutForTenant } from "@/modules/workouts/workouts";
 
-/// Execução de sessão de treino (FIT-041). Toda sessão referencia um
-/// `Workout` do plano-snapshot da atribuição ativa do aluno (ADR-005) —
-/// nunca o modelo editável do personal. "Registrar autor, data e tipo de
-/// alteração" (`REGRAS-DE-NEGOCIO.md`, seção 9) lista explicitamente
-/// "plano atribuído, avaliação e pagamento" — sessão não está nessa
-/// lista, então nenhuma função deste módulo grava `AuditEvent` (decisão
+/// Execução de sessão de treino (FIT-041/FIT-103). Toda sessão referencia
+/// um `Workout` — para o aluno, sempre do plano-snapshot da atribuição
+/// ativa (ADR-005), nunca o modelo editável do personal; para o
+/// praticante individual (FIT-103, `startOrResumeIndividualWorkoutSession`
+/// abaixo), o próprio treino editável do tenant, porque não existe
+/// personal que possa alterá-lo "pelas costas" do praticante — o mesmo
+/// risco que a cópia imutável da ADR-005 existe para prevenir
+/// simplesmente não existe quando quem prescreve e quem executa são a
+/// mesma pessoa. "Registrar autor, data e tipo de alteração"
+/// (`REGRAS-DE-NEGOCIO.md`, seção 9) lista explicitamente "plano
+/// atribuído, avaliação e pagamento" — sessão não está nessa lista,
+/// então nenhuma função deste módulo grava `AuditEvent` (decisão
 /// registrada, não um esquecimento).
 
 export class SessionError extends Error {
@@ -103,6 +109,34 @@ export async function startOrResumeWorkoutSession(
     throw new SessionError("NAO_ENCONTRADO", "Treino não encontrado no programa atribuído.");
   }
 
+  return resumeOrCreateSession(input, client);
+}
+
+/// Mesmo motor de `startOrResumeWorkoutSession` (resume se já houver uma
+/// sessão `EM_ANDAMENTO` para o mesmo treino; abandona qualquer sessão
+/// `EM_ANDAMENTO` de **outro** treino antes de criar a nova), mas com a
+/// validação de acesso ao treino trocada (FIT-103): em vez de exigir uma
+/// atribuição ativa (conceito que não existe para quem não tem personal),
+/// exige apenas que `workoutId` pertença ao próprio tenant e esteja
+/// `ATIVO` — o mesmo padrão de posse já usado por todo o resto do módulo
+/// `workouts.ts` para o builder individual (FIT-102). Ver a nota no topo
+/// deste arquivo sobre por que isso é seguro sem o snapshot da ADR-005.
+export async function startOrResumeIndividualWorkoutSession(
+  input: StartOrResumeSessionInput,
+  client: PrismaClient = prisma
+): Promise<WorkoutSessionWithDetails> {
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout || workout.status !== "ATIVO") {
+    throw new SessionError("NAO_ENCONTRADO", "Treino não encontrado.");
+  }
+
+  return resumeOrCreateSession(input, client);
+}
+
+async function resumeOrCreateSession(
+  input: StartOrResumeSessionInput,
+  client: PrismaClient
+): Promise<WorkoutSessionWithDetails> {
   const inProgress = await client.workoutSession.findFirst({
     where: { tenantId: input.tenantId, studentId: input.studentId, status: "EM_ANDAMENTO" },
   });
