@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Button, FormAlert, TextField } from "@/shared/ui";
+import { Button, ExerciseAutocomplete, FormAlert, TextField } from "@/shared/ui";
 import styles from "./ItensDoModelo.module.css";
 
 export interface WorkoutItemProp {
@@ -21,6 +21,7 @@ export interface WorkoutItemProp {
 export interface CatalogExerciseOption {
   id: string;
   name: string;
+  muscle?: string | null;
 }
 
 interface ItensDoModeloProps {
@@ -217,25 +218,15 @@ export function ItensDoModelo({ workoutId, items, catalog }: ItensDoModeloProps)
         <h3 className={styles.addFormTitle}>Adicionar exercício</h3>
         {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
-        <div className={styles.selectField}>
-          <label className={styles.selectLabel} htmlFor="exerciseId">
-            Exercício
-          </label>
-          <select
-            id="exerciseId"
-            className={styles.select}
-            value={exerciseId}
-            onChange={(event) => setExerciseId(event.target.value)}
-            disabled={isSubmitting}
-          >
-            <option value="">Selecione um exercício</option>
-            {catalog.map((exercise) => (
-              <option key={exercise.id} value={exercise.id}>
-                {exercise.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ExerciseAutocomplete
+          label="Exercício"
+          name="exerciseId"
+          options={catalog}
+          value={exerciseId}
+          onChange={setExerciseId}
+          placeholder="Buscar exercício por nome"
+          disabled={isSubmitting}
+        />
 
         <div className={styles.paramsGrid}>
           <TextField

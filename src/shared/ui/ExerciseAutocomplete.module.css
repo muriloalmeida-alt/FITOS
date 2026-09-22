@@ -1,0 +1,124 @@
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.comboboxWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  padding-right: calc(var(--fitos-space-4) + 32px);
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline);
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  line-height: 24px;
+  transition: border-color var(--fitos-motion-state) var(--fitos-motion-standard);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--fitos-color-primary);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--fitos-color-error);
+}
+
+.clearButton {
+  position: absolute;
+  right: var(--fitos-space-2);
+  min-width: 32px;
+  min-height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--fitos-color-on-surface-variant);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--fitos-shape-small);
+}
+
+.clearButton:hover {
+  background-color: var(--fitos-color-surface-container);
+}
+
+.clearButton:disabled {
+  color: var(--fitos-color-outline);
+  cursor: default;
+}
+
+.listbox {
+  position: absolute;
+  top: calc(100% + var(--fitos-space-1));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: var(--fitos-space-1);
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-outline-variant);
+  background-color: var(--fitos-color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--fitos-space-2);
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  border-radius: var(--fitos-shape-small);
+  cursor: pointer;
+}
+
+.option:hover,
+.optionHighlighted {
+  background-color: var(--fitos-color-surface-container);
+}
+
+.optionName {
+  font-size: 15px;
+  color: var(--fitos-color-on-surface);
+}
+
+.optionMuscle {
+  font-size: 12px;
+  color: var(--fitos-color-on-surface-variant);
+  white-space: nowrap;
+}
+
+.emptyOption,
+.moreHint {
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 450;
+  color: var(--fitos-color-error);
+}

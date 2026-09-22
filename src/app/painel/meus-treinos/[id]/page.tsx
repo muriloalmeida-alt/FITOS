@@ -5,7 +5,7 @@ import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requireIndividual } from "@/modules/tenancy/authContext";
 import { getWorkoutForTenant, listWorkoutExercisesForWorkout } from "@/modules/workouts/workouts";
-import { listCatalogExercises } from "@/modules/exercises/exercises";
+import { listCatalogExercisesForPicker } from "@/modules/exercises/exercises";
 import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
 import { EditarMeuTreinoForm } from "./EditarMeuTreinoForm";
@@ -24,14 +24,12 @@ interface MeuTreinoDetalhePageProps {
   params: Promise<{ id: string }>;
 }
 
-const CATALOG_PAGE_SIZE_FOR_PICKER = 100;
-
 /// Detalhe/builder de um treino do workspace individual (FIT-102). Busca
 /// sempre pelo tenant da sessão (`getWorkoutForTenant`) — um treino de
 /// outro tenant nunca é encontrado, e a resposta (404) não revela se
-/// aquele `id` existe em outro tenant. Reaproveita `listCatalogExercises`
-/// (FIT-023) sem alteração — o catálogo local abastecido pela IMP-EX-001 é
-/// o mesmo para qualquer tenant, `PERSONAL` ou `INDIVIDUAL`.
+/// aquele `id` existe em outro tenant. Reaproveita `listCatalogExercisesForPicker`
+/// (FIT-023/IMP-EX-002) sem alteração — o catálogo local é o mesmo para
+/// qualquer tenant, `PERSONAL` ou `INDIVIDUAL`.
 export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalhePageProps) {
   let ctx;
   try {
@@ -51,7 +49,7 @@ export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalheP
 
   const [items, catalog] = await Promise.all([
     listWorkoutExercisesForWorkout({ tenantId: ctx.tenantId, workoutId: id }),
-    listCatalogExercises({ tenantId: ctx.tenantId, pageSize: CATALOG_PAGE_SIZE_FOR_PICKER }),
+    listCatalogExercisesForPicker({ tenantId: ctx.tenantId }),
   ]);
 
   return (
@@ -90,7 +88,7 @@ export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalheP
             restSeconds: item.restSeconds,
             notes: item.notes,
           }))}
-          catalog={catalog.items.map((exercise) => ({ id: exercise.id, name: exercise.name }))}
+          catalog={catalog}
         />
       </Card>
 

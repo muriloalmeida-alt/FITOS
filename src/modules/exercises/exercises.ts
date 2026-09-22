@@ -340,6 +340,41 @@ export async function listCatalogExercises(
   return { items, total, page, pageSize };
 }
 
+/// Lista completa (sem paginação) do catálogo visível ao tenant, para
+/// seletores client-side com busca instantânea (montagem de treino,
+/// `ExerciseAutocomplete`) — diferente de `listCatalogExercises`, que
+/// pagina deliberadamente para a tela de navegação do catálogo
+/// (`/painel/exercicios`). Usar a versão paginada aqui faria o seletor
+/// esconder qualquer exercício fora da primeira página — bug real
+/// encontrado após a IMP-EX-002 (208 exercícios curados sozinhos já
+/// excedem o `MAX_CATALOG_PAGE_SIZE` de 100). `PICKER_HARD_LIMIT` é só uma
+/// rede de segurança contra uma consulta sem tamanho definido, não um
+/// valor esperado de ser alcançado no volume atual do catálogo.
+const PICKER_HARD_LIMIT = 1000;
+
+export interface CatalogExercisePickerItem {
+  id: string;
+  name: string;
+  muscle: string | null;
+}
+
+export async function listCatalogExercisesForPicker(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<CatalogExercisePickerItem[]> {
+  const where: Prisma.ExerciseWhereInput = {
+    status: "ATIVO",
+    ...visibleCatalogOriginCondition(input.tenantId),
+  };
+
+  return client.exercise.findMany({
+    where,
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    take: PICKER_HARD_LIMIT,
+    select: { id: true, name: true, muscle: true },
+  });
+}
+
 /// Busca um exercício do catálogo visível ao tenant — global (qualquer
 /// status; na prática sempre ATIVO, importação nunca cria um global
 /// arquivado) ou próprio do tenant **em qualquer status**, incluindo

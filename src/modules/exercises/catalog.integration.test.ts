@@ -5,7 +5,13 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
-import { archiveExercise, createOwnExercise, getCatalogExerciseForTenant, listCatalogExercises } from "./exercises";
+import {
+  archiveExercise,
+  createOwnExercise,
+  getCatalogExerciseForTenant,
+  listCatalogExercises,
+  listCatalogExercisesForPicker,
+} from "./exercises";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
@@ -152,5 +158,55 @@ describe("getCatalogExerciseForTenant (FIT-023)", () => {
     const { tenant } = await createTenant("detalhe-inexistente");
     const found = await getCatalogExerciseForTenant({ tenantId: tenant.id, exerciseId: "id-que-nao-existe" }, prisma);
     expect(found).toBeNull();
+  });
+});
+
+describe("listCatalogExercisesForPicker (correção pós-IMP-EX-002: seletor de exercício nunca paginado)", () => {
+  it("retorna mais de 100 itens quando o catálogo visível ao tenant tem mais de 100 — nunca limitado como listCatalogExercises", async () => {
+    const { owner, tenant } = await createTenant("picker-sem-limite");
+    const names = Array.from({ length: 105 }, (_, i) => `Picker sem limite ${run} ${String(i).padStart(3, "0")}`);
+    await Promise.all(names.map((name) => createOwnExercise({ tenantId: tenant.id, actorUserId: owner.id, name }, prisma)));
+
+    const result = await listCatalogExercisesForPicker({ tenantId: tenant.id }, prisma);
+
+    const matching = result.filter((item) => item.name.startsWith(`Picker sem limite ${run}`));
+    expect(matching).toHaveLength(105);
+  });
+
+  it("inclui o músculo do exercício", async () => {
+    const { tenant } = await createTenant("picker-musculo");
+    const global = await createGlobalExercise(`Rosca picker ${run}`, { muscle: "biceps" });
+
+    const result = await listCatalogExercisesForPicker({ tenantId: tenant.id }, prisma);
+    expect(result.find((item) => item.id === global.id)?.muscle).toBe("biceps");
+  });
+
+  it("nunca inclui exercício arquivado", async () => {
+    const { owner, tenant } = await createTenant("picker-arquivado");
+    const own = await createOwnExercise({ tenantId: tenant.id, actorUserId: owner.id, name: `Picker arquivado ${run}` }, prisma);
+    await archiveExercise({ tenantId: tenant.id, actorUserId: owner.id, exerciseId: own.id }, prisma);
+
+    const result = await listCatalogExercisesForPicker({ tenantId: tenant.id }, prisma);
+    expect(result.map((item) => item.id)).not.toContain(own.id);
+  });
+
+  it("nunca inclui exercício próprio de outro tenant", async () => {
+    const tenantA = await createTenant("picker-cruzado-a");
+    const tenantB = await createTenant("picker-cruzado-b");
+    const ownB = await createOwnExercise(
+      { tenantId: tenantB.tenant.id, actorUserId: tenantB.owner.id, name: `Picker só de B ${run}` },
+      prisma
+    );
+
+    const result = await listCatalogExercisesForPicker({ tenantId: tenantA.tenant.id }, prisma);
+    expect(result.map((item) => item.id)).not.toContain(ownB.id);
+  });
+
+  it("inclui exercício global de origem FITOS_CURATED, não só API_NINJAS", async () => {
+    const { tenant } = await createTenant("picker-curated");
+    const curated = await prisma.exercise.create({ data: { tenantId: null, origin: "FITOS_CURATED", name: `Picker curado ${run}` } });
+
+    const result = await listCatalogExercisesForPicker({ tenantId: tenant.id }, prisma);
+    expect(result.map((item) => item.id)).toContain(curated.id);
   });
 });
