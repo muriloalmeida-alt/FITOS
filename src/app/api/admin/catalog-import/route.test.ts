@@ -2,11 +2,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const runCatalogImportDryRun = vi.fn();
 const runCatalogImport = vi.fn();
+const parseCuratedCatalogCsv = vi.fn();
+const importCuratedCatalog = vi.fn();
+const readFile = vi.fn();
 
 vi.mock("@/modules/exercises/catalogImportOrchestrator", () => ({
   runCatalogImportDryRun: (...args: unknown[]) => runCatalogImportDryRun(...args),
   runCatalogImport: (...args: unknown[]) => runCatalogImport(...args),
 }));
+
+vi.mock("@/modules/exercises/importCuratedCatalog", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/exercises/importCuratedCatalog")>(
+    "@/modules/exercises/importCuratedCatalog"
+  );
+  return {
+    ...actual,
+    parseCuratedCatalogCsv: (...args: unknown[]) => parseCuratedCatalogCsv(...args),
+    importCuratedCatalog: (...args: unknown[]) => importCuratedCatalog(...args),
+  };
+});
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...actual, readFile: (...args: unknown[]) => readFile(...args) };
+});
 
 const SECRET = "segredo-de-teste-bem-longo-0123456789";
 
@@ -254,6 +273,81 @@ describe("Segredo via query string ?secret= (exceção adicional, 21/09/2026 —
     const response = await POST(new Request(url, { method: "POST", body: JSON.stringify({ environment: "homologacao", dryRun: true }) }));
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe("GET /api/admin/catalog-import?source=curated (extensão IMP-EX-002, 22/09/2026 — sem acesso a terminal/CLI)", () => {
+  beforeEach(() => {
+    process.env.CATALOG_IMPORT_TRIGGER_SECRET = SECRET;
+    readFile.mockResolvedValue("canonical_key,name\nfitos:x,X");
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+    delete process.env.CATALOG_IMPORT_TRIGGER_SECRET;
+  });
+
+  it("retorna 404 sem o segredo, mesmo com source=curated", async () => {
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ source: "curated" }, {}));
+
+    expect(response.status).toBe(404);
+    expect(importCuratedCatalog).not.toHaveBeenCalled();
+  });
+
+  it("lê o CSV, faz o parsing e importa — devolve o resultado com source: curated", async () => {
+    const records = [{ externalId: "fitos:x", name: "X" }];
+    parseCuratedCatalogCsv.mockReturnValue(records);
+    importCuratedCatalog.mockResolvedValue({ total: 1, created: 1, updated: 0 });
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ source: "curated" }));
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json).toEqual({ ok: true, source: "curated", total: 1, created: 1, updated: 0 });
+    expect(importCuratedCatalog).toHaveBeenCalledWith(records);
+    expect(runCatalogImport).not.toHaveBeenCalled();
+  });
+
+  it("linha inválida do CSV (CuratedCatalogRowError) retorna 400", async () => {
+    const { CuratedCatalogRowError } = await vi.importActual<typeof import("@/modules/exercises/importCuratedCatalog")>(
+      "@/modules/exercises/importCuratedCatalog"
+    );
+    parseCuratedCatalogCsv.mockImplementation(() => {
+      throw new CuratedCatalogRowError(2, 'campo obrigatório "name" ausente ou vazio.');
+    });
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ source: "curated" }));
+
+    expect(response.status).toBe(400);
+    expect(importCuratedCatalog).not.toHaveBeenCalled();
+  });
+
+  it("erro inesperado retorna 500 genérico, sem vazar a mensagem original", async () => {
+    parseCuratedCatalogCsv.mockReturnValue([]);
+    importCuratedCatalog.mockRejectedValue(new Error("detalhe interno sensível"));
+    const { GET } = await import("./route");
+
+    const response = await GET(getRequest({ source: "curated" }));
+    const json = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(json)).not.toContain("detalhe interno sensível");
+  });
+
+  it("também funciona via POST com source: curated no corpo", async () => {
+    parseCuratedCatalogCsv.mockReturnValue([]);
+    importCuratedCatalog.mockResolvedValue({ total: 0, created: 0, updated: 0 });
+    const { POST } = await import("./route");
+
+    const response = await POST(postRequest({ source: "curated" }));
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json).toEqual({ ok: true, source: "curated", total: 0, created: 0, updated: 0 });
   });
 });
 

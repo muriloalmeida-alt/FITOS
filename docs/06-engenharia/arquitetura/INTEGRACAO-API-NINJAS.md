@@ -47,6 +47,16 @@ O IMP-EX-001 (pacote pós-MVP, seção 8) proíbe explicitamente "manter endpoin
 
 **Plano de retirada**: remover a rota (ou, no mínimo, desconfigurar `CATALOG_IMPORT_TRIGGER_SECRET` no Railway) assim que a carga real for concluída e confirmada, ou assim que o acesso SSH/CLI ao Railway for restabelecido — o que ocorrer primeiro. Esta rota não deve ser reaproveitada para nenhum outro job futuro sem uma nova decisão de Produto registrada.
 
+### Reaproveitamento — importação do catálogo curado (`?source=curated`, IMP-EX-002, 22/09/2026)
+
+Nova decisão de Produto registrada, conforme exigido acima: Murilo pediu a importação do catálogo curado FITOS (IMP-EX-002) em homologação, mas não tem acesso a terminal/CLI para rodar `npm run catalog:import-curated` diretamente — mesma classe de bloqueio que originou esta rota na IMP-EX-001, então ele optou por reaproveitá-la em vez de abrir uma superfície nova.
+
+- `?source=curated` (em `GET`, ou `{ "source": "curated" }` no corpo do `POST`) desvia o despacho antes de `parseCatalogImportRequest` para `runCuratedCatalogImport` — lê o CSV versionado no repositório, faz o parsing e chama `importCuratedCatalog`. Mesmo segredo, mesmo guarda-corpo de `isAuthorized`, nenhuma superfície nova de autenticação.
+- **Sem `environment`/`autorizadoPor`/trava de `CatalogImportRun`**: a importação curada não usa essa máquina (ver `CATALOGO-DE-EXERCICIOS.md`, seção IMP-EX-002) — é sempre idempotente por `externalId`, então chamar a rota várias vezes nunca duplica nem exige coordenação.
+- Erro de linha inválida do CSV (`CuratedCatalogRowError`) responde 400; qualquer outro erro responde 500 genérico, mesmo padrão do restante da rota.
+- Smoke test manual contra `npm run start` local confirmou o fluxo completo: `{"ok":true,"source":"curated","total":208,"created":0,"updated":208}` (idempotente — os 208 já existiam do banco de desenvolvimento local).
+- O plano de retirada acima permanece válido para os dois usos da rota (API Ninjas e catálogo curado) — nenhum dos dois deve sobreviver além da necessidade operacional que os justificou.
+
 ## Controles
 
 - segredo exclusivamente no Railway/backend;
