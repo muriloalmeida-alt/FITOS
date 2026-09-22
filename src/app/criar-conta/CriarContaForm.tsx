@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, FormAlert, TextField } from "@/shared/ui";
 import { signUp } from "@/modules/identity/auth-client";
@@ -52,6 +52,32 @@ export function CriarContaForm({ mode = "personal" }: CriarContaFormProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hasData = name.trim() !== "" || email.trim() !== "" || password !== "" || confirmPassword !== "";
+
+  /// Requisito comum do onboarding (FIT-112, seção 6 do pacote): "opção de
+  /// fechar com confirmação se houver dados preenchidos". Cobre fechar a
+  /// aba/recarregar/navegar para fora do site — um descarregamento real de
+  /// página, que `beforeunload` já intercepta nativamente. O "← Voltar"
+  /// abaixo é navegação client-side do Next.js (nunca dispara
+  /// `beforeunload`), por isso tem sua própria confirmação explícita.
+  useEffect(() => {
+    if (!hasData || isSubmitting) {
+      return;
+    }
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasData, isSubmitting]);
+
+  function handleBack() {
+    if (hasData && !window.confirm("Você tem dados preenchidos que serão perdidos. Quer mesmo voltar?")) {
+      return;
+    }
+    router.push("/criar-conta");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,6 +163,9 @@ export function CriarContaForm({ mode = "personal" }: CriarContaFormProps) {
       <Button type="submit" variant="filled" disabled={isSubmitting}>
         {isSubmitting ? "Criando conta…" : "Criar conta"}
       </Button>
+      <button type="button" className={styles.backButton} onClick={handleBack} disabled={isSubmitting}>
+        ← Voltar
+      </button>
     </form>
   );
 }

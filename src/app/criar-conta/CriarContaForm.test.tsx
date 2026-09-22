@@ -89,6 +89,43 @@ describe("CriarContaForm", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding"));
   });
 
+  it("FIT-112: Voltar sem dados preenchidos navega direto para a etapa 1, sem confirmação", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm");
+    const { CriarContaForm } = await import("./CriarContaForm");
+    const user = userEvent.setup();
+    render(<CriarContaForm />);
+
+    await user.click(screen.getByRole("button", { name: "← Voltar" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith("/criar-conta");
+  });
+
+  it("FIT-112: Voltar com dados preenchidos pede confirmação; cancelar não navega", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const { CriarContaForm } = await import("./CriarContaForm");
+    const user = userEvent.setup();
+    render(<CriarContaForm />);
+
+    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
+    await user.click(screen.getByRole("button", { name: "← Voltar" }));
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("FIT-112: Voltar com dados preenchidos e confirmação aceita navega para a etapa 1", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { CriarContaForm } = await import("./CriarContaForm");
+    const user = userEvent.setup();
+    render(<CriarContaForm />);
+
+    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
+    await user.click(screen.getByRole("button", { name: "← Voltar" }));
+
+    expect(push).toHaveBeenCalledWith("/criar-conta");
+  });
+
   it("mostra mensagem genérica de erro quando o cadastro falha, sem revelar o motivo exato", async () => {
     signUpEmail.mockResolvedValue({ error: { message: "User already exists" } });
     const { CriarContaForm } = await import("./CriarContaForm");

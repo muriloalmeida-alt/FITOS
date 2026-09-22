@@ -100,7 +100,7 @@ export default function LandingPage() {
         <div className={styles.pathsGrid}>
           <Card title="Sou Personal">
             <p>Gestão profissional de alunos, treinos e negócio.</p>
-            <Button href="/criar-conta" variant="filled" className={styles.pathCta}>
+            <Button href="/criar-conta?modo=personal" variant="filled" className={styles.pathCta}>
               Criar conta grátis
             </Button>
           </Card>
