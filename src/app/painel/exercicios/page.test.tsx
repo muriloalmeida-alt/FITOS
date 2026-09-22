@@ -83,6 +83,23 @@ describe("ExerciciosPage (FIT-023)", () => {
     );
   });
 
+  it("IMP-EX-002: exercício de origem FITOS_CURATED também é mostrado como Global, não Meu exercício", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listCatalogExercises.mockResolvedValue({
+      items: [{ id: "c1", name: "Rosca alta no cabo", muscle: "Bíceps", origin: "FITOS_CURATED", status: "ATIVO" }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    const { default: ExerciciosPage } = await import("./page");
+    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
+
+    expect(screen.getByText("Rosca alta no cabo")).toBeInTheDocument();
+    expect(screen.getByText("Global")).toBeInTheDocument();
+    expect(screen.queryByText("Meu exercício")).not.toBeInTheDocument();
+  });
+
   it("estado vazio honesto quando não há resultado", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });

@@ -14,7 +14,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "catalog:import-api-ninjas": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-exercicios.ts"
+    "catalog:import-api-ninjas": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-exercicios.ts",
+    "catalog:import-curated": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-catalogo-curado.ts"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -22,6 +23,7 @@
   "dependencies": {
     "@prisma/client": "6.19.3",
     "better-auth": "1.7.5",
+    "csv-parse": "^7.0.2",
     "next": "16.3.5",
     "prisma": "6.19.3",
     "react": "19.3.0",
