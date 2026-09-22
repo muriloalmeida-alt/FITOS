@@ -1,4 +1,6 @@
 import "server-only";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { secretsMatch } from "@/shared/lib/secretCompare";
 import { parseCatalogImportRequest, CatalogImportRequestValidationError } from "@/modules/exercises/catalogImportRequest";
 import { runCatalogImport, runCatalogImportDryRun } from "@/modules/exercises/catalogImportOrchestrator";
@@ -7,6 +9,7 @@ import {
   CatalogImportLockedError,
   CatalogImportManifestMismatchError,
 } from "@/modules/exercises/catalogImportRun";
+import { CuratedCatalogRowError, importCuratedCatalog, parseCuratedCatalogCsv } from "@/modules/exercises/importCuratedCatalog";
 
 /// Exceção de governança registrada (IMP-EX-001, pacote pós-MVP proíbe
 /// explicitamente "endpoint público para disparar a importação") — decisão
@@ -17,6 +20,11 @@ import {
 /// risco aceito (inclusive os riscos adicionais do método `GET` e do
 /// segredo por query string, ambos aceitos separadamente em 21/09/2026) e
 /// do plano de retirada.
+///
+/// Estendida em 22/09/2026 (IMP-EX-002) para também disparar a importação
+/// do catálogo curado (`?source=curated`), pelo mesmo motivo e mesma
+/// decisão explícita de Murilo: sem acesso a terminal/CLI em homologação.
+/// Mesmo segredo, mesma superfície — ver `runCuratedCatalogImport` abaixo.
 ///
 /// Não é uma rota pública: sem `CATALOG_IMPORT_TRIGGER_SECRET` configurada,
 /// comporta-se como se não existisse (404 em qualquer método, nunca 503 —
@@ -57,11 +65,41 @@ function readBoolean(value: string | null): boolean {
   return value === "true" || value === "1";
 }
 
+const CURATED_CATALOG_CSV_PATH = path.join(process.cwd(), "src/modules/exercises/data/catalogo-exercicios-fitos-ptbr.csv");
+
+/// Extensão desta mesma exceção de governança (IMP-EX-002, 22/09/2026):
+/// Murilo não tem acesso a terminal/CLI para rodar
+/// `npm run catalog:import-curated` em homologação — `?source=curated`
+/// dispara a importação do catálogo curado em vez da API Ninjas, pelo
+/// mesmo segredo e mesmo guarda-corpo de `isAuthorized`. Sem parâmetros de
+/// `environment`/`autorizadoPor`: a importação curada é sempre idempotente
+/// (upsert por `externalId`, ver `importCuratedCatalog.ts`) e lê sempre o
+/// mesmo arquivo versionado no repositório — nenhuma trava adicional é
+/// necessária, ao contrário da API Ninjas.
+async function runCuratedCatalogImport(): Promise<Response> {
+  try {
+    const csvContent = await readFile(CURATED_CATALOG_CSV_PATH, "utf-8");
+    const records = parseCuratedCatalogCsv(csvContent);
+    const result = await importCuratedCatalog(records);
+    return Response.json({ ok: true, source: "curated", ...result });
+  } catch (error) {
+    if (error instanceof CuratedCatalogRowError) {
+      return Response.json({ ok: false, error: "VALIDACAO", message: error.message }, { status: 400 });
+    }
+    console.error("[api/admin/catalog-import] falha na importação curada:", error instanceof Error ? error.message : error);
+    return Response.json({ ok: false, error: "ERRO_INTERNO" }, { status: 500 });
+  }
+}
+
 /// `GET` e `POST` chegam aqui já normalizados para o mesmo formato — única
 /// implementação de despacho, nunca duplicada entre os dois métodos.
 async function handle(request: Request, input: Record<string, unknown>): Promise<Response> {
   if (!isAuthorized(request)) {
     return notFound();
+  }
+
+  if (input.source === "curated") {
+    return runCuratedCatalogImport();
   }
 
   let parsed;
@@ -133,6 +171,7 @@ export async function GET(request: Request): Promise<Response> {
   }
   const params = new URL(request.url).searchParams;
   return handle(request, {
+    source: params.get("source"),
     environment: params.get("environment"),
     dryRun: readBoolean(params.get("dryRun")),
     autorizadoPor: params.get("autorizadoPor"),
