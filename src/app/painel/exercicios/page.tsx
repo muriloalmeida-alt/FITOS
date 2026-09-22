@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button } from "@/shared/ui";
+import { AppShell, Button, ExerciseThumbnail } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listCatalogExercises } from "@/modules/exercises/exercises";
@@ -117,14 +117,23 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
             : "Nenhum exercício no catálogo ainda. Cadastre um exercício próprio para começar."}
         </p>
       ) : (
-        <ul className={styles.list} aria-label="Lista de exercícios">
+        <ul className={styles.grid} aria-label="Lista de exercícios">
           {result.items.map((exercise) => (
             <li key={exercise.id}>
-              <Link href={`/painel/exercicios/${exercise.id}`} className={styles.row}>
-                <span className={styles.cellName}>{exercise.name}</span>
-                <span className={styles.cellMuscle}>{exercise.muscle ?? "—"}</span>
-                <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
-                  {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
+              <Link href={`/painel/exercicios/${exercise.id}`} className={styles.card}>
+                <ExerciseThumbnail
+                  src={exercise.imageUrl}
+                  alt={exercise.imageAlt ?? exercise.name}
+                  width={96}
+                  height={96}
+                  className={styles.cardThumbnail}
+                />
+                <span className={styles.cardBody}>
+                  <span className={styles.cellName}>{exercise.name}</span>
+                  <span className={styles.cellMuscle}>{exercise.muscle ?? "—"}</span>
+                  <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
+                    {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
+                  </span>
                 </span>
               </Link>
             </li>

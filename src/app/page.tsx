@@ -3,9 +3,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import exerciseImageManifest from "@/modules/exercises/data/manifesto-imagens-exercicios.json";
 import { LandingHeader } from "./LandingHeader";
 import { ConviteCodeForm } from "./ConviteCodeForm";
 import styles from "./page.module.css";
+
+/// Teaser da biblioteca ilustrada (FIT-111, seção 8B do pacote — deferido
+/// da FIT-110 porque exigia o caminho real de imagens que só a FIT-111
+/// estabelece). A quantidade exibida (`exerciseImageManifest.length`) vem
+/// do próprio manifesto de importação versionado, nunca de um número
+/// hardcoded: a seção nunca fica desatualizada nem "enganosa" (exigência
+/// explícita do pacote) conforme novas ilustrações forem importadas em
+/// histórias futuras — o texto sempre reflete a contagem real publicada.
+const LIBRARY_TEASER_SLUGS = ["agachamento-livre-com-barra", "prancha-lateral", "puxada-alta-pegada-aberta", "rosca-direta-com-barra"];
+const libraryTeaserItems = LIBRARY_TEASER_SLUGS.map((slug) => exerciseImageManifest.find((entry) => entry.slug === slug)).filter(
+  (entry): entry is (typeof exerciseImageManifest)[number] => entry !== undefined
+);
 
 export const metadata: Metadata = {
   title: `${appName} — Gestão fitness, sem peso extra`,
@@ -108,6 +121,34 @@ export default function LandingPage() {
             </Button>
           </Card>
         </div>
+      </section>
+
+      <section id="biblioteca" className={styles.library}>
+        <h2 className={styles.sectionTitle}>Biblioteca ilustrada de exercícios</h2>
+        <p className={styles.libraryIntro}>
+          {exerciseImageManifest.length} exercícios já ilustrados de um acervo planejado de quase 100 — biblioteca
+          em expansão, disponível para Personal, Aluno vinculado e FitOS Livre.
+        </p>
+        <div className={styles.libraryGrid}>
+          {libraryTeaserItems.map((entry) => (
+            <figure key={entry.slug} className={styles.libraryItem}>
+              <Image
+                src={`/media/exercises/${entry.slug}.webp`}
+                alt={entry.altText}
+                width={200}
+                height={200}
+                loading="lazy"
+                sizes="(min-width: 900px) 160px, 40vw"
+                className={styles.libraryImage}
+              />
+              <figcaption className={styles.libraryCaption}>{entry.nomeCanonico}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <p className={styles.libraryExample}>
+          Busque por nome (ex.: &ldquo;agachamento&rdquo;) e filtre por músculo, equipamento e dificuldade — com
+          ilustrações em duas fases do movimento quando aplicável.
+        </p>
       </section>
 
       <section id="para-quem" className={styles.relationship}>

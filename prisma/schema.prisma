@@ -413,6 +413,14 @@ model Exercise {
   difficulty   String?
   instructions String?
   safetyInfo   String?
+  /// FIT-111: caminho estático público (`/media/exercises/<slug>.webp`),
+  /// nunca um bucket/URL assinada — a regra de assets do pacote pede
+  /// explicitamente que nenhum caminho interno seja exposto, e um caminho
+  /// estático já servido por `public/` satisfaz isso sem exigir storage
+  /// externo. `imageAlt` é texto funcional do movimento (não o nome do
+  /// arquivo original), escrito pelo manifesto de importação.
+  imageUrl     String?
+  imageAlt     String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

@@ -34,19 +34,19 @@
   font-size: 16px;
 }
 
-.list {
+.grid {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--fitos-space-2);
 }
 
-.row {
+.card {
   display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-1);
+  align-items: center;
+  gap: var(--fitos-space-3);
   padding: var(--fitos-space-3) var(--fitos-space-4);
   border-radius: var(--fitos-shape-medium);
   background-color: var(--fitos-color-surface-container);
@@ -55,8 +55,19 @@
   color: inherit;
 }
 
-.row:hover {
+.card:hover {
   background-color: var(--fitos-color-surface-container-high);
+}
+
+.cardThumbnail {
+  border-radius: var(--fitos-shape-small);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  min-width: 0;
 }
 
 .cellName {
@@ -136,16 +147,7 @@
     flex: 1;
   }
 
-  .row {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .cellName {
-    flex: 1 1 40%;
-  }
-
-  .cellMuscle {
-    flex: 1 1 30%;
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

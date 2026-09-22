@@ -8,3 +8,4 @@ export { AppShell, type AppShellNavItem } from "./AppShell";
 export { PulseLine, type PulseLineVariant } from "./PulseLine";
 export { AuthHero } from "./AuthHero";
 export { Avatar } from "./Avatar";
+export { ExerciseThumbnail } from "./ExerciseThumbnail";

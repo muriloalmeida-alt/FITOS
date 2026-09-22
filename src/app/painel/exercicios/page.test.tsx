@@ -100,6 +100,48 @@ describe("ExerciciosPage (FIT-023)", () => {
     expect(screen.queryByText("Meu exercício")).not.toBeInTheDocument();
   });
 
+  it("FIT-111: exercício com imagem ilustrada mostra a imagem com o alt funcional do movimento", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listCatalogExercises.mockResolvedValue({
+      items: [
+        {
+          id: "c1",
+          name: "Agachamento livre com barra",
+          muscle: "Quadríceps",
+          origin: "FITOS_CURATED",
+          status: "ATIVO",
+          imageUrl: "/media/exercises/agachamento-livre-com-barra.webp",
+          imageAlt: "Agachamento livre com barra. Ilustração em duas fases do movimento.",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    const { default: ExerciciosPage } = await import("./page");
+    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
+
+    expect(
+      screen.getByRole("img", { name: "Agachamento livre com barra. Ilustração em duas fases do movimento." })
+    ).toBeInTheDocument();
+  });
+
+  it("FIT-111: exercício sem imagem ainda vinculada mostra o placeholder, nunca uma quebra visual", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listCatalogExercises.mockResolvedValue({
+      items: [{ id: "p1", name: "Rosca própria", muscle: "bíceps", origin: "PERSONAL", status: "ATIVO", imageUrl: null, imageAlt: null }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    const { default: ExerciciosPage } = await import("./page");
+    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
+
+    expect(screen.getByText("Sem imagem")).toBeInTheDocument();
+  });
+
   it("estado vazio honesto quando não há resultado", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });

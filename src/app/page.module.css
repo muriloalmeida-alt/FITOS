@@ -114,6 +114,59 @@
   margin-top: var(--fitos-space-3);
 }
 
+.library {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--fitos-space-10) var(--fitos-space-4);
+  text-align: center;
+}
+
+.libraryIntro {
+  max-width: 640px;
+  margin: 0 auto var(--fitos-space-6) auto;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.libraryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--fitos-space-4);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.libraryItem {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  align-items: center;
+}
+
+.libraryImage {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--fitos-shape-medium);
+  display: block;
+}
+
+.libraryCaption {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--fitos-color-on-chrome);
+}
+
+.libraryExample {
+  max-width: 560px;
+  margin: var(--fitos-space-6) auto 0 auto;
+  font-size: 14px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
 .relationship {
   max-width: 1120px;
   margin: 0 auto;
@@ -232,6 +285,11 @@
   .benefitsGrid,
   .pathsGrid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .libraryGrid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 100%;
   }
 
   .relationship {

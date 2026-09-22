@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { AppShell, Card, ExerciseThumbnail } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
@@ -50,6 +50,15 @@ export default async function ExercicioDetalhePage({ params }: ExercicioDetalheP
       <Link href="/painel/exercicios" className={styles.backLink}>
         ← Voltar para o catálogo
       </Link>
+
+      <ExerciseThumbnail
+        src={exercise.imageUrl}
+        alt={exercise.imageAlt ?? exercise.name}
+        width={320}
+        height={320}
+        priority
+        className={styles.heroImage}
+      />
 
       <Card title="Dados do exercício">
         <p className={styles.originLine}>

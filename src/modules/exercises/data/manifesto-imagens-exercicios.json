@@ -1,0 +1,647 @@
+[
+  {
+    "arquivoOriginal": "Abdominal no cabo ajoelhado.png",
+    "canonicalKey": "fitos:abdominal-no-cabo-ajoelhado",
+    "slug": "abdominal-no-cabo-ajoelhado",
+    "nomeCanonico": "Abdominal no cabo ajoelhado",
+    "musculo": "Core",
+    "equipamento": "polia alta, corda",
+    "aliases": [
+      "Abdominal no cabo ajoelhado"
+    ],
+    "duasFases": false,
+    "altText": "Abdominal no cabo ajoelhado. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: polia alta, corda.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Agachamento búlgaro com halteres.png",
+    "canonicalKey": "fitos:agachamento-bulgaro",
+    "slug": "agachamento-bulgaro",
+    "nomeCanonico": "Agachamento búlgaro",
+    "musculo": "Quadríceps",
+    "equipamento": "halteres, banco",
+    "aliases": [
+      "Agachamento búlgaro com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento búlgaro. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halteres, banco.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Agachamento frontal com barra em duas fases.png",
+    "canonicalKey": "fitos:agachamento-frontal-com-barra",
+    "slug": "agachamento-frontal-com-barra",
+    "nomeCanonico": "Agachamento frontal com barra",
+    "musculo": "Quadríceps",
+    "equipamento": "barra, rack",
+    "aliases": [
+      "Agachamento frontal com barra em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Agachamento frontal com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: barra, rack.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Agachamento livre com barra: duas fases.png",
+    "canonicalKey": "fitos:agachamento-livre-com-barra",
+    "slug": "agachamento-livre-com-barra",
+    "nomeCanonico": "Agachamento livre com barra",
+    "musculo": "Quadríceps",
+    "equipamento": "barra, rack",
+    "aliases": [
+      "Agachamento livre com barra: duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Agachamento livre com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: barra, rack.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Avanço reverso com halteres.png",
+    "canonicalKey": "fitos:avanco-com-halteres",
+    "slug": "avanco-com-halteres",
+    "nomeCanonico": "Avanço com halteres",
+    "musculo": "Quadríceps",
+    "equipamento": "halteres",
+    "aliases": [
+      "Avanço reverso com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Avanço com halteres. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halteres.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Cadeira extensora: flexão e extensão controladas.png",
+    "canonicalKey": "fitos:cadeira-extensora",
+    "slug": "cadeira-extensora",
+    "nomeCanonico": "Cadeira extensora",
+    "musculo": "Quadríceps",
+    "equipamento": "cadeira extensora",
+    "aliases": [
+      "Cadeira extensora: flexão e extensão controladas"
+    ],
+    "duasFases": true,
+    "altText": "Cadeira extensora. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: cadeira extensora.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Chest press sentado na máquina.png",
+    "canonicalKey": "fitos:chest-press-sentado",
+    "slug": "chest-press-sentado",
+    "nomeCanonico": "Chest press sentado",
+    "musculo": "Peitoral",
+    "equipamento": "máquina chest press",
+    "aliases": [
+      "Chest press sentado na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Chest press sentado. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina chest press.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Crucifixo na máquina peck deck.png",
+    "canonicalKey": "fitos:crucifixo-na-maquina-peck-deck",
+    "slug": "crucifixo-na-maquina-peck-deck",
+    "nomeCanonico": "Crucifixo na máquina peck deck",
+    "musculo": "Peitoral",
+    "equipamento": "máquina peck deck",
+    "aliases": [
+      "Crucifixo na máquina peck deck"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo na máquina peck deck. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina peck deck.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Desenvolvimento na máquina.png",
+    "canonicalKey": "fitos:desenvolvimento-na-maquina",
+    "slug": "desenvolvimento-na-maquina",
+    "nomeCanonico": "Desenvolvimento na máquina",
+    "musculo": "Ombros",
+    "equipamento": "máquina de desenvolvimento",
+    "aliases": [
+      "Desenvolvimento na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Desenvolvimento na máquina. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: máquina de desenvolvimento.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Desenvolvimento sentado com halteres.png",
+    "canonicalKey": "fitos:desenvolvimento-com-halteres-sentado",
+    "slug": "desenvolvimento-com-halteres-sentado",
+    "nomeCanonico": "Desenvolvimento com halteres sentado",
+    "musculo": "Ombros",
+    "equipamento": "halteres, banco",
+    "aliases": [
+      "Desenvolvimento sentado com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Desenvolvimento com halteres sentado. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres, banco.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Elevação de pernas deitado.png",
+    "canonicalKey": "fitos:elevacao-de-pernas-deitado",
+    "slug": "elevacao-de-pernas-deitado",
+    "nomeCanonico": "Elevação de pernas deitado",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Elevação de pernas deitado"
+    ],
+    "duasFases": false,
+    "altText": "Elevação de pernas deitado. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Elevação de pernas na barra.png",
+    "canonicalKey": "fitos:elevacao-de-pernas-na-barra",
+    "slug": "elevacao-de-pernas-na-barra",
+    "nomeCanonico": "Elevação de pernas na barra",
+    "musculo": "Core",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Elevação de pernas na barra"
+    ],
+    "duasFases": false,
+    "altText": "Elevação de pernas na barra. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: barra fixa.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Elevação lateral com halteres.png",
+    "canonicalKey": "fitos:elevacao-lateral-com-halteres",
+    "slug": "elevacao-lateral-com-halteres",
+    "nomeCanonico": "Elevação lateral com halteres",
+    "musculo": "Ombros",
+    "equipamento": "halteres",
+    "aliases": [
+      "Elevação lateral com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Elevação lateral com halteres. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Elevação pélvica com barra em duas fases.png",
+    "canonicalKey": "fitos:elevacao-pelvica-com-barra",
+    "slug": "elevacao-pelvica-com-barra",
+    "nomeCanonico": "Elevação pélvica com barra",
+    "musculo": "Glúteos",
+    "equipamento": "barra, banco",
+    "aliases": [
+      "Elevação pélvica com barra em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Elevação pélvica com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Glúteos. Equipamento: barra, banco.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Face pull em duas fases.png",
+    "canonicalKey": "fitos:face-pull",
+    "slug": "face-pull",
+    "nomeCanonico": "Face pull",
+    "musculo": "Costas",
+    "equipamento": "polia alta, corda",
+    "aliases": [
+      "Face pull em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Face pull. Ilustração em duas fases do movimento (início e final). Músculo principal: Costas. Equipamento: polia alta, corda.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Leg press 45° em duas fases.webp",
+    "canonicalKey": "fitos:leg-press-45",
+    "slug": "leg-press-45",
+    "nomeCanonico": "Leg press 45°",
+    "musculo": "Quadríceps",
+    "equipamento": "leg press 45°",
+    "aliases": [
+      "Leg press 45° em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Leg press 45°. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: leg press 45°.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Levantamento terra romeno com barra.webp",
+    "canonicalKey": "fitos:levantamento-terra-romeno-com-barra",
+    "slug": "levantamento-terra-romeno-com-barra",
+    "nomeCanonico": "Levantamento terra romeno com barra",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "barra",
+    "aliases": [
+      "Levantamento terra romeno com barra"
+    ],
+    "duasFases": false,
+    "altText": "Levantamento terra romeno com barra. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: barra.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Mesa flexora em duas fases.webp",
+    "canonicalKey": "fitos:mesa-flexora",
+    "slug": "mesa-flexora",
+    "nomeCanonico": "Mesa flexora",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "mesa flexora",
+    "aliases": [
+      "Mesa flexora em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Mesa flexora. Ilustração em duas fases do movimento (início e final). Músculo principal: Posteriores de coxa. Equipamento: mesa flexora.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Panturrilha em pé na máquina.webp",
+    "canonicalKey": "fitos:panturrilha-em-pe-na-maquina",
+    "slug": "panturrilha-em-pe-na-maquina",
+    "nomeCanonico": "Panturrilha em pé na máquina",
+    "musculo": "Panturrilhas",
+    "equipamento": "máquina de panturrilha",
+    "aliases": [
+      "Panturrilha em pé na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha em pé na máquina. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: máquina de panturrilha.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Panturrilha na máquina: alongamento e contração.webp",
+    "canonicalKey": "fitos:panturrilha-sentada-na-maquina",
+    "slug": "panturrilha-sentada-na-maquina",
+    "nomeCanonico": "Panturrilha sentada na máquina",
+    "musculo": "Panturrilhas",
+    "equipamento": "máquina de panturrilha sentada",
+    "aliases": [
+      "Panturrilha na máquina: alongamento e contração"
+    ],
+    "duasFases": true,
+    "altText": "Panturrilha sentada na máquina. Ilustração em duas fases do movimento (início e final). Músculo principal: Panturrilhas. Equipamento: máquina de panturrilha sentada.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Prancha frontal: preparação e execução.webp",
+    "canonicalKey": "fitos:prancha-frontal",
+    "slug": "prancha-frontal",
+    "nomeCanonico": "Prancha frontal",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Prancha frontal: preparação e execução"
+    ],
+    "duasFases": true,
+    "altText": "Prancha frontal. Ilustração em duas fases do movimento (início e final). Músculo principal: Core. Equipamento: colchonete.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Prancha lateral: duas fases.webp",
+    "canonicalKey": "fitos:prancha-lateral",
+    "slug": "prancha-lateral",
+    "nomeCanonico": "Prancha lateral",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Prancha lateral: duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Prancha lateral. Ilustração em duas fases do movimento (início e final). Músculo principal: Core. Equipamento: colchonete.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Pulldown com braços estendidos no cabo.webp",
+    "canonicalKey": "fitos:pulldown-com-bracos-estendidos",
+    "slug": "pulldown-com-bracos-estendidos",
+    "nomeCanonico": "Pulldown com braços estendidos",
+    "musculo": "Costas",
+    "equipamento": "polia alta, barra",
+    "aliases": [
+      "Pulldown com braços estendidos no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Pulldown com braços estendidos. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, barra.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Puxada alta com pegada aberta.webp",
+    "canonicalKey": "fitos:puxada-alta-pegada-aberta",
+    "slug": "puxada-alta-pegada-aberta",
+    "nomeCanonico": "Puxada alta pegada aberta",
+    "musculo": "Costas",
+    "equipamento": "polia alta, barra",
+    "aliases": [
+      "Puxada alta com pegada aberta"
+    ],
+    "duasFases": false,
+    "altText": "Puxada alta pegada aberta. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, barra.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Puxada alta com pegada neutra.webp",
+    "canonicalKey": "fitos:puxada-alta-pegada-neutra",
+    "slug": "puxada-alta-pegada-neutra",
+    "nomeCanonico": "Puxada alta pegada neutra",
+    "musculo": "Costas",
+    "equipamento": "polia alta, triângulo",
+    "aliases": [
+      "Puxada alta com pegada neutra"
+    ],
+    "duasFases": false,
+    "altText": "Puxada alta pegada neutra. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, triângulo.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Remada baixa no cabo em duas fases.webp",
+    "canonicalKey": "fitos:remada-baixa-no-cabo",
+    "slug": "remada-baixa-no-cabo",
+    "nomeCanonico": "Remada baixa no cabo",
+    "musculo": "Costas",
+    "equipamento": "polia baixa, triângulo",
+    "aliases": [
+      "Remada baixa no cabo em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Remada baixa no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Costas. Equipamento: polia baixa, triângulo.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Remada curvada com barra.webp",
+    "canonicalKey": "fitos:remada-curvada-com-barra",
+    "slug": "remada-curvada-com-barra",
+    "nomeCanonico": "Remada curvada com barra",
+    "musculo": "Costas",
+    "equipamento": "barra",
+    "aliases": [
+      "Remada curvada com barra"
+    ],
+    "duasFases": false,
+    "altText": "Remada curvada com barra. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Remada unilateral com halter.webp",
+    "canonicalKey": "fitos:remada-unilateral-com-halter",
+    "slug": "remada-unilateral-com-halter",
+    "nomeCanonico": "Remada unilateral com halter",
+    "musculo": "Costas",
+    "equipamento": "halter, banco",
+    "aliases": [
+      "Remada unilateral com halter"
+    ],
+    "duasFases": false,
+    "altText": "Remada unilateral com halter. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: halter, banco.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Rosca Scott com barra W.webp",
+    "canonicalKey": "fitos:rosca-scott-com-barra-w",
+    "slug": "rosca-scott-com-barra-w",
+    "nomeCanonico": "Rosca Scott com barra W",
+    "musculo": "Bíceps",
+    "equipamento": "barra W, banco Scott",
+    "aliases": [
+      "Rosca Scott com barra W"
+    ],
+    "duasFases": false,
+    "altText": "Rosca Scott com barra W. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra W, banco Scott.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Rosca aranha com barra W.webp",
+    "canonicalKey": "fitos:rosca-aranha-com-barra-w",
+    "slug": "rosca-aranha-com-barra-w",
+    "nomeCanonico": "Rosca aranha com barra W",
+    "musculo": "Bíceps",
+    "equipamento": "barra W, banco inclinado",
+    "aliases": [
+      "Rosca aranha com barra W"
+    ],
+    "duasFases": false,
+    "altText": "Rosca aranha com barra W. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra W, banco inclinado.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca com barra W em duas fases.webp",
+    "canonicalKey": "fitos:rosca-direta-com-barra-w",
+    "slug": "rosca-direta-com-barra-w",
+    "nomeCanonico": "Rosca direta com barra W",
+    "musculo": "Bíceps",
+    "equipamento": "barra W",
+    "aliases": [
+      "Rosca com barra W em duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Rosca direta com barra W. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: barra W.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca com corda: duas fases.png",
+    "canonicalKey": "fitos:rosca-com-corda-no-cabo",
+    "slug": "rosca-com-corda-no-cabo",
+    "nomeCanonico": "Rosca com corda no cabo",
+    "musculo": "Bíceps",
+    "equipamento": "polia baixa, corda",
+    "aliases": [
+      "Rosca com corda: duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Rosca com corda no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: polia baixa, corda.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca direta com barra.png",
+    "canonicalKey": "fitos:rosca-direta-com-barra",
+    "slug": "rosca-direta-com-barra",
+    "nomeCanonico": "Rosca direta com barra",
+    "musculo": "Bíceps",
+    "equipamento": "barra",
+    "aliases": [
+      "Rosca direta com barra"
+    ],
+    "duasFases": false,
+    "altText": "Rosca direta com barra. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Rosca direta na máquina: início e final.png",
+    "canonicalKey": "fitos:rosca-direta-na-maquina",
+    "slug": "rosca-direta-na-maquina",
+    "nomeCanonico": "Rosca direta na máquina",
+    "musculo": "Bíceps",
+    "equipamento": "máquina de rosca",
+    "aliases": [
+      "Rosca direta na máquina: início e final"
+    ],
+    "duasFases": true,
+    "altText": "Rosca direta na máquina. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: máquina de rosca.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca direta no cabo: início e final.png",
+    "canonicalKey": "fitos:rosca-direta-no-cabo",
+    "slug": "rosca-direta-no-cabo",
+    "nomeCanonico": "Rosca direta no cabo",
+    "musculo": "Bíceps",
+    "equipamento": "polia baixa, barra",
+    "aliases": [
+      "Rosca direta no cabo: início e final"
+    ],
+    "duasFases": true,
+    "altText": "Rosca direta no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: polia baixa, barra.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca inclinada com halteres: início e final.png",
+    "canonicalKey": "fitos:rosca-inclinada-com-halteres",
+    "slug": "rosca-inclinada-com-halteres",
+    "nomeCanonico": "Rosca inclinada com halteres",
+    "musculo": "Bíceps",
+    "equipamento": "halteres, banco inclinado",
+    "aliases": [
+      "Rosca inclinada com halteres: início e final"
+    ],
+    "duasFases": true,
+    "altText": "Rosca inclinada com halteres. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: halteres, banco inclinado.",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "arquivoOriginal": "Rosca martelo com halteres.png",
+    "canonicalKey": "fitos:rosca-martelo",
+    "slug": "rosca-martelo",
+    "nomeCanonico": "Rosca martelo",
+    "musculo": "Bíceps",
+    "equipamento": "halteres",
+    "aliases": [
+      "Rosca martelo com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Rosca martelo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Rotação de tronco na máquina.png",
+    "canonicalKey": "fitos:rotacao-de-tronco-na-maquina",
+    "slug": "rotacao-de-tronco-na-maquina",
+    "nomeCanonico": "Rotação de tronco na máquina",
+    "musculo": "Core",
+    "equipamento": "máquina de rotação",
+    "aliases": [
+      "Rotação de tronco na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Rotação de tronco na máquina. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: máquina de rotação.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Supino declinado com halteres.png",
+    "canonicalKey": "fitos:supino-declinado-com-halteres",
+    "slug": "supino-declinado-com-halteres",
+    "nomeCanonico": "Supino declinado com halteres",
+    "musculo": "Peitoral",
+    "equipamento": "halteres, banco declinado",
+    "aliases": [
+      "Supino declinado com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Supino declinado com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco declinado.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Supino inclinado com halteres.png",
+    "canonicalKey": "fitos:supino-inclinado-com-halteres",
+    "slug": "supino-inclinado-com-halteres",
+    "nomeCanonico": "Supino inclinado com halteres",
+    "musculo": "Peitoral",
+    "equipamento": "halteres, banco inclinado",
+    "aliases": [
+      "Supino inclinado com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Supino inclinado com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco inclinado.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Supino reto com barra, duas fases.png",
+    "canonicalKey": "fitos:supino-reto-com-barra",
+    "slug": "supino-reto-com-barra",
+    "nomeCanonico": "Supino reto com barra",
+    "musculo": "Peitoral",
+    "equipamento": "barra, banco reto",
+    "aliases": [
+      "Supino reto com barra, duas fases"
+    ],
+    "duasFases": true,
+    "altText": "Supino reto com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Peitoral. Equipamento: barra, banco reto.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Tríceps na polia com corda.png",
+    "canonicalKey": "fitos:triceps-na-polia-com-corda",
+    "slug": "triceps-na-polia-com-corda",
+    "nomeCanonico": "Tríceps na polia com corda",
+    "musculo": "Tríceps",
+    "equipamento": "polia alta, corda",
+    "aliases": [
+      "Tríceps na polia com corda"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps na polia com corda. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia alta, corda.",
+    "width": 800,
+    "height": 800
+  },
+  {
+    "arquivoOriginal": "Tríceps testa com barra W.png",
+    "canonicalKey": "fitos:triceps-testa-com-barra-w",
+    "slug": "triceps-testa-com-barra-w",
+    "nomeCanonico": "Tríceps testa com barra W",
+    "musculo": "Tríceps",
+    "equipamento": "barra W, banco",
+    "aliases": [
+      "Tríceps testa com barra W"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps testa com barra W. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: barra W, banco.",
+    "width": 800,
+    "height": 800
+  }
+]
