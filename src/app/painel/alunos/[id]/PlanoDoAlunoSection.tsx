@@ -20,6 +20,7 @@ interface PlanoDoAlunoSectionProps {
   activeAssignment: ActiveAssignmentProp | null;
   hasEndedAssignments: boolean;
   availablePlans: AvailablePlanOption[];
+  podeAtribuir: boolean;
 }
 
 /// Gestão da atribuição de plano ao aluno, do ponto de vista do personal
@@ -28,7 +29,14 @@ interface PlanoDoAlunoSectionProps {
 /// encerrado (nenhuma ativa, mas `hasEndedAssignments`) — atribuir um novo
 /// plano funciona igual nos três casos, sempre encerrando controladamente
 /// a anterior, se houver (`assignTrainingPlanToStudent`).
-export function PlanoDoAlunoSection({ studentId, activeAssignment, hasEndedAssignments, availablePlans }: PlanoDoAlunoSectionProps) {
+///
+/// `podeAtribuir` (FIT-108, `status === "ATIVO"`) esconde o formulário de
+/// atribuir/trocar e o botão de encerrar atribuição — nunca a leitura do
+/// programa já atribuído, que a FIT-107 já garante permanecer visível.
+/// `assignTrainingPlanToStudent`/`unassignTrainingPlanFromStudent`
+/// (backend) já rejeitam essas ações para um aluno não `ATIVO`; esconder
+/// o formulário aqui evita que o personal tente e receba um erro confuso.
+export function PlanoDoAlunoSection({ studentId, activeAssignment, hasEndedAssignments, availablePlans, podeAtribuir }: PlanoDoAlunoSectionProps) {
   const router = useRouter();
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -90,12 +98,16 @@ export function PlanoDoAlunoSection({ studentId, activeAssignment, hasEndedAssig
           <p className={styles.assignedSince}>
             Atribuído em {new Date(activeAssignment.assignedAt).toLocaleDateString("pt-BR")}
           </p>
-          {endError ? <FormAlert variant="error">{endError}</FormAlert> : null}
-          <div className={styles.actions}>
-            <Button type="button" variant="outlined" onClick={handleEnd} disabled={isEnding}>
-              {isEnding ? "Encerrando…" : "Encerrar atribuição"}
-            </Button>
-          </div>
+          {podeAtribuir ? (
+            <>
+              {endError ? <FormAlert variant="error">{endError}</FormAlert> : null}
+              <div className={styles.actions}>
+                <Button type="button" variant="outlined" onClick={handleEnd} disabled={isEnding}>
+                  {isEnding ? "Encerrando…" : "Encerrar atribuição"}
+                </Button>
+              </div>
+            </>
+          ) : null}
         </div>
       ) : (
         <p className={styles.empty}>
@@ -103,39 +115,41 @@ export function PlanoDoAlunoSection({ studentId, activeAssignment, hasEndedAssig
         </p>
       )}
 
-      <form className={styles.form} onSubmit={handleAssignSubmit} noValidate>
-        <h3 className={styles.formTitle}>{activeAssignment ? "Trocar programa" : "Atribuir programa"}</h3>
-        {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
+      {podeAtribuir ? (
+        <form className={styles.form} onSubmit={handleAssignSubmit} noValidate>
+          <h3 className={styles.formTitle}>{activeAssignment ? "Trocar programa" : "Atribuir programa"}</h3>
+          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
-        {availablePlans.length === 0 ? (
-          <p className={styles.empty}>Nenhum programa disponível para atribuir ainda.</p>
-        ) : (
-          <>
-            <div className={styles.selectField}>
-              <label className={styles.selectLabel} htmlFor="trainingPlanId">
-                Programa
-              </label>
-              <select
-                id="trainingPlanId"
-                className={styles.select}
-                value={selectedPlanId}
-                onChange={(event) => setSelectedPlanId(event.target.value)}
-                disabled={isSubmitting}
-              >
-                <option value="">Selecione um programa</option>
-                {availablePlans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" variant="filled" disabled={isSubmitting}>
-              {isSubmitting ? "Atribuindo…" : "Atribuir programa"}
-            </Button>
-          </>
-        )}
-      </form>
+          {availablePlans.length === 0 ? (
+            <p className={styles.empty}>Nenhum programa disponível para atribuir ainda.</p>
+          ) : (
+            <>
+              <div className={styles.selectField}>
+                <label className={styles.selectLabel} htmlFor="trainingPlanId">
+                  Programa
+                </label>
+                <select
+                  id="trainingPlanId"
+                  className={styles.select}
+                  value={selectedPlanId}
+                  onChange={(event) => setSelectedPlanId(event.target.value)}
+                  disabled={isSubmitting}
+                >
+                  <option value="">Selecione um programa</option>
+                  {availablePlans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" variant="filled" disabled={isSubmitting}>
+                {isSubmitting ? "Atribuindo…" : "Atribuir programa"}
+              </Button>
+            </>
+          )}
+        </form>
+      ) : null}
     </div>
   );
 }

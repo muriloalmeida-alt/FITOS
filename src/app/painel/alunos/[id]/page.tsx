@@ -108,6 +108,7 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
           }
           hasEndedAssignments={endedAssignments.length > 0}
           availablePlans={availablePlans.map((plan) => ({ id: plan.id, name: plan.name }))}
+          podeAtribuir={student.status === "ATIVO"}
         />
       </Card>
 
