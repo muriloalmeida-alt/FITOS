@@ -2,7 +2,9 @@
 
 ## Origem
 
-Mesmo pacote do EPIC-12 (`FitOS_Pacote_Pos_MVP_Fases_2_1_Monetizacao_2_2_Livre_v3.zip`). Esta fase depende do motor de assinatura, notificações e conciliação entregues pelo EPIC-12 — não inicia antes do encerramento e aprovação daquele Épico.
+Mesmo pacote do EPIC-12 (`FitOS_Pacote_Pos_MVP_Fases_2_1_Monetizacao_2_2_Livre_v3.zip`). Esta fase depende do motor de assinatura, notificações e conciliação entregues pelo EPIC-12 apenas na `FIT-105` (assinar o FitOS Livre) — as demais Histórias (`FIT-100` a `FIT-104`, `FIT-106` a `FIT-109`) não dependem de pagamento.
+
+**Atualização (21/09/2026)**: o EPIC-12 foi pausado na `FIT-091` por bloqueio real de rede ao Asaas nesta sessão (ver `EPIC-12-MONETIZACAO.md`). Decisão de Murilo: iniciar o EPIC-13 mesmo assim, começando pela `FIT-100`, e só pausar quando chegar na `FIT-105` (única dependente do motor de assinatura). A frase original acima ("não inicia antes do encerramento e aprovação daquele Épico") descrevia a sequência ideal, mas a dependência real, história por história, é só a listada em "Dependência" abaixo.
 
 ## Nota de transparência — renumeração de identificadores
 
@@ -52,4 +54,4 @@ Um usuário entra diretamente no FitOS Livre ou migra de um vínculo encerrado, 
 
 ## Estado do Épico
 
-Não iniciado — depende do encerramento e aprovação do EPIC-12.
+**Em andamento.** `FIT-100` (#99, sub-issue de #97) implementada: `Tenant.type`/`UserRole.INDIVIDUAL` (migration aditiva), `ensureTenantForIndividual`, `authContext.ts`/`requireIndividual()`, testes de autorização e isolamento — ver `ADR-006-WORKSPACE-INDIVIDUAL.md`. PR aberto, pendente de revisão/merge. `FIT-101` em diante seguem conforme a Dependência acima; `FIT-105` permanece bloqueada enquanto o EPIC-12 estiver pausado na `FIT-091`.

@@ -15,6 +15,7 @@ import {
   AuthError,
   assertTenantAccess,
   getAuthContext,
+  requireIndividual,
   requirePersonal,
   requireSession,
   requireStudent,
@@ -37,6 +38,12 @@ async function createPersonalWithTenant(label: string) {
   });
   const tenant = await prisma.tenant.create({ data: { ownerId: user.id, name: `Tenant ${label}` } });
   return { user, tenant };
+}
+
+async function createIndividualUser(label: string) {
+  return prisma.user.create({
+    data: { email: `${label}-${run}@example.test`, name: `${label} de teste`, role: "INDIVIDUAL" },
+  });
 }
 
 async function createStudentFor(tenantId: string, label: string) {
@@ -99,6 +106,22 @@ describe("getAuthContext (FIT-011)", () => {
     expect(ctx).toEqual({ authenticated: false });
   });
 
+  it("FIT-100: individual sem tenant prévio -> autocura provisiona o workspace e retorna role INDIVIDUAL", async () => {
+    const user = await createIndividualUser("individual-autocura");
+
+    const ctx = await getAuthContext(sessionFor(user), prisma);
+
+    expect(ctx.authenticated).toBe(true);
+    if (!ctx.authenticated) throw new Error("unreachable");
+    expect(ctx.role).toBe("INDIVIDUAL");
+    expect(ctx.studentId).toBeNull();
+    expect(ctx.tenantId).not.toBeNull();
+
+    const tenant = await prisma.tenant.findUnique({ where: { ownerId: user.id } });
+    expect(tenant?.type).toBe("INDIVIDUAL");
+    expect(ctx.tenantId).toBe(tenant?.id);
+  });
+
   it("FIT-014: aluno inativado pelo personal -> tratado como sem vínculo (tenantId/studentId nulos), não erro", async () => {
     const { user: owner, tenant } = await createPersonalWithTenant("dono-para-aluno-inativado");
     const { user } = await createStudentFor(tenant.id, "aluno-inativado");
@@ -145,6 +168,43 @@ describe("requireSession / requirePersonal / requireStudent (FIT-011)", () => {
     await prisma.student.update({ where: { userId: user.id }, data: { status: "INATIVO" } });
 
     await expect(requireStudent(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-100: individual tentando rota exclusiva do personal -> requirePersonal lança AuthError FORBIDDEN", async () => {
+    const user = await createIndividualUser("individual-tentando-personal");
+
+    await expect(requirePersonal(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-100: individual tentando rota exclusiva do aluno -> requireStudent lança AuthError FORBIDDEN", async () => {
+    const user = await createIndividualUser("individual-tentando-aluno");
+
+    await expect(requireStudent(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-100: personal tentando rota exclusiva do individual -> requireIndividual lança AuthError FORBIDDEN", async () => {
+    const { user } = await createPersonalWithTenant("personal-tentando-individual");
+
+    await expect(requireIndividual(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-100: aluno tentando rota exclusiva do individual -> requireIndividual lança AuthError FORBIDDEN", async () => {
+    const { user: owner, tenant } = await createPersonalWithTenant("dono-para-aluno-tentando-individual");
+    const { user } = await createStudentFor(tenant.id, "aluno-tentando-individual");
+    void owner;
+
+    await expect(requireIndividual(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+  });
+
+  it("FIT-100: individual autenticado acessa requireIndividual normalmente, com workspace autoprovisionado", async () => {
+    const user = await createIndividualUser("individual-acesso-normal");
+
+    const ctx = await requireIndividual(sessionFor(user), prisma);
+
+    expect(ctx.userId).toBe(user.id);
+    expect(ctx.role).toBe("INDIVIDUAL");
+    const tenant = await prisma.tenant.findUnique({ where: { ownerId: user.id } });
+    expect(ctx.tenantId).toBe(tenant?.id);
   });
 
   it("personal autenticado acessa requirePersonal normalmente", async () => {

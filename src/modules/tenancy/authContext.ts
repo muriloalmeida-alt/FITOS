@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getServerSession } from "@/modules/identity/session";
 import { ensureTenantForPersonal } from "./ensureTenantForPersonal";
+import { ensureTenantForIndividual } from "./ensureTenantForIndividual";
 
 /// Contexto de autorização confiável (FIT-011): a única fonte que os
 /// módulos de negócio devem consultar para saber "quem está autenticado,
@@ -20,7 +21,8 @@ export type AuthContext =
   | { authenticated: false }
   | { authenticated: true; userId: string; role: "PERSONAL"; tenantId: string; studentId: null }
   | { authenticated: true; userId: string; role: "ALUNO"; tenantId: string; studentId: string }
-  | { authenticated: true; userId: string; role: "ALUNO"; tenantId: null; studentId: null };
+  | { authenticated: true; userId: string; role: "ALUNO"; tenantId: null; studentId: null }
+  | { authenticated: true; userId: string; role: "INDIVIDUAL"; tenantId: string; studentId: null };
 
 type ServerSession = Awaited<ReturnType<typeof getServerSession>>;
 
@@ -45,6 +47,13 @@ export async function getAuthContext(sessionOverride?: ServerSession, client: Pr
     // falhado — nunca retorna tenantId nulo para um PERSONAL autenticado.
     const tenant = await ensureTenantForPersonal(user, client);
     return { authenticated: true, userId: user.id, role: "PERSONAL", tenantId: tenant.id, studentId: null };
+  }
+
+  if (user.role === "INDIVIDUAL") {
+    // Mesma autocura, workspace individual (FIT-100) — nunca retorna
+    // tenantId nulo para um INDIVIDUAL autenticado.
+    const tenant = await ensureTenantForIndividual(user, client);
+    return { authenticated: true, userId: user.id, role: "INDIVIDUAL", tenantId: tenant.id, studentId: null };
   }
 
   const student = await client.student.findUnique({ where: { userId: user.id } });
@@ -105,6 +114,17 @@ export async function requirePersonal(
   const ctx = await requireSession(sessionOverride, client);
   if (ctx.role !== "PERSONAL") {
     throw new AuthError("FORBIDDEN", "Acesso restrito a personal.");
+  }
+  return { userId: ctx.userId, role: ctx.role, tenantId: ctx.tenantId };
+}
+
+export async function requireIndividual(
+  sessionOverride?: ServerSession,
+  client: PrismaClient = prisma
+): Promise<{ userId: string; role: "INDIVIDUAL"; tenantId: string }> {
+  const ctx = await requireSession(sessionOverride, client);
+  if (ctx.role !== "INDIVIDUAL") {
+    throw new AuthError("FORBIDDEN", "Acesso restrito ao workspace individual (FitOS Livre).");
   }
   return { userId: ctx.userId, role: ctx.role, tenantId: ctx.tenantId };
 }

@@ -239,3 +239,17 @@ Execução real da carga (fora do `--dry-run`) permanece pendente — depende do
 Depois do PR #92 (retry-com-backoff no dry-run), o Product Owner testou de novo e reportou "o mesmo erro" — ou seja, mesmo com 3 tentativas por consulta, as falhas continuaram. Como `runCatalogImportDryRun` só devolvia uma contagem agregada (`failedSearches`), sem nenhuma indicação da causa, e esta sessão não tem acesso ao log do Railway, não havia como diferenciar chave inválida (401), plano sem permissão (403) e rate limit (429) só pelo número.
 
 Corrigido: `CatalogImportDryRunReport` ganhou `errorKinds` — contagem por `ApiNinjasError.kind` (`NAO_AUTORIZADO`, `PROIBIDO`, `LIMITE_EXCEDIDO`, `ERRO_SERVIDOR`, `TIMEOUT`, `RESPOSTA_INVALIDA`, ou `DESCONHECIDO` para erro fora do client da API Ninjas) — nenhum campo novo inclui a chave nem o corpo bruto da resposta, mesma garantia já existente em `ApiNinjasError`. Testes novos cobrindo a classificação. Suíte completa: 628/628, typecheck/lint/build limpos. Próximo passo: pedir o JSON de resposta do próximo teste — agora ele deve dizer exatamente qual é o problema.
+
+## Início do EPIC-13 (FitOS Livre): FIT-100 — workspace individual
+
+Murilo autorizou seguir com o EPIC-12 e o EPIC-13 até o fim, história por história, sem pausar para confirmação a cada etapa — mantendo de pé o gate de merge do pacote (todo PR continua `NÃO MERGEAR` até confirmação). O EPIC-12 foi implementado até a FIT-090 (#94, PR #95) e então pausado na FIT-091 por bloqueio real de rede ao Asaas (ver PR #98 e ADR-003) — decisão de Murilo foi seguir para o EPIC-13 (#97) enquanto isso.
+
+FIT-100 (workspace individual) é a primeira História do EPIC-13: dar a uma pessoa que treina sozinha (sem personal) seu próprio espaço na aplicação, provisionado automaticamente no cadastro, no mesmo padrão de autocura já usado para o tenant do personal (FIT-010). Issue [FIT-100] criada (#99, sub-issue de EPIC-13 #97).
+
+Implementado:
+
+- `TenantType` (`PERSONAL`/`INDIVIDUAL`, `@default(PERSONAL)`) em `Tenant.type` e `UserRole.INDIVIDUAL` — migration puramente aditiva (`20260921230135_add_individual_workspace`), nenhuma linha existente muda de significado.
+- `ensureTenantForIndividual.ts`: mesmo padrão de idempotência/concorrência de `ensureTenantForPersonal` (constraint física `tenants.ownerId @unique` decide a corrida, o perdedor busca o tenant do vencedor). Deliberadamente não cria `Student` nem qualquer dado de treino — só o workspace; a modelagem de como o próprio praticante se relaciona com treino/execução é decisão da FIT-102 (ver `ADR-006-WORKSPACE-INDIVIDUAL.md`).
+- `authContext.ts` (FIT-011): novo ramo de `getAuthContext` para `INDIVIDUAL` (mesma autocura do tenant) e novo `requireIndividual()`; `requirePersonal`/`requireStudent` continuam rejeitando qualquer sessão que não seja exatamente o papel esperado, incluindo `INDIVIDUAL`.
+- `auth.ts` (Better Auth): hook de criação de usuário estendido para provisionar o workspace individual simetricamente ao tenant do personal — hoje nenhuma rota pública ainda produz `role: "INDIVIDUAL"` (chega na FIT-101, onboarding "Treino sozinho"); o hook já está pronto para quando existir.
+- Testes: `ensureTenantForIndividual.integration.test.ts` (7 testes, incluindo um cadastro real via `betterAuth()` simulando a futura FIT-101) e extensão de `authContext.integration.test.ts` cobrindo `INDIVIDUAL` em `getAuthContext`, `requireIndividual` e a rejeição por `requirePersonal`/`requireStudent`.

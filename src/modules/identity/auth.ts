@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@/shared/db/prisma";
 import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
+import { ensureTenantForIndividual } from "@/modules/tenancy/ensureTenantForIndividual";
 
 /// Único ponto de configuração do provedor de autenticação (Better Auth).
 /// Nenhum outro módulo deve importar `better-auth` diretamente — server
@@ -40,7 +41,10 @@ export const auth = betterAuth({
       // Nunca aceito do cliente (`input: false`): definido pelo servidor no
       // momento do cadastro. O cadastro público (`/criar-conta`) só cria
       // PERSONAL; contas ALUNO dependem de um fluxo de vínculo/convite fora
-      // do escopo desta História (FIT-010/011).
+      // do escopo desta História (FIT-010/011). Contas INDIVIDUAL (FitOS
+      // Livre) ainda não têm nenhum fluxo de cadastro público — chega na
+      // FIT-101 (onboarding "Treino sozinho"); o hook abaixo já trata o
+      // papel simetricamente, mas nenhuma rota hoje o produz.
       role: {
         type: "string",
         required: true,
@@ -75,15 +79,24 @@ export const auth = betterAuth({
         // for chamado (ver `/painel` e `PROVISIONAMENTO-DE-TENANT.md`) —
         // por isso o erro é apenas registrado, não relançado.
         after: async (user) => {
-          if (user.role !== "PERSONAL") {
+          if (user.role === "PERSONAL") {
+            try {
+              await ensureTenantForPersonal({ id: user.id, name: user.name, role: user.role });
+            } catch {
+              console.error("[FIT-010] Falha ao provisionar tenant automaticamente no cadastro", {
+                userId: user.id,
+              });
+            }
             return;
           }
-          try {
-            await ensureTenantForPersonal({ id: user.id, name: user.name, role: user.role });
-          } catch {
-            console.error("[FIT-010] Falha ao provisionar tenant automaticamente no cadastro", {
-              userId: user.id,
-            });
+          if (user.role === "INDIVIDUAL") {
+            try {
+              await ensureTenantForIndividual({ id: user.id, name: user.name, role: user.role });
+            } catch {
+              console.error("[FIT-100] Falha ao provisionar workspace individual automaticamente no cadastro", {
+                userId: user.id,
+              });
+            }
           }
         },
       },

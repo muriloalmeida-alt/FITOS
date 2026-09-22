@@ -9,3 +9,4 @@ Estados: `Proposto`, `Aceito`, `Substituído` ou `Rejeitado`.
 - `ADR-003-ASAAS-COMO-CANDIDATO.md`
 - `ADR-004-API-NINJAS-EXERCICIOS.md`
 - `ADR-005-VERSIONAMENTO-DE-PLANOS.md`
+- `ADR-006-WORKSPACE-INDIVIDUAL.md`
