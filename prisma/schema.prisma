@@ -229,6 +229,7 @@ model Tenant {
   auditEvents           AuditEvent[]
   invitations           Invitation[]
   individualProfile     IndividualProfile?
+  goals                 Goal[]
 
   @@map("tenants")
 }
@@ -310,6 +311,7 @@ model Student {
   charges           StudentCharge[]
   chargeRecurrences ChargeRecurrence[]
   invitations       Invitation[]
+  goals             Goal[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -782,6 +784,43 @@ enum BodyMeasurementType {
   BRACO
   COXA
   PANTURRILHA
+}
+
+/// Meta pessoal de evolução (FIT-104, EPIC-13 — FitOS Livre), genérica por
+/// `[studentId, tenantId]` como todo o resto do domínio de evolução —
+/// nunca amarrada a `INDIVIDUAL`: um aluno com personal poderá ganhar a
+/// mesma tela no futuro sem migração nova. Só o próprio `Student` (ou,
+/// hoje, só o praticante individual via `ensureStudentForIndividual`)
+/// cria/conclui/abandona as próprias metas — nenhuma função de
+/// `goals.ts` aceita um `actorUserId` diferente do dono, ao contrário de
+/// `Assessment` (que é sempre autorada por outra pessoa, o personal).
+/// `description` é texto livre (não um catálogo fechado — "perder 5kg",
+/// "correr 5km" e "aumentar carga do supino" não cabem em um enum sem
+/// engessar o produto). `completedAt` só é preenchido ao concluir; uma
+/// meta abandonada não tem `completedAt` (não foi alcançada).
+model Goal {
+  id          String     @id @default(cuid())
+  tenantId    String
+  studentId   String
+  description String
+  targetDate  DateTime?
+  status      GoalStatus @default(EM_ANDAMENTO)
+  createdAt   DateTime   @default(now())
+  completedAt DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([studentId, tenantId])
+  @@map("goals")
+}
+
+enum GoalStatus {
+  EM_ANDAMENTO
+  CONCLUIDA
+  ABANDONADA
 }
 
 /// Controle manual de cobrança do aluno. `amountCents` em centavos (Int)
