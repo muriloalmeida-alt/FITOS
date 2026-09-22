@@ -109,6 +109,7 @@ describe("AlunoPerfilPage (FIT-014)", () => {
     render(await AlunoPerfilPage({ params: makeParams("s1") }));
 
     expect(screen.getByRole("link", { name: "Inativar aluno" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Encerrar vínculo" })).toBeInTheDocument();
     expect(screen.getByLabelText("E-mail")).not.toBeDisabled();
     expect(screen.getByText("Não convidado")).toBeInTheDocument();
   });
@@ -133,7 +134,36 @@ describe("AlunoPerfilPage (FIT-014)", () => {
 
     expect(screen.getByRole("button", { name: "Reativar aluno" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Inativar aluno" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Encerrar vínculo" })).toBeInTheDocument();
     expect(screen.getByLabelText("E-mail")).toBeDisabled();
+    expect(screen.queryByText("Acesso e convite")).not.toBeInTheDocument();
+  });
+
+  it("FIT-106: vínculo encerrado mostra data/motivo, sem nenhuma ação de ciclo de vida (nunca reabre)", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    getStudentForTenant.mockResolvedValue({
+      id: "s1",
+      displayName: "Fulano",
+      email: "fulano@example.test",
+      status: "VINCULO_ENCERRADO",
+      userId: "user-1",
+      endedAt: new Date("2026-09-22T00:00:00.000Z"),
+      endReason: "Mudança de cidade",
+    });
+    getLatestInvitationForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue(null);
+    listEndedPlanAssignmentsForStudent.mockResolvedValue([]);
+    listTrainingPlansForTenant.mockResolvedValue([]);
+    listAssessmentsForStudent.mockResolvedValue([]);
+    const { default: AlunoPerfilPage } = await import("./page");
+
+    render(await AlunoPerfilPage({ params: makeParams("s1") }));
+
+    expect(screen.getByText("Vínculo encerrado")).toBeInTheDocument();
+    expect(screen.getByText(/motivo: Mudança de cidade/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Inativar aluno" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reativar aluno" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Encerrar vínculo" })).not.toBeInTheDocument();
     expect(screen.queryByText("Acesso e convite")).not.toBeInTheDocument();
   });
 

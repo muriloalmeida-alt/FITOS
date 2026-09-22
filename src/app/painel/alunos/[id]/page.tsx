@@ -25,6 +25,12 @@ export const metadata: Metadata = {
   title: `Perfil do aluno — ${appName}`,
 };
 
+const STUDENT_STATUS_LABEL: Record<string, string> = {
+  ATIVO: "Ativo",
+  INATIVO: "Inativo",
+  VINCULO_ENCERRADO: "Vínculo encerrado",
+};
+
 interface AlunoPerfilPageProps {
   params: Promise<{ id: string }>;
 }
@@ -74,7 +80,7 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
           <p className={styles.statusLine}>
             Status:{" "}
             <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
-              {student.status === "ATIVO" ? "Ativo" : "Inativo"}
+              {STUDENT_STATUS_LABEL[student.status]}
             </span>
           </p>
         </div>
@@ -120,12 +126,24 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
       </Card>
 
       <Card title="Ciclo de vida">
-        {student.status === "ATIVO" ? (
-          <Button href={`/painel/alunos/${student.id}/inativar`} variant="outlined">
-            Inativar aluno
-          </Button>
+        {student.status === "VINCULO_ENCERRADO" ? (
+          <p className={styles.statusLine}>
+            Vínculo encerrado em {new Date(student.endedAt!).toLocaleDateString("pt-BR")}
+            {student.endReason ? ` — motivo: ${student.endReason}` : ""}. Esta ação é definitiva.
+          </p>
         ) : (
-          <ReativarAlunoButton studentId={student.id} />
+          <div className={styles.lifecycleActions}>
+            {student.status === "ATIVO" ? (
+              <Button href={`/painel/alunos/${student.id}/inativar`} variant="outlined">
+                Inativar aluno
+              </Button>
+            ) : (
+              <ReativarAlunoButton studentId={student.id} />
+            )}
+            <Button href={`/painel/alunos/${student.id}/encerrar-vinculo`} variant="outlined">
+              Encerrar vínculo
+            </Button>
+          </div>
         )}
       </Card>
     </AppShell>

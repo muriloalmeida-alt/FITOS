@@ -30,3 +30,9 @@
 .statusInativo {
   color: var(--fitos-color-on-surface-variant);
 }
+
+.lifecycleActions {
+  display: flex;
+  gap: var(--fitos-space-3);
+  flex-wrap: wrap;
+}

@@ -1,0 +1,36 @@
+# ADR-009 — Encerramento de vínculo: terceiro estado terminal, nunca sinônimo de inativação; acesso granular e comunicação deliberadamente fora desta História
+
+Status: **Aceito** (FIT-106, EPIC-13 — FitOS Livre, "Continuidade do aluno")
+Data: 22 de setembro de 2026
+
+## Contexto
+
+FIT-106 ("Encerrar vínculo com personal — data, motivo opcional, comunicação") é a primeira História da sprint "Continuidade do aluno" (FIT-106 a FIT-109). Antes de escrever qualquer código, foi preciso entender o que já existia: `Student.status` (`ATIVO`/`INATIVO`, FIT-014) já tem um ciclo de vida reversível — `inactivateStudent`/`reactivateStudent` — mas `requireStudent()` trata `INATIVO` como bloqueio total (403 em qualquer rota do aluno), documentado como "mesma resposta segura para os dois casos reais: nunca existiu vínculo, ou o vínculo foi pausado". Isso não é o que a EPIC-13 pede para "encerrar vínculo": a restrição obrigatória do épico (`EPIC-13-FITOS-LIVRE.md`) diz que o aluno **mantém** perfil, medidas, fotos privadas, metas, execuções, cargas, frequência, recordes e treinos individuais, e só **perde** acesso a planos personalizados, treinos futuros atribuídos, duplicação/reexecução de prescrição e notas privadas do personal — uma granularidade que `INATIVO` (bloqueio total) nunca implementou.
+
+O pacote reserva explicitamente essa granularidade para Histórias separadas: `FIT-107` ("Preservar histórico do aluno — sem perda ou duplicação") e `FIT-108` ("Proteger prescrições do personal — bloqueio de planos/notas após vínculo encerrado"). `FIT-106` é só o evento de encerrar — data, motivo opcional, comunicação —, não a reconstrução do controle de acesso.
+
+## Decisões
+
+**1. `VINCULO_ENCERRADO` é um terceiro valor de `StudentStatus`, nunca um sinônimo de `INATIVO`.** `INATIVO` continua sendo uma pausa reversível decidida unilateralmente pelo personal (`reactivateStudent` sempre existe para ela). Encerrar é definitivo — nenhuma função deste domínio jamais reabre um vínculo encerrado; `reactivateStudent` agora rejeita (`ESTADO_INVALIDO`) tentar reativar um `VINCULO_ENCERRADO`. Tratar os dois como o mesmo estado hoje (ambos resultam em 403 via `requireStudent()`, sem a granularidade de FIT-107/108 ainda implementada) seria uma simplificação de curto prazo que quebraria a primeira vez que FIT-107/108 precisassem diferenciar "pausado, o personal pode reativar" de "encerrado, nunca mais".
+
+**2. Novos campos no próprio `Student`** (`endedAt`, `endReason`, `endedByUserId`), não uma entidade separada — migration puramente aditiva. Preserva a mesma filosofia de "o vínculo é o `Student`" já documentada (não existe um modelo `Vinculo` separado nesta base) e evita inventar uma tabela nova só para três campos que descrevem um evento terminal de uma entidade que já existe.
+
+**3. `endStudentBond` é idempotente como `inactivateStudent`/`reactivateStudent`, mas com uma diferença: o motivo e a data da *primeira* chamada nunca são sobrescritos por uma chamada repetida.** Encerrar um vínculo já encerrado silenciosamente preserva o registro original — mudar o motivo depois exigiria uma decisão de produto sobre "quem pode editar um evento já auditado", fora do escopo mínimo desta História.
+
+**4. O controle de acesso granular do ex-aluno (o que ele mantém vs. perde) é deliberadamente fora desta História.** `requireStudent()` trata `VINCULO_ENCERRADO` exatamente como já tratava `INATIVO`: bloqueio total, mesma resposta segura de sempre. Implementar agora a granularidade ("mantém medidas/metas/execuções, perde planos/notas") duplicaria trabalho: a FIT-107 precisa decidir exatamente **onde** aparece essa experiência preservada (uma tela nova? a mesma `/painel/minha-evolucao` da FIT-104, hoje exclusiva do workspace `INDIVIDUAL`? uma transição de papel `ALUNO` → `INDIVIDUAL`?) antes de qualquer código de leitura mudar — decisão que, por sua vez, colide com uma restrição física ainda não resolvida: `Student.userId` é `@unique` **globalmente** (não por tenant), então uma pessoa só pode ser `Student` de exatamente um tenant, para sempre, no schema atual. A FIT-109 ("compartilhar com novo personal") não pode funcionar sem revisitar essa constraint — sinalizado aqui para não ser esquecido, mas resolvido lá, quando o desenho concreto da tela exigir a resposta (mesmo método já seguido pela FIT-102: "a pergunta real só precisa de resposta quando o dado é físico").
+
+**5. "Comunicação" (avisar o aluno que o vínculo foi encerrado) fica fora desta implementação — e isso não é uma omissão silenciosa.** `docs/06-engenharia/arquitetura/DECISOES-PENDENTES.md` já lista "E-mail transacional" como decisão pendente de Engenharia+Produto, "antes de convite/recuperação" — a mesma dependência que bloquearia qualquer notificação real por e-mail aqui. Implementar uma notificação apenas in-app (sem e-mail) seria uma meia-solução que a própria História não pede explicitamente ("comunicação" no pacote sugere alcançar o aluno fora do produto, não só um estado de UI); implementar com e-mail exigiria a decisão de provedor ainda pendente. Mesma decisão de escopo já tomada para "fotos privadas" na FIT-104 (`ADR-008`).
+
+## Alternativas consideradas
+
+1. **Reaproveitar `INATIVO` para "encerrar", sem estado novo.** Rejeitada: colide com a garantia de "nunca reabre" — nada distinguiria um aluno pausado (reativável) de um aluno cujo vínculo terminou de vez, e a primeira tela que precisar diferenciar os dois (FIT-107/108) teria que inventar essa distinção tarde, provavelmente com uma migração de dado retroativa para separar os dois grupos já misturados sob `INATIVO`.
+2. **Implementar agora a experiência preservada do ex-aluno** (mesma proposta de "medidas/metas/execuções continuam visíveis"). Rejeitada: exigiria decidir, sem necessidade imediata, se o ex-aluno se torna um workspace `INDIVIDUAL` (colidindo com a unicidade de `Student.userId`) ou algo mais simples — decisão de produto que a FIT-107/108 ainda não pediram para ser tomada.
+3. **Guardar o motivo em `AuditEvent`** (que já registra `action`/`entityType`/`entityId`). Rejeitada: `AuditEvent` não tem nenhum campo de payload livre hoje (só metadados) — adicionar um exigiria alterar um modelo cross-cutting usado por todo o resto da base só para este caso, quando o próprio `Student` já é o lugar natural para um dado que descreve o estado atual do vínculo.
+
+## Consequências
+
+- `inactivateStudent`/`reactivateStudent` continuam existindo e funcionando exatamente como antes para o caso de pausa reversível — nenhuma regressão para a FIT-014.
+- `getStudentForTenant`/`listStudents` (FIT-013) continuam genéricas por `status` — nenhuma alteração necessária além do enum ganhar um terceiro valor.
+- A tela "Ciclo de vida" do aluno (`/painel/alunos/[id]`) ganha uma terceira ramificação, definitiva e sem nenhuma ação disponível, quando `status === "VINCULO_ENCERRADO"`.
+- FIT-107 e FIT-108 herdam um estado físico já pronto (`endedAt`/`endReason`/`endedByUserId`) para construir a granularidade de acesso sem precisar de nenhuma migração adicional — só decisão de leitura/autorização.
+- A restrição `Student.userId @unique` (global) permanece sinalizada como bloqueio real para a FIT-109 — não resolvida aqui, deliberadamente.

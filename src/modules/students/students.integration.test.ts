@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import {
   createStudent,
+  endStudentBond,
   getStudentForTenant,
   inactivateStudent,
   listStudents,
@@ -328,5 +329,98 @@ describe("inactivateStudent / reactivateStudent (FIT-014)", () => {
     await expect(
       inactivateStudent({ tenantId: tenantB.id, studentId: student.id, actorUserId: tenantB.ownerId }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("endStudentBond (FIT-106)", () => {
+  it("encerra um vínculo ATIVO com motivo, registrando data/motivo/autor e auditoria", async () => {
+    const tenant = await createTenant("encerrar");
+    const student = await createStudent({ tenantId: tenant.id, name: "Aluno", email: `encerrar-${run}@example.test` }, prisma);
+
+    const updated = await endStudentBond(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: "Mudança de cidade" },
+      prisma
+    );
+
+    expect(updated.status).toBe("VINCULO_ENCERRADO");
+    expect(updated.endedAt).not.toBeNull();
+    expect(updated.endReason).toBe("Mudança de cidade");
+    expect(updated.endedByUserId).toBe(tenant.ownerId);
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "VINCULO_ENCERRADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("encerra um vínculo INATIVO e aceita motivo nulo/vazio", async () => {
+    const tenant = await createTenant("encerrar-de-inativo");
+    const student = await createStudent(
+      { tenantId: tenant.id, name: "Aluno", email: `encerrar-inativo-${run}@example.test` },
+      prisma
+    );
+    await inactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma);
+
+    const updated = await endStudentBond(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: "   " },
+      prisma
+    );
+
+    expect(updated.status).toBe("VINCULO_ENCERRADO");
+    expect(updated.endReason).toBeNull();
+  });
+
+  it("é idempotente: encerrar um vínculo já encerrado não gera novo evento nem sobrescreve o motivo original", async () => {
+    const tenant = await createTenant("encerrar-idempotente");
+    const student = await createStudent(
+      { tenantId: tenant.id, name: "Aluno", email: `encerrar-idem-${run}@example.test` },
+      prisma
+    );
+    const first = await endStudentBond(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: "Motivo original" },
+      prisma
+    );
+
+    const second = await endStudentBond(
+      { tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: "Outro motivo" },
+      prisma
+    );
+
+    expect(second.endReason).toBe("Motivo original");
+    expect(second.endedAt?.getTime()).toBe(first.endedAt?.getTime());
+    const events = await prisma.auditEvent.findMany({ where: { entityId: student.id, action: "VINCULO_ENCERRADO" } });
+    expect(events).toHaveLength(1);
+  });
+
+  it("rejeita motivo maior que 500 caracteres", async () => {
+    const tenant = await createTenant("encerrar-motivo-longo");
+    const student = await createStudent(
+      { tenantId: tenant.id, name: "Aluno", email: `encerrar-longo-${run}@example.test` },
+      prisma
+    );
+
+    await expect(
+      endStudentBond({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: "a".repeat(501) }, prisma)
+    ).rejects.toMatchObject({ kind: "VALIDACAO" });
+  });
+
+  it("lança NAO_ENCONTRADO para um studentId de outro tenant", async () => {
+    const tenantA = await createTenant("encerrar-outro-tenant-a");
+    const tenantB = await createTenant("encerrar-outro-tenant-b");
+    const student = await createStudent({ tenantId: tenantA.id, name: "Aluno A", email: `encerrar-cruzado-${run}@example.test` }, prisma);
+
+    await expect(
+      endStudentBond({ tenantId: tenantB.id, studentId: student.id, actorUserId: tenantB.ownerId, reason: null }, prisma)
+    ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("rejeita reativar um vínculo encerrado (ESTADO_INVALIDO), diferente de INATIVO", async () => {
+    const tenant = await createTenant("encerrar-nunca-reabre");
+    const student = await createStudent(
+      { tenantId: tenant.id, name: "Aluno", email: `encerrar-nunca-reabre-${run}@example.test` },
+      prisma
+    );
+    await endStudentBond({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId, reason: null }, prisma);
+
+    await expect(
+      reactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma)
+    ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
   });
 });

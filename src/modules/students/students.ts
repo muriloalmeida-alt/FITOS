@@ -21,7 +21,8 @@ export class StudentError extends Error {
       | "EMAIL_JA_POSSUI_CONTA"
       | "VALIDACAO"
       | "EMAIL_BLOQUEADO_POS_ATIVACAO"
-      | "NAO_ENCONTRADO",
+      | "NAO_ENCONTRADO"
+      | "ESTADO_INVALIDO",
     message: string
   ) {
     super(message);
@@ -293,10 +294,17 @@ export async function inactivateStudent(input: StudentLifecycleInput, client: Pr
 /// Reativa um aluno do próprio tenant. Idempotente pela mesma razão de
 /// `inactivateStudent`. Não restaura nenhum convite expirado ou cancelado
 /// automaticamente (não há convites nesta História).
+///
+/// Rejeita (`ESTADO_INVALIDO`) reativar um vínculo `VINCULO_ENCERRADO`
+/// (FIT-106): ao contrário de `INATIVO` (pausa reversível), encerrar é
+/// definitivo — ver `endStudentBond`.
 export async function reactivateStudent(input: StudentLifecycleInput, client: PrismaClient = prisma): Promise<Student> {
   const current = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
   if (!current) {
     throw new StudentError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (current.status === "VINCULO_ENCERRADO") {
+    throw new StudentError("ESTADO_INVALIDO", "Este vínculo foi encerrado e não pode ser reaberto.");
   }
   if (current.status === "ATIVO") {
     return current;
@@ -313,6 +321,72 @@ export async function reactivateStudent(input: StudentLifecycleInput, client: Pr
       },
     }),
     client.student.update({ where: { id: input.studentId }, data: { status: "ATIVO" } }),
+  ]);
+  return updated;
+}
+
+const MAX_END_REASON_LENGTH = 500;
+
+function normalizeEndReason(reason: string | null): string | null {
+  if (reason === null) {
+    return null;
+  }
+  const trimmed = reason.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  if (trimmed.length > MAX_END_REASON_LENGTH) {
+    throw new StudentError("VALIDACAO", `O motivo deve ter no máximo ${MAX_END_REASON_LENGTH} caracteres.`);
+  }
+  return trimmed;
+}
+
+export interface EndStudentBondInput {
+  tenantId: string;
+  studentId: string;
+  actorUserId: string;
+  reason: string | null;
+}
+
+/// Encerra definitivamente o vínculo do personal com o aluno (FIT-106) —
+/// diferente de `inactivateStudent`: não é uma pausa, nunca é revertida por
+/// `reactivateStudent`. Idempotente pela mesma razão das duas funções
+/// acima: chamar de novo sobre um vínculo já encerrado não é erro, apenas
+/// retorna o estado atual sem novo evento de auditoria (o motivo e a data
+/// já registrados na primeira chamada nunca são sobrescritos).
+///
+/// Registra `endedAt`/`endReason`/`endedByUserId` no próprio `Student` —
+/// nunca exclusão física, preservando todo o histórico já registrado
+/// (planos, sessões, avaliações), conforme a FIT-107 exige. O que o
+/// ex-aluno continua ou deixa de acessar depois disso é decisão
+/// deliberadamente fora desta História (FIT-107/FIT-108) — aqui
+/// `requireStudent()` trata `VINCULO_ENCERRADO` exatamente como `INATIVO`
+/// hoje: sem acesso à experiência normal do aluno.
+export async function endStudentBond(input: EndStudentBondInput, client: PrismaClient = prisma): Promise<Student> {
+  const current = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!current) {
+    throw new StudentError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (current.status === "VINCULO_ENCERRADO") {
+    return current;
+  }
+
+  const reason = normalizeEndReason(input.reason);
+
+  const [, updated] = await client.$transaction([
+    client.auditEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: "VINCULO_ENCERRADO",
+        entityType: "Student",
+        entityId: input.studentId,
+      },
+    }),
+    client.student.update({
+      where: { id: input.studentId },
+      data: { status: "VINCULO_ENCERRADO", endedAt: new Date(), endReason: reason, endedByUserId: input.actorUserId },
+    }),
   ]);
   return updated;
 }
