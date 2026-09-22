@@ -66,6 +66,14 @@ Objetivo: após o MVP aprovado, mergeado e estabilizado (EPIC-10/EPIC-11), habil
 - EPIC-13 — FitOS Livre — FIT-100 a FIT-109 (renumerado de FIT-080-089 do pacote; depende do encerramento do EPIC-12; ver `docs/04-backlog/EPIC-13-FITOS-LIVRE.md`).
 - Gate de PR novo nesta Fase: aprovação explícita de GPT/Codex (revisão externa) além do aceite de Produto — nenhum merge sem as duas.
 
+## Fase 9 — Landing comercial, onboarding completo e biblioteca ilustrada
+
+Objetivo: substituir a landing placeholder por uma página comercial real, reformular a entrada do onboarding com os três caminhos do produto (Personal / Aluno com convite / FitOS Livre) e entregar a biblioteca ilustrada de exercícios. Origem: pacote `FitOS_Pacote_Claude_Parte_{1,2,3}_de_3` (instrução única, não um backlog numerado — ver nota de adaptação em `EPIC-14-LANDING-COMERCIAL-E-ONBOARDING.md`).
+
+- EPIC-14 — FIT-110 a FIT-116 — ver `docs/04-backlog/EPIC-14-LANDING-COMERCIAL-E-ONBOARDING.md`.
+- Não depende do encerramento do EPIC-12/EPIC-13; reaproveita o que a FIT-015 e a FIT-101 já entregam.
+- Mesmo gate de PR das Fases anteriores: `PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR` até aprovação externa e aceite de Produto.
+
 ## Fora do MVP
 
 - Aplicativos nativos.

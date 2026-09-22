@@ -1,80 +1,250 @@
+/*
+ * Landing comercial (FIT-110). Toda a página herda a paleta "chrome"
+ * (navy/lima) já usada pelo AppShell autenticado, redefinindo localmente
+ * os tokens semânticos que Card/Button/TextField consomem — mesmo padrão
+ * de sobreposição local já usado em AppShell.module.css (.trailing) e
+ * LandingHeader.module.css, nunca um Design System paralelo. O fundo
+ * escuro é constante mesmo em preferência de sistema clara, porque os
+ * tokens `--fitos-color-chrome*` nunca alternam com o tema — exatamente
+ * o efeito pedido pela seção 4.2 do pacote ("fundo predominantemente
+ * preto, grafite e cinza profundo").
+ */
 .main {
-  min-height: 100vh;
+  background-color: var(--fitos-color-chrome);
+  color: var(--fitos-color-on-chrome);
+  --fitos-color-surface: var(--fitos-color-chrome-container);
+  --fitos-color-surface-container: var(--fitos-color-chrome-container);
+  --fitos-color-on-surface: var(--fitos-color-on-chrome);
+  --fitos-color-on-surface-variant: var(--fitos-color-on-chrome-variant);
+  --fitos-color-outline: var(--fitos-color-on-chrome-variant);
+  --fitos-color-primary: var(--fitos-color-chrome-accent);
+  --fitos-color-on-primary: var(--fitos-color-chrome-active-fg);
+  --fitos-color-error: #ffb4ab;
+}
+
+.hero {
+  max-width: 1120px;
+  margin: 0 auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: center;
-  padding: var(--fitos-space-6) var(--fitos-space-4);
+  gap: var(--fitos-space-8);
+  padding: var(--fitos-space-8) var(--fitos-space-4);
 }
 
-.content {
-  width: 100%;
-  max-width: 720px;
+.heroText {
   display: flex;
   flex-direction: column;
-  gap: var(--fitos-space-6);
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
-  padding: var(--fitos-space-4) 0;
+  gap: var(--fitos-space-4);
+  text-align: center;
 }
 
 .eyebrow {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 650;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fitos-color-primary);
+  color: var(--fitos-color-chrome-accent);
 }
 
-.title {
+.heroTitle {
   margin: 0;
-  font-size: 32px;
-  line-height: 40px;
-  font-weight: 700;
-  color: var(--fitos-color-on-surface);
+  font-size: 36px;
+  line-height: 42px;
+  font-weight: 800;
+  color: var(--fitos-color-on-chrome);
 }
 
-.subtitle {
+.heroDescription {
   margin: 0;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 450;
-  color: var(--fitos-color-on-surface-variant);
+  font-size: 17px;
+  line-height: 26px;
+  color: var(--fitos-color-on-chrome-variant);
 }
 
-.grid {
-  display: grid;
-  gap: var(--fitos-space-4);
-}
-
-.list {
-  margin: 0;
-  padding-left: var(--fitos-space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
-}
-
-.actions {
+.heroActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--fitos-space-3);
 }
 
-.footer {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--fitos-color-on-surface-variant);
-  text-align: center;
-  padding: var(--fitos-space-6) 0 var(--fitos-space-4);
+.heroImageWrapper {
+  width: 100%;
+  max-width: 420px;
 }
 
-@media (min-width: 600px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
+.heroImage {
+  width: 100%;
+  height: auto;
+  border-radius: var(--fitos-shape-large);
+  display: block;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--fitos-space-6) 0;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 750;
+  color: var(--fitos-color-on-chrome);
+  text-align: center;
+}
+
+.benefits,
+.paths {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--fitos-space-10) var(--fitos-space-4);
+}
+
+.benefitsGrid,
+.pathsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--fitos-space-4);
+}
+
+.pathHint {
+  font-size: 13px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.pathCta {
+  margin-top: var(--fitos-space-3);
+}
+
+.relationship {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fitos-space-8);
+  padding: var(--fitos-space-10) var(--fitos-space-4);
+}
+
+.relationshipList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding-left: var(--fitos-space-5);
+  color: var(--fitos-color-on-chrome-variant);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.relationshipImageWrapper {
+  width: 100%;
+  max-width: 480px;
+}
+
+.relationshipImage {
+  width: 100%;
+  height: auto;
+  border-radius: var(--fitos-shape-large);
+  display: block;
+}
+
+.finalCta {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fitos-space-6);
+  padding: var(--fitos-space-10) var(--fitos-space-4);
+  text-align: center;
+}
+
+.finalCtaTitle {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 750;
+  color: var(--fitos-color-on-chrome);
+}
+
+.footer {
+  border-top: 1px solid var(--fitos-color-chrome-container);
+  padding: var(--fitos-space-8) var(--fitos-space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  text-align: center;
+}
+
+.footerBrand {
+  margin: 0;
+  font-weight: 800;
+  color: var(--fitos-color-on-chrome);
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--fitos-space-4);
+}
+
+.footerLinks a {
+  font-size: 14px;
+  color: var(--fitos-color-on-chrome-variant);
+  text-decoration: none;
+}
+
+.footerLinks a:hover,
+.footerLinks a:focus-visible {
+  color: var(--fitos-color-on-chrome);
+}
+
+.footerLegal {
+  margin: 0;
+  max-width: 480px;
+  font-size: 12px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+@media (min-width: 900px) {
+  .hero {
+    flex-direction: row;
+    text-align: left;
+    padding-top: var(--fitos-space-16);
+    padding-bottom: var(--fitos-space-16);
+  }
+
+  .heroText {
+    text-align: left;
+    align-items: flex-start;
+    flex: 1;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .heroImageWrapper {
+    flex: 0 0 420px;
+  }
+
+  .benefitsGrid,
+  .pathsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .relationship {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+  }
+
+  .relationshipText {
+    flex: 1;
+  }
+
+  .relationshipImageWrapper {
+    flex: 0 0 480px;
   }
 }

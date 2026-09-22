@@ -1,0 +1,113 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: var(--fitos-color-chrome);
+  border-bottom: 1px solid var(--fitos-color-chrome-container);
+  --fitos-color-primary: var(--fitos-color-chrome-accent);
+  --fitos-color-on-primary: var(--fitos-color-chrome-active-fg);
+  --fitos-color-outline: var(--fitos-color-on-chrome-variant);
+}
+
+.bar {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-4);
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--fitos-color-on-chrome);
+  text-decoration: none;
+}
+
+.desktopNav {
+  display: none;
+  align-items: center;
+  gap: var(--fitos-space-6);
+}
+
+.navLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fitos-color-on-chrome-variant);
+  text-decoration: none;
+}
+
+.navLink:hover,
+.navLink:focus-visible {
+  color: var(--fitos-color-on-chrome);
+}
+
+.desktopActions {
+  display: none;
+  align-items: center;
+  gap: var(--fitos-space-4);
+}
+
+.enterLink {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-chrome);
+  text-decoration: none;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ctaButton {
+  white-space: nowrap;
+}
+
+.menuToggle {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: var(--fitos-shape-small);
+  border: 1px solid var(--fitos-color-on-chrome-variant);
+  background: transparent;
+  color: var(--fitos-color-on-chrome);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.mobileNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  padding: var(--fitos-space-2) var(--fitos-space-4) var(--fitos-space-4);
+}
+
+.mobileNavLink {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fitos-color-on-chrome);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fitos-color-chrome-container);
+}
+
+.mobileCta {
+  margin-top: var(--fitos-space-2);
+  align-self: stretch;
+  justify-content: center;
+}
+
+@media (min-width: 900px) {
+  .desktopNav,
+  .desktopActions {
+    display: flex;
+  }
+
+  .menuToggle,
+  .mobileNav {
+    display: none;
+  }
+}
