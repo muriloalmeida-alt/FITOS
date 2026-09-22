@@ -106,6 +106,29 @@ describe("ExercicioDetalhePage (FIT-023)", () => {
     expect(screen.getByRole("button", { name: /Arquivar exercício/ })).toBeInTheDocument();
   });
 
+  it("FIT-111: exercício com imagem ilustrada mostra a imagem no detalhe, com o alt funcional", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    getCatalogExerciseForTenant.mockResolvedValue({
+      id: "c1",
+      name: "Prancha lateral",
+      origin: "FITOS_CURATED",
+      status: "ATIVO",
+      type: null,
+      muscle: "Core",
+      equipments: null,
+      difficulty: null,
+      instructions: null,
+      safetyInfo: null,
+      imageUrl: "/media/exercises/prancha-lateral.webp",
+      imageAlt: "Prancha lateral. Ilustração em duas fases do movimento.",
+    });
+
+    const { default: ExercicioDetalhePage } = await import("./page");
+    render(await ExercicioDetalhePage({ params: makeParams("c1") }));
+
+    expect(screen.getByRole("img", { name: "Prancha lateral. Ilustração em duas fases do movimento." })).toBeInTheDocument();
+  });
+
   it("exercício próprio arquivado: mostra botão de reativar, não o de arquivar", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     getCatalogExerciseForTenant.mockResolvedValue({

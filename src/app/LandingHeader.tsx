@@ -33,6 +33,9 @@ export function LandingHeader({ appName }: LandingHeaderProps) {
           <Link href="#para-quem" className={styles.navLink}>
             Para quem
           </Link>
+          <Link href="#biblioteca" className={styles.navLink}>
+            Exercícios
+          </Link>
           <Link href="#comecar" className={styles.navLink}>
             Começar
           </Link>
@@ -66,6 +69,9 @@ export function LandingHeader({ appName }: LandingHeaderProps) {
           </Link>
           <Link href="#para-quem" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
             Para quem
+          </Link>
+          <Link href="#biblioteca" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
+            Exercícios
           </Link>
           <Link href="#comecar" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
             Começar

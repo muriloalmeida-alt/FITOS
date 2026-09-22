@@ -1,0 +1,21 @@
+.thumbnail {
+  display: block;
+  flex-shrink: 0;
+  border-radius: var(--fitos-shape-medium);
+  object-fit: cover;
+  background-color: var(--fitos-color-surface-container-high);
+}
+
+span.thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--fitos-space-2);
+}
+
+.placeholderText {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface-variant);
+}

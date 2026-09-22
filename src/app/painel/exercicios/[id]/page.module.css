@@ -5,6 +5,13 @@
   text-decoration: none;
 }
 
+.heroImage {
+  margin: var(--fitos-space-3) 0;
+  width: 100%;
+  max-width: 320px;
+  height: 320px;
+}
+
 .originLine {
   margin: 0 0 var(--fitos-space-4) 0;
   font-size: 14px;

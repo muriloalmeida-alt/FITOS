@@ -15,7 +15,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "catalog:import-api-ninjas": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-exercicios.ts",
-    "catalog:import-curated": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-catalogo-curado.ts"
+    "catalog:import-curated": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-catalogo-curado.ts",
+    "catalog:import-imagens-exercicios": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-imagens-exercicios.ts"
   },
   "engines": {
     "node": ">=22.0.0"
