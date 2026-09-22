@@ -7,7 +7,7 @@
 | Planos, preços e teste grátis | Product Owner + Produto | antes do checkout | bloqueia oferta comercial |
 | Carência, suspensão e reativação | Product Owner + Produto | antes do controle de acesso pago | risco de bloqueio incorreto |
 | Limites por plano | Produto | antes da comercialização | impede enforcement coerente |
-| Provedor S3 compatível | Engenharia | antes de fotos/anexos | bloqueia arquivos |
+| Provedor S3 compatível | Engenharia | antes de fotos/anexos | bloqueia arquivos — bloqueou explicitamente "fotos privadas" da FIT-104 (`ADR-008-EVOLUCAO-DO-PRATICANTE-INDIVIDUAL.md`); resto da História implementado, essa parte deferida até esta decisão |
 | E-mail transacional | Engenharia + Produto | antes de convite/recuperação | bloqueia jornadas de acesso |
 | Backup, retenção e restauração | Engenharia | antes de dados reais | risco operacional |
 | Domínios e URLs | Product Owner + Engenharia | antes da homologação pública | configuração incompleta |
