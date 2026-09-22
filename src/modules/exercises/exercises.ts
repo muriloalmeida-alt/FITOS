@@ -295,10 +295,15 @@ const MAX_CATALOG_PAGE_SIZE = 100;
 /// abaixo com uma diferença deliberada: o detalhe também precisa mostrar um
 /// exercício próprio ARQUIVADO (para o personal decidir reativar), então a
 /// condição de status "ATIVO" só se aplica à listagem, nunca ao detalhe.
+///
+/// "Global" é sempre `tenantId: null` e `origin !== "PERSONAL"` — nunca um
+/// enum específico como `"API_NINJAS"` (IMP-EX-002, `FITOS_CURATED`
+/// adicionado como segunda fonte global sem exigir nenhuma mudança nesta
+/// condição, exatamente por já estar escrita desta forma).
 function visibleCatalogOriginCondition(tenantId: string): Prisma.ExerciseWhereInput {
   return {
     OR: [
-      { origin: "API_NINJAS", tenantId: null },
+      { origin: { not: "PERSONAL" }, tenantId: null },
       { origin: "PERSONAL", tenantId },
     ],
   };

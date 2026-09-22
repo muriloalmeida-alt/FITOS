@@ -47,9 +47,18 @@ enum InvitationStatus {
   CANCELADO
 }
 
+/// `FITOS_CURATED` (IMP-EX-002): segunda fonte de catálogo global, ao lado
+/// de `API_NINJAS` — um catálogo estático, autorado diretamente em PT-BR
+/// (nunca traduzido de outra língua), carregado de um arquivo versionado no
+/// repositório (`src/modules/exercises/data/`), nunca de uma API externa.
+/// Qualquer código que trate "catálogo global" como sinônimo de
+/// `origin === "API_NINJAS"` está incompleto — a condição correta é sempre
+/// "`origin !== "PERSONAL"` e `tenantId` nulo" (ver `visibleCatalogOriginCondition`
+/// em `exercises.ts`, corrigida junto com esta migration).
 enum ExerciseOrigin {
   API_NINJAS
   PERSONAL
+  FITOS_CURATED
 }
 
 /// Ciclo de vida do exercício próprio (FIT-022). Exercício global

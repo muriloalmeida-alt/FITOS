@@ -123,8 +123,8 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
               <Link href={`/painel/exercicios/${exercise.id}`} className={styles.row}>
                 <span className={styles.cellName}>{exercise.name}</span>
                 <span className={styles.cellMuscle}>{exercise.muscle ?? "—"}</span>
-                <span className={exercise.origin === "API_NINJAS" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
-                  {exercise.origin === "API_NINJAS" ? "Global" : "Meu exercício"}
+                <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
+                  {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
                 </span>
               </Link>
             </li>

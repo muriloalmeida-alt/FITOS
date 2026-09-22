@@ -96,7 +96,7 @@ Torna o item "Exercícios" da navegação do personal (`src/app/painel/navigatio
 
 ### Funções de consulta (`src/modules/exercises/exercises.ts`)
 
-- `visibleCatalogOriginCondition(tenantId)` — cláusula Prisma compartilhada: `{ origin: API_NINJAS, tenantId: null }` OU `{ origin: PERSONAL, tenantId }`. Nunca inclui exercício próprio de outro tenant nem depende de nada vindo do cliente além do `tenantId` da sessão.
+- `visibleCatalogOriginCondition(tenantId)` — cláusula Prisma compartilhada: `{ origin: { not: PERSONAL }, tenantId: null }` OU `{ origin: PERSONAL, tenantId }`. "Global" é sempre "qualquer origem que não seja `PERSONAL`, com `tenantId` nulo" — nunca um enum específico como `API_NINJAS` (correção feita na IMP-EX-002, ao adicionar `FITOS_CURATED` como segunda fonte global — a condição original, escrita à época só com `API_NINJAS` como origem global existente, teria deixado a nova fonte invisível). Nunca inclui exercício próprio de outro tenant nem depende de nada vindo do cliente além do `tenantId` da sessão.
 - `listCatalogExercises(input, client)` — usa a condição acima **e** filtra `status: ATIVO`; aplica busca por nome (contains, case-insensitive), filtros de músculo/tipo/dificuldade, ordenação estável (`name asc, id asc` — evita que a paginação repita ou salte itens quando nomes se repetem) e paginação server-side (`page`/`pageSize`, retorna `items`/`total`/`page`/`pageSize`).
 - `getCatalogExerciseForTenant(input, client)` — usa a mesma condição de visibilidade, mas **sem** o filtro de `status`: um exercício próprio arquivado continua acessível pelo detalhe (é o único caminho para reativá-lo), mesmo não aparecendo na listagem padrão. Nunca retorna exercício de outro tenant nem exercício inexistente — `null` em ambos os casos, sem diferenciar a resposta.
 
@@ -118,6 +118,20 @@ Aplica o Design System M3 aprovado (Manrope, temas claro/escuro, tokens `primary
 
 - `src/modules/exercises/catalog.integration.test.ts` (Postgres real, 10 testes): catálogo combina global e próprio ativos; exclui próprio arquivado da listagem; exclui exercício de outro tenant; busca por nome e filtro por músculo; resposta vazia sem erro; paginação estável (sem repetir nem saltar itens entre páginas); detalhe encontra global, encontra próprio mesmo arquivado, nunca encontra de outro tenant, nunca encontra inexistente.
 - `src/app/painel/exercicios/page.test.tsx` (7), `[id]/page.test.tsx` (5), `novo/page.test.tsx` (3): redirecionamento sem sessão/sem papel de personal, listagem com selos de origem corretos, estado vazio vs. sem-resultado, `tenantId` da query string nunca repassado à consulta, detalhe global somente leitura sem card de ciclo de vida, detalhe próprio ativo com botão de arquivar, detalhe próprio arquivado com botão de reativar (nunca os dois ao mesmo tempo).
+
+## IMP-EX-002 — Segunda fonte global: catálogo curado FITOS em PT-BR
+
+Pré-requisito operacional (não é História `FIT-`, mesma categorização da `IMP-EX-001`): importação de um catálogo curado de 208 exercícios, escrito diretamente em português (nunca traduzido), a partir de um arquivo CSV estático versionado no repositório (`src/modules/exercises/data/catalogo-exercicios-fitos-ptbr.csv`) — nunca de uma API externa.
+
+- `ExerciseOrigin.FITOS_CURATED` — segunda origem global, ao lado de `API_NINJAS`. Qualquer código anterior a esta rodada que tratasse "global" como sinônimo de `API_NINJAS` foi corrigido (ver `visibleCatalogOriginCondition` acima e o selo de origem em `painel/exercicios/page.tsx`).
+- `src/modules/exercises/importCuratedCatalog.ts` — `parseCuratedCatalogCsv`/`mapCuratedCatalogRows` (parsing via `csv-parse`, com `CuratedCatalogRowError` para linha sem `canonical_key`/`name`) e `importCuratedCatalog`/`upsertCuratedExercise` (upsert idempotente por `[origin, externalId]`, mesmo padrão de `upsertGlobalExercise` da FIT-021 — mas sem hash: `externalId` é a própria `canonical_key` do CSV, estável por natureza).
+- **Sem `CatalogImportRun`/checkpoint/lock (IMP-EX-001) deliberadamente**: essa trilha de execução resolve o risco de uma API externa paginada e falível — não existe aqui, onde é um único arquivo local lido uma vez. A idempotência do upsert já é suficiente.
+- Mapeamento de campos: `type` ← `category_label` (rótulo em PT-BR, ex. "Cabos e polias" — não o `type` bruto do CSV, só "strength"/"mobility"); `muscle` ← `primary_muscle_label` (ex. "Bíceps" — não a chave interna); `equipments` normaliza o separador `|` do CSV para ", "; `active` ← `Exercise.status` (`ATIVO`/`ARQUIVADO`).
+- `scripts/import-catalogo-curado.ts` (`npm run catalog:import-curated`) — execução manual apenas, lê o arquivo do repositório, importa, loga o resultado.
+
+### Importação real — executada
+
+Ao contrário da API Ninjas (IMP-EX-001, nunca executada por falta de credencial), esta importação **foi executada de fato** contra o banco de desenvolvimento local: 208 exercícios criados na primeira execução, confirmados idempotentes numa segunda execução imediata (0 criados, 208 atualizados, nenhuma duplicata). Testes: `importCuratedCatalog.integration.test.ts` (10 testes).
 
 ## Situação da licença/importação real — declaração final da Sprint
 

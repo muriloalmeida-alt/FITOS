@@ -43,6 +43,17 @@ describe("listCatalogExercises (FIT-023)", () => {
     expect(ids).toContain(own.id);
   });
 
+  it("IMP-EX-002: inclui exercício global de origem FITOS_CURATED, não só API_NINJAS", async () => {
+    const { tenant } = await createTenant("listagem-curated");
+    const curated = await prisma.exercise.create({
+      data: { tenantId: null, origin: "FITOS_CURATED", name: `Rosca curada ${run}` },
+    });
+
+    const result = await listCatalogExercises({ tenantId: tenant.id, search: `curada ${run}` }, prisma);
+
+    expect(result.items.map((item) => item.id)).toContain(curated.id);
+  });
+
   it("nunca inclui exercício próprio arquivado", async () => {
     const { owner, tenant } = await createTenant("arquivado-oculto");
     const own = await createOwnExercise(
