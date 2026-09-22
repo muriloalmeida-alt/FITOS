@@ -58,7 +58,10 @@ export default async function PainelPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } });
+    const [tenant, workouts] = await Promise.all([
+      prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } }),
+      listWorkoutsForTenant({ tenantId: ctx.tenantId }),
+    ]);
     return (
       <IndividualHome
         name={session.user.name}
@@ -66,6 +69,7 @@ export default async function PainelPage() {
         objective={profile.objective}
         experienceLevel={profile.experienceLevel}
         weeklyAvailability={profile.weeklyAvailability}
+        workoutsCount={workouts.length}
       />
     );
   }

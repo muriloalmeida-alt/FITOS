@@ -272,3 +272,17 @@ Implementado:
 - `zod` adicionado como dependência direta (já vinha transitivamente pelo Better Auth) — usado pelo validator acima.
 
 Testado: suíte completa (typecheck/lint/vitest/build) e, adicionalmente, um fluxo real de ponta a ponta em navegador via Playwright contra o dev server + Postgres real — `/treino-sozinho` → `/criar-conta?modo=individual` → cadastro real → `/onboarding` → `/painel` mostrando o `IndividualHome` com as respostas salvas; e uma regressão do cadastro padrão de personal (sem `modo`), confirmando que continua indo direto para `/painel`, sem nenhuma mudança de comportamento.
+
+## FIT-102 — Criar treino individual
+
+Issue [FIT-102] criada (#103, sub-issue de EPIC-13 #97). Builder de treino a partir do catálogo local: adicionar, remover, ordenar e parametrizar exercícios — "o treino pertence ao praticante", sem consulta online à API.
+
+**A decisão adiada pela ADR-006 acabou não sendo necessária aqui.** Antes de escrever qualquer código, reli `workouts.ts` (FIT-030) inteiro para decidir como o `Student` (ou a ausência dele) afetaria o builder — e a resposta foi: não afeta em nada. `createWorkout`, `addWorkoutExercise`, `updateWorkoutExercise`, `removeWorkoutExercise`, `reorderWorkoutExercises`, `duplicateWorkout` (e `listCatalogExercises`, FIT-023) já são inteiramente genéricas por `tenantId`, sem absolutamente nenhuma lógica de `PERSONAL` embutida — nenhuma delas toca `Student`, `PlanAssignment` ou `WorkoutSession`. Reaproveitei todas **sem alterar uma linha** desses dois módulos; só criei rotas (`/api/meus-treinos/*`) e páginas (`/painel/meus-treinos/*`) próprias, gateadas por `requireIndividual()` em vez de `requirePersonal()`. O "bucket rascunho" já existente (`ensureDraftTrainingPlanForTenant`, criado na FIT-030 para o personal antes da FIT-032 existir) resolveu de graça a exigência "o treino pertence ao praticante, sem plano visível" — é literalmente o mesmo comportamento que ele já tinha. Registrei isso como atualização na `ADR-006-WORKSPACE-INDIVIDUAL.md`: a pergunta real ("quem é o `Student` de um praticante sem aluno") só volta a valer na FIT-103, porque `WorkoutSession.studentId` é a primeira FK obrigatória que exige essa resposta.
+
+Implementado:
+
+- `/api/meus-treinos` + sub-rotas (`[id]`, `arquivar`, `reativar`, `duplicar`, `itens`, `itens/[itemId]`, `itens/reordenar`) — cópia 1:1 do padrão de `/api/workouts/*`, só troca `requirePersonal` por `requireIndividual`.
+- `/painel/meus-treinos` (lista, sem paginação de "planos"), `/novo`, `/[id]` (builder completo) — componentes próprios (`ItensDoMeuTreino`, `EditarMeuTreinoForm`, botões de arquivar/reativar/duplicar), sem `suggestedDays` (agenda é conceito do personal/aluno, sem uso aqui).
+- `INDIVIDUAL_NAV_ITEMS`: "Treinos" deixa de ser `comingSoon`, aponta para `/painel/meus-treinos`. `IndividualHome` ganhou o card "Meus treinos" (contagem real + CTA), substituindo o "Em breve" da FIT-101.
+
+Testado: suíte completa (typecheck/lint/vitest/build, 709/709) e um fluxo real de ponta a ponta em navegador (Playwright): cadastro individual → onboarding → criar treino → adicionar exercício do catálogo → renomear → arquivar (confirma que some da listagem de ativos, mesma regra do personal) → reativar. Precisei inserir dois exercícios sintéticos via SQL direto no banco de desenvolvimento para o teste, porque a carga real do catálogo global (IMP-EX-001) ainda está pendente neste ambiente — removidos depois do teste, junto com o restante dos dados sintéticos.
