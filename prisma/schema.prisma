@@ -452,12 +452,18 @@ model Exercise {
   difficulty   String?
   instructions String?
   safetyInfo   String?
-  /// FIT-111: caminho estático público (`/media/exercises/<slug>.webp`),
-  /// nunca um bucket/URL assinada — a regra de assets do pacote pede
-  /// explicitamente que nenhum caminho interno seja exposto, e um caminho
-  /// estático já servido por `public/` satisfaz isso sem exigir storage
-  /// externo. `imageAlt` é texto funcional do movimento (não o nome do
-  /// arquivo original), escrito pelo manifesto de importação.
+  /// FIT-111: URL pública HTTPS da ilustração do exercício. Migrado para
+  /// Cloudflare R2 (storage compatível com S3) — nunca uma URL assinada,
+  /// nunca um caminho interno exposto (a regra de assets do pacote proíbe
+  /// ambos; um bucket R2 público satisfaz isso sem exigir autenticação para
+  /// servir a imagem). Ver docs/06-engenharia/arquitetura/
+  /// ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md e ADR-010. Alguns registros ainda
+  /// podem conter o caminho estático local legado (`/media/exercises/
+  /// <slug>.webp`, servido por `public/`) até serem migrados pela
+  /// reexecução do importador — ambas as formas são URLs válidas para
+  /// `next/image` (a local não passa por `remotePatterns`, a do R2 passa).
+  /// `imageAlt` é texto funcional do movimento (não o nome do arquivo
+  /// original), escrito pelo manifesto de importação.
   imageUrl     String?
   imageAlt     String?
   createdAt    DateTime       @default(now())

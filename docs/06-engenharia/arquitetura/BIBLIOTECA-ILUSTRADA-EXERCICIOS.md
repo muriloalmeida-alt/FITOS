@@ -22,7 +22,9 @@ Os 43 arquivos restantes foram cada um mapeado manualmente ao `Exercise` corresp
 
 ## Assets
 
-Otimizadas de PNG/WebP originais (~1MB cada, ~46MB no total) para WebP quality=82, redimensionadas a no máximo 800px de largura (~1,4MB no total) — `public/media/exercises/<slug>.webp`, mesmo padrão de nomenclatura e otimização já usado por `public/media/landing/` (FIT-110). Caminho estático público, nunca um bucket ou URL assinada (regra explícita do pacote) — servido diretamente pelo Next.js a partir de `public/`.
+Otimizadas de PNG/WebP originais (~1MB cada, ~46MB no total) para WebP quality=82, redimensionadas a no máximo 800px de largura (~1,4MB no total) — `public/media/exercises/<slug>.webp`, mesmo padrão de nomenclatura e otimização já usado por `public/media/landing/` (FIT-110).
+
+**Atualização (pós-FIT-111):** o arquivo local em `public/media/exercises/` continua existindo (é a fonte que o importador lê), mas `Exercise.imageUrl` passou a apontar para uma URL pública do Cloudflare R2, não mais para o caminho estático — ver ADR-010 e `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`. Continua nunca uma URL assinada (regra explícita do pacote): o bucket R2 é servido publicamente, sem autenticação, mesmo modelo de exposição que o caminho estático anterior já tinha.
 
 ## Importação (idempotente, execução manual)
 
@@ -52,7 +54,7 @@ Nova seção `#biblioteca` em `src/app/page.tsx`, entre "Comece pelo caminho cer
 
 ## Segurança e LGPD
 
-Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos de aluno real (a mesma regra de `docs/06-GOVERNANCA-DE-MIDIA.md` que já proíbe foto de aluno em `Avatar` não se aplica aqui — não há aluno envolvido). Caminho estático público (`/media/exercises/...`), sem autenticação — mesmo padrão de `/media/landing/` e `/media/brand/`, nenhuma nova superfície de autorização.
+Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos de aluno real (a mesma regra de `docs/06-GOVERNANCA-DE-MIDIA.md` que já proíbe foto de aluno em `Avatar` não se aplica aqui — não há aluno envolvido). URL pública sem autenticação (bucket R2 desde a migração pós-FIT-111, ver ADR-010; caminho estático local `/media/exercises/...` continua existindo como fonte do importador e do teaser da landing) — mesmo modelo de exposição de `/media/landing/` e `/media/brand/`, nenhuma nova superfície de autorização.
 
 ## Critérios de aceite (seção 8B + 17 do pacote) resolvidos por esta História
 
@@ -83,3 +85,5 @@ Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos d
 
 - Os 13 arquivos do pacote reclassificados como não-catálogo (ver "Curadoria dos assets") continuam disponíveis para uso futuro de marketing, sem História própria ainda.
 - Os ~57 exercícios restantes do acervo planejado ("quase 100") dependem de novos assets do pacote — o pipeline de importação já suporta reexecução incremental sem nenhuma mudança de código.
+- **Cobertura real do catálogo curado**: 43 de 208 exercícios têm ilustração (20,7%) — os outros 165 nunca tiveram asset aprovado, em nenhuma rodada. A migração de storage para R2 (ADR-010) não altera esse número; ela só troca onde as 43 imagens existentes são servidas.
+- Ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md` para o estado operacional completo do storage pós-migração, incluindo o teaser da landing (ainda não migrado para R2 nesta rodada).
