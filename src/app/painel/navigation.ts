@@ -24,8 +24,10 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// produzia. "Perfil" ainda não tem rota própria para o Personal (apenas
 /// "Configurações" hospeda dados de conta hoje) — listado como `comingSoon`
 /// para já refletir a IA alvo do pacote ("Mais" reúne Exercícios,
-/// Programas, Financeiro, Perfil e Assinatura) sem simular uma tela que
-/// ainda não existe.
+/// Financeiro, Perfil, Assinatura e Configurações) sem simular uma tela que
+/// ainda não existe. "Assinatura" (FIT-122) já é um destino real — mesma
+/// solução interina de item de nível superior próprio, mesmo sem a árvore
+/// de Configurações (item 5 de `UX-ARCHITECTURE.md`) existir por completo.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
@@ -33,6 +35,7 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
   { key: "perfil", label: "Perfil", comingSoon: true },
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
@@ -59,5 +62,8 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos" },
   { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao" },
+  // FIT-122: "Assinatura" (FitOS Livre) já é real — "Perfil" (nome/e-mail)
+  // continua comingSoon, são destinos distintos.
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "perfil", label: "Perfil", comingSoon: true },
 ];

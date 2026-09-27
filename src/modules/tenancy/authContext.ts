@@ -133,6 +133,21 @@ export async function requireIndividual(
   return { userId: ctx.userId, role: ctx.role, tenantId: ctx.tenantId };
 }
 
+/// FIT-122: os dois papéis que podem ter uma assinatura SaaS — `PERSONAL`
+/// contratando o próprio negócio ou `INDIVIDUAL` assinando o FitOS Livre
+/// (FIT-105). `tenantType` reaproveita diretamente `ctx.role` (os valores
+/// coincidem com `TenantType`), nunca uma segunda leitura do tenant.
+export async function requireSubscriber(
+  sessionOverride?: ServerSession,
+  client: PrismaClient = prisma
+): Promise<{ userId: string; role: "PERSONAL" | "INDIVIDUAL"; tenantId: string; tenantType: "PERSONAL" | "INDIVIDUAL" }> {
+  const ctx = await requireSession(sessionOverride, client);
+  if (ctx.role !== "PERSONAL" && ctx.role !== "INDIVIDUAL") {
+    throw new AuthError("FORBIDDEN", "Acesso restrito a personal ou workspace individual.");
+  }
+  return { userId: ctx.userId, role: ctx.role, tenantId: ctx.tenantId, tenantType: ctx.role };
+}
+
 export async function requireStudent(
   sessionOverride?: ServerSession,
   client: PrismaClient = prisma
