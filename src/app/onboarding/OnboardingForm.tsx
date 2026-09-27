@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
 import { Button, FormAlert, SelectField } from "@/shared/ui";
 import styles from "./OnboardingForm.module.css";
@@ -10,6 +11,11 @@ interface OnboardingFormProps {
   initialObjective: IndividualObjective | null;
   initialExperienceLevel: ExperienceLevel | null;
   initialWeeklyAvailability: WeeklyAvailability | null;
+  /// Já aceitou os termos numa conclusão anterior (FIT-119) — reabrir o
+  /// onboarding para ajustar objetivo/experiência/disponibilidade nunca
+  /// exige um novo aceite; o checkbox aparece pré-marcado e desabilitado
+  /// nesse caso, nunca escondido (o aceite continua visível/honesto).
+  alreadyAcceptedTerms: boolean;
 }
 
 const OBJECTIVE_OPTIONS: { value: IndividualObjective; label: string }[] = [
@@ -36,13 +42,20 @@ interface FieldErrors {
   objective?: string;
   experienceLevel?: string;
   weeklyAvailability?: string;
+  termsAccepted?: string;
 }
 
-export function OnboardingForm({ initialObjective, initialExperienceLevel, initialWeeklyAvailability }: OnboardingFormProps) {
+export function OnboardingForm({
+  initialObjective,
+  initialExperienceLevel,
+  initialWeeklyAvailability,
+  alreadyAcceptedTerms,
+}: OnboardingFormProps) {
   const router = useRouter();
   const [objective, setObjective] = useState<IndividualObjective | "">(initialObjective ?? "");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | "">(initialExperienceLevel ?? "");
   const [weeklyAvailability, setWeeklyAvailability] = useState<WeeklyAvailability | "">(initialWeeklyAvailability ?? "");
+  const [termsAccepted, setTermsAccepted] = useState(alreadyAcceptedTerms);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +70,7 @@ export function OnboardingForm({ initialObjective, initialExperienceLevel, initi
     if (!objective) errors.objective = "Escolha um objetivo.";
     if (!experienceLevel) errors.experienceLevel = "Escolha seu nível de experiência.";
     if (!weeklyAvailability) errors.weeklyAvailability = "Escolha sua disponibilidade.";
+    if (!alreadyAcceptedTerms && !termsAccepted) errors.termsAccepted = "É necessário aceitar os termos para continuar.";
     setFieldErrors(errors);
     setFormError(null);
 
@@ -68,7 +82,7 @@ export function OnboardingForm({ initialObjective, initialExperienceLevel, initi
     const response = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, experienceLevel, weeklyAvailability }),
+      body: JSON.stringify({ objective, experienceLevel, weeklyAvailability, termsAccepted }),
     });
     setIsSubmitting(false);
 
@@ -117,6 +131,22 @@ export function OnboardingForm({ initialObjective, initialExperienceLevel, initi
         disabled={isSubmitting}
         required
       />
+
+      <label className={styles.checkboxLabel}>
+        <input
+          type="checkbox"
+          checked={termsAccepted}
+          onChange={(event) => setTermsAccepted(event.target.checked)}
+          disabled={isSubmitting || alreadyAcceptedTerms}
+        />
+        Li e aceito os <Link href="/termos-de-uso">Termos de Uso</Link> e a{" "}
+        <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
+      </label>
+      {fieldErrors.termsAccepted ? (
+        <p className={styles.checkboxError} role="alert">
+          {fieldErrors.termsAccepted}
+        </p>
+      ) : null}
 
       <Button type="submit" variant="filled" disabled={isSubmitting}>
         {isSubmitting ? "Salvando…" : "Concluir"}

@@ -63,6 +63,7 @@ describe("OnboardingPage (FIT-101)", () => {
       objective: "PERDER_PESO",
       experienceLevel: "AVANCADO",
       weeklyAvailability: "CINCO_OU_MAIS_DIAS",
+      termsAcceptedAt: null,
     });
 
     const { default: OnboardingPage } = await import("./page");
@@ -70,6 +71,27 @@ describe("OnboardingPage (FIT-101)", () => {
 
     expect(screen.getByRole("heading", { name: "Configure seu espaço" })).toBeInTheDocument();
     expect(screen.getByLabelText("Qual seu objetivo principal?")).toHaveValue("PERDER_PESO");
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("FIT-119: perfil com termsAcceptedAt já preenchido pré-marca e desabilita o checkbox de aceite", async () => {
+    getServerSession.mockResolvedValue({ user: { id: "u1" } });
+    getAuthContext.mockResolvedValue({ authenticated: true, role: "INDIVIDUAL", userId: "u1", tenantId: "t1", studentId: null });
+    getIndividualOnboardingProfile.mockResolvedValue({
+      id: "p1",
+      tenantId: "t1",
+      objective: "PERDER_PESO",
+      experienceLevel: "AVANCADO",
+      weeklyAvailability: "CINCO_OU_MAIS_DIAS",
+      termsAcceptedAt: new Date(),
+    });
+
+    const { default: OnboardingPage } = await import("./page");
+    render(await OnboardingPage());
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
   });
 });

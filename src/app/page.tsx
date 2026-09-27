@@ -189,8 +189,8 @@ export default function LandingPage() {
           <Link href="/treino-sozinho">FitOS Livre</Link>
         </nav>
         <p className={styles.footerLegal}>
-          Termos de uso e Política de Privacidade — em preparação. Nenhum link legal é publicado até
-          existir uma página real.
+          <Link href="/termos-de-uso">Termos de Uso</Link> e{" "}
+          <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
         </p>
       </footer>
     </main>
