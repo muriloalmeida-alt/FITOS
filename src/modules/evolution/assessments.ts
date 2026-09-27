@@ -144,6 +144,29 @@ export async function listAssessmentsForStudent(
   });
 }
 
+/// Última avaliação registrada por aluno (não excluída), para todo o
+/// tenant de uma vez — base da seção "Precisa de atenção" do Início do
+/// personal (FIT-120): identificar quem está sem avaliação recente sem uma
+/// consulta por aluno (`groupBy` único, independente de quantos alunos o
+/// tenant tiver). Aluno sem nenhuma linha no retorno nunca foi avaliado.
+export async function getLastAssessmentDatesForTenant(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<Map<string, Date>> {
+  const rows = await client.assessment.groupBy({
+    by: ["studentId"],
+    where: { tenantId: input.tenantId, deletedAt: null },
+    _max: { recordedAt: true },
+  });
+  const lastAssessmentAtByStudentId = new Map<string, Date>();
+  for (const row of rows) {
+    if (row._max.recordedAt) {
+      lastAssessmentAtByStudentId.set(row.studentId, row._max.recordedAt);
+    }
+  }
+  return lastAssessmentAtByStudentId;
+}
+
 /// Exclusão lógica de uma avaliação (`REGRAS-DE-NEGOCIO.md`, seção 7:
 /// "Exclusões de avaliações devem ser lógicas e auditáveis") — nunca
 /// remove a linha, marca `deletedAt`/`deletedByUserId` e registra

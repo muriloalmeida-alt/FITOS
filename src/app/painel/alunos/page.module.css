@@ -16,8 +16,7 @@
   gap: var(--fitos-space-2);
 }
 
-.searchInput,
-.statusSelect {
+.searchInput {
   font-family: var(--fitos-font-family);
   font-size: 16px;
   min-height: 48px;
@@ -28,6 +27,36 @@
   color: var(--fitos-color-on-surface);
 }
 
+.segmented {
+  display: flex;
+  gap: var(--fitos-space-1);
+  padding: 4px;
+  border-radius: var(--fitos-shape-full);
+  background-color: var(--fitos-color-surface-container);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.segment {
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 650;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--fitos-shape-full);
+  color: var(--fitos-color-on-surface-variant);
+  text-decoration: none;
+}
+
+.segmentActive {
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+  box-shadow: 0 1px 3px rgba(16, 28, 44, 0.12);
+}
+
 .empty {
   margin: var(--fitos-space-6) 0;
   color: var(--fitos-color-on-surface-variant);
@@ -35,66 +64,9 @@
 }
 
 .list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--fitos-space-2);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--fitos-space-3);
-  padding: var(--fitos-space-3) var(--fitos-space-4);
-  border-radius: var(--fitos-shape-medium);
-  background-color: var(--fitos-color-surface-container);
-  border: 1px solid var(--fitos-color-outline-variant);
-  text-decoration: none;
-  color: inherit;
-}
-
-.row:hover {
-  background-color: var(--fitos-color-surface-container-high);
-}
-
-.cellText {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-1);
-  flex: 1;
-  min-width: 0;
-}
-
-.cellName {
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--fitos-color-on-surface);
-}
-
-.cellEmail {
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-.statusAtivo,
-.statusInativo {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 650;
-  padding: 2px var(--fitos-space-2);
-  border-radius: var(--fitos-shape-full);
-}
-
-.statusAtivo {
-  color: var(--fitos-color-on-primary-container);
-  background-color: var(--fitos-color-primary-container);
-}
-
-.statusInativo {
-  color: var(--fitos-color-on-surface-variant);
-  background-color: var(--fitos-color-surface-container-high);
 }
 
 .pagination {

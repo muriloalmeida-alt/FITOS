@@ -1,5 +1,6 @@
-import { AppShell, Button, Card } from "@/shared/ui";
+import { AppShell, AttentionItem, Button, Card, EvolutionMetric } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
+import type { PersonalAttentionEntry } from "./getPersonalAttentionItems";
 import { LogoutButton } from "./LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "./navigation";
 import { PersonalHero } from "./PersonalHero";
@@ -12,13 +13,24 @@ interface PersonalHomeProps {
   activeStudentsCount: number;
   activeWorkoutsCount: number;
   atrasadoCents: number;
+  attentionItems: PersonalAttentionEntry[];
 }
 
-/// Painel operacional do personal (FIT-060): alunos ativos, treinos e
-/// situação financeira consolidados, com atalhos diretos para as ações
-/// principais. Nenhuma entidade nova — composição/leitura sobre o que já
-/// existe (alunos, treinos, financeiro).
-export function PersonalHome({ name, email, tenantName, activeStudentsCount, activeWorkoutsCount, atrasadoCents }: PersonalHomeProps) {
+/// Painel operacional do personal (FIT-060, redesenhado na FIT-120):
+/// alunos ativos, treinos e situação financeira consolidados, com atalhos
+/// diretos para as ações principais e a lista "Precisa de atenção"
+/// (mensalidade vencida/avaliação atrasada, `getPersonalAttentionItems`).
+/// Nenhuma entidade nova — composição/leitura sobre o que já existe
+/// (alunos, treinos, financeiro, avaliações).
+export function PersonalHome({
+  name,
+  email,
+  tenantName,
+  activeStudentsCount,
+  activeWorkoutsCount,
+  atrasadoCents,
+  attentionItems,
+}: PersonalHomeProps) {
   return (
     <AppShell
       title="Início"
@@ -29,21 +41,29 @@ export function PersonalHome({ name, email, tenantName, activeStudentsCount, act
     >
       <PersonalHero />
 
+      {attentionItems.length > 0 ? (
+        <Card title="Precisa de atenção">
+          <div className={styles.attentionList}>
+            {attentionItems.map((item) => (
+              <AttentionItem
+                key={item.studentId}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+                tone={item.tone}
+                href={`/painel/alunos/${item.studentId}`}
+              />
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
       <Card title="Visão geral">
-        <dl className={styles.statsGrid}>
-          <div className={styles.statTile}>
-            <dt>Alunos ativos</dt>
-            <dd>{activeStudentsCount}</dd>
-          </div>
-          <div className={styles.statTile}>
-            <dt>Treinos ativos</dt>
-            <dd>{activeWorkoutsCount}</dd>
-          </div>
-          <div className={styles.statTile} data-tone={atrasadoCents > 0 ? "negative" : undefined}>
-            <dt>Atrasado este mês</dt>
-            <dd>{formatCentsBRL(atrasadoCents)}</dd>
-          </div>
-        </dl>
+        <div className={styles.metricsGrid}>
+          <EvolutionMetric value={String(activeStudentsCount)} label="Alunos ativos" />
+          <EvolutionMetric value={String(activeWorkoutsCount)} label="Treinos ativos" />
+          <EvolutionMetric value={formatCentsBRL(atrasadoCents)} label="Atrasado este mês" />
+        </div>
 
         {activeStudentsCount === 0 ? (
           <p className={styles.emptyHint}>Comece cadastrando seu primeiro aluno para acompanhar a evolução dele por aqui.</p>
