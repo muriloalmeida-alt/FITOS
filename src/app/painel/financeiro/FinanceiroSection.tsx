@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Button, FormAlert, TextField } from "@/shared/ui";
+import { Button, EmptyStateAction, FormAlert, TextField } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import styles from "./FinanceiroSection.module.css";
 
@@ -191,7 +191,7 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
   return (
     <div className={styles.container}>
       {charges.length === 0 ? (
-        <p className={styles.empty}>Nenhuma cobrança cadastrada ainda.</p>
+        <EmptyStateAction title="Nenhuma cobrança cadastrada ainda" description="Cadastre a primeira cobrança no formulário abaixo." />
       ) : (
         <ul className={styles.list} aria-label="Lista de recebimentos, competência mais recente primeiro">
           {charges.map((charge) => (
@@ -293,7 +293,11 @@ export function FinanceiroSection({ students, charges }: FinanceiroSectionProps)
         {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
         {students.length === 0 ? (
-          <p className={styles.empty}>Nenhum aluno ativo para cobrar ainda.</p>
+          <EmptyStateAction
+            title="Nenhum aluno ativo para cobrar ainda"
+            description="Cadastre um aluno primeiro."
+            action={{ label: "+ Cadastrar aluno", href: "/painel/alunos/novo" }}
+          />
         ) : (
           <>
             <div className={styles.selectField}>

@@ -21,20 +21,20 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// compacta mostra sem "Mais" (ver `MAX_COMPACT_ITEMS` em `AppShell.tsx`) —
 /// "Início/Alunos/Treinos" é a combinação especificada pelo protótipo
 /// (`personal.js`), não "Início/Alunos/Exercícios" que a ordem anterior
-/// produzia. "Perfil" ainda não tem rota própria para o Personal (apenas
-/// "Configurações" hospeda dados de conta hoje) — listado como `comingSoon`
-/// para já refletir a IA alvo do pacote ("Mais" reúne Exercícios,
-/// Financeiro, Perfil, Assinatura e Configurações) sem simular uma tela que
-/// ainda não existe. "Assinatura" (FIT-122) já é um destino real — mesma
-/// solução interina de item de nível superior próprio, mesmo sem a árvore
-/// de Configurações (item 5 de `UX-ARCHITECTURE.md`) existir por completo.
+/// produzia. "Perfil" passa a ser real na PR4 do redesign (FIT-120):
+/// `/painel/perfil` agora também atende o papel PERSONAL (a mesma rota já
+/// existia para o ALUNO desde a FIT-016) — dados profissionais (celular/
+/// CREF/faixa de alunos) e um resumo real da assinatura, com link para a
+/// gestão completa em `/painel/assinatura` (FIT-122, item próprio abaixo).
+/// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
+/// ainda.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
   { key: "treinos", label: "Treinos", href: "/painel/treinos" },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
-  { key: "perfil", label: "Perfil", comingSoon: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil" },
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];

@@ -18,8 +18,8 @@ describe("FinanceiroSection (FIT-050)", () => {
   it("mostra estado vazio quando não há cobranças nem alunos ativos", () => {
     render(<FinanceiroSection students={[]} charges={[]} />);
 
-    expect(screen.getByText("Nenhuma cobrança cadastrada ainda.")).toBeInTheDocument();
-    expect(screen.getByText("Nenhum aluno ativo para cobrar ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma cobrança cadastrada ainda")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum aluno ativo para cobrar ainda")).toBeInTheDocument();
   });
 
   it("cadastra cobrança usando o aluno selecionado e atualiza a lista", async () => {

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Button, FormAlert, TextField } from "@/shared/ui";
+import { Button, EmptyStateAction, FormAlert, TextField } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import styles from "./FinanceiroSection.module.css";
 import type { StudentOption } from "./FinanceiroSection";
@@ -116,7 +116,10 @@ export function RecorrenciasSection({ students, recurrences }: RecorrenciasSecti
   return (
     <div className={styles.container}>
       {recurrences.length === 0 ? (
-        <p className={styles.empty}>Nenhuma cobrança recorrente ativa ainda.</p>
+        <EmptyStateAction
+          title="Nenhuma cobrança recorrente ativa ainda"
+          description="Crie a primeira no formulário abaixo."
+        />
       ) : (
         <ul className={styles.list} aria-label="Cobranças recorrentes ativas">
           {recurrences.map((recurrence) => (
@@ -145,7 +148,11 @@ export function RecorrenciasSection({ students, recurrences }: RecorrenciasSecti
         {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
         {students.length === 0 ? (
-          <p className={styles.empty}>Nenhum aluno ativo para cobrar ainda.</p>
+          <EmptyStateAction
+            title="Nenhum aluno ativo para cobrar ainda"
+            description="Cadastre um aluno primeiro."
+            action={{ label: "+ Cadastrar aluno", href: "/painel/alunos/novo" }}
+          />
         ) : (
           <>
             <div className={styles.selectField}>

@@ -67,6 +67,8 @@ Estados persistidos: `pendente`, `pago`, `atrasado` e `cancelado`. “A vencer�
 
 **Implementado (PR1):** `src/shared/ui/PaymentStatus.tsx`, com `PaymentStatusValue` espelhando exatamente o enum `StudentChargeStatus` do schema (`PENDENTE`/`PAGO`/`ATRASADO`/`CANCELADO`). Cada estado tem um símbolo textual próprio (○/✓/!/✕) além de cor — "a vencer" continua sendo apresentação calculada por quem usa o componente, não um valor novo aceito por ele.
 
+**Deliberadamente não encaixado em `/painel/financeiro` na PR4**: a pílula de status de `FinanceiroSection.tsx` continua sua própria implementação (`data-status`), porque ela já mostra "A vencer" — uma quinta apresentação calculada sobre `PENDENTE` com vencimento futuro, sem equivalente em `PaymentStatusValue` (que só aceita os 4 estados persistidos). Trocar pelo componente removeria essa distinção real, uma regressão de conteúdo, não uma limpeza visual — fica reservado para quando `PaymentStatus` ganhar essa variação, se Produto decidir que vale a pena.
+
 ### WorkoutBuilderStep
 
 Etapas: contexto, exercícios, parâmetros e revisão. Salvar rascunho automaticamente e indicar o estado de salvamento (Salvando/Salvo/Erro).
@@ -85,9 +87,9 @@ Card de destaque escuro para "o treino de hoje" (jornada Aluno/Livre — `Hoje`)
 
 Card celebratório (fundo em gradiente, ícone, título, descrição) para reconhecimento de marcos de evolução — recorde pessoal, sequência de treinos, meta concluída. Sem ação própria; é sempre um cartão informativo. `src/shared/ui/AchievementCard.tsx`.
 
-### EmptyStateAction (novo, PR1; encaixado em Exercícios/Treinos/Programas na PR3)
+### EmptyStateAction (novo, PR1; encaixado em Exercícios/Treinos/Programas na PR3; Financeiro na PR4)
 
-Estado vazio padrão para listas sem conteúdo (nenhum aluno, nenhum treino, nenhuma cobrança ainda): título, descrição e uma ação opcional (`href` ou `onClick`). Substitui qualquer texto solto de "nenhum item encontrado" por um padrão único e consistente. `src/shared/ui/EmptyStateAction.tsx`. Aplicado em `/painel/exercicios`, `/painel/treinos` e `/painel/treinos/planos` na PR3 (FIT-120) — o estado "sem resultado para a busca" continua um texto simples nesses três lugares (não é "lista vazia", é "filtro não encontrou nada"; a ação de convite não faz sentido ali).
+Estado vazio padrão para listas sem conteúdo (nenhum aluno, nenhum treino, nenhuma cobrança ainda): título, descrição e uma ação opcional (`href` ou `onClick`). Substitui qualquer texto solto de "nenhum item encontrado" por um padrão único e consistente. `src/shared/ui/EmptyStateAction.tsx`. Aplicado em `/painel/exercicios`, `/painel/treinos` e `/painel/treinos/planos` na PR3 (FIT-120) — o estado "sem resultado para a busca" continua um texto simples nesses três lugares (não é "lista vazia", é "filtro não encontrou nada"; a ação de convite não faz sentido ali). Aplicado também em `FinanceiroSection`/`RecorrenciasSection` (`/painel/financeiro`) na PR4 — "Nenhum aluno ativo para cobrar ainda" ganha ação real (`+ Cadastrar aluno` → `/painel/alunos/novo`); "Nenhuma cobrança/recorrência cadastrada ainda" fica sem ação própria (o formulário para criar já está logo abaixo, na mesma tela).
 
 ### ErrorRecovery (novo, PR1)
 
