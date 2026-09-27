@@ -556,4 +556,12 @@ Implementado: `prisma/schema.prisma` (`Plan`, `BillingCycle`, extensão de `Saas
 
 Testado: `plans.integration.test.ts` (5), `subscriptions.integration.test.ts` (11) — contratar, trocar (mesma linha, nunca duplica), reativar após cancelamento, audiência incompatível, plano inativo, plano inexistente, cancelamento idempotente com motivo preservado, motivo vazio rejeitado; `authContext.integration.test.ts` (+3 para `requireSubscriber`); `isolation.integration.test.ts` corrigido (2 fixtures de `saasSubscription` que não tinham `planId`, agora obrigatório); `route.test.ts` para as 2 rotas (mocks, mesmo padrão de `/api/cobrancas/[id]/cancelar`). Suíte completa em 964/964, `tsc --noEmit`/`eslint .`/`npm run build` limpos. Fluxo real de ponta a ponta contra o dev server (signup real de um `PERSONAL`, `curl` com cookie de sessão real — sem Playwright desta vez, suficiente para validar leitura/escrita server-side): página inicial sem assinatura ("Nenhuma assinatura contratada ainda"), contratar via `POST`, página reflete o plano/preço/status corretos e o selo "Plano atual", cancelar via `POST`, página reflete `Cancelada`+motivo e o formulário de cancelamento desaparece — dado de teste removido do banco de dev depois.
 
+Issue #139 criada (sub-issue de EPIC-15 #130). PR #140 aberto a partir de `feature/fit-122-monetizacao-mecanica` com o status `PRONTO PARA REVISÃO GPT/CODEX — NÃO MERGEAR`.
+
+## Merge autorizado do PR #140 (FIT-122)
+
+Murilo autorizou o merge para `main`. PR #140 mesclado (`merge commit` `1f5314b`, `mergeable_state: clean`, sem conflito); Issue #139 fechada automaticamente pelo merge (`Closes #139` no corpo do PR).
+
+`main` agora contém a mecânica completa de assinatura SaaS com preço zero (catálogo de planos, contratar/trocar/cancelar, `/painel/assinatura`) para `PERSONAL` e `INDIVIDUAL` — gateway de pagamento real permanece deliberadamente pendente (`FIT-091` e demais, ver `ADR-010-MECANICA-DE-ASSINATURA-SEM-GATEWAY.md`).
+
 `main` agora contém: a landing comercial completa (FIT-110), a biblioteca ilustrada de exercícios com as 43 imagens vinculadas (FIT-111 — a importação em si segue pendente de execução manual em homologação/produção, como já registrado), a entrada de onboarding com os três caminhos (FIT-112), e o onboarding profissional obrigatório do Personal (FIT-113 — toda conta Personal existente será redirecionada para `/onboarding-personal` na próxima visita a `/painel`, comportamento intencional já confirmado com Murilo).
