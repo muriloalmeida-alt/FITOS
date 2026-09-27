@@ -5,7 +5,7 @@ import { LandingHeader } from "./LandingHeader";
 
 describe("LandingHeader (FIT-110)", () => {
   it("renderiza a marca e os links de navegação", () => {
-    render(<LandingHeader appName="FitOS" />);
+    render(<LandingHeader />);
     expect(screen.getByRole("link", { name: "FitOS" })).toHaveAttribute("href", "/");
     expect(screen.getAllByRole("link", { name: "Recursos" })[0]).toHaveAttribute("href", "#recursos");
     expect(screen.getAllByRole("link", { name: "Para quem" })[0]).toHaveAttribute("href", "#para-quem");
@@ -13,7 +13,7 @@ describe("LandingHeader (FIT-110)", () => {
 
   it("menu mobile começa fechado (aria-expanded=false) e alterna ao clicar", async () => {
     const user = userEvent.setup();
-    render(<LandingHeader appName="FitOS" />);
+    render(<LandingHeader />);
 
     const toggle = screen.getByRole("button", { name: "Abrir menu" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -27,7 +27,7 @@ describe("LandingHeader (FIT-110)", () => {
 
   it("clicar num link do menu mobile fecha o menu", async () => {
     const user = userEvent.setup();
-    render(<LandingHeader appName="FitOS" />);
+    render(<LandingHeader />);
 
     await user.click(screen.getByRole("button", { name: "Abrir menu" }));
     const mobileNav = screen.getByRole("navigation", { name: "Navegação principal (mobile)" });

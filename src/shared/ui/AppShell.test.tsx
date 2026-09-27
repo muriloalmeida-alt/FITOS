@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell, type AppShellNavItem } from "./AppShell";
 
@@ -8,6 +8,22 @@ const items: AppShellNavItem[] = [
   { key: "alunos", label: "Alunos", comingSoon: true },
   { key: "treinos", label: "Treinos", comingSoon: true },
   { key: "financeiro", label: "Financeiro", comingSoon: true },
+  { key: "config", label: "Configurações", comingSoon: true },
+];
+
+const ALUNO_ITEMS: AppShellNavItem[] = [
+  { key: "hoje", label: "Hoje", href: "/painel" },
+  { key: "treino", label: "Treino", href: "/painel/treino" },
+  { key: "progresso", label: "Progresso", href: "/painel/progresso" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil" },
+];
+
+const PERSONAL_ITEMS: AppShellNavItem[] = [
+  { key: "inicio", label: "Início", href: "/painel" },
+  { key: "alunos", label: "Alunos", href: "/painel/alunos" },
+  { key: "treinos", label: "Treinos", href: "/painel/treinos" },
+  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
+  { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
@@ -68,5 +84,43 @@ describe("AppShell", () => {
     );
 
     expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument();
+  });
+
+  it("sem overflow (4 destinos reais, ex.: Aluno): mostra os 4 na barra compacta, nenhum botão Mais", () => {
+    render(
+      <AppShell title="Hoje" navItems={ALUNO_ITEMS} activeKey="hoje">
+        <p>Conteúdo</p>
+      </AppShell>
+    );
+    const bottomNav = screen.getAllByRole("navigation", { name: "Navegação principal" })[1] as HTMLElement;
+
+    expect(within(bottomNav).getByRole("link", { name: "Hoje" })).toBeInTheDocument();
+    expect(within(bottomNav).getByRole("link", { name: "Perfil" })).toBeInTheDocument();
+    expect(within(bottomNav).queryByRole("button", { name: "Mais" })).not.toBeInTheDocument();
+  });
+
+  it("com overflow (6 destinos, ex.: Personal): mostra só os 3 primeiros + Mais, nunca 4 reais + um 5º botão", () => {
+    render(
+      <AppShell title="Início" navItems={PERSONAL_ITEMS} activeKey="inicio">
+        <p>Conteúdo</p>
+      </AppShell>
+    );
+    const bottomNav = screen.getAllByRole("navigation", { name: "Navegação principal" })[1] as HTMLElement;
+
+    expect(within(bottomNav).getByRole("link", { name: "Início" })).toBeInTheDocument();
+    expect(within(bottomNav).getByRole("link", { name: "Alunos" })).toBeInTheDocument();
+    expect(within(bottomNav).getByRole("link", { name: "Treinos" })).toBeInTheDocument();
+    expect(within(bottomNav).queryByRole("link", { name: "Exercícios" })).not.toBeInTheDocument();
+    expect(within(bottomNav).getByRole("button", { name: "Mais" })).toBeInTheDocument();
+  });
+
+  it("renderiza a marca FitOS (BrandLogo) no cabeçalho", () => {
+    render(
+      <AppShell title="Início" navItems={items} activeKey="inicio">
+        <p>Conteúdo</p>
+      </AppShell>
+    );
+    expect(screen.getByText("Fit")).toBeInTheDocument();
+    expect(screen.getByText("OS")).toBeInTheDocument();
   });
 });

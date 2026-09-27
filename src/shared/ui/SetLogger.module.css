@@ -1,0 +1,54 @@
+.logger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-5);
+  background-color: var(--fitos-color-chrome-container);
+  color: var(--fitos-color-on-chrome);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.chip {
+  border-radius: var(--fitos-shape-full);
+  padding: var(--fitos-space-1) var(--fitos-space-3);
+  background-color: var(--fitos-color-chrome);
+  color: var(--fitos-color-on-chrome);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fitos-space-4);
+}
+
+.value {
+  display: flex;
+  flex-direction: column;
+}
+
+.value strong {
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+
+.value span {
+  font-size: 13px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.complete {
+  width: 100%;
+}

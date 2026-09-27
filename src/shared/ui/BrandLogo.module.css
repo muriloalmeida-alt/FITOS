@@ -1,0 +1,53 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fitos-space-2);
+  font-family: var(--fitos-font-family);
+  line-height: 1;
+}
+
+.symbol {
+  flex-shrink: 0;
+  display: block;
+}
+
+.wordmark {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.wordmarkStrong {
+  font-weight: 800;
+}
+
+.dark .wordmark {
+  color: var(--fitos-color-on-chrome);
+}
+
+.dark .wordmarkStrong {
+  color: var(--fitos-color-chrome-accent);
+}
+
+.dark .symbolBg {
+  fill: var(--fitos-navy-900);
+}
+
+.dark .symbolPath {
+  stroke: var(--fitos-lime-500);
+}
+
+.light .wordmark {
+  color: var(--fitos-color-on-surface);
+}
+
+.light .wordmarkStrong {
+  color: var(--fitos-color-primary);
+}
+
+.light .symbolBg {
+  fill: var(--fitos-navy-900);
+}
+
+.light .symbolPath {
+  stroke: var(--fitos-lime-500);
+}

@@ -1,0 +1,26 @@
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--fitos-space-2);
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-5);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-error);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.description {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.retry {
+  margin-top: var(--fitos-space-1);
+}

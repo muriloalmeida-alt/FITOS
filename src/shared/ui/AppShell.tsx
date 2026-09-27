@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 import styles from "./AppShell.module.css";
 
 /// Item de navegação do shell autenticado (FIT-012). `href` só existe para
@@ -26,9 +27,15 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-/// Máximo de destinos exibidos diretamente na barra de navegação compacta
-/// (mobile) antes de agrupar o restante sob "Mais" — mesmo critério descrito
-/// em `docs/03-design/UX-ARCHITECTURE.md` ("Compact: Navigation bar + Mais").
+/// Máximo de destinos visíveis na barra de navegação compacta (mobile),
+/// contando o botão "Mais" quando ele existe — mesmo critério descrito em
+/// `docs/03-design/UX-ARCHITECTURE.md` ("Compact: Navigation bar + Mais").
+/// Sem overflow (ex.: Aluno/Livre, 4 destinos reais): os 4 aparecem,
+/// nenhum "Mais". Com overflow (ex.: Personal, mais de 4 destinos): os 3
+/// primeiros aparecem + "Mais" ocupa o 4º slot, nunca 4 reais + um 5º
+/// botão — item corrigido nesta rodada (o cálculo anterior sempre mostrava
+/// os 4 primeiros e adicionava "Mais" como destino extra, resultando em 5
+/// pílulas na barra do Personal em vez de 4).
 const MAX_COMPACT_ITEMS = 4;
 
 function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean }) {
@@ -54,14 +61,15 @@ function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean 
 
 export function AppShell({ title, subtitle, navItems, activeKey, trailing, children }: AppShellProps) {
   const [showMore, setShowMore] = useState(false);
-  const visibleInCompact = navItems.slice(0, MAX_COMPACT_ITEMS);
-  const collapsedInCompact = navItems.slice(MAX_COMPACT_ITEMS);
+  const hasOverflow = navItems.length > MAX_COMPACT_ITEMS;
+  const visibleInCompact = hasOverflow ? navItems.slice(0, MAX_COMPACT_ITEMS - 1) : navItems;
+  const collapsedInCompact = hasOverflow ? navItems.slice(MAX_COMPACT_ITEMS - 1) : [];
 
   return (
     <div className={styles.shell}>
       <header className={styles.topBar}>
         <div>
-          <span className={styles.brand}>FitOS</span>
+          <BrandLogo background="dark" size={20} className={styles.brand} />
           <h1 className={styles.title}>{title}</h1>
           {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
         </div>
