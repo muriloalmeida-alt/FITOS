@@ -5,21 +5,11 @@ import { useRouter } from "next/navigation";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
 import { Button, FormAlert, SelectField, TextField } from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
+import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
 import styles from "./page.module.css";
 
 interface PersonalOnboardingWizardProps {
   initialBusinessName: string;
-}
-
-const STUDENT_RANGE_OPTIONS: { value: PersonalStudentRangeEstimate; label: string }[] = [
-  { value: "COMECANDO_AGORA", label: "Começando agora" },
-  { value: "ATE_20", label: "Até 20 alunos" },
-  { value: "DE_21_A_50", label: "De 21 a 50 alunos" },
-  { value: "MAIS_DE_50", label: "Mais de 50 alunos" },
-];
-
-function studentRangeLabel(value: PersonalStudentRangeEstimate | ""): string {
-  return STUDENT_RANGE_OPTIONS.find((option) => option.value === value)?.label ?? "—";
 }
 
 type Step = 1 | 2 | 3;

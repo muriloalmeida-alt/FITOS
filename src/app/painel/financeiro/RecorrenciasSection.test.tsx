@@ -18,8 +18,8 @@ describe("RecorrenciasSection (FIT-052)", () => {
   it("mostra estado vazio quando não há recorrências nem alunos ativos", () => {
     render(<RecorrenciasSection students={[]} recurrences={[]} />);
 
-    expect(screen.getByText("Nenhuma cobrança recorrente ativa ainda.")).toBeInTheDocument();
-    expect(screen.getByText("Nenhum aluno ativo para cobrar ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma cobrança recorrente ativa ainda")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum aluno ativo para cobrar ainda")).toBeInTheDocument();
   });
 
   it("cadastra recorrência usando o aluno selecionado", async () => {
