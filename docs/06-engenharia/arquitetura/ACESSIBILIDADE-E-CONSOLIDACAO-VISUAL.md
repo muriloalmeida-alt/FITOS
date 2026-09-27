@@ -61,3 +61,20 @@ Evidência em `docs/06-engenharia/evidencias/FIT-070/`. Nenhuma quebra de layout
 ## Gate final integral
 
 `npm run test` (573/573 — 1 novo teste em `Button.test.tsx` provando que a variante `href` nunca aninha um `<button>` dentro do `<a>`) · `npm run lint` · `npm run typecheck` · `npm run build` — todos limpos após as correções desta Sprint.
+
+## Auditoria de contraste — papel `warning` (FIT-120/PR6)
+
+O papel semântico `warning` (novo na PR1 do redesign mobile-first — extensão M3, fora da especificação oficial de cor) nunca tinha sido auditado com o mesmo método desta Sprint. Mesma fórmula (relative luminance / contrast ratio) aplicada aos 4 pares texto/fundo dos dois temas:
+
+| Par | Claro | Escuro |
+|---|---|---|
+| on-warning-container / warning-container | 13.26:1 ✅ | 7.27:1 ✅ |
+| on-warning / warning | 6.45:1 ✅ | 7.67:1 ✅ |
+
+Todos os 4 pares passam com folga acima do limiar 4.5:1 (texto normal). Único uso real hoje é `AttentionItem` (`tone="warning"`, ícone sobre `warning-container`) — o par `on-warning`/`warning` ainda não tem nenhum consumidor real na aplicação, auditado preventivamente por já fazer parte do contrato público documentado em `M3-DESIGN-TOKENS.md`.
+
+## Estados de erro/404 do segmento `app/` (FIT-120/PR6)
+
+Achado: nenhuma rota tinha `error.tsx`/`not-found.tsx` — um erro não tratado em qualquer página caía no overlay genérico de desenvolvimento do Next.js (ou, em produção, numa tela em branco sem marca nem ação de recuperação); uma URL inexistente caía no 404 padrão do Next.js, sem o sistema de design aplicado. Corrigido: `src/app/error.tsx` (limite de erro do segmento `app/`, `"use client"`, usa `ErrorRecovery` — nunca expõe `error.message`/stack ao usuário, só registra no console) e `src/app/not-found.tsx` (estado informativo próprio, deliberadamente **sem** `ErrorRecovery` — um 404 não é um erro recuperável com "tentar novamente", é uma URL que não existe, `role="alert"` seria semanticamente incorreto ali).
+
+Também corrigido, achado durante a mesma varredura: `src/app/layout.tsx` ainda tinha o `metadata` da fundação técnica original (FIT-006) — "Fundação executável do FitOS... sem funcionalidades de negócio implementadas" — nunca atualizado ao longo de todo o programa, apesar de ser o `<meta name="description">` padrão de qualquer página sem `metadata` própria. Corrigido para refletir o produto real.
