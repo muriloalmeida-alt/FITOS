@@ -126,8 +126,8 @@ export default function LandingPage() {
       <section id="biblioteca" className={styles.library}>
         <h2 className={styles.sectionTitle}>Biblioteca ilustrada de exercícios</h2>
         <p className={styles.libraryIntro}>
-          {exerciseImageManifest.length} exercícios já ilustrados de um acervo planejado de quase 100 — biblioteca
-          em expansão, disponível para Personal, Aluno vinculado e FitOS Livre.
+          {exerciseImageManifest.length} de 208 exercícios do catálogo já ilustrados — biblioteca completa em
+          expansão, disponível para Personal, Aluno vinculado e FitOS Livre.
         </p>
         <div className={styles.libraryGrid}>
           {libraryTeaserItems.map((entry) => (

@@ -22,7 +22,9 @@ Os 43 arquivos restantes foram cada um mapeado manualmente ao `Exercise` corresp
 
 ## Assets
 
-Otimizadas de PNG/WebP originais (~1MB cada, ~46MB no total) para WebP quality=82, redimensionadas a no máximo 800px de largura (~1,4MB no total) — `public/media/exercises/<slug>.webp`, mesmo padrão de nomenclatura e otimização já usado por `public/media/landing/` (FIT-110). Caminho estático público, nunca um bucket ou URL assinada (regra explícita do pacote) — servido diretamente pelo Next.js a partir de `public/`.
+Otimizadas de PNG/WebP originais (~1MB cada, ~46MB no total) para WebP quality=82, redimensionadas a no máximo 800px de largura (~1,4MB no total) — `public/media/exercises/<slug>.webp`, mesmo padrão de nomenclatura e otimização já usado por `public/media/landing/` (FIT-110).
+
+**Atualização (pós-FIT-111):** o arquivo local em `public/media/exercises/` continua existindo (é a fonte que o importador lê), mas `Exercise.imageUrl` passou a apontar para uma URL pública do Cloudflare R2, não mais para o caminho estático — ver ADR-011 e `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`. Continua nunca uma URL assinada (regra explícita do pacote): o bucket R2 é servido publicamente, sem autenticação, mesmo modelo de exposição que o caminho estático anterior já tinha.
 
 ## Importação (idempotente, execução manual)
 
@@ -52,7 +54,7 @@ Nova seção `#biblioteca` em `src/app/page.tsx`, entre "Comece pelo caminho cer
 
 ## Segurança e LGPD
 
-Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos de aluno real (a mesma regra de `docs/06-GOVERNANCA-DE-MIDIA.md` que já proíbe foto de aluno em `Avatar` não se aplica aqui — não há aluno envolvido). Caminho estático público (`/media/exercises/...`), sem autenticação — mesmo padrão de `/media/landing/` e `/media/brand/`, nenhuma nova superfície de autorização.
+Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos de aluno real (a mesma regra de `docs/06-GOVERNANCA-DE-MIDIA.md` que já proíbe foto de aluno em `Avatar` não se aplica aqui — não há aluno envolvido). URL pública sem autenticação (bucket R2 desde a migração pós-FIT-111, ver ADR-011; caminho estático local `/media/exercises/...` continua existindo como fonte do importador e do teaser da landing) — mesmo modelo de exposição de `/media/landing/` e `/media/brand/`, nenhuma nova superfície de autorização.
 
 ## Critérios de aceite (seção 8B + 17 do pacote) resolvidos por esta História
 
@@ -81,5 +83,7 @@ Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos d
 
 ## Pendências reais
 
-- Os 13 arquivos do pacote reclassificados como não-catálogo (ver "Curadoria dos assets") continuam disponíveis para uso futuro de marketing, sem História própria ainda.
-- Os ~57 exercícios restantes do acervo planejado ("quase 100") dependem de novos assets do pacote — o pipeline de importação já suporta reexecução incremental sem nenhuma mudança de código.
+- Os 13 arquivos do pacote original reclassificados como não-catálogo (ver "Curadoria dos assets") continuam disponíveis para uso futuro de marketing, sem História própria ainda.
+- **Atualização (FIT-118)**: um segundo lote de 208 ilustrações fotográficas aprovadas (nomes já em slug, uma imagem por `canonical_key` do catálogo curado) substituiu o lote original de 43 — ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`, seção "Ampliação FIT-118", para a reconciliação completa (203/208 aplicadas, 7 arquivos vazios recebidos). **Decisão de Produto (Murilo, 27/09/2026): 203/208 é o estado final** — os 5 exercícios sem imagem não são mais uma pendência de reenvio. O manifesto (`manifesto-imagens-exercicios.json`) e `public/media/exercises/` já refletem o lote novo.
+- **Upload real para o bucket R2 confirmado por Murilo em 27/09/2026** — ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`, seção "Execução real", para o que este agente pôde e não pôde verificar de forma independente.
+- Ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md` para o estado operacional completo do storage pós-migração, incluindo o teaser da landing (ainda não migrado para R2 nesta rodada).

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import exerciseImageManifest from "@/modules/exercises/data/manifesto-imagens-exercicios.json";
 import LandingPage from "./page";
 
 vi.mock("next/navigation", () => ({
@@ -57,11 +58,11 @@ describe("LandingPage (FIT-110)", () => {
     expect(screen.getByRole("link", { name: "Criar meu perfil" })).toHaveAttribute("href", "/criar-conta");
   });
 
-  it("FIT-111: renderiza o teaser da biblioteca ilustrada com a quantidade real, nunca 'quase 100' como se já publicado", () => {
+  it("FIT-111/FIT-118: renderiza o teaser da biblioteca ilustrada com a quantidade real do manifesto, nunca hardcoded", () => {
     render(<LandingPage />);
     expect(screen.getByRole("heading", { name: "Biblioteca ilustrada de exercícios" })).toBeInTheDocument();
-    expect(screen.getByText(/43 exercícios já ilustrados de um acervo planejado de quase 100/)).toBeInTheDocument();
-    expect(screen.getByText(/biblioteca em expansão/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${exerciseImageManifest.length} de 208 exercícios do catálogo já ilustrados`))).toBeInTheDocument();
+    expect(screen.getByText(/biblioteca completa em expansão/)).toBeInTheDocument();
     expect(screen.getByText(/Personal, Aluno vinculado e FitOS Livre/)).toBeInTheDocument();
   });
 

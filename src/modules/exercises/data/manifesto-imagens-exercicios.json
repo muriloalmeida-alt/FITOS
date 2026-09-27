@@ -1,6 +1,36 @@
 [
   {
-    "arquivoOriginal": "Abdominal no cabo ajoelhado.png",
+    "arquivoOriginal": "abdominal-bicicleta.webp",
+    "canonicalKey": "fitos:abdominal-bicicleta",
+    "slug": "abdominal-bicicleta",
+    "nomeCanonico": "Abdominal bicicleta",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Abdominal bicicleta"
+    ],
+    "duasFases": false,
+    "altText": "Abdominal bicicleta. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "abdominal-na-maquina.webp",
+    "canonicalKey": "fitos:abdominal-na-maquina",
+    "slug": "abdominal-na-maquina",
+    "nomeCanonico": "Abdominal na máquina",
+    "musculo": "Core",
+    "equipamento": "máquina abdominal",
+    "aliases": [
+      "Abdominal na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Abdominal na máquina. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: máquina abdominal.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "abdominal-no-cabo-ajoelhado.webp",
     "canonicalKey": "fitos:abdominal-no-cabo-ajoelhado",
     "slug": "abdominal-no-cabo-ajoelhado",
     "nomeCanonico": "Abdominal no cabo ajoelhado",
@@ -11,101 +41,806 @@
     ],
     "duasFases": false,
     "altText": "Abdominal no cabo ajoelhado. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: polia alta, corda.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Agachamento búlgaro com halteres.png",
+    "arquivoOriginal": "abdominal-reverso.webp",
+    "canonicalKey": "fitos:abdominal-reverso",
+    "slug": "abdominal-reverso",
+    "nomeCanonico": "Abdominal reverso",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Abdominal reverso"
+    ],
+    "duasFases": false,
+    "altText": "Abdominal reverso. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "abdominal-supra.webp",
+    "canonicalKey": "fitos:abdominal-supra",
+    "slug": "abdominal-supra",
+    "nomeCanonico": "Abdominal supra",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Abdominal supra"
+    ],
+    "duasFases": false,
+    "altText": "Abdominal supra. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "abducao-de-quadril-no-cabo.webp",
+    "canonicalKey": "fitos:abducao-de-quadril-no-cabo",
+    "slug": "abducao-de-quadril-no-cabo",
+    "nomeCanonico": "Abdução de quadril no cabo",
+    "musculo": "Glúteos",
+    "equipamento": "polia baixa, tornozeleira",
+    "aliases": [
+      "Abdução de quadril no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Abdução de quadril no cabo. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: polia baixa, tornozeleira.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "abducao-lateral-deitada.webp",
+    "canonicalKey": "fitos:abducao-lateral-deitada",
+    "slug": "abducao-lateral-deitada",
+    "nomeCanonico": "Abdução lateral deitada",
+    "musculo": "Glúteos",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Abdução lateral deitada"
+    ],
+    "duasFases": false,
+    "altText": "Abdução lateral deitada. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "afundo-no-smith.webp",
+    "canonicalKey": "fitos:afundo-no-smith",
+    "slug": "afundo-no-smith",
+    "nomeCanonico": "Afundo no Smith",
+    "musculo": "Quadríceps",
+    "equipamento": "máquina Smith",
+    "aliases": [
+      "Afundo no Smith"
+    ],
+    "duasFases": false,
+    "altText": "Afundo no Smith. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: máquina Smith.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "afundo-reverso.webp",
+    "canonicalKey": "fitos:afundo-reverso",
+    "slug": "afundo-reverso",
+    "nomeCanonico": "Afundo reverso",
+    "musculo": "Quadríceps",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Afundo reverso"
+    ],
+    "duasFases": false,
+    "altText": "Afundo reverso. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: peso corporal.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "agachamento-bulgaro.webp",
     "canonicalKey": "fitos:agachamento-bulgaro",
     "slug": "agachamento-bulgaro",
     "nomeCanonico": "Agachamento búlgaro",
     "musculo": "Quadríceps",
     "equipamento": "halteres, banco",
     "aliases": [
-      "Agachamento búlgaro com halteres"
+      "Agachamento búlgaro"
     ],
     "duasFases": false,
     "altText": "Agachamento búlgaro. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halteres, banco.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Agachamento frontal com barra em duas fases.png",
+    "arquivoOriginal": "agachamento-com-salto.webp",
+    "canonicalKey": "fitos:agachamento-com-salto",
+    "slug": "agachamento-com-salto",
+    "nomeCanonico": "Agachamento com salto",
+    "musculo": "Quadríceps",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Agachamento com salto"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento com salto. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: peso corporal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-frontal-com-barra.webp",
     "canonicalKey": "fitos:agachamento-frontal-com-barra",
     "slug": "agachamento-frontal-com-barra",
     "nomeCanonico": "Agachamento frontal com barra",
     "musculo": "Quadríceps",
     "equipamento": "barra, rack",
     "aliases": [
-      "Agachamento frontal com barra em duas fases"
+      "Agachamento frontal com barra"
     ],
-    "duasFases": true,
-    "altText": "Agachamento frontal com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: barra, rack.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Agachamento frontal com barra. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: barra, rack.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Agachamento livre com barra: duas fases.png",
+    "arquivoOriginal": "agachamento-goblet.webp",
+    "canonicalKey": "fitos:agachamento-goblet",
+    "slug": "agachamento-goblet",
+    "nomeCanonico": "Agachamento goblet",
+    "musculo": "Quadríceps",
+    "equipamento": "halter ou kettlebell",
+    "aliases": [
+      "Agachamento goblet"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento goblet. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halter ou kettlebell.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-hack.webp",
+    "canonicalKey": "fitos:agachamento-hack",
+    "slug": "agachamento-hack",
+    "nomeCanonico": "Agachamento Hack",
+    "musculo": "Quadríceps",
+    "equipamento": "máquina hack",
+    "aliases": [
+      "Agachamento Hack"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento Hack. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: máquina hack.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-isometrico-na-parede.webp",
+    "canonicalKey": "fitos:agachamento-isometrico-na-parede",
+    "slug": "agachamento-isometrico-na-parede",
+    "nomeCanonico": "Agachamento isométrico na parede",
+    "musculo": "Quadríceps",
+    "equipamento": "parede",
+    "aliases": [
+      "Agachamento isométrico na parede"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento isométrico na parede. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: parede.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-livre.webp",
+    "canonicalKey": "fitos:agachamento-livre",
+    "slug": "agachamento-livre",
+    "nomeCanonico": "Agachamento livre",
+    "musculo": "Quadríceps",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Agachamento livre"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento livre. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: peso corporal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-livre-com-barra.webp",
     "canonicalKey": "fitos:agachamento-livre-com-barra",
     "slug": "agachamento-livre-com-barra",
     "nomeCanonico": "Agachamento livre com barra",
     "musculo": "Quadríceps",
     "equipamento": "barra, rack",
     "aliases": [
-      "Agachamento livre com barra: duas fases"
+      "Agachamento livre com barra"
     ],
-    "duasFases": true,
-    "altText": "Agachamento livre com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: barra, rack.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Agachamento livre com barra. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: barra, rack.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Avanço reverso com halteres.png",
+    "arquivoOriginal": "agachamento-no-cabo.webp",
+    "canonicalKey": "fitos:agachamento-no-cabo",
+    "slug": "agachamento-no-cabo",
+    "nomeCanonico": "Agachamento no cabo",
+    "musculo": "Quadríceps",
+    "equipamento": "polia baixa",
+    "aliases": [
+      "Agachamento no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento no cabo. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: polia baixa.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-no-smith.webp",
+    "canonicalKey": "fitos:agachamento-no-smith",
+    "slug": "agachamento-no-smith",
+    "nomeCanonico": "Agachamento no Smith",
+    "musculo": "Quadríceps",
+    "equipamento": "máquina Smith",
+    "aliases": [
+      "Agachamento no Smith"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento no Smith. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: máquina Smith.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "agachamento-profundo-assistido.webp",
+    "canonicalKey": "fitos:agachamento-profundo-assistido",
+    "slug": "agachamento-profundo-assistido",
+    "nomeCanonico": "Agachamento profundo assistido",
+    "musculo": "Mobilidade global",
+    "equipamento": "apoio fixo",
+    "aliases": [
+      "Agachamento profundo assistido"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento profundo assistido. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: apoio fixo.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "agachamento-sumo-com-halter.webp",
+    "canonicalKey": "fitos:agachamento-sumo-com-halter",
+    "slug": "agachamento-sumo-com-halter",
+    "nomeCanonico": "Agachamento sumô com halter",
+    "musculo": "Glúteos",
+    "equipamento": "halter",
+    "aliases": [
+      "Agachamento sumô com halter"
+    ],
+    "duasFases": false,
+    "altText": "Agachamento sumô com halter. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: halter.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-cruzado-de-ombro.webp",
+    "canonicalKey": "fitos:alongamento-cruzado-de-ombro",
+    "slug": "alongamento-cruzado-de-ombro",
+    "nomeCanonico": "Alongamento cruzado de ombro",
+    "musculo": "Mobilidade global",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Alongamento cruzado de ombro"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento cruzado de ombro. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: peso corporal.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-adutores-borboleta.webp",
+    "canonicalKey": "fitos:alongamento-de-adutores-borboleta",
+    "slug": "alongamento-de-adutores-borboleta",
+    "nomeCanonico": "Alongamento de adutores borboleta",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Alongamento de adutores borboleta"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de adutores borboleta. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-biceps-na-parede.webp",
+    "canonicalKey": "fitos:alongamento-de-biceps-na-parede",
+    "slug": "alongamento-de-biceps-na-parede",
+    "nomeCanonico": "Alongamento de bíceps na parede",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Alongamento de bíceps na parede"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de bíceps na parede. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-dorsal-ajoelhado.webp",
+    "canonicalKey": "fitos:alongamento-de-dorsal-ajoelhado",
+    "slug": "alongamento-de-dorsal-ajoelhado",
+    "nomeCanonico": "Alongamento de dorsal ajoelhado",
+    "musculo": "Mobilidade global",
+    "equipamento": "banco ou caixa",
+    "aliases": [
+      "Alongamento de dorsal ajoelhado"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de dorsal ajoelhado. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: banco ou caixa.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-extensores-do-punho.webp",
+    "canonicalKey": "fitos:alongamento-de-extensores-do-punho",
+    "slug": "alongamento-de-extensores-do-punho",
+    "nomeCanonico": "Alongamento de extensores do punho",
+    "musculo": "Mobilidade global",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Alongamento de extensores do punho"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de extensores do punho. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: peso corporal.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-flexores-do-punho.webp",
+    "canonicalKey": "fitos:alongamento-de-flexores-do-punho",
+    "slug": "alongamento-de-flexores-do-punho",
+    "nomeCanonico": "Alongamento de flexores do punho",
+    "musculo": "Mobilidade global",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Alongamento de flexores do punho"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de flexores do punho. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: peso corporal.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-panturrilha-na-parede.webp",
+    "canonicalKey": "fitos:alongamento-de-panturrilha-na-parede",
+    "slug": "alongamento-de-panturrilha-na-parede",
+    "nomeCanonico": "Alongamento de panturrilha na parede",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Alongamento de panturrilha na parede"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de panturrilha na parede. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-peitoral-na-parede.webp",
+    "canonicalKey": "fitos:alongamento-de-peitoral-na-parede",
+    "slug": "alongamento-de-peitoral-na-parede",
+    "nomeCanonico": "Alongamento de peitoral na parede",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Alongamento de peitoral na parede"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de peitoral na parede. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-peitoral-na-porta.webp",
+    "canonicalKey": "fitos:alongamento-de-peitoral-na-porta",
+    "slug": "alongamento-de-peitoral-na-porta",
+    "nomeCanonico": "Alongamento de peitoral na porta",
+    "musculo": "Mobilidade global",
+    "equipamento": "batente de porta",
+    "aliases": [
+      "Alongamento de peitoral na porta"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de peitoral na porta. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: batente de porta.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-posteriores-sentado.webp",
+    "canonicalKey": "fitos:alongamento-de-posteriores-sentado",
+    "slug": "alongamento-de-posteriores-sentado",
+    "nomeCanonico": "Alongamento de posteriores sentado",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Alongamento de posteriores sentado"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de posteriores sentado. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-quadriceps-em-pe.webp",
+    "canonicalKey": "fitos:alongamento-de-quadriceps-em-pe",
+    "slug": "alongamento-de-quadriceps-em-pe",
+    "nomeCanonico": "Alongamento de quadríceps em pé",
+    "musculo": "Mobilidade global",
+    "equipamento": "apoio opcional",
+    "aliases": [
+      "Alongamento de quadríceps em pé"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de quadríceps em pé. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: apoio opcional.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-soleo-na-parede.webp",
+    "canonicalKey": "fitos:alongamento-de-soleo-na-parede",
+    "slug": "alongamento-de-soleo-na-parede",
+    "nomeCanonico": "Alongamento de sóleo na parede",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Alongamento de sóleo na parede"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de sóleo na parede. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-de-triceps-acima-da-cabeca.webp",
+    "canonicalKey": "fitos:alongamento-de-triceps-acima-da-cabeca",
+    "slug": "alongamento-de-triceps-acima-da-cabeca",
+    "nomeCanonico": "Alongamento de tríceps acima da cabeça",
+    "musculo": "Mobilidade global",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Alongamento de tríceps acima da cabeça"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento de tríceps acima da cabeça. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: peso corporal.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-do-flexor-do-quadril-ajoelhado.webp",
+    "canonicalKey": "fitos:alongamento-do-flexor-do-quadril-ajoelhado",
+    "slug": "alongamento-do-flexor-do-quadril-ajoelhado",
+    "nomeCanonico": "Alongamento do flexor do quadril ajoelhado",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Alongamento do flexor do quadril ajoelhado"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento do flexor do quadril ajoelhado. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "alongamento-piriforme-em-figura-quatro.webp",
+    "canonicalKey": "fitos:alongamento-piriforme-em-figura-quatro",
+    "slug": "alongamento-piriforme-em-figura-quatro",
+    "nomeCanonico": "Alongamento piriforme em figura quatro",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Alongamento piriforme em figura quatro"
+    ],
+    "duasFases": false,
+    "altText": "Alongamento piriforme em figura quatro. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "avanco-com-halteres.webp",
     "canonicalKey": "fitos:avanco-com-halteres",
     "slug": "avanco-com-halteres",
     "nomeCanonico": "Avanço com halteres",
     "musculo": "Quadríceps",
     "equipamento": "halteres",
     "aliases": [
-      "Avanço reverso com halteres"
+      "Avanço com halteres"
     ],
     "duasFases": false,
     "altText": "Avanço com halteres. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halteres.",
-    "width": 800,
-    "height": 800
+    "width": 512,
+    "height": 512
   },
   {
-    "arquivoOriginal": "Cadeira extensora: flexão e extensão controladas.png",
+    "arquivoOriginal": "avanco-lateral-com-halter.webp",
+    "canonicalKey": "fitos:avanco-lateral-com-halter",
+    "slug": "avanco-lateral-com-halter",
+    "nomeCanonico": "Avanço lateral com halter",
+    "musculo": "Glúteos",
+    "equipamento": "halter",
+    "aliases": [
+      "Avanço lateral com halter"
+    ],
+    "duasFases": false,
+    "altText": "Avanço lateral com halter. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: halter.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "barra-fixa-neutra.webp",
+    "canonicalKey": "fitos:barra-fixa-neutra",
+    "slug": "barra-fixa-neutra",
+    "nomeCanonico": "Barra fixa neutra",
+    "musculo": "Costas",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Barra fixa neutra"
+    ],
+    "duasFases": false,
+    "altText": "Barra fixa neutra. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra fixa.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "barra-fixa-pronada.webp",
+    "canonicalKey": "fitos:barra-fixa-pronada",
+    "slug": "barra-fixa-pronada",
+    "nomeCanonico": "Barra fixa pronada",
+    "musculo": "Costas",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Barra fixa pronada"
+    ],
+    "duasFases": false,
+    "altText": "Barra fixa pronada. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra fixa.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "barra-fixa-supinada.webp",
+    "canonicalKey": "fitos:barra-fixa-supinada",
+    "slug": "barra-fixa-supinada",
+    "nomeCanonico": "Barra fixa supinada",
+    "musculo": "Costas",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Barra fixa supinada"
+    ],
+    "duasFases": false,
+    "altText": "Barra fixa supinada. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra fixa.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "bird-dog.webp",
+    "canonicalKey": "fitos:bird-dog",
+    "slug": "bird-dog",
+    "nomeCanonico": "Bird dog",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Bird dog"
+    ],
+    "duasFases": false,
+    "altText": "Bird dog. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "cadeira-extensora.webp",
     "canonicalKey": "fitos:cadeira-extensora",
     "slug": "cadeira-extensora",
     "nomeCanonico": "Cadeira extensora",
     "musculo": "Quadríceps",
     "equipamento": "cadeira extensora",
     "aliases": [
-      "Cadeira extensora: flexão e extensão controladas"
+      "Cadeira extensora"
     ],
-    "duasFases": true,
-    "altText": "Cadeira extensora. Ilustração em duas fases do movimento (início e final). Músculo principal: Quadríceps. Equipamento: cadeira extensora.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Cadeira extensora. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: cadeira extensora.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Chest press sentado na máquina.png",
+    "arquivoOriginal": "cadeira-flexora.webp",
+    "canonicalKey": "fitos:cadeira-flexora",
+    "slug": "cadeira-flexora",
+    "nomeCanonico": "Cadeira flexora",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "cadeira flexora",
+    "aliases": [
+      "Cadeira flexora"
+    ],
+    "duasFases": false,
+    "altText": "Cadeira flexora. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: cadeira flexora.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "cat-cow.webp",
+    "canonicalKey": "fitos:cat-cow",
+    "slug": "cat-cow",
+    "nomeCanonico": "Cat-cow",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Cat-cow"
+    ],
+    "duasFases": false,
+    "altText": "Cat-cow. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "chest-press-sentado.webp",
     "canonicalKey": "fitos:chest-press-sentado",
     "slug": "chest-press-sentado",
     "nomeCanonico": "Chest press sentado",
     "musculo": "Peitoral",
     "equipamento": "máquina chest press",
     "aliases": [
-      "Chest press sentado na máquina"
+      "Chest press sentado"
     ],
     "duasFases": false,
     "altText": "Chest press sentado. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina chest press.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Crucifixo na máquina peck deck.png",
+    "arquivoOriginal": "cobra-suave.webp",
+    "canonicalKey": "fitos:cobra-suave",
+    "slug": "cobra-suave",
+    "nomeCanonico": "Cobra suave",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Cobra suave"
+    ],
+    "duasFases": false,
+    "altText": "Cobra suave. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "coice-na-maquina.webp",
+    "canonicalKey": "fitos:coice-na-maquina",
+    "slug": "coice-na-maquina",
+    "nomeCanonico": "Coice na máquina",
+    "musculo": "Glúteos",
+    "equipamento": "máquina de glúteos",
+    "aliases": [
+      "Coice na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Coice na máquina. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: máquina de glúteos.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "coice-no-cabo.webp",
+    "canonicalKey": "fitos:coice-no-cabo",
+    "slug": "coice-no-cabo",
+    "nomeCanonico": "Coice no cabo",
+    "musculo": "Glúteos",
+    "equipamento": "polia baixa, tornozeleira",
+    "aliases": [
+      "Coice no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Coice no cabo. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: polia baixa, tornozeleira.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "crossover-alto.webp",
+    "canonicalKey": "fitos:crossover-alto",
+    "slug": "crossover-alto",
+    "nomeCanonico": "Crossover alto",
+    "musculo": "Peitoral",
+    "equipamento": "polia dupla",
+    "aliases": [
+      "Crossover alto"
+    ],
+    "duasFases": false,
+    "altText": "Crossover alto. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: polia dupla.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "crossover-baixo.webp",
+    "canonicalKey": "fitos:crossover-baixo",
+    "slug": "crossover-baixo",
+    "nomeCanonico": "Crossover baixo",
+    "musculo": "Peitoral",
+    "equipamento": "polia dupla",
+    "aliases": [
+      "Crossover baixo"
+    ],
+    "duasFases": false,
+    "altText": "Crossover baixo. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: polia dupla.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "crossover-medio.webp",
+    "canonicalKey": "fitos:crossover-medio",
+    "slug": "crossover-medio",
+    "nomeCanonico": "Crossover médio",
+    "musculo": "Peitoral",
+    "equipamento": "polia dupla",
+    "aliases": [
+      "Crossover médio"
+    ],
+    "duasFases": false,
+    "altText": "Crossover médio. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: polia dupla.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "crucifixo-inclinado-com-halteres.webp",
+    "canonicalKey": "fitos:crucifixo-inclinado-com-halteres",
+    "slug": "crucifixo-inclinado-com-halteres",
+    "nomeCanonico": "Crucifixo inclinado com halteres",
+    "musculo": "Peitoral",
+    "equipamento": "halteres, banco inclinado",
+    "aliases": [
+      "Crucifixo inclinado com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo inclinado com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco inclinado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "crucifixo-inverso-com-halteres.webp",
+    "canonicalKey": "fitos:crucifixo-inverso-com-halteres",
+    "slug": "crucifixo-inverso-com-halteres",
+    "nomeCanonico": "Crucifixo inverso com halteres",
+    "musculo": "Ombros",
+    "equipamento": "halteres",
+    "aliases": [
+      "Crucifixo inverso com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo inverso com halteres. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "crucifixo-inverso-na-maquina.webp",
+    "canonicalKey": "fitos:crucifixo-inverso-na-maquina",
+    "slug": "crucifixo-inverso-na-maquina",
+    "nomeCanonico": "Crucifixo inverso na máquina",
+    "musculo": "Ombros",
+    "equipamento": "máquina peck deck invertida",
+    "aliases": [
+      "Crucifixo inverso na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo inverso na máquina. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: máquina peck deck invertida.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "crucifixo-inverso-no-cabo.webp",
+    "canonicalKey": "fitos:crucifixo-inverso-no-cabo",
+    "slug": "crucifixo-inverso-no-cabo",
+    "nomeCanonico": "Crucifixo inverso no cabo",
+    "musculo": "Ombros",
+    "equipamento": "polia dupla",
+    "aliases": [
+      "Crucifixo inverso no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo inverso no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia dupla.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "crucifixo-na-maquina-peck-deck.webp",
     "canonicalKey": "fitos:crucifixo-na-maquina-peck-deck",
     "slug": "crucifixo-na-maquina-peck-deck",
     "nomeCanonico": "Crucifixo na máquina peck deck",
@@ -116,11 +851,101 @@
     ],
     "duasFases": false,
     "altText": "Crucifixo na máquina peck deck. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina peck deck.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Desenvolvimento na máquina.png",
+    "arquivoOriginal": "crucifixo-reto-com-halteres.webp",
+    "canonicalKey": "fitos:crucifixo-reto-com-halteres",
+    "slug": "crucifixo-reto-com-halteres",
+    "nomeCanonico": "Crucifixo reto com halteres",
+    "musculo": "Peitoral",
+    "equipamento": "halteres, banco reto",
+    "aliases": [
+      "Crucifixo reto com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo reto com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco reto.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "crucifixo-unilateral-no-cabo.webp",
+    "canonicalKey": "fitos:crucifixo-unilateral-no-cabo",
+    "slug": "crucifixo-unilateral-no-cabo",
+    "nomeCanonico": "Crucifixo unilateral no cabo",
+    "musculo": "Peitoral",
+    "equipamento": "polia",
+    "aliases": [
+      "Crucifixo unilateral no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Crucifixo unilateral no cabo. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: polia.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "dead-bug.webp",
+    "canonicalKey": "fitos:dead-bug",
+    "slug": "dead-bug",
+    "nomeCanonico": "Dead bug",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Dead bug"
+    ],
+    "duasFases": false,
+    "altText": "Dead bug. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "desenvolvimento-arnold.webp",
+    "canonicalKey": "fitos:desenvolvimento-arnold",
+    "slug": "desenvolvimento-arnold",
+    "nomeCanonico": "Desenvolvimento Arnold",
+    "musculo": "Ombros",
+    "equipamento": "halteres",
+    "aliases": [
+      "Desenvolvimento Arnold"
+    ],
+    "duasFases": false,
+    "altText": "Desenvolvimento Arnold. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "desenvolvimento-com-halteres-sentado.webp",
+    "canonicalKey": "fitos:desenvolvimento-com-halteres-sentado",
+    "slug": "desenvolvimento-com-halteres-sentado",
+    "nomeCanonico": "Desenvolvimento com halteres sentado",
+    "musculo": "Ombros",
+    "equipamento": "halteres, banco",
+    "aliases": [
+      "Desenvolvimento com halteres sentado"
+    ],
+    "duasFases": false,
+    "altText": "Desenvolvimento com halteres sentado. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres, banco.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "desenvolvimento-militar-com-barra.webp",
+    "canonicalKey": "fitos:desenvolvimento-militar-com-barra",
+    "slug": "desenvolvimento-militar-com-barra",
+    "nomeCanonico": "Desenvolvimento militar com barra",
+    "musculo": "Ombros",
+    "equipamento": "barra",
+    "aliases": [
+      "Desenvolvimento militar com barra"
+    ],
+    "duasFases": false,
+    "altText": "Desenvolvimento militar com barra. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: barra.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "desenvolvimento-na-maquina.webp",
     "canonicalKey": "fitos:desenvolvimento-na-maquina",
     "slug": "desenvolvimento-na-maquina",
     "nomeCanonico": "Desenvolvimento na máquina",
@@ -131,26 +956,56 @@
     ],
     "duasFases": false,
     "altText": "Desenvolvimento na máquina. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: máquina de desenvolvimento.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Desenvolvimento sentado com halteres.png",
-    "canonicalKey": "fitos:desenvolvimento-com-halteres-sentado",
-    "slug": "desenvolvimento-com-halteres-sentado",
-    "nomeCanonico": "Desenvolvimento com halteres sentado",
+    "arquivoOriginal": "desenvolvimento-no-cabo.webp",
+    "canonicalKey": "fitos:desenvolvimento-no-cabo",
+    "slug": "desenvolvimento-no-cabo",
+    "nomeCanonico": "Desenvolvimento no cabo",
     "musculo": "Ombros",
-    "equipamento": "halteres, banco",
+    "equipamento": "polia baixa",
     "aliases": [
-      "Desenvolvimento sentado com halteres"
+      "Desenvolvimento no cabo"
     ],
     "duasFases": false,
-    "altText": "Desenvolvimento com halteres sentado. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres, banco.",
-    "width": 800,
-    "height": 800
+    "altText": "Desenvolvimento no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia baixa.",
+    "width": 418,
+    "height": 627
   },
   {
-    "arquivoOriginal": "Elevação de pernas deitado.png",
+    "arquivoOriginal": "donkey-kick.webp",
+    "canonicalKey": "fitos:donkey-kick",
+    "slug": "donkey-kick",
+    "nomeCanonico": "Donkey kick",
+    "musculo": "Glúteos",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Donkey kick"
+    ],
+    "duasFases": false,
+    "altText": "Donkey kick. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "elevacao-de-joelhos-na-barra.webp",
+    "canonicalKey": "fitos:elevacao-de-joelhos-na-barra",
+    "slug": "elevacao-de-joelhos-na-barra",
+    "nomeCanonico": "Elevação de joelhos na barra",
+    "musculo": "Core",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Elevação de joelhos na barra"
+    ],
+    "duasFases": false,
+    "altText": "Elevação de joelhos na barra. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: barra fixa.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "elevacao-de-pernas-deitado.webp",
     "canonicalKey": "fitos:elevacao-de-pernas-deitado",
     "slug": "elevacao-de-pernas-deitado",
     "nomeCanonico": "Elevação de pernas deitado",
@@ -161,11 +1016,11 @@
     ],
     "duasFases": false,
     "altText": "Elevação de pernas deitado. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Elevação de pernas na barra.png",
+    "arquivoOriginal": "elevacao-de-pernas-na-barra.webp",
     "canonicalKey": "fitos:elevacao-de-pernas-na-barra",
     "slug": "elevacao-de-pernas-na-barra",
     "nomeCanonico": "Elevação de pernas na barra",
@@ -176,11 +1031,71 @@
     ],
     "duasFases": false,
     "altText": "Elevação de pernas na barra. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: barra fixa.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Elevação lateral com halteres.png",
+    "arquivoOriginal": "elevacao-em-y-no-cabo.webp",
+    "canonicalKey": "fitos:elevacao-em-y-no-cabo",
+    "slug": "elevacao-em-y-no-cabo",
+    "nomeCanonico": "Elevação em Y no cabo",
+    "musculo": "Ombros",
+    "equipamento": "polia baixa",
+    "aliases": [
+      "Elevação em Y no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Elevação em Y no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia baixa.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-frontal-com-barra.webp",
+    "canonicalKey": "fitos:elevacao-frontal-com-barra",
+    "slug": "elevacao-frontal-com-barra",
+    "nomeCanonico": "Elevação frontal com barra",
+    "musculo": "Ombros",
+    "equipamento": "barra",
+    "aliases": [
+      "Elevação frontal com barra"
+    ],
+    "duasFases": false,
+    "altText": "Elevação frontal com barra. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: barra.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-frontal-com-halteres.webp",
+    "canonicalKey": "fitos:elevacao-frontal-com-halteres",
+    "slug": "elevacao-frontal-com-halteres",
+    "nomeCanonico": "Elevação frontal com halteres",
+    "musculo": "Ombros",
+    "equipamento": "halteres",
+    "aliases": [
+      "Elevação frontal com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Elevação frontal com halteres. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-frontal-no-cabo.webp",
+    "canonicalKey": "fitos:elevacao-frontal-no-cabo",
+    "slug": "elevacao-frontal-no-cabo",
+    "nomeCanonico": "Elevação frontal no cabo",
+    "musculo": "Ombros",
+    "equipamento": "polia baixa",
+    "aliases": [
+      "Elevação frontal no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Elevação frontal no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia baixa.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-lateral-com-halteres.webp",
     "canonicalKey": "fitos:elevacao-lateral-com-halteres",
     "slug": "elevacao-lateral-com-halteres",
     "nomeCanonico": "Elevação lateral com halteres",
@@ -191,38 +1106,368 @@
     ],
     "duasFases": false,
     "altText": "Elevação lateral com halteres. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: halteres.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Elevação pélvica com barra em duas fases.png",
+    "arquivoOriginal": "elevacao-lateral-na-maquina.webp",
+    "canonicalKey": "fitos:elevacao-lateral-na-maquina",
+    "slug": "elevacao-lateral-na-maquina",
+    "nomeCanonico": "Elevação lateral na máquina",
+    "musculo": "Ombros",
+    "equipamento": "máquina de elevação lateral",
+    "aliases": [
+      "Elevação lateral na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Elevação lateral na máquina. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: máquina de elevação lateral.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-lateral-no-cabo.webp",
+    "canonicalKey": "fitos:elevacao-lateral-no-cabo",
+    "slug": "elevacao-lateral-no-cabo",
+    "nomeCanonico": "Elevação lateral no cabo",
+    "musculo": "Ombros",
+    "equipamento": "polia baixa",
+    "aliases": [
+      "Elevação lateral no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Elevação lateral no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia baixa.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "elevacao-pelvica-com-barra.webp",
     "canonicalKey": "fitos:elevacao-pelvica-com-barra",
     "slug": "elevacao-pelvica-com-barra",
     "nomeCanonico": "Elevação pélvica com barra",
     "musculo": "Glúteos",
     "equipamento": "barra, banco",
     "aliases": [
-      "Elevação pélvica com barra em duas fases"
+      "Elevação pélvica com barra"
     ],
-    "duasFases": true,
-    "altText": "Elevação pélvica com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Glúteos. Equipamento: barra, banco.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Elevação pélvica com barra. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: barra, banco.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Face pull em duas fases.png",
+    "arquivoOriginal": "elevacao-pelvica-na-maquina.webp",
+    "canonicalKey": "fitos:elevacao-pelvica-na-maquina",
+    "slug": "elevacao-pelvica-na-maquina",
+    "nomeCanonico": "Elevação pélvica na máquina",
+    "musculo": "Glúteos",
+    "equipamento": "máquina de hip thrust",
+    "aliases": [
+      "Elevação pélvica na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Elevação pélvica na máquina. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: máquina de hip thrust.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "encolhimento-com-barra.webp",
+    "canonicalKey": "fitos:encolhimento-com-barra",
+    "slug": "encolhimento-com-barra",
+    "nomeCanonico": "Encolhimento com barra",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "barra",
+    "aliases": [
+      "Encolhimento com barra"
+    ],
+    "duasFases": false,
+    "altText": "Encolhimento com barra. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "encolhimento-com-halteres.webp",
+    "canonicalKey": "fitos:encolhimento-com-halteres",
+    "slug": "encolhimento-com-halteres",
+    "nomeCanonico": "Encolhimento com halteres",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "halteres",
+    "aliases": [
+      "Encolhimento com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Encolhimento com halteres. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: halteres.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "encolhimento-na-maquina.webp",
+    "canonicalKey": "fitos:encolhimento-na-maquina",
+    "slug": "encolhimento-na-maquina",
+    "nomeCanonico": "Encolhimento na máquina",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "máquina de encolhimento",
+    "aliases": [
+      "Encolhimento na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Encolhimento na máquina. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: máquina de encolhimento.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "encolhimento-no-cabo.webp",
+    "canonicalKey": "fitos:encolhimento-no-cabo",
+    "slug": "encolhimento-no-cabo",
+    "nomeCanonico": "Encolhimento no cabo",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "polia baixa, barra",
+    "aliases": [
+      "Encolhimento no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Encolhimento no cabo. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: polia baixa, barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "extensao-de-triceps-na-maquina.webp",
+    "canonicalKey": "fitos:extensao-de-triceps-na-maquina",
+    "slug": "extensao-de-triceps-na-maquina",
+    "nomeCanonico": "Extensão de tríceps na máquina",
+    "musculo": "Tríceps",
+    "equipamento": "máquina de tríceps",
+    "aliases": [
+      "Extensão de tríceps na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Extensão de tríceps na máquina. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: máquina de tríceps.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "extensao-lombar-no-banco-romano.webp",
+    "canonicalKey": "fitos:extensao-lombar-no-banco-romano",
+    "slug": "extensao-lombar-no-banco-romano",
+    "nomeCanonico": "Extensão lombar no banco romano",
+    "musculo": "Costas",
+    "equipamento": "banco romano",
+    "aliases": [
+      "Extensão lombar no banco romano"
+    ],
+    "duasFases": false,
+    "altText": "Extensão lombar no banco romano. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: banco romano.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "extensao-toracica-no-rolo.webp",
+    "canonicalKey": "fitos:extensao-toracica-no-rolo",
+    "slug": "extensao-toracica-no-rolo",
+    "nomeCanonico": "Extensão torácica no rolo",
+    "musculo": "Mobilidade global",
+    "equipamento": "rolo de liberação",
+    "aliases": [
+      "Extensão torácica no rolo"
+    ],
+    "duasFases": false,
+    "altText": "Extensão torácica no rolo. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: rolo de liberação.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "face-pull.webp",
     "canonicalKey": "fitos:face-pull",
     "slug": "face-pull",
     "nomeCanonico": "Face pull",
     "musculo": "Costas",
     "equipamento": "polia alta, corda",
     "aliases": [
-      "Face pull em duas fases"
+      "Face pull"
     ],
-    "duasFases": true,
-    "altText": "Face pull. Ilustração em duas fases do movimento (início e final). Músculo principal: Costas. Equipamento: polia alta, corda.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Face pull. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, corda.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "farmer-walk.webp",
+    "canonicalKey": "fitos:farmer-walk",
+    "slug": "farmer-walk",
+    "nomeCanonico": "Farmer walk",
+    "musculo": "Core",
+    "equipamento": "halteres ou kettlebells",
+    "aliases": [
+      "Farmer walk"
+    ],
+    "duasFases": false,
+    "altText": "Farmer walk. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: halteres ou kettlebells.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "fire-hydrant.webp",
+    "canonicalKey": "fitos:fire-hydrant",
+    "slug": "fire-hydrant",
+    "nomeCanonico": "Fire hydrant",
+    "musculo": "Glúteos",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Fire hydrant"
+    ],
+    "duasFases": false,
+    "altText": "Fire hydrant. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "flexao-arqueiro.webp",
+    "canonicalKey": "fitos:flexao-arqueiro",
+    "slug": "flexao-arqueiro",
+    "nomeCanonico": "Flexão arqueiro",
+    "musculo": "Peitoral",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Flexão arqueiro"
+    ],
+    "duasFases": false,
+    "altText": "Flexão arqueiro. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: peso corporal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-de-bracos.webp",
+    "canonicalKey": "fitos:flexao-de-bracos",
+    "slug": "flexao-de-bracos",
+    "nomeCanonico": "Flexão de braços",
+    "musculo": "Peitoral",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Flexão de braços"
+    ],
+    "duasFases": false,
+    "altText": "Flexão de braços. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: peso corporal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-de-joelhos-no-cabo.webp",
+    "canonicalKey": "fitos:flexao-de-joelhos-no-cabo",
+    "slug": "flexao-de-joelhos-no-cabo",
+    "nomeCanonico": "Flexão de joelhos no cabo",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "polia baixa, tornozeleira",
+    "aliases": [
+      "Flexão de joelhos no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Flexão de joelhos no cabo. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: polia baixa, tornozeleira.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-declinada.webp",
+    "canonicalKey": "fitos:flexao-declinada",
+    "slug": "flexao-declinada",
+    "nomeCanonico": "Flexão declinada",
+    "musculo": "Peitoral",
+    "equipamento": "apoio para os pés",
+    "aliases": [
+      "Flexão declinada"
+    ],
+    "duasFases": false,
+    "altText": "Flexão declinada. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: apoio para os pés.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-diamante.webp",
+    "canonicalKey": "fitos:flexao-diamante",
+    "slug": "flexao-diamante",
+    "nomeCanonico": "Flexão diamante",
+    "musculo": "Peitoral",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Flexão diamante"
+    ],
+    "duasFases": false,
+    "altText": "Flexão diamante. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: peso corporal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-inclinada.webp",
+    "canonicalKey": "fitos:flexao-inclinada",
+    "slug": "flexao-inclinada",
+    "nomeCanonico": "Flexão inclinada",
+    "musculo": "Peitoral",
+    "equipamento": "apoio elevado",
+    "aliases": [
+      "Flexão inclinada"
+    ],
+    "duasFases": false,
+    "altText": "Flexão inclinada. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: apoio elevado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "flexao-pike.webp",
+    "canonicalKey": "fitos:flexao-pike",
+    "slug": "flexao-pike",
+    "nomeCanonico": "Flexão pike",
+    "musculo": "Ombros",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Flexão pike"
+    ],
+    "duasFases": false,
+    "altText": "Flexão pike. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: peso corporal.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "flexora-em-pe-unilateral.webp",
+    "canonicalKey": "fitos:flexora-em-pe-unilateral",
+    "slug": "flexora-em-pe-unilateral",
+    "nomeCanonico": "Flexora em pé unilateral",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "máquina flexora em pé",
+    "aliases": [
+      "Flexora em pé unilateral"
+    ],
+    "duasFases": false,
+    "altText": "Flexora em pé unilateral. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: máquina flexora em pé.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "good-morning-com-barra.webp",
+    "canonicalKey": "fitos:good-morning-com-barra",
+    "slug": "good-morning-com-barra",
+    "nomeCanonico": "Good morning com barra",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "barra",
+    "aliases": [
+      "Good morning com barra"
+    ],
+    "duasFases": false,
+    "altText": "Good morning com barra. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "hollow-body-hold.webp",
+    "canonicalKey": "fitos:hollow-body-hold",
+    "slug": "hollow-body-hold",
+    "nomeCanonico": "Hollow body hold",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Hollow body hold"
+    ],
+    "duasFases": false,
+    "altText": "Hollow body hold. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
   },
   {
     "arquivoOriginal": "Leg press 45° em duas fases.webp",
@@ -240,7 +1485,37 @@
     "height": 800
   },
   {
-    "arquivoOriginal": "Levantamento terra romeno com barra.webp",
+    "arquivoOriginal": "leg-press-horizontal.webp",
+    "canonicalKey": "fitos:leg-press-horizontal",
+    "slug": "leg-press-horizontal",
+    "nomeCanonico": "Leg press horizontal",
+    "musculo": "Quadríceps",
+    "equipamento": "leg press horizontal",
+    "aliases": [
+      "Leg press horizontal"
+    ],
+    "duasFases": false,
+    "altText": "Leg press horizontal. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: leg press horizontal.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "levantamento-terra-convencional.webp",
+    "canonicalKey": "fitos:levantamento-terra-convencional",
+    "slug": "levantamento-terra-convencional",
+    "nomeCanonico": "Levantamento terra convencional",
+    "musculo": "Costas",
+    "equipamento": "barra, anilhas",
+    "aliases": [
+      "Levantamento terra convencional"
+    ],
+    "duasFases": false,
+    "altText": "Levantamento terra convencional. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra, anilhas.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "levantamento-terra-romeno-com-barra.webp",
     "canonicalKey": "fitos:levantamento-terra-romeno-com-barra",
     "slug": "levantamento-terra-romeno-com-barra",
     "nomeCanonico": "Levantamento terra romeno com barra",
@@ -251,26 +1526,206 @@
     ],
     "duasFases": false,
     "altText": "Levantamento terra romeno com barra. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: barra.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Mesa flexora em duas fases.webp",
+    "arquivoOriginal": "levantamento-terra-romeno-com-halteres.webp",
+    "canonicalKey": "fitos:levantamento-terra-romeno-com-halteres",
+    "slug": "levantamento-terra-romeno-com-halteres",
+    "nomeCanonico": "Levantamento terra romeno com halteres",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "halteres",
+    "aliases": [
+      "Levantamento terra romeno com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Levantamento terra romeno com halteres. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: halteres.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "levantamento-terra-sumo.webp",
+    "canonicalKey": "fitos:levantamento-terra-sumo",
+    "slug": "levantamento-terra-sumo",
+    "nomeCanonico": "Levantamento terra sumô",
+    "musculo": "Costas",
+    "equipamento": "barra, anilhas",
+    "aliases": [
+      "Levantamento terra sumô"
+    ],
+    "duasFases": false,
+    "altText": "Levantamento terra sumô. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra, anilhas.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "maquina-abdutora.webp",
+    "canonicalKey": "fitos:maquina-abdutora",
+    "slug": "maquina-abdutora",
+    "nomeCanonico": "Máquina abdutora",
+    "musculo": "Glúteos",
+    "equipamento": "máquina abdutora",
+    "aliases": [
+      "Máquina abdutora"
+    ],
+    "duasFases": false,
+    "altText": "Máquina abdutora. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: máquina abdutora.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "mergulho-entre-bancos.webp",
+    "canonicalKey": "fitos:mergulho-entre-bancos",
+    "slug": "mergulho-entre-bancos",
+    "nomeCanonico": "Mergulho entre bancos",
+    "musculo": "Tríceps",
+    "equipamento": "dois bancos",
+    "aliases": [
+      "Mergulho entre bancos"
+    ],
+    "duasFases": false,
+    "altText": "Mergulho entre bancos. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: dois bancos.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "mergulho-na-maquina.webp",
+    "canonicalKey": "fitos:mergulho-na-maquina",
+    "slug": "mergulho-na-maquina",
+    "nomeCanonico": "Mergulho na máquina",
+    "musculo": "Tríceps",
+    "equipamento": "máquina de mergulho",
+    "aliases": [
+      "Mergulho na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Mergulho na máquina. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: máquina de mergulho.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "mesa-flexora.webp",
     "canonicalKey": "fitos:mesa-flexora",
     "slug": "mesa-flexora",
     "nomeCanonico": "Mesa flexora",
     "musculo": "Posteriores de coxa",
     "equipamento": "mesa flexora",
     "aliases": [
-      "Mesa flexora em duas fases"
+      "Mesa flexora"
     ],
-    "duasFases": true,
-    "altText": "Mesa flexora. Ilustração em duas fases do movimento (início e final). Músculo principal: Posteriores de coxa. Equipamento: mesa flexora.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Mesa flexora. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: mesa flexora.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Panturrilha em pé na máquina.webp",
+    "arquivoOriginal": "mobilidade-90-90-de-quadril.webp",
+    "canonicalKey": "fitos:mobilidade-90-90-de-quadril",
+    "slug": "mobilidade-90-90-de-quadril",
+    "nomeCanonico": "Mobilidade 90/90 de quadril",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Mobilidade 90/90 de quadril"
+    ],
+    "duasFases": false,
+    "altText": "Mobilidade 90/90 de quadril. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "mobilidade-de-ombro-com-bastao.webp",
+    "canonicalKey": "fitos:mobilidade-de-ombro-com-bastao",
+    "slug": "mobilidade-de-ombro-com-bastao",
+    "nomeCanonico": "Mobilidade de ombro com bastão",
+    "musculo": "Mobilidade global",
+    "equipamento": "bastão",
+    "aliases": [
+      "Mobilidade de ombro com bastão"
+    ],
+    "duasFases": false,
+    "altText": "Mobilidade de ombro com bastão. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: bastão.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "mobilidade-de-tornozelo-na-parede.webp",
+    "canonicalKey": "fitos:mobilidade-de-tornozelo-na-parede",
+    "slug": "mobilidade-de-tornozelo-na-parede",
+    "nomeCanonico": "Mobilidade de tornozelo na parede",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Mobilidade de tornozelo na parede"
+    ],
+    "duasFases": false,
+    "altText": "Mobilidade de tornozelo na parede. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "nordic-curl-assistido.webp",
+    "canonicalKey": "fitos:nordic-curl-assistido",
+    "slug": "nordic-curl-assistido",
+    "nomeCanonico": "Nordic curl assistido",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "apoio para os pés",
+    "aliases": [
+      "Nordic curl assistido"
+    ],
+    "duasFases": false,
+    "altText": "Nordic curl assistido. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: apoio para os pés.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "pallof-press.webp",
+    "canonicalKey": "fitos:pallof-press",
+    "slug": "pallof-press",
+    "nomeCanonico": "Pallof press",
+    "musculo": "Core",
+    "equipamento": "polia",
+    "aliases": [
+      "Pallof press"
+    ],
+    "duasFases": false,
+    "altText": "Pallof press. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: polia.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "panturrilha-bilateral-no-solo.webp",
+    "canonicalKey": "fitos:panturrilha-bilateral-no-solo",
+    "slug": "panturrilha-bilateral-no-solo",
+    "nomeCanonico": "Panturrilha bilateral no solo",
+    "musculo": "Panturrilhas",
+    "equipamento": "peso corporal",
+    "aliases": [
+      "Panturrilha bilateral no solo"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha bilateral no solo. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: peso corporal.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "panturrilha-em-pe-com-halteres.webp",
+    "canonicalKey": "fitos:panturrilha-em-pe-com-halteres",
+    "slug": "panturrilha-em-pe-com-halteres",
+    "nomeCanonico": "Panturrilha em pé com halteres",
+    "musculo": "Panturrilhas",
+    "equipamento": "halteres",
+    "aliases": [
+      "Panturrilha em pé com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha em pé com halteres. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: halteres.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "panturrilha-em-pe-na-maquina.webp",
     "canonicalKey": "fitos:panturrilha-em-pe-na-maquina",
     "slug": "panturrilha-em-pe-na-maquina",
     "nomeCanonico": "Panturrilha em pé na máquina",
@@ -281,116 +1736,521 @@
     ],
     "duasFases": false,
     "altText": "Panturrilha em pé na máquina. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: máquina de panturrilha.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Panturrilha na máquina: alongamento e contração.webp",
+    "arquivoOriginal": "panturrilha-no-smith.webp",
+    "canonicalKey": "fitos:panturrilha-no-smith",
+    "slug": "panturrilha-no-smith",
+    "nomeCanonico": "Panturrilha no Smith",
+    "musculo": "Panturrilhas",
+    "equipamento": "máquina Smith, plataforma",
+    "aliases": [
+      "Panturrilha no Smith"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha no Smith. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: máquina Smith, plataforma.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "panturrilha-sentada-na-maquina.webp",
     "canonicalKey": "fitos:panturrilha-sentada-na-maquina",
     "slug": "panturrilha-sentada-na-maquina",
     "nomeCanonico": "Panturrilha sentada na máquina",
     "musculo": "Panturrilhas",
     "equipamento": "máquina de panturrilha sentada",
     "aliases": [
-      "Panturrilha na máquina: alongamento e contração"
+      "Panturrilha sentada na máquina"
     ],
-    "duasFases": true,
-    "altText": "Panturrilha sentada na máquina. Ilustração em duas fases do movimento (início e final). Músculo principal: Panturrilhas. Equipamento: máquina de panturrilha sentada.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Panturrilha sentada na máquina. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: máquina de panturrilha sentada.",
+    "width": 512,
+    "height": 512
   },
   {
-    "arquivoOriginal": "Prancha frontal: preparação e execução.webp",
+    "arquivoOriginal": "panturrilha-sentado-com-barra.webp",
+    "canonicalKey": "fitos:panturrilha-sentado-com-barra",
+    "slug": "panturrilha-sentado-com-barra",
+    "nomeCanonico": "Panturrilha sentado com barra",
+    "musculo": "Panturrilhas",
+    "equipamento": "barra, banco",
+    "aliases": [
+      "Panturrilha sentado com barra"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha sentado com barra. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: barra, banco.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "panturrilha-unilateral-em-degrau.webp",
+    "canonicalKey": "fitos:panturrilha-unilateral-em-degrau",
+    "slug": "panturrilha-unilateral-em-degrau",
+    "nomeCanonico": "Panturrilha unilateral em degrau",
+    "musculo": "Panturrilhas",
+    "equipamento": "degrau",
+    "aliases": [
+      "Panturrilha unilateral em degrau"
+    ],
+    "duasFases": false,
+    "altText": "Panturrilha unilateral em degrau. Ilustração da execução do movimento. Músculo principal: Panturrilhas. Equipamento: degrau.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "parada-de-maos-assistida.webp",
+    "canonicalKey": "fitos:parada-de-maos-assistida",
+    "slug": "parada-de-maos-assistida",
+    "nomeCanonico": "Parada de mãos assistida",
+    "musculo": "Ombros",
+    "equipamento": "parede",
+    "aliases": [
+      "Parada de mãos assistida"
+    ],
+    "duasFases": false,
+    "altText": "Parada de mãos assistida. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: parede.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "paralelas-com-foco-em-triceps.webp",
+    "canonicalKey": "fitos:paralelas-com-foco-em-triceps",
+    "slug": "paralelas-com-foco-em-triceps",
+    "nomeCanonico": "Paralelas com foco em tríceps",
+    "musculo": "Tríceps",
+    "equipamento": "barras paralelas",
+    "aliases": [
+      "Paralelas com foco em tríceps"
+    ],
+    "duasFases": false,
+    "altText": "Paralelas com foco em tríceps. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: barras paralelas.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "paralelas-com-foco-no-peitoral.webp",
+    "canonicalKey": "fitos:paralelas-com-foco-no-peitoral",
+    "slug": "paralelas-com-foco-no-peitoral",
+    "nomeCanonico": "Paralelas com foco no peitoral",
+    "musculo": "Peitoral",
+    "equipamento": "barras paralelas",
+    "aliases": [
+      "Paralelas com foco no peitoral"
+    ],
+    "duasFases": false,
+    "altText": "Paralelas com foco no peitoral. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: barras paralelas.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "passada-com-barra.webp",
+    "canonicalKey": "fitos:passada-com-barra",
+    "slug": "passada-com-barra",
+    "nomeCanonico": "Passada com barra",
+    "musculo": "Quadríceps",
+    "equipamento": "barra",
+    "aliases": [
+      "Passada com barra"
+    ],
+    "duasFases": false,
+    "altText": "Passada com barra. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "pinca-de-anilhas.webp",
+    "canonicalKey": "fitos:pinca-de-anilhas",
+    "slug": "pinca-de-anilhas",
+    "nomeCanonico": "Pinça de anilhas",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "anilhas",
+    "aliases": [
+      "Pinça de anilhas"
+    ],
+    "duasFases": false,
+    "altText": "Pinça de anilhas. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: anilhas.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "pistol-squat-assistido.webp",
+    "canonicalKey": "fitos:pistol-squat-assistido",
+    "slug": "pistol-squat-assistido",
+    "nomeCanonico": "Pistol squat assistido",
+    "musculo": "Quadríceps",
+    "equipamento": "apoio fixo",
+    "aliases": [
+      "Pistol squat assistido"
+    ],
+    "duasFases": false,
+    "altText": "Pistol squat assistido. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: apoio fixo.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "ponte-com-caminhada-dos-calcanhares.webp",
+    "canonicalKey": "fitos:ponte-com-caminhada-dos-calcanhares",
+    "slug": "ponte-com-caminhada-dos-calcanhares",
+    "nomeCanonico": "Ponte com caminhada dos calcanhares",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Ponte com caminhada dos calcanhares"
+    ],
+    "duasFases": false,
+    "altText": "Ponte com caminhada dos calcanhares. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: colchonete.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "ponte-de-gluteos.webp",
+    "canonicalKey": "fitos:ponte-de-gluteos",
+    "slug": "ponte-de-gluteos",
+    "nomeCanonico": "Ponte de glúteos",
+    "musculo": "Glúteos",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Ponte de glúteos"
+    ],
+    "duasFases": false,
+    "altText": "Ponte de glúteos. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "ponte-de-gluteos-com-halter.webp",
+    "canonicalKey": "fitos:ponte-de-gluteos-com-halter",
+    "slug": "ponte-de-gluteos-com-halter",
+    "nomeCanonico": "Ponte de glúteos com halter",
+    "musculo": "Glúteos",
+    "equipamento": "halter, colchonete",
+    "aliases": [
+      "Ponte de glúteos com halter"
+    ],
+    "duasFases": false,
+    "altText": "Ponte de glúteos com halter. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: halter, colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "ponte-unilateral.webp",
+    "canonicalKey": "fitos:ponte-unilateral",
+    "slug": "ponte-unilateral",
+    "nomeCanonico": "Ponte unilateral",
+    "musculo": "Glúteos",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Ponte unilateral"
+    ],
+    "duasFases": false,
+    "altText": "Ponte unilateral. Ilustração da execução do movimento. Músculo principal: Glúteos. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "postura-da-crianca.webp",
+    "canonicalKey": "fitos:postura-da-crianca",
+    "slug": "postura-da-crianca",
+    "nomeCanonico": "Postura da criança",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Postura da criança"
+    ],
+    "duasFases": false,
+    "altText": "Postura da criança. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "prancha-com-toque-nos-ombros.webp",
+    "canonicalKey": "fitos:prancha-com-toque-nos-ombros",
+    "slug": "prancha-com-toque-nos-ombros",
+    "nomeCanonico": "Prancha com toque nos ombros",
+    "musculo": "Core",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Prancha com toque nos ombros"
+    ],
+    "duasFases": false,
+    "altText": "Prancha com toque nos ombros. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "prancha-frontal.webp",
     "canonicalKey": "fitos:prancha-frontal",
     "slug": "prancha-frontal",
     "nomeCanonico": "Prancha frontal",
     "musculo": "Core",
     "equipamento": "colchonete",
     "aliases": [
-      "Prancha frontal: preparação e execução"
+      "Prancha frontal"
     ],
-    "duasFases": true,
-    "altText": "Prancha frontal. Ilustração em duas fases do movimento (início e final). Músculo principal: Core. Equipamento: colchonete.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Prancha frontal. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Prancha lateral: duas fases.webp",
+    "arquivoOriginal": "prancha-lateral.webp",
     "canonicalKey": "fitos:prancha-lateral",
     "slug": "prancha-lateral",
     "nomeCanonico": "Prancha lateral",
     "musculo": "Core",
     "equipamento": "colchonete",
     "aliases": [
-      "Prancha lateral: duas fases"
+      "Prancha lateral"
     ],
-    "duasFases": true,
-    "altText": "Prancha lateral. Ilustração em duas fases do movimento (início e final). Músculo principal: Core. Equipamento: colchonete.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Prancha lateral. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Pulldown com braços estendidos no cabo.webp",
+    "arquivoOriginal": "pull-through-no-cabo.webp",
+    "canonicalKey": "fitos:pull-through-no-cabo",
+    "slug": "pull-through-no-cabo",
+    "nomeCanonico": "Pull-through no cabo",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "polia baixa, corda",
+    "aliases": [
+      "Pull-through no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Pull-through no cabo. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: polia baixa, corda.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "pulldown-com-bracos-estendidos.webp",
     "canonicalKey": "fitos:pulldown-com-bracos-estendidos",
     "slug": "pulldown-com-bracos-estendidos",
     "nomeCanonico": "Pulldown com braços estendidos",
     "musculo": "Costas",
     "equipamento": "polia alta, barra",
     "aliases": [
-      "Pulldown com braços estendidos no cabo"
+      "Pulldown com braços estendidos"
     ],
     "duasFases": false,
     "altText": "Pulldown com braços estendidos. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, barra.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Puxada alta com pegada aberta.webp",
+    "arquivoOriginal": "pullover-com-halter.webp",
+    "canonicalKey": "fitos:pullover-com-halter",
+    "slug": "pullover-com-halter",
+    "nomeCanonico": "Pullover com halter",
+    "musculo": "Peitoral",
+    "equipamento": "halter, banco",
+    "aliases": [
+      "Pullover com halter"
+    ],
+    "duasFases": false,
+    "altText": "Pullover com halter. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halter, banco.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "puxada-alta-pegada-aberta.webp",
     "canonicalKey": "fitos:puxada-alta-pegada-aberta",
     "slug": "puxada-alta-pegada-aberta",
     "nomeCanonico": "Puxada alta pegada aberta",
     "musculo": "Costas",
     "equipamento": "polia alta, barra",
     "aliases": [
-      "Puxada alta com pegada aberta"
+      "Puxada alta pegada aberta"
     ],
     "duasFases": false,
     "altText": "Puxada alta pegada aberta. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, barra.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Puxada alta com pegada neutra.webp",
+    "arquivoOriginal": "puxada-alta-pegada-neutra.webp",
     "canonicalKey": "fitos:puxada-alta-pegada-neutra",
     "slug": "puxada-alta-pegada-neutra",
     "nomeCanonico": "Puxada alta pegada neutra",
     "musculo": "Costas",
     "equipamento": "polia alta, triângulo",
     "aliases": [
-      "Puxada alta com pegada neutra"
+      "Puxada alta pegada neutra"
     ],
     "duasFases": false,
     "altText": "Puxada alta pegada neutra. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, triângulo.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Remada baixa no cabo em duas fases.webp",
+    "arquivoOriginal": "puxada-alta-pegada-supinada.webp",
+    "canonicalKey": "fitos:puxada-alta-pegada-supinada",
+    "slug": "puxada-alta-pegada-supinada",
+    "nomeCanonico": "Puxada alta pegada supinada",
+    "musculo": "Costas",
+    "equipamento": "polia alta, barra",
+    "aliases": [
+      "Puxada alta pegada supinada"
+    ],
+    "duasFases": false,
+    "altText": "Puxada alta pegada supinada. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta, barra.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "puxada-frontal-na-maquina.webp",
+    "canonicalKey": "fitos:puxada-frontal-na-maquina",
+    "slug": "puxada-frontal-na-maquina",
+    "nomeCanonico": "Puxada frontal na máquina",
+    "musculo": "Costas",
+    "equipamento": "máquina de puxada",
+    "aliases": [
+      "Puxada frontal na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Puxada frontal na máquina. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: máquina de puxada.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "puxada-unilateral-no-cabo.webp",
+    "canonicalKey": "fitos:puxada-unilateral-no-cabo",
+    "slug": "puxada-unilateral-no-cabo",
+    "nomeCanonico": "Puxada unilateral no cabo",
+    "musculo": "Costas",
+    "equipamento": "polia alta",
+    "aliases": [
+      "Puxada unilateral no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Puxada unilateral no cabo. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia alta.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-alta-com-barra.webp",
+    "canonicalKey": "fitos:remada-alta-com-barra",
+    "slug": "remada-alta-com-barra",
+    "nomeCanonico": "Remada alta com barra",
+    "musculo": "Ombros",
+    "equipamento": "barra",
+    "aliases": [
+      "Remada alta com barra"
+    ],
+    "duasFases": false,
+    "altText": "Remada alta com barra. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: barra.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "remada-alta-no-cabo.webp",
+    "canonicalKey": "fitos:remada-alta-no-cabo",
+    "slug": "remada-alta-no-cabo",
+    "nomeCanonico": "Remada alta no cabo",
+    "musculo": "Ombros",
+    "equipamento": "polia baixa, barra",
+    "aliases": [
+      "Remada alta no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Remada alta no cabo. Ilustração da execução do movimento. Músculo principal: Ombros. Equipamento: polia baixa, barra.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "remada-articulada.webp",
+    "canonicalKey": "fitos:remada-articulada",
+    "slug": "remada-articulada",
+    "nomeCanonico": "Remada articulada",
+    "musculo": "Costas",
+    "equipamento": "máquina articulada",
+    "aliases": [
+      "Remada articulada"
+    ],
+    "duasFases": false,
+    "altText": "Remada articulada. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: máquina articulada.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-baixa-com-barra-reta.webp",
+    "canonicalKey": "fitos:remada-baixa-com-barra-reta",
+    "slug": "remada-baixa-com-barra-reta",
+    "nomeCanonico": "Remada baixa com barra reta",
+    "musculo": "Costas",
+    "equipamento": "polia baixa, barra",
+    "aliases": [
+      "Remada baixa com barra reta"
+    ],
+    "duasFases": false,
+    "altText": "Remada baixa com barra reta. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia baixa, barra.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-baixa-na-maquina.webp",
+    "canonicalKey": "fitos:remada-baixa-na-maquina",
+    "slug": "remada-baixa-na-maquina",
+    "nomeCanonico": "Remada baixa na máquina",
+    "musculo": "Costas",
+    "equipamento": "máquina de remada",
+    "aliases": [
+      "Remada baixa na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Remada baixa na máquina. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: máquina de remada.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-baixa-no-cabo.webp",
     "canonicalKey": "fitos:remada-baixa-no-cabo",
     "slug": "remada-baixa-no-cabo",
     "nomeCanonico": "Remada baixa no cabo",
     "musculo": "Costas",
     "equipamento": "polia baixa, triângulo",
     "aliases": [
-      "Remada baixa no cabo em duas fases"
+      "Remada baixa no cabo"
     ],
-    "duasFases": true,
-    "altText": "Remada baixa no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Costas. Equipamento: polia baixa, triângulo.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Remada baixa no cabo. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia baixa, triângulo.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Remada curvada com barra.webp",
+    "arquivoOriginal": "remada-cavalinho.webp",
+    "canonicalKey": "fitos:remada-cavalinho",
+    "slug": "remada-cavalinho",
+    "nomeCanonico": "Remada cavalinho",
+    "musculo": "Costas",
+    "equipamento": "barra, suporte landmine",
+    "aliases": [
+      "Remada cavalinho"
+    ],
+    "duasFases": false,
+    "altText": "Remada cavalinho. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra, suporte landmine.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-com-halteres-no-banco-inclinado.webp",
+    "canonicalKey": "fitos:remada-com-halteres-no-banco-inclinado",
+    "slug": "remada-com-halteres-no-banco-inclinado",
+    "nomeCanonico": "Remada com halteres no banco inclinado",
+    "musculo": "Costas",
+    "equipamento": "halteres, banco inclinado",
+    "aliases": [
+      "Remada com halteres no banco inclinado"
+    ],
+    "duasFases": false,
+    "altText": "Remada com halteres no banco inclinado. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: halteres, banco inclinado.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-curvada-com-barra.webp",
     "canonicalKey": "fitos:remada-curvada-com-barra",
     "slug": "remada-curvada-com-barra",
     "nomeCanonico": "Remada curvada com barra",
@@ -401,11 +2261,26 @@
     ],
     "duasFases": false,
     "altText": "Remada curvada com barra. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Remada unilateral com halter.webp",
+    "arquivoOriginal": "remada-pendlay.webp",
+    "canonicalKey": "fitos:remada-pendlay",
+    "slug": "remada-pendlay",
+    "nomeCanonico": "Remada Pendlay",
+    "musculo": "Costas",
+    "equipamento": "barra",
+    "aliases": [
+      "Remada Pendlay"
+    ],
+    "duasFases": false,
+    "altText": "Remada Pendlay. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: barra.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "remada-unilateral-com-halter.webp",
     "canonicalKey": "fitos:remada-unilateral-com-halter",
     "slug": "remada-unilateral-com-halter",
     "nomeCanonico": "Remada unilateral com halter",
@@ -416,26 +2291,56 @@
     ],
     "duasFases": false,
     "altText": "Remada unilateral com halter. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: halter, banco.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Rosca Scott com barra W.webp",
-    "canonicalKey": "fitos:rosca-scott-com-barra-w",
-    "slug": "rosca-scott-com-barra-w",
-    "nomeCanonico": "Rosca Scott com barra W",
-    "musculo": "Bíceps",
-    "equipamento": "barra W, banco Scott",
+    "arquivoOriginal": "remada-unilateral-no-cabo.webp",
+    "canonicalKey": "fitos:remada-unilateral-no-cabo",
+    "slug": "remada-unilateral-no-cabo",
+    "nomeCanonico": "Remada unilateral no cabo",
+    "musculo": "Costas",
+    "equipamento": "polia",
     "aliases": [
-      "Rosca Scott com barra W"
+      "Remada unilateral no cabo"
     ],
     "duasFases": false,
-    "altText": "Rosca Scott com barra W. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra W, banco Scott.",
-    "width": 800,
-    "height": 800
+    "altText": "Remada unilateral no cabo. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: polia.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Rosca aranha com barra W.webp",
+    "arquivoOriginal": "rosca-alta-no-cabo.webp",
+    "canonicalKey": "fitos:rosca-alta-no-cabo",
+    "slug": "rosca-alta-no-cabo",
+    "nomeCanonico": "Rosca alta no cabo",
+    "musculo": "Bíceps",
+    "equipamento": "polia dupla",
+    "aliases": [
+      "Rosca alta no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Rosca alta no cabo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: polia dupla.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "rosca-alternada-com-halteres.webp",
+    "canonicalKey": "fitos:rosca-alternada-com-halteres",
+    "slug": "rosca-alternada-com-halteres",
+    "nomeCanonico": "Rosca alternada com halteres",
+    "musculo": "Bíceps",
+    "equipamento": "halteres",
+    "aliases": [
+      "Rosca alternada com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Rosca alternada com halteres. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "rosca-aranha-com-barra-w.webp",
     "canonicalKey": "fitos:rosca-aranha-com-barra-w",
     "slug": "rosca-aranha-com-barra-w",
     "nomeCanonico": "Rosca aranha com barra W",
@@ -446,8 +2351,68 @@
     ],
     "duasFases": false,
     "altText": "Rosca aranha com barra W. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra W, banco inclinado.",
-    "width": 800,
-    "height": 533
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "rosca-com-corda-no-cabo.webp",
+    "canonicalKey": "fitos:rosca-com-corda-no-cabo",
+    "slug": "rosca-com-corda-no-cabo",
+    "nomeCanonico": "Rosca com corda no cabo",
+    "musculo": "Bíceps",
+    "equipamento": "polia baixa, corda",
+    "aliases": [
+      "Rosca com corda no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Rosca com corda no cabo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: polia baixa, corda.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "rosca-concentrada.webp",
+    "canonicalKey": "fitos:rosca-concentrada",
+    "slug": "rosca-concentrada",
+    "nomeCanonico": "Rosca concentrada",
+    "musculo": "Bíceps",
+    "equipamento": "halter, banco",
+    "aliases": [
+      "Rosca concentrada"
+    ],
+    "duasFases": false,
+    "altText": "Rosca concentrada. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halter, banco.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "rosca-de-punho-com-barra.webp",
+    "canonicalKey": "fitos:rosca-de-punho-com-barra",
+    "slug": "rosca-de-punho-com-barra",
+    "nomeCanonico": "Rosca de punho com barra",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "barra, banco",
+    "aliases": [
+      "Rosca de punho com barra"
+    ],
+    "duasFases": false,
+    "altText": "Rosca de punho com barra. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: barra, banco.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "rosca-direta-com-barra.webp",
+    "canonicalKey": "fitos:rosca-direta-com-barra",
+    "slug": "rosca-direta-com-barra",
+    "nomeCanonico": "Rosca direta com barra",
+    "musculo": "Bíceps",
+    "equipamento": "barra",
+    "aliases": [
+      "Rosca direta com barra"
+    ],
+    "duasFases": false,
+    "altText": "Rosca direta com barra. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra.",
+    "width": 1254,
+    "height": 1254
   },
   {
     "arquivoOriginal": "Rosca com barra W em duas fases.webp",
@@ -465,97 +2430,172 @@
     "height": 533
   },
   {
-    "arquivoOriginal": "Rosca com corda: duas fases.png",
-    "canonicalKey": "fitos:rosca-com-corda-no-cabo",
-    "slug": "rosca-com-corda-no-cabo",
-    "nomeCanonico": "Rosca com corda no cabo",
-    "musculo": "Bíceps",
-    "equipamento": "polia baixa, corda",
-    "aliases": [
-      "Rosca com corda: duas fases"
-    ],
-    "duasFases": true,
-    "altText": "Rosca com corda no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: polia baixa, corda.",
-    "width": 800,
-    "height": 533
-  },
-  {
-    "arquivoOriginal": "Rosca direta com barra.png",
-    "canonicalKey": "fitos:rosca-direta-com-barra",
-    "slug": "rosca-direta-com-barra",
-    "nomeCanonico": "Rosca direta com barra",
-    "musculo": "Bíceps",
-    "equipamento": "barra",
-    "aliases": [
-      "Rosca direta com barra"
-    ],
-    "duasFases": false,
-    "altText": "Rosca direta com barra. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra.",
-    "width": 800,
-    "height": 800
-  },
-  {
-    "arquivoOriginal": "Rosca direta na máquina: início e final.png",
+    "arquivoOriginal": "rosca-direta-na-maquina.webp",
     "canonicalKey": "fitos:rosca-direta-na-maquina",
     "slug": "rosca-direta-na-maquina",
     "nomeCanonico": "Rosca direta na máquina",
     "musculo": "Bíceps",
     "equipamento": "máquina de rosca",
     "aliases": [
-      "Rosca direta na máquina: início e final"
+      "Rosca direta na máquina"
     ],
-    "duasFases": true,
-    "altText": "Rosca direta na máquina. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: máquina de rosca.",
-    "width": 800,
-    "height": 533
+    "duasFases": false,
+    "altText": "Rosca direta na máquina. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: máquina de rosca.",
+    "width": 1536,
+    "height": 1024
   },
   {
-    "arquivoOriginal": "Rosca direta no cabo: início e final.png",
+    "arquivoOriginal": "rosca-direta-no-cabo.webp",
     "canonicalKey": "fitos:rosca-direta-no-cabo",
     "slug": "rosca-direta-no-cabo",
     "nomeCanonico": "Rosca direta no cabo",
     "musculo": "Bíceps",
     "equipamento": "polia baixa, barra",
     "aliases": [
-      "Rosca direta no cabo: início e final"
+      "Rosca direta no cabo"
     ],
-    "duasFases": true,
-    "altText": "Rosca direta no cabo. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: polia baixa, barra.",
-    "width": 800,
-    "height": 533
+    "duasFases": false,
+    "altText": "Rosca direta no cabo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: polia baixa, barra.",
+    "width": 1536,
+    "height": 1024
   },
   {
-    "arquivoOriginal": "Rosca inclinada com halteres: início e final.png",
+    "arquivoOriginal": "rosca-inclinada-com-halteres.webp",
     "canonicalKey": "fitos:rosca-inclinada-com-halteres",
     "slug": "rosca-inclinada-com-halteres",
     "nomeCanonico": "Rosca inclinada com halteres",
     "musculo": "Bíceps",
     "equipamento": "halteres, banco inclinado",
     "aliases": [
-      "Rosca inclinada com halteres: início e final"
+      "Rosca inclinada com halteres"
     ],
-    "duasFases": true,
-    "altText": "Rosca inclinada com halteres. Ilustração em duas fases do movimento (início e final). Músculo principal: Bíceps. Equipamento: halteres, banco inclinado.",
-    "width": 800,
-    "height": 533
+    "duasFases": false,
+    "altText": "Rosca inclinada com halteres. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres, banco inclinado.",
+    "width": 1536,
+    "height": 1024
   },
   {
-    "arquivoOriginal": "Rosca martelo com halteres.png",
+    "arquivoOriginal": "rosca-inversa-com-barra-w.webp",
+    "canonicalKey": "fitos:rosca-inversa-com-barra-w",
+    "slug": "rosca-inversa-com-barra-w",
+    "nomeCanonico": "Rosca inversa com barra W",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "barra W",
+    "aliases": [
+      "Rosca inversa com barra W"
+    ],
+    "duasFases": false,
+    "altText": "Rosca inversa com barra W. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: barra W.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "rosca-inversa-de-punho-com-barra.webp",
+    "canonicalKey": "fitos:rosca-inversa-de-punho-com-barra",
+    "slug": "rosca-inversa-de-punho-com-barra",
+    "nomeCanonico": "Rosca inversa de punho com barra",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "barra, banco",
+    "aliases": [
+      "Rosca inversa de punho com barra"
+    ],
+    "duasFases": false,
+    "altText": "Rosca inversa de punho com barra. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: barra, banco.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "rosca-martelo.webp",
     "canonicalKey": "fitos:rosca-martelo",
     "slug": "rosca-martelo",
     "nomeCanonico": "Rosca martelo",
     "musculo": "Bíceps",
     "equipamento": "halteres",
     "aliases": [
-      "Rosca martelo com halteres"
+      "Rosca martelo"
     ],
     "duasFases": false,
     "altText": "Rosca martelo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Rotação de tronco na máquina.png",
+    "arquivoOriginal": "rosca-martelo-inclinada.webp",
+    "canonicalKey": "fitos:rosca-martelo-inclinada",
+    "slug": "rosca-martelo-inclinada",
+    "nomeCanonico": "Rosca martelo inclinada",
+    "musculo": "Bíceps",
+    "equipamento": "halteres, banco inclinado",
+    "aliases": [
+      "Rosca martelo inclinada"
+    ],
+    "duasFases": false,
+    "altText": "Rosca martelo inclinada. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres, banco inclinado.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "rosca-scott-com-barra-w.webp",
+    "canonicalKey": "fitos:rosca-scott-com-barra-w",
+    "slug": "rosca-scott-com-barra-w",
+    "nomeCanonico": "Rosca Scott com barra W",
+    "musculo": "Bíceps",
+    "equipamento": "barra W, banco Scott",
+    "aliases": [
+      "Rosca Scott com barra W"
+    ],
+    "duasFases": false,
+    "altText": "Rosca Scott com barra W. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: barra W, banco Scott.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "rosca-unilateral-no-cabo.webp",
+    "canonicalKey": "fitos:rosca-unilateral-no-cabo",
+    "slug": "rosca-unilateral-no-cabo",
+    "nomeCanonico": "Rosca unilateral no cabo",
+    "musculo": "Bíceps",
+    "equipamento": "polia baixa",
+    "aliases": [
+      "Rosca unilateral no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Rosca unilateral no cabo. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: polia baixa.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "rosca-zottman.webp",
+    "canonicalKey": "fitos:rosca-zottman",
+    "slug": "rosca-zottman",
+    "nomeCanonico": "Rosca Zottman",
+    "musculo": "Bíceps",
+    "equipamento": "halteres",
+    "aliases": [
+      "Rosca Zottman"
+    ],
+    "duasFases": false,
+    "altText": "Rosca Zottman. Ilustração da execução do movimento. Músculo principal: Bíceps. Equipamento: halteres.",
+    "width": 1536,
+    "height": 1024
+  },
+  {
+    "arquivoOriginal": "rotacao-de-punho-com-halter.webp",
+    "canonicalKey": "fitos:rotacao-de-punho-com-halter",
+    "slug": "rotacao-de-punho-com-halter",
+    "nomeCanonico": "Rotação de punho com halter",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "halter",
+    "aliases": [
+      "Rotação de punho com halter"
+    ],
+    "duasFases": false,
+    "altText": "Rotação de punho com halter. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: halter.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "rotacao-de-tronco-na-maquina.webp",
     "canonicalKey": "fitos:rotacao-de-tronco-na-maquina",
     "slug": "rotacao-de-tronco-na-maquina",
     "nomeCanonico": "Rotação de tronco na máquina",
@@ -566,11 +2606,146 @@
     ],
     "duasFases": false,
     "altText": "Rotação de tronco na máquina. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: máquina de rotação.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Supino declinado com halteres.png",
+    "arquivoOriginal": "rotacao-externa-de-ombro-com-apoio.webp",
+    "canonicalKey": "fitos:rotacao-externa-de-ombro-com-apoio",
+    "slug": "rotacao-externa-de-ombro-com-apoio",
+    "nomeCanonico": "Rotação externa de ombro com apoio",
+    "musculo": "Mobilidade global",
+    "equipamento": "parede",
+    "aliases": [
+      "Rotação externa de ombro com apoio"
+    ],
+    "duasFases": false,
+    "altText": "Rotação externa de ombro com apoio. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: parede.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "rotacao-lombar-deitada.webp",
+    "canonicalKey": "fitos:rotacao-lombar-deitada",
+    "slug": "rotacao-lombar-deitada",
+    "nomeCanonico": "Rotação lombar deitada",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Rotação lombar deitada"
+    ],
+    "duasFases": false,
+    "altText": "Rotação lombar deitada. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "rotacao-toracica-em-quatro-apoios.webp",
+    "canonicalKey": "fitos:rotacao-toracica-em-quatro-apoios",
+    "slug": "rotacao-toracica-em-quatro-apoios",
+    "nomeCanonico": "Rotação torácica em quatro apoios",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Rotação torácica em quatro apoios"
+    ],
+    "duasFases": false,
+    "altText": "Rotação torácica em quatro apoios. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 418,
+    "height": 627
+  },
+  {
+    "arquivoOriginal": "step-up-com-halteres.webp",
+    "canonicalKey": "fitos:step-up-com-halteres",
+    "slug": "step-up-com-halteres",
+    "nomeCanonico": "Step-up com halteres",
+    "musculo": "Quadríceps",
+    "equipamento": "halteres, caixa",
+    "aliases": [
+      "Step-up com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Step-up com halteres. Ilustração da execução do movimento. Músculo principal: Quadríceps. Equipamento: halteres, caixa.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "stiff-com-barra.webp",
+    "canonicalKey": "fitos:stiff-com-barra",
+    "slug": "stiff-com-barra",
+    "nomeCanonico": "Stiff com barra",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "barra",
+    "aliases": [
+      "Stiff com barra"
+    ],
+    "duasFases": false,
+    "altText": "Stiff com barra. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "suitcase-carry-unilateral.webp",
+    "canonicalKey": "fitos:suitcase-carry-unilateral",
+    "slug": "suitcase-carry-unilateral",
+    "nomeCanonico": "Suitcase carry unilateral",
+    "musculo": "Core",
+    "equipamento": "halter ou kettlebell",
+    "aliases": [
+      "Suitcase carry unilateral"
+    ],
+    "duasFases": false,
+    "altText": "Suitcase carry unilateral. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: halter ou kettlebell.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "superman.webp",
+    "canonicalKey": "fitos:superman",
+    "slug": "superman",
+    "nomeCanonico": "Superman",
+    "musculo": "Costas",
+    "equipamento": "colchonete",
+    "aliases": [
+      "Superman"
+    ],
+    "duasFases": false,
+    "altText": "Superman. Ilustração da execução do movimento. Músculo principal: Costas. Equipamento: colchonete.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "supino-com-pegada-fechada.webp",
+    "canonicalKey": "fitos:supino-com-pegada-fechada",
+    "slug": "supino-com-pegada-fechada",
+    "nomeCanonico": "Supino com pegada fechada",
+    "musculo": "Peitoral",
+    "equipamento": "barra, banco reto",
+    "aliases": [
+      "Supino com pegada fechada"
+    ],
+    "duasFases": false,
+    "altText": "Supino com pegada fechada. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: barra, banco reto.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "supino-declinado-com-barra.webp",
+    "canonicalKey": "fitos:supino-declinado-com-barra",
+    "slug": "supino-declinado-com-barra",
+    "nomeCanonico": "Supino declinado com barra",
+    "musculo": "Peitoral",
+    "equipamento": "barra, banco declinado",
+    "aliases": [
+      "Supino declinado com barra"
+    ],
+    "duasFases": false,
+    "altText": "Supino declinado com barra. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: barra, banco declinado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "supino-declinado-com-halteres.webp",
     "canonicalKey": "fitos:supino-declinado-com-halteres",
     "slug": "supino-declinado-com-halteres",
     "nomeCanonico": "Supino declinado com halteres",
@@ -581,11 +2756,41 @@
     ],
     "duasFases": false,
     "altText": "Supino declinado com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco declinado.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Supino inclinado com halteres.png",
+    "arquivoOriginal": "supino-declinado-na-maquina.webp",
+    "canonicalKey": "fitos:supino-declinado-na-maquina",
+    "slug": "supino-declinado-na-maquina",
+    "nomeCanonico": "Supino declinado na máquina",
+    "musculo": "Peitoral",
+    "equipamento": "máquina de supino declinado",
+    "aliases": [
+      "Supino declinado na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Supino declinado na máquina. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina de supino declinado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "supino-inclinado-com-barra.webp",
+    "canonicalKey": "fitos:supino-inclinado-com-barra",
+    "slug": "supino-inclinado-com-barra",
+    "nomeCanonico": "Supino inclinado com barra",
+    "musculo": "Peitoral",
+    "equipamento": "barra, banco inclinado",
+    "aliases": [
+      "Supino inclinado com barra"
+    ],
+    "duasFases": false,
+    "altText": "Supino inclinado com barra. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: barra, banco inclinado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "supino-inclinado-com-halteres.webp",
     "canonicalKey": "fitos:supino-inclinado-com-halteres",
     "slug": "supino-inclinado-com-halteres",
     "nomeCanonico": "Supino inclinado com halteres",
@@ -596,26 +2801,146 @@
     ],
     "duasFases": false,
     "altText": "Supino inclinado com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco inclinado.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Supino reto com barra, duas fases.png",
+    "arquivoOriginal": "supino-inclinado-na-maquina.webp",
+    "canonicalKey": "fitos:supino-inclinado-na-maquina",
+    "slug": "supino-inclinado-na-maquina",
+    "nomeCanonico": "Supino inclinado na máquina",
+    "musculo": "Peitoral",
+    "equipamento": "máquina de supino inclinado",
+    "aliases": [
+      "Supino inclinado na máquina"
+    ],
+    "duasFases": false,
+    "altText": "Supino inclinado na máquina. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: máquina de supino inclinado.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "supino-reto-com-barra.webp",
     "canonicalKey": "fitos:supino-reto-com-barra",
     "slug": "supino-reto-com-barra",
     "nomeCanonico": "Supino reto com barra",
     "musculo": "Peitoral",
     "equipamento": "barra, banco reto",
     "aliases": [
-      "Supino reto com barra, duas fases"
+      "Supino reto com barra"
     ],
-    "duasFases": true,
-    "altText": "Supino reto com barra. Ilustração em duas fases do movimento (início e final). Músculo principal: Peitoral. Equipamento: barra, banco reto.",
-    "width": 800,
-    "height": 800
+    "duasFases": false,
+    "altText": "Supino reto com barra. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: barra, banco reto.",
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Tríceps na polia com corda.png",
+    "arquivoOriginal": "supino-reto-com-halteres.webp",
+    "canonicalKey": "fitos:supino-reto-com-halteres",
+    "slug": "supino-reto-com-halteres",
+    "nomeCanonico": "Supino reto com halteres",
+    "musculo": "Peitoral",
+    "equipamento": "halteres, banco reto",
+    "aliases": [
+      "Supino reto com halteres"
+    ],
+    "duasFases": false,
+    "altText": "Supino reto com halteres. Ilustração da execução do movimento. Músculo principal: Peitoral. Equipamento: halteres, banco reto.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "suspensao-na-barra.webp",
+    "canonicalKey": "fitos:suspensao-na-barra",
+    "slug": "suspensao-na-barra",
+    "nomeCanonico": "Suspensão na barra",
+    "musculo": "Trapézio e antebraços",
+    "equipamento": "barra fixa",
+    "aliases": [
+      "Suspensão na barra"
+    ],
+    "duasFases": false,
+    "altText": "Suspensão na barra. Ilustração da execução do movimento. Músculo principal: Trapézio e antebraços. Equipamento: barra fixa.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "terra-romeno-no-smith.webp",
+    "canonicalKey": "fitos:terra-romeno-no-smith",
+    "slug": "terra-romeno-no-smith",
+    "nomeCanonico": "Terra romeno no Smith",
+    "musculo": "Posteriores de coxa",
+    "equipamento": "máquina Smith",
+    "aliases": [
+      "Terra romeno no Smith"
+    ],
+    "duasFases": false,
+    "altText": "Terra romeno no Smith. Ilustração da execução do movimento. Músculo principal: Posteriores de coxa. Equipamento: máquina Smith.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-coice-com-halter.webp",
+    "canonicalKey": "fitos:triceps-coice-com-halter",
+    "slug": "triceps-coice-com-halter",
+    "nomeCanonico": "Tríceps coice com halter",
+    "musculo": "Tríceps",
+    "equipamento": "halter, banco",
+    "aliases": [
+      "Tríceps coice com halter"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps coice com halter. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: halter, banco.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-frances-com-halter.webp",
+    "canonicalKey": "fitos:triceps-frances-com-halter",
+    "slug": "triceps-frances-com-halter",
+    "nomeCanonico": "Tríceps francês com halter",
+    "musculo": "Tríceps",
+    "equipamento": "halter",
+    "aliases": [
+      "Tríceps francês com halter"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps francês com halter. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: halter.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-frances-no-cabo.webp",
+    "canonicalKey": "fitos:triceps-frances-no-cabo",
+    "slug": "triceps-frances-no-cabo",
+    "nomeCanonico": "Tríceps francês no cabo",
+    "musculo": "Tríceps",
+    "equipamento": "polia, corda",
+    "aliases": [
+      "Tríceps francês no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps francês no cabo. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia, corda.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-na-polia-com-barra.webp",
+    "canonicalKey": "fitos:triceps-na-polia-com-barra",
+    "slug": "triceps-na-polia-com-barra",
+    "nomeCanonico": "Tríceps na polia com barra",
+    "musculo": "Tríceps",
+    "equipamento": "polia alta, barra",
+    "aliases": [
+      "Tríceps na polia com barra"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps na polia com barra. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia alta, barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-na-polia-com-corda.webp",
     "canonicalKey": "fitos:triceps-na-polia-com-corda",
     "slug": "triceps-na-polia-com-corda",
     "nomeCanonico": "Tríceps na polia com corda",
@@ -626,11 +2951,11 @@
     ],
     "duasFases": false,
     "altText": "Tríceps na polia com corda. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia alta, corda.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
   },
   {
-    "arquivoOriginal": "Tríceps testa com barra W.png",
+    "arquivoOriginal": "triceps-testa-com-barra-w.webp",
     "canonicalKey": "fitos:triceps-testa-com-barra-w",
     "slug": "triceps-testa-com-barra-w",
     "nomeCanonico": "Tríceps testa com barra W",
@@ -641,7 +2966,82 @@
     ],
     "duasFases": false,
     "altText": "Tríceps testa com barra W. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: barra W, banco.",
-    "width": 800,
-    "height": 800
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "triceps-testa-no-cabo.webp",
+    "canonicalKey": "fitos:triceps-testa-no-cabo",
+    "slug": "triceps-testa-no-cabo",
+    "nomeCanonico": "Tríceps testa no cabo",
+    "musculo": "Tríceps",
+    "equipamento": "polia, barra",
+    "aliases": [
+      "Tríceps testa no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps testa no cabo. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia, barra.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "triceps-unilateral-no-cabo.webp",
+    "canonicalKey": "fitos:triceps-unilateral-no-cabo",
+    "slug": "triceps-unilateral-no-cabo",
+    "nomeCanonico": "Tríceps unilateral no cabo",
+    "musculo": "Tríceps",
+    "equipamento": "polia alta",
+    "aliases": [
+      "Tríceps unilateral no cabo"
+    ],
+    "duasFases": false,
+    "altText": "Tríceps unilateral no cabo. Ilustração da execução do movimento. Músculo principal: Tríceps. Equipamento: polia alta.",
+    "width": 512,
+    "height": 512
+  },
+  {
+    "arquivoOriginal": "wood-chop-alto-para-baixo.webp",
+    "canonicalKey": "fitos:wood-chop-alto-para-baixo",
+    "slug": "wood-chop-alto-para-baixo",
+    "nomeCanonico": "Wood chop alto para baixo",
+    "musculo": "Core",
+    "equipamento": "polia",
+    "aliases": [
+      "Wood chop alto para baixo"
+    ],
+    "duasFases": false,
+    "altText": "Wood chop alto para baixo. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: polia.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "wood-chop-baixo-para-alto.webp",
+    "canonicalKey": "fitos:wood-chop-baixo-para-alto",
+    "slug": "wood-chop-baixo-para-alto",
+    "nomeCanonico": "Wood chop baixo para alto",
+    "musculo": "Core",
+    "equipamento": "polia",
+    "aliases": [
+      "Wood chop baixo para alto"
+    ],
+    "duasFases": false,
+    "altText": "Wood chop baixo para alto. Ilustração da execução do movimento. Músculo principal: Core. Equipamento: polia.",
+    "width": 1254,
+    "height": 1254
+  },
+  {
+    "arquivoOriginal": "world-greatest-stretch.webp",
+    "canonicalKey": "fitos:world-greatest-stretch",
+    "slug": "world-greatest-stretch",
+    "nomeCanonico": "World greatest stretch",
+    "musculo": "Mobilidade global",
+    "equipamento": "colchonete",
+    "aliases": [
+      "World greatest stretch"
+    ],
+    "duasFases": false,
+    "altText": "World greatest stretch. Ilustração da execução do movimento. Músculo principal: Mobilidade global. Equipamento: colchonete.",
+    "width": 418,
+    "height": 627
   }
 ]
