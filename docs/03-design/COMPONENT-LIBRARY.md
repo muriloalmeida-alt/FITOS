@@ -39,7 +39,7 @@ Conteúdo obrigatório: severidade, fato, pessoa, tempo e ação. Não usar verm
 
 Variações: biblioteca, builder e execução. Inclui mídia opcional (imagem; vídeo não é requisito obrigatório no MVP — ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`), nome, grupo muscular, equipamento e ações contextuais.
 
-**Implementado (PR1), variação execução/builder:** `src/shared/ui/WorkoutExerciseCard.tsx` — nome, meta (grupo muscular/equipamento) e miniatura (reaproveita `ExerciseThumbnail`, 56×56), com slot `trailing` livre para a ação contextual do contexto (ex.: `SetLogger` numa execução, alça de arraste num builder). A variação "biblioteca" já existe desde a FIT-111 nos cards de `/painel/exercicios`.
+**Implementado (PR1), variação execução/builder; encaixado no "Hoje" do aluno na PR5:** `src/shared/ui/WorkoutExerciseCard.tsx` — nome, meta (grupo muscular/equipamento) e miniatura (reaproveita `ExerciseThumbnail`, 56×56), com slot `trailing` livre para a ação contextual do contexto (ex.: `SetLogger` numa execução, alça de arraste num builder). A variação "biblioteca" já existe desde a FIT-111 nos cards de `/painel/exercicios`. Na PR5, cada exercício do "Treino de hoje" (`AlunoHome.tsx`) usa `WorkoutExerciseCard` (`meta` combina músculo + a prescrição — "Peito · 3 séries · 10 repetições..."), com a imagem real do catálogo (`imageUrl`/`imageAlt` de `Exercise`, adicionados ao `select` de `getActivePlanAssignmentForStudent`) — primeira vez que a biblioteca ilustrada da FIT-111 aparece na jornada diária do aluno, não só no catálogo do personal.
 
 ### SetRow
 
@@ -49,11 +49,13 @@ Campos no MVP: número da série, carga, repetições e conclusão. No mobile, d
 
 **Implementado (PR1) como `SetLogger`:** `src/shared/ui/SetLogger.tsx`. Chip "série N de M", carga/repetições em destaque (`tabular-nums`) e botão de conclusão. "Repetição rápida do valor anterior" é responsabilidade de quem usa o componente (preencher `reps`/`load` com o valor da série anterior antes de renderizar) — o componente em si é sem estado de formulário próprio.
 
+**Deliberadamente não encaixado na execução real de treino na PR5**: `SessaoExecucao.tsx`/`SessaoExecucaoIndividual.tsx` (`/painel/treino/sessao`, `/painel/meus-treinos/sessao`) permitem editar séries/repetições/duração/carga com valores livres por campo (formulário, não um contador fixo) — `SetLogger` modela um "set atual" de progresso fixo (série N de M, um botão "concluir"), incompatível com a edição arbitrária já existente e testada (FIT-041/103). Trocar perderia a flexibilidade real do formulário. Ver também `RestTimer` abaixo.
+
 ### RestTimer
 
 Estados: parado, rodando, pausado e concluído. Precisa permanecer acessível durante navegação dentro do treino e oferecer vibração/som configuráveis.
 
-**Implementado (PR1):** `src/shared/ui/RestTimer.tsx`. Cobre "rodando" e "concluído" (contagem regressiva a partir de `seconds`, `onComplete` disparado uma única vez ao chegar a zero). "Parado"/"pausado" e vibração/som configuráveis ficam para quando o componente for integrado à execução real de treino (PR5 — Aluno/Livre); nesta primeira versão o timer sempre inicia rodando ao montar.
+**Implementado (PR1):** `src/shared/ui/RestTimer.tsx`. Cobre "rodando" e "concluído" (contagem regressiva a partir de `seconds`, `onComplete` disparado uma única vez ao chegar a zero). "Parado"/"pausado" e vibração/som configuráveis ficariam para quando o componente fosse integrado à execução real de treino — avaliado na PR5 e **não encaixado**: `DescansoTimer`/`SessaoExecucao.tsx` já tem seu próprio temporizador de descanso, deliberadamente com `aria-live="polite"` (FIT-041, "acessível... anuncia a contagem sem exigir foco") — o oposto da decisão documentada do `RestTimer` desta biblioteca ("Sem `aria-live`, deliberadamente... evita ruído para leitor de tela"). São duas decisões de acessibilidade conflitantes e ambas deliberadas; substituir a implementação testada da FIT-041 pela nova regrediria uma escolha de acessibilidade já validada, não uma limpeza visual. `RestTimer` continua reservado para um contexto futuro que ainda não tenha essa decisão tomada.
 
 ### ProgressMetric
 
@@ -79,13 +81,15 @@ Etapas: contexto, exercícios, parâmetros e revisão. Salvar rascunho automatic
 
 Mostra sugestão, justificativa, fonte/contexto utilizado e ações editar/aceitar/descartar. Nunca apresenta conteúdo como decisão definitiva.
 
-### WorkoutTodayCard (novo, PR1)
+### WorkoutTodayCard (novo, PR1; encaixado na PR5)
 
-Card de destaque escuro para "o treino de hoje" (jornada Aluno/Livre — `Hoje`), oposto deliberado das superfícies claras de gestão do Personal: eyebrow, título, descrição, metadados e uma única ação dominante (`href` ou `onClick`, nunca as duas ao mesmo tempo), com imagem opcional (`next/image` via `fill`). `src/shared/ui/WorkoutTodayCard.tsx`.
+Card de destaque escuro para "o treino de hoje" (jornada Aluno/Livre — `Hoje`), oposto deliberado das superfícies claras de gestão do Personal: eyebrow, título, descrição, metadados e uma única ação dominante (`href` ou `onClick`, nunca as duas ao mesmo tempo), com imagem opcional (`next/image` via `fill`). `src/shared/ui/WorkoutTodayCard.tsx`. Na PR5, usado em `AlunoHome.tsx` (hero do treino do dia, com `meta` = contagem de exercícios; e um card de fallback com texto genérico "Você tem um treino em andamento" quando há sessão em andamento mas o dia não tem treino previsto — `hasInProgressSession` nunca carrega o nome do treino, então o texto nunca é fabricado) e em `IndividualHome.tsx` (card "Treino em andamento" do FitOS Livre, substituindo o `Card`+`Button` genérico anterior). Nenhuma imagem de capa (`imageSrc`) é usada em nenhum dos dois — não existe hoje uma imagem por treino (só por exercício, FIT-111), então o campo fica de fora em vez de reaproveitar indevidamente a imagem de um exercício avulso como se fosse a do treino inteiro.
 
 ### AchievementCard (novo, PR1)
 
 Card celebratório (fundo em gradiente, ícone, título, descrição) para reconhecimento de marcos de evolução — recorde pessoal, sequência de treinos, meta concluída. Sem ação própria; é sempre um cartão informativo. `src/shared/ui/AchievementCard.tsx`.
+
+**Avaliado e não encaixado em `/painel/progresso` na PR5**: o protótipo de referência mostra "Conquistas" (ex.: "Seu melhor ciclo — 12 semanas de consistência") na tela de progresso do aluno, mas esse sinal (sequência de semanas consistentes, recorde de carga) não existe hoje em nenhuma consulta — `listAssessmentsForStudent` só lê avaliações manuais (peso/gordura/medidas), sem qualquer agregação de frequência de treino. Fabricar uma conquista sem essa consulta real violaria a mesma regra já aplicada a `EvolutionMetric`/`trend` na PR2 (nunca uma variação sem dado real por trás). Registrado como pendência de produto (exigiria uma nova consulta agregada sobre `WorkoutSession`), não implementado nesta rodada.
 
 ### EmptyStateAction (novo, PR1; encaixado em Exercícios/Treinos/Programas na PR3; Financeiro na PR4)
 
