@@ -1,0 +1,20 @@
+.timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-4);
+  background-color: var(--fitos-color-chrome-container);
+  color: var(--fitos-color-on-chrome);
+}
+
+.label {
+  font-size: 14px;
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.value {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

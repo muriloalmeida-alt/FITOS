@@ -1,0 +1,25 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fitos-space-1);
+  border-radius: var(--fitos-shape-full);
+  padding: var(--fitos-space-1) var(--fitos-space-3);
+  font-family: var(--fitos-font-family);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.positive {
+  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-on-primary-container);
+}
+
+.warning {
+  background-color: var(--fitos-color-warning-container);
+  color: var(--fitos-color-on-warning-container);
+}
+
+.neutral {
+  background-color: var(--fitos-color-surface-container-high);
+  color: var(--fitos-color-on-surface-variant);
+}

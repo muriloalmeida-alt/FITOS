@@ -21,17 +21,25 @@
 
 ## Componentes de domínio
 
+> **PR1 do redesign mobile-first (FIT-117, "fundação visual, shell e componentes compartilhados")** implementou em `src/shared/ui/` a primeira versão em código de boa parte destas especificações, até então só descritas neste documento. Cada componente abaixo com nota **Implementado (PR1)** tem arquivo `.tsx`/`.module.css`/`.test.tsx` reais; os sem essa nota continuam apenas especificados, aguardando o PR do fluxo que os usa (PR2 em diante, conforme a ordem sugerida pelo pacote de redesign).
+
 ### StudentCard
 
 Conteúdo: avatar, nome, objetivo, última atividade, adesão e sinal de atenção. Ações secundárias ficam em menu; clicar abre o perfil.
+
+**Implementado (PR1):** `src/shared/ui/StudentCard.tsx`. Primeira versão cobre avatar (reaproveita `Avatar`), nome, descrição (objetivo/última atividade) e uma pílula de status com tom (`positive`/`warning`/`neutral`) — nunca só cor, sempre com texto. Menu de ações secundárias e o "sinal de atenção" dedicado ficam para o PR2 (Personal — dashboard e alunos), quando o componente for de fato encaixado em `/painel/alunos`.
 
 ### AttentionItem
 
 Conteúdo obrigatório: severidade, fato, pessoa, tempo e ação. Não usar vermelho para simples ausência; vermelho é reservado a erro, bloqueio ou risco real.
 
+**Implementado (PR1):** `src/shared/ui/AttentionItem.tsx`. Duas tonalidades (`neutral`/`warning`) usando o novo papel semântico `warning` (ver `M3-DESIGN-TOKENS.md`) — nunca vermelho/`error`, reservado a bloqueio real, conforme este mesmo documento. Ícone, título, descrição e destino opcional (`href`/`onClick`); campos "pessoa" e "tempo" ficam a critério de quem compõe o conteúdo (a descrição), sem um slot dedicado nesta primeira versão.
+
 ### ExerciseCard
 
 Variações: biblioteca, builder e execução. Inclui mídia opcional (imagem; vídeo não é requisito obrigatório no MVP — ver Matriz de aderência ao escopo em `PRODUCT-DESIGN.md`), nome, grupo muscular, equipamento e ações contextuais.
+
+**Implementado (PR1), variação execução/builder:** `src/shared/ui/WorkoutExerciseCard.tsx` — nome, meta (grupo muscular/equipamento) e miniatura (reaproveita `ExerciseThumbnail`, 56×56), com slot `trailing` livre para a ação contextual do contexto (ex.: `SetLogger` numa execução, alça de arraste num builder). A variação "biblioteca" já existe desde a FIT-111 nos cards de `/painel/exercicios`.
 
 ### SetRow
 
@@ -39,17 +47,25 @@ Campos no MVP: número da série, carga, repetições e conclusão. No mobile, d
 
 *(RPE/RIR são pós-MVP — hipótese sujeita à decisão de Produto; não incluir como campo do MVP.)*
 
+**Implementado (PR1) como `SetLogger`:** `src/shared/ui/SetLogger.tsx`. Chip "série N de M", carga/repetições em destaque (`tabular-nums`) e botão de conclusão. "Repetição rápida do valor anterior" é responsabilidade de quem usa o componente (preencher `reps`/`load` com o valor da série anterior antes de renderizar) — o componente em si é sem estado de formulário próprio.
+
 ### RestTimer
 
 Estados: parado, rodando, pausado e concluído. Precisa permanecer acessível durante navegação dentro do treino e oferecer vibração/som configuráveis.
+
+**Implementado (PR1):** `src/shared/ui/RestTimer.tsx`. Cobre "rodando" e "concluído" (contagem regressiva a partir de `seconds`, `onComplete` disparado uma única vez ao chegar a zero). "Parado"/"pausado" e vibração/som configuráveis ficam para quando o componente for integrado à execução real de treino (PR5 — Aluno/Livre); nesta primeira versão o timer sempre inicia rodando ao montar.
 
 ### ProgressMetric
 
 Exibe valor, período, comparação e definição. Nunca usar tendência positiva/negativa sem explicar a métrica.
 
+**Implementado (PR1) como `EvolutionMetric`:** `src/shared/ui/EvolutionMetric.tsx`. Valor, rótulo e chip de tendência opcional (`direction: "up"|"down"|"neutral"`) — sempre com símbolo textual (▲/▼/—), nunca só cor, para nunca depender de percepção de cor para o significado.
+
 ### PaymentStatus
 
 Estados persistidos: `pendente`, `pago`, `atrasado` e `cancelado`. “A vencer” é uma apresentação calculada de uma cobrança `pendente` com vencimento futuro, não um estado próprio. Pagamento parcial e estorno estão fora do MVP. Cada estado combina texto, ícone e cor.
+
+**Implementado (PR1):** `src/shared/ui/PaymentStatus.tsx`, com `PaymentStatusValue` espelhando exatamente o enum `StudentChargeStatus` do schema (`PENDENTE`/`PAGO`/`ATRASADO`/`CANCELADO`). Cada estado tem um símbolo textual próprio (○/✓/!/✕) além de cor — "a vencer" continua sendo apresentação calculada por quem usa o componente, não um valor novo aceito por ele.
 
 ### WorkoutBuilderStep
 
@@ -60,6 +76,30 @@ Etapas: contexto, exercícios, parâmetros e revisão. Salvar rascunho automatic
 > **Nota de escopo:** este componente e o fluxo “Criar primeira versão com IA” (builder de treino) especificam a experiência para quando a prescrição assistida por IA for priorizada por Produto. Conforme `docs/00-governanca/ROADMAP.md`, a prescrição/recomendação de treino por IA está **fora do MVP** (Gate G5) — este componente é especificação **pós-MVP** (hipótese sujeita à decisão de Produto), não uma entrega do MVP, e não deve ser referenciado como recurso disponível nos fluxos, telas ou eventos analíticos atuais.
 
 Mostra sugestão, justificativa, fonte/contexto utilizado e ações editar/aceitar/descartar. Nunca apresenta conteúdo como decisão definitiva.
+
+### WorkoutTodayCard (novo, PR1)
+
+Card de destaque escuro para "o treino de hoje" (jornada Aluno/Livre — `Hoje`), oposto deliberado das superfícies claras de gestão do Personal: eyebrow, título, descrição, metadados e uma única ação dominante (`href` ou `onClick`, nunca as duas ao mesmo tempo), com imagem opcional (`next/image` via `fill`). `src/shared/ui/WorkoutTodayCard.tsx`.
+
+### AchievementCard (novo, PR1)
+
+Card celebratório (fundo em gradiente, ícone, título, descrição) para reconhecimento de marcos de evolução — recorde pessoal, sequência de treinos, meta concluída. Sem ação própria; é sempre um cartão informativo. `src/shared/ui/AchievementCard.tsx`.
+
+### EmptyStateAction (novo, PR1)
+
+Estado vazio padrão para listas sem conteúdo (nenhum aluno, nenhum treino, nenhuma cobrança ainda): título, descrição e uma ação opcional (`href` ou `onClick`). Substitui qualquer texto solto de "nenhum item encontrado" por um padrão único e consistente. `src/shared/ui/EmptyStateAction.tsx`.
+
+### ErrorRecovery (novo, PR1)
+
+Estado de erro padrão (`role="alert"`), com título default ("Algo não funcionou como esperado"), descrição opcional e botão de nova tentativa opcional. Não é um dialog — vive inline, no lugar do conteúdo que falhou ao carregar. `src/shared/ui/ErrorRecovery.tsx`.
+
+### MediaAttribution (novo, PR1)
+
+Legenda discreta de crédito de mídia (fotos de banco de imagens da landing e de materiais promocionais). Puramente textual, sem interação. `src/shared/ui/MediaAttribution.tsx`.
+
+### BrandLogo (novo, PR1 — FIT-117)
+
+Wordmark/símbolo oficial do FitOS ("Fit" em peso médio + "OS" em peso forte, conforme `BENCHMARK-IDENTIDADE-VISUAL.md` §5.2 e `docs/03-design/APLICACAO-DA-MARCA-EM-CODIGO.md`). SVG local, sem dependência remota. Duas variantes: `horizontal` (texto real "Fit"+"OS", ícone sempre `aria-hidden`) e `symbol` (só o símbolo, `role="img"`+`aria-label="FitOS"` a menos que `decorative`). `background="dark"|"light"` escolhe a paleta de contraste correta. Aplicado nesta rodada ao `AppShell` (cabeçalho dos três papéis) e ao `LandingHeader`. **Pendência registrada, fora do escopo deste PR:** os painéis de formulário mobile de `/entrar`, `/criar-conta`, `/onboarding*` e `/treino-sozinho` (dentro de `AuthHero`, que fica `display: none` abaixo de 840px) ainda não exibem a marca em mobile — a FIT-117 continua parcialmente em aberto até uma PR dedicada tocar cada uma dessas páginas individualmente. `src/shared/ui/BrandLogo.tsx`.
 
 ## Tabelas no desktop
 

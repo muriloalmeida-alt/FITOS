@@ -18,9 +18,12 @@ Hierarquia de tokens:
   "lime": {"50":"#F4FCE8","100":"#E3F8C4","300":"#BDF478","500":"#9DDB4A","700":"#5C970D","900":"#294900"},
   "teal": {"50":"#E4FBF7","100":"#BDF2EA","300":"#6CD4C7","500":"#21A69A","700":"#00766D","900":"#004E48"},
   "neutral": {"0":"#FFFFFF","50":"#F8FAFC","100":"#EDF1F4","300":"#C7CDD3","500":"#727A82","700":"#424A52","900":"#18212B"},
-  "error": {"500":"#BA1A1A","100":"#FFDAD6"}
+  "error": {"500":"#BA1A1A","100":"#FFDAD6"},
+  "amber": {"100":"#FFDEA6","900":"#271900"}
 }
 ```
+
+`amber` é uma extensão do M3 (o padrão oficial não define papel semântico de "atenção"/aviso, só `error`). Existe porque o pacote de redesign distingue "precisa de atenção" (convite expirando, avaliação vencendo, cobrança atrasada — reversível, não é falha) de `error` (reservado a destrutivo/fatal). Todo uso de `warning` é sempre acompanhado de ícone ou rótulo textual — nunca só a cor (critério de aceite "status não depende apenas de cor").
 
 ## Tema claro
 
@@ -112,9 +115,10 @@ Base de 4 px: `0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80`.
 |---|---:|---|
 | `shape.extraSmall` | 4 px | tags compactas |
 | `shape.small` | 8 px | inputs |
-| `shape.medium` | 12 px | cards |
+| `shape.medium` | 12 px | cards administrativos densos (tabelas, formulários) |
 | `shape.large` | 16 px | painéis e dialogs |
-| `shape.full` | 999 px | chips e FAB |
+| `shape.card` | 24 px | cards de domínio orgânicos (`AttentionItem`, `StudentCard`, `WorkoutTodayCard` e os demais componentes de `docs/04-backlog/` "Evolução em movimento") — raio amplo é requisito explícito do pacote de redesign, nunca a estética de ERP/planilha que `shape.medium` ainda serve para telas de gestão densa |
+| `shape.full` | 999 px | chips, FAB e botões |
 
 ## Elevação
 

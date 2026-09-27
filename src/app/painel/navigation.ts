@@ -15,12 +15,24 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// interina já usada para "Alunos" (FIT-013) e "Perfil" do aluno (FIT-016):
 /// um destino real não espera o pai conceitual da árvore de informação
 /// existir. "Treinos" continua como o item real para modelos/planos.
+///
+/// Ordem redefinida na FIT-117 (fundação visual/shell do redesign
+/// mobile-first): os 3 primeiros da lista são exatamente os que a barra
+/// compacta mostra sem "Mais" (ver `MAX_COMPACT_ITEMS` em `AppShell.tsx`) —
+/// "Início/Alunos/Treinos" é a combinação especificada pelo protótipo
+/// (`personal.js`), não "Início/Alunos/Exercícios" que a ordem anterior
+/// produzia. "Perfil" ainda não tem rota própria para o Personal (apenas
+/// "Configurações" hospeda dados de conta hoje) — listado como `comingSoon`
+/// para já refletir a IA alvo do pacote ("Mais" reúne Exercícios,
+/// Programas, Financeiro, Perfil e Assinatura) sem simular uma tela que
+/// ainda não existe.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
-  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "treinos", label: "Treinos", href: "/painel/treinos" },
+  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
+  { key: "perfil", label: "Perfil", comingSoon: true },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 

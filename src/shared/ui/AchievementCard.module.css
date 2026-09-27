@@ -1,0 +1,39 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-4);
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-4);
+  background: linear-gradient(120deg, var(--fitos-color-surface-container), var(--fitos-color-primary-container));
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fitos-shape-large);
+  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-on-primary-container);
+  font-size: 20px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.description {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}

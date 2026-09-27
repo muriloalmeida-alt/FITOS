@@ -1,0 +1,44 @@
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-4);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.value {
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 800;
+  color: var(--fitos-color-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--fitos-space-1);
+  font-size: 12px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.up {
+  color: var(--fitos-color-tertiary);
+}
+
+.down {
+  color: var(--fitos-color-warning);
+}
+
+.neutral {
+  color: var(--fitos-color-on-surface-variant);
+}

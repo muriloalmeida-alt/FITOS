@@ -1,0 +1,67 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-4);
+  width: 100%;
+  text-align: left;
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-4);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+  font-family: var(--fitos-font-family);
+  color: inherit;
+  text-decoration: none;
+}
+
+.asButton {
+  cursor: pointer;
+  border: none;
+}
+
+.asButton:focus-visible {
+  outline: 2px solid var(--fitos-color-primary);
+  outline-offset: 2px;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fitos-shape-large);
+  font-size: 20px;
+}
+
+.neutral .icon {
+  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-on-primary-container);
+}
+
+.warning .icon {
+  background-color: var(--fitos-color-warning-container);
+  color: var(--fitos-color-on-warning-container);
+}
+
+.warning {
+  border-color: var(--fitos-color-warning-container);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.description {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
