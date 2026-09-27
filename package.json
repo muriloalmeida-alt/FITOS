@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "catalog:import-api-ninjas": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-exercicios.ts",
     "catalog:import-curated": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-catalogo-curado.ts",
-    "catalog:import-imagens-exercicios": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-imagens-exercicios.ts"
+    "catalog:import-imagens-exercicios": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-imagens-exercicios.ts",
+    "planos:seed-comerciais": "NODE_OPTIONS=--conditions=react-server tsx scripts/seed-planos-comerciais.ts"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -52,6 +53,6 @@
     "deepmerge-ts": "8.0.2"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "NODE_OPTIONS=--conditions=react-server tsx prisma/seed.ts"
   }
 }
