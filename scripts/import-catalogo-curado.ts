@@ -5,11 +5,12 @@
  * Execução manual apenas — nunca chamado pelo build, seed, deploy ou
  * acesso à página.
  *
- * Ao contrário de `catalog:import-api-ninjas` (FIT-021/IMP-EX-001), não há
- * chamada de rede, paginação, checkpoint ou lock: um único arquivo local,
- * lido do início ao fim, em uma única execução. A segurança contra
- * reexecução acidental vem do upsert idempotente por `[origin, externalId]`
- * em `importCuratedCatalog.ts` — rodar de novo nunca duplica nem perde dado.
+ * Ao contrário da integração com a API Ninjas (FIT-021/IMP-EX-001,
+ * descontinuada pela FIT-121), não há chamada de rede, paginação,
+ * checkpoint ou lock: um único arquivo local, lido do início ao fim, em
+ * uma única execução. A segurança contra reexecução acidental vem do
+ * upsert idempotente por `[origin, externalId]` em
+ * `importCuratedCatalog.ts` — rodar de novo nunca duplica nem perde dado.
  *
  * Uso:
  *   npm run catalog:import-curated

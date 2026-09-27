@@ -5,15 +5,17 @@ import { prisma } from "@/shared/db/prisma";
 
 /// Importação do catálogo curado FITOS em PT-BR (IMP-EX-002) — um arquivo
 /// estático versionado no repositório (`data/catalogo-exercicios-fitos-ptbr.csv`),
-/// nunca uma API externa. Ao contrário da FIT-021 (API Ninjas), não existe
-/// aqui nenhum risco de rede instável, paginação ou rate limit — um único
-/// arquivo lido uma vez, do início ao fim — então este módulo
-/// deliberadamente não reaproveita a trilha de execução do IMP-EX-001
-/// (`catalogImportRun.ts`, com checkpoint/retomada/lock): essa complexidade
-/// existe para um problema (importação lenta e falível de um fornecedor
-/// externo) que este import não tem. A segurança contra reexecução
-/// acidental vem só do upsert idempotente por `[origin, externalId]` abaixo
-/// — chamar de novo com o mesmo arquivo nunca duplica nem perde dado.
+/// nunca uma API externa. Ao contrário da FIT-021 (API Ninjas, integração
+/// descontinuada pela FIT-121 — nunca teve uma carga real executada em
+/// nenhum ambiente), não existe aqui nenhum risco de rede instável,
+/// paginação ou rate limit — um único arquivo lido uma vez, do início ao
+/// fim — então este módulo deliberadamente nunca teve a trilha de
+/// execução com checkpoint/retomada/lock que aquela integração exigia:
+/// essa complexidade existia para um problema (importação lenta e falível
+/// de um fornecedor externo) que este import não tem. A segurança contra
+/// reexecução acidental vem só do upsert idempotente por
+/// `[origin, externalId]` abaixo — chamar de novo com o mesmo arquivo
+/// nunca duplica nem perde dado.
 
 export class CuratedCatalogRowError extends Error {
   constructor(

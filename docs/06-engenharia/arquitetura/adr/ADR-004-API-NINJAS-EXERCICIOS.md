@@ -1,6 +1,6 @@
 # ADR-004 — API Ninjas como fonte do catálogo global de exercícios
 
-Status: **Aceito, com escopo comercial explicitamente pendente** (FIT-020, EPIC-05/SPRINT-06)
+Status: **Descontinuada (FIT-121, 27/09/2026)** — ver "Atualização — descontinuação" ao final. Histórico original preservado abaixo: **Aceito, com escopo comercial explicitamente pendente** (FIT-020, EPIC-05/SPRINT-06)
 Data: 16 de setembro de 2026
 
 ## Contexto
@@ -52,3 +52,11 @@ Enquanto essas duas condições não forem satisfeitas, o FitOS opera com: exerc
 ## Atualização — IMP-EX-001 (pacote pós-MVP, 21/09/2026)
 
 O comando administrativo (FIT-021) ganhou trava de execução única, retomada por checkpoint e manifesto versionado de consultas — ver `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md`. Esta atualização não muda a classificação de uso comercial acima (ainda não autorizado) nem afirma nenhuma chave real — mas corrige um fato de conectividade: `api.api-ninjas.com` (o endpoint da API, diferente de `api-ninjas.com`, a documentação, que permanece bloqueada pelo proxy de egresso deste ambiente) **é alcançável** a partir deste sandbox. Testado com uma chave inválida propositalmente (`--dry-run`, sem gravar nada): a API respondeu 403 real para as 10 consultas do manifesto, confirmando que o client (FIT-020) funciona ponta a ponta contra a rede real, não só contra fixtures. `API_NINJAS_API_KEY` continua sem valor real neste `.env` — assim que uma chave nova (nunca a já exposta) for configurada por canal seguro, o `--dry-run` real (e a carga completa) podem ser executados a partir deste mesmo ambiente, sem depender do Railway.
+
+## Atualização — descontinuação (FIT-121, 27/09/2026)
+
+Nenhuma das duas condições da seção "Decisão" chegou a se realizar: nenhuma chave nova foi fornecida por canal seguro e nenhum plano comercial foi contratado durante todo o programa — **zero chamadas reais à API Ninjas foram feitas em qualquer ambiente**, do início ao fim. O catálogo global do FitOS foi, em vez disso, integralmente preenchido pelo catálogo curado FITOS em PT-BR (IMP-EX-002, 208/208 exercícios, sem depender de nenhum fornecedor externo), satisfazendo a condição registrada em `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md` ("Plano de retirada") para remover definitivamente a integração e a rota administrativa associada.
+
+Removidos pela FIT-121: `src/integrations/api-ninjas/`, a máquina de orquestração da IMP-EX-001 (manifesto, orquestrador, parsing de requisição, `CatalogImportRun`), a rota `src/app/api/admin/catalog-import/route.ts`, o script `scripts/import-exercicios.ts`, o comando `catalog:import-api-ninjas` e as variáveis `API_NINJAS_API_KEY`/`CATALOG_IMPORT_TRIGGER_SECRET`. O model `CatalogImportRun` e os enums `CatalogImportEnvironment`/`CatalogImportStatus` foram removidos do `schema.prisma` com migration própria. Preservado deliberadamente: o valor `API_NINJAS` do enum `origin` de `Exercise`, usado como fixture genérica de "exercício global" por várias suítes de teste não relacionadas a esta integração.
+
+Se o Produto decidir no futuro reintroduzir uma fonte externa de catálogo, isso exigirá uma nova decisão de arquitetura (novo ADR) — este documento não deve ser reaberto como base de reimplementação, já que o código que ele descreve não existe mais no repositório.
