@@ -76,7 +76,7 @@ Reporta, sem tocar rede nem banco além de leitura: `encontrados` (total do mani
 
 1. Confirmar que o deploy do serviço `fitos-web-hml` está `SUCCESS` no commit desta migração.
 2. Rodar `--dry-run` **no ambiente de homologação** (via Railway CLI/SSH, ou por quem tiver esse acesso — este agente não tem, ver "Execução real" abaixo) e registrar a saída sanitizada (sem segredos — a saída do comando nunca inclui valores de variável, só nomes e contadores).
-3. Só se o dry-run apontar zero bloqueios (nenhum manifesto inválido, nenhuma variável R2 ausente) e a contagem de `ausentes` for a esperada (hoje, 0 dos 43 atuais — os outros 165 exercícios do catálogo simplesmente não estão no manifesto, não aparecem como "ausentes"), rodar a carga real.
+3. Só se o dry-run apontar zero bloqueios (nenhum manifesto inválido, nenhuma variável R2 ausente) e a contagem de `ausentes` for a esperada (hoje, 0 dos 203 do manifesto — os 5 exercícios sem imagem simplesmente não estão no manifesto ainda, não aparecem como "ausentes"), rodar a carga real.
 4. Validar no R2: contagem de objetos sob o prefixo `exercises/` corresponde ao número de itens `importados`/`atualizados` reportados.
 5. Validar no PostgreSQL de homologação: `Exercise` com `origin = 'FITOS_CURATED'` e `imageUrl` preenchido tem contagem igual à soma de `já_vinculados` + `importados` + `atualizados`; nenhum `Exercise` com `origin = 'PERSONAL'` foi alterado.
 6. Amostrar pelo menos 10 URLs (distribuídas entre grupos musculares) com uma requisição HTTP simples: `200`, `Content-Type` de imagem.
@@ -109,8 +109,21 @@ O que foi comprovado nesta rodada, sem depender de rede real:
 - URL pública do R2 nunca é assinada (bucket servido publicamente, mesmo modelo de exposição que o caminho estático local já tinha) — não há segredo na própria URL da imagem.
 - `next.config.mjs` restringe `remotePatterns` ao hostname exato de `R2_PUBLIC_BASE_URL`, nunca um curinga amplo.
 
+## Ampliação FIT-118 — de 43 para 203/208
+
+Um segundo lote de 208 fotografias aprovadas foi recebido (nomes de arquivo já em slug, `.webp`, uma imagem por `canonical_key` do catálogo curado — `src/modules/exercises/data/catalogo-exercicios-fitos-ptbr.csv`). Reconciliação feita antes de qualquer gravação:
+
+- **Conferência 1:1**: os 208 slugs do lote batem exatamente com os 208 `canonical_key` do CSV — zero ausentes, zero sobrando, zero duplicado.
+- **7 arquivos do lote vieram vazios** (0 bytes) — falha de exportação do lote recebido, confirmada por inspeção direta do zip antes de tocar em qualquer arquivo do repositório: `alongamento-de-gluteo-deitado`, `barra-australiana`, `elevacao-lateral-inclinada`, `leg-press-45`, `panturrilha-no-leg-press`, `rosca-direta-com-barra-w`, `rosca-scott-na-maquina`.
+- Desses 7: **2 já tinham imagem no lote anterior de 43** (`leg-press-45`, `rosca-direta-com-barra-w`) — mantidos como estavam (arquivo e entrada de manifesto antigos preservados, não regenerados); os outros **5 nunca tiveram ilustração em nenhum lote e continuam sem imagem** (`Exercise.imageUrl` permanece `null` para eles, mesmo comportamento de antes — sem regressão).
+- As 40 imagens do lote de 43 que tinham correspondente no lote novo foram **substituídas** (bytes diferentes, resolução maior — mesmo exercício, lote de produção mais recente), para manter consistência visual entre as 201 imagens novas e as poucas antigas que sobraram.
+- Dimensões reais variam por arquivo (1254×1254, 512×512, 418×627 confirmados por amostragem) — nunca assumidas fixas; `width`/`height` do manifesto refletem o arquivo real de cada entrada (metadado informativo, a renderização usa contêiner fixo com `object-fit: cover` em `ExerciseThumbnail`, não é afetada por isso).
+- `--dry-run` local confirmou o resultado: `encontrados=203 já_vinculados=0 novos=160 atualizáveis=43 ausentes=0 outros_falhos=0`.
+
+**Pendência explícita**: as 5 imagens vazias precisam ser reenviadas (o restante do lote está correto); assim que chegarem, a mesma reexecução do importador as adiciona sem duplicar nada (chave determinística por slug).
+
 ## Pendências reais
 
-- Cobertura de imagens continua em 43/208 — os outros 165 exercícios do catálogo curado não têm ilustração aprovada disponível no repositório; produzi-las é uma decisão de conteúdo/produto, fora do escopo desta migração de storage.
-- O teaser da biblioteca na landing (`src/app/page.tsx`, seção `#biblioteca`) continua servindo os 43 arquivos locais diretamente (não consulta `Exercise.imageUrl`, não foi migrado para R2 nesta rodada) — ver ADR-010.
+- Cobertura de imagens: **203/208** (ver "Ampliação FIT-118" acima) — 5 exercícios aguardam reenvio de arquivo corrigido.
+- O teaser da biblioteca na landing (`src/app/page.tsx`, seção `#biblioteca`) continua servindo os arquivos locais diretamente (não consulta `Exercise.imageUrl`, não foi migrado para R2 nesta rodada) — ver ADR-010.
 - Exclusão controlada de objetos órfãos no bucket (flag explícita + confirmação) não foi implementada — não havia caso de uso real para priorizar isso nesta rodada.

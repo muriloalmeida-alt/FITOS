@@ -83,7 +83,6 @@ Nenhum dado sensível. As imagens são ilustrações de exercício, não fotos d
 
 ## Pendências reais
 
-- Os 13 arquivos do pacote reclassificados como não-catálogo (ver "Curadoria dos assets") continuam disponíveis para uso futuro de marketing, sem História própria ainda.
-- Os ~57 exercícios restantes do acervo planejado ("quase 100") dependem de novos assets do pacote — o pipeline de importação já suporta reexecução incremental sem nenhuma mudança de código.
-- **Cobertura real do catálogo curado**: 43 de 208 exercícios têm ilustração (20,7%) — os outros 165 nunca tiveram asset aprovado, em nenhuma rodada. A migração de storage para R2 (ADR-010) não altera esse número; ela só troca onde as 43 imagens existentes são servidas.
+- Os 13 arquivos do pacote original reclassificados como não-catálogo (ver "Curadoria dos assets") continuam disponíveis para uso futuro de marketing, sem História própria ainda.
+- **Atualização (FIT-118)**: um segundo lote de 208 ilustrações fotográficas aprovadas (nomes já em slug, uma imagem por `canonical_key` do catálogo curado) substituiu o lote original de 43 — ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`, seção "Ampliação FIT-118", para a reconciliação completa (203/208 aplicadas, 7 arquivos vazios recebidos, 5 exercícios sem imagem até hoje). O manifesto (`manifesto-imagens-exercicios.json`) e `public/media/exercises/` já refletem o lote novo.
 - Ver `ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md` para o estado operacional completo do storage pós-migração, incluindo o teaser da landing (ainda não migrado para R2 nesta rodada).
