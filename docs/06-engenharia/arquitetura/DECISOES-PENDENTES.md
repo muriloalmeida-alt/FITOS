@@ -13,6 +13,7 @@
 | Backup, retenção e restauração | Engenharia | antes de dados reais | risco operacional |
 | Domínios e URLs | Product Owner + Engenharia | antes da homologação pública | configuração incompleta |
 | Retenção e exclusão LGPD | Produto + responsável jurídico | antes da produção | risco legal |
-| Termos comerciais da API Ninjas | Product Owner + Engenharia | antes do uso comercial | bloqueia catálogo externo |
 
 Nenhuma pendência autoriza escolha silenciosa. A decisão deve ser registrada em Issue/PR e ADR quando arquitetural.
+
+Resolvida (removida desta tabela): "Termos comerciais da API Ninjas" — a FIT-121 (27/09/2026) descontinuou inteiramente a integração em vez de licenciá-la comercialmente; o catálogo global do FitOS é preenchido pelo catálogo curado próprio (IMP-EX-002), que não depende de nenhum fornecedor externo. Ver `docs/06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`.
