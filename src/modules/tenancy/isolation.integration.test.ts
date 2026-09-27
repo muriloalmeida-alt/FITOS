@@ -27,6 +27,7 @@ let privateExerciseB: { id: string };
 let globalExercise: { id: string };
 let tenantIndividual: { id: string };
 let privateExerciseIndividual: { id: string };
+let commercialPlan: { id: string };
 
 beforeAll(async () => {
   const ownerA = await prisma.user.create({
@@ -86,6 +87,10 @@ beforeAll(async () => {
   privateExerciseIndividual = await prisma.exercise.create({
     data: { tenantId: tenantIndividual.id, name: `Exercício privado individual ${run}`, origin: "PERSONAL" },
   });
+
+  commercialPlan = await prisma.plan.create({
+    data: { slug: `plano-teste-${run}`, audience: "PERSONAL", name: "Plano de teste", billingCycle: "MENSAL" },
+  });
 });
 
 afterAll(async () => {
@@ -104,6 +109,7 @@ afterAll(async () => {
   await prisma.user.deleteMany({
     where: { email: { contains: run } },
   });
+  await prisma.plan.deleteMany({ where: { id: commercialPlan.id } });
   await prisma.$disconnect();
 });
 
@@ -172,10 +178,10 @@ describe("constraints de tenancy (1 personal = 1 tenant; aluno = 1 tenant)", () 
   });
 
   it("impede uma segunda assinatura SaaS para o mesmo tenant", async () => {
-    await prisma.saasSubscription.create({ data: { tenantId: tenantA.id, provider: "sandbox" } });
+    await prisma.saasSubscription.create({ data: { tenantId: tenantA.id, planId: commercialPlan.id, provider: "sandbox" } });
 
     await expect(
-      prisma.saasSubscription.create({ data: { tenantId: tenantA.id, provider: "sandbox" } })
+      prisma.saasSubscription.create({ data: { tenantId: tenantA.id, planId: commercialPlan.id, provider: "sandbox" } })
     ).rejects.toThrow(Prisma.PrismaClientKnownRequestError);
 
     await prisma.saasSubscription.deleteMany({ where: { tenantId: tenantA.id } });

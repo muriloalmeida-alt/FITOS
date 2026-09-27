@@ -5,6 +5,7 @@ const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
+const getSubscriptionForTenant = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -30,6 +31,11 @@ vi.mock("@/modules/personal-onboarding/onboarding", async () => {
     "@/modules/personal-onboarding/onboarding"
   );
   return { ...actual, getPersonalOnboardingProfile: (...args: unknown[]) => getPersonalOnboardingProfile(...args) };
+});
+
+vi.mock("@/modules/billing/subscriptions", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
+  return { ...actual, getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) };
 });
 
 vi.mock("next/navigation", () => ({
@@ -127,7 +133,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/onboarding-personal");
   });
 
-  it("personal com onboarding concluído vê dados reais: conta, espaço e perfil profissional, nunca uma assinatura fabricada", async () => {
+  it("personal com onboarding concluído vê dados reais: conta, espaço, perfil profissional e assinatura", async () => {
     getServerSession.mockResolvedValue({
       user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" },
     });
@@ -147,6 +153,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
       termsAcceptedAt: new Date(),
     });
     findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
+    getSubscriptionForTenant.mockResolvedValue({ plan: { name: "Profissional" } });
     const { default: PerfilPage } = await import("./page");
 
     render(await PerfilPage());
@@ -158,7 +165,36 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(screen.getByText("(11) 99999-9999")).toBeInTheDocument();
     expect(screen.getByText("012345-G/SP")).toBeInTheDocument();
     expect(screen.getByText("De 21 a 50 alunos")).toBeInTheDocument();
-    expect(screen.getByText(/Ainda não há gestão de assinatura neste MVP/)).toBeInTheDocument();
+    expect(screen.getByText("Profissional")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Gerenciar assinatura" })).toHaveAttribute("href", "/painel/assinatura");
+  });
+
+  it("personal sem assinatura contratada vê aviso honesto, nunca um plano fabricado", async () => {
+    getServerSession.mockResolvedValue({
+      user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" },
+    });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u1",
+      role: "PERSONAL",
+      tenantId: "t1",
+      studentId: null,
+    });
+    getPersonalOnboardingProfile.mockResolvedValue({
+      id: "pp1",
+      tenantId: "t1",
+      phone: "(11) 99999-9999",
+      cref: "012345-G/SP",
+      studentRangeEstimate: "DE_21_A_50",
+      termsAcceptedAt: new Date(),
+    });
+    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
+    getSubscriptionForTenant.mockResolvedValue(null);
+    const { default: PerfilPage } = await import("./page");
+
+    render(await PerfilPage());
+
+    expect(screen.getByText("Nenhuma assinatura contratada ainda.")).toBeInTheDocument();
   });
 
   it("personal sem CREF informado mostra 'Não informado', nunca um valor vazio ou fabricado", async () => {
