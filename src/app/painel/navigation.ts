@@ -15,12 +15,27 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// interina já usada para "Alunos" (FIT-013) e "Perfil" do aluno (FIT-016):
 /// um destino real não espera o pai conceitual da árvore de informação
 /// existir. "Treinos" continua como o item real para modelos/planos.
+///
+/// Ordem redefinida na FIT-117 (fundação visual/shell do redesign
+/// mobile-first): os 3 primeiros da lista são exatamente os que a barra
+/// compacta mostra sem "Mais" (ver `MAX_COMPACT_ITEMS` em `AppShell.tsx`) —
+/// "Início/Alunos/Treinos" é a combinação especificada pelo protótipo
+/// (`personal.js`), não "Início/Alunos/Exercícios" que a ordem anterior
+/// produzia. "Perfil" passa a ser real na PR4 do redesign (FIT-120):
+/// `/painel/perfil` agora também atende o papel PERSONAL (a mesma rota já
+/// existia para o ALUNO desde a FIT-016) — dados profissionais (celular/
+/// CREF/faixa de alunos) e um resumo real da assinatura, com link para a
+/// gestão completa em `/painel/assinatura` (FIT-122, item próprio abaixo).
+/// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
+/// ainda.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
-  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "treinos", label: "Treinos", href: "/painel/treinos" },
+  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil" },
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
@@ -47,5 +62,8 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos" },
   { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao" },
+  // FIT-122: "Assinatura" (FitOS Livre) já é real — "Perfil" (nome/e-mail)
+  // continua comingSoon, são destinos distintos.
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "perfil", label: "Perfil", comingSoon: true },
 ];

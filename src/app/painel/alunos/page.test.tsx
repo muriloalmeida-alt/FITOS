@@ -116,4 +116,41 @@ describe("AlunosPage (FIT-013)", () => {
 
     expect(screen.getByText("Página 1 de 2")).toBeInTheDocument();
   });
+
+  it("segmentos Ativos/Inativos/Todos exibem a contagem real de cada um, e o ativo reflete o filtro atual", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listStudents.mockImplementation(async (input: { status?: string; pageSize?: number }) => {
+      if (input.pageSize === 1 && input.status === "ATIVO") return { items: [], total: 24, page: 1, pageSize: 1 };
+      if (input.pageSize === 1 && input.status === "INATIVO") return { items: [], total: 5, page: 1, pageSize: 1 };
+      if (input.pageSize === 1 && !input.status) return { items: [], total: 29, page: 1, pageSize: 1 };
+      return { items: [], total: 24, page: 1, pageSize: 20 };
+    });
+    const { default: AlunosPage } = await import("./page");
+
+    render(await AlunosPage({ searchParams: makeSearchParams() }));
+
+    const ativosTab = screen.getByRole("tab", { name: "Ativos 24" });
+    expect(ativosTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Inativos 5" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "Todos 29" })).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("aba 'Todos' exibe um aluno com vínculo encerrado com o rótulo real, nunca um status inventado", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listStudents.mockImplementation(async (input: { status?: string; pageSize?: number }) => {
+      if (input.pageSize === 1) return { items: [], total: 1, page: 1, pageSize: 1 };
+      return {
+        items: [{ id: "s1", displayName: "Encerrado Antigo", email: "encerrado@example.test", status: "VINCULO_ENCERRADO" }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+    });
+    const { default: AlunosPage } = await import("./page");
+
+    render(await AlunosPage({ searchParams: makeSearchParams({ status: "todos" }) }));
+
+    expect(screen.getByText("Encerrado Antigo")).toBeInTheDocument();
+    expect(screen.getByText("Vínculo encerrado")).toBeInTheDocument();
+  });
 });

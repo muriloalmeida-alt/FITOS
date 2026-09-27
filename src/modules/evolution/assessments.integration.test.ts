@@ -5,7 +5,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
-import { createAssessment, listAssessmentsForStudent, softDeleteAssessment } from "./assessments";
+import { createAssessment, getLastAssessmentDatesForTenant, listAssessmentsForStudent, softDeleteAssessment } from "./assessments";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
@@ -208,5 +208,68 @@ describe("softDeleteAssessment (FIT-042)", () => {
     await expect(
       softDeleteAssessment({ tenantId: tenantB.id, actorUserId: ownerB.id, assessmentId: assessment.id }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("getLastAssessmentDatesForTenant (FIT-120)", () => {
+  it("retorna a data mais recente por aluno, nunca a mais antiga", async () => {
+    const { tenant, owner } = await createTenant("ultima-data");
+    const student = await createStudent(tenant.id, "ultima-data");
+    const primeira = await createAssessment(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, weightKg: 80, bodyFatPercent: null, notes: null, measurementsCm: [] },
+      prisma
+    );
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const segunda = await createAssessment(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, weightKg: 79, bodyFatPercent: null, notes: null, measurementsCm: [] },
+      prisma
+    );
+
+    const datas = await getLastAssessmentDatesForTenant({ tenantId: tenant.id }, prisma);
+
+    expect(datas.get(student.id)?.getTime()).toBe(segunda.recordedAt.getTime());
+    expect(datas.get(student.id)?.getTime()).not.toBe(primeira.recordedAt.getTime());
+  });
+
+  it("aluno sem nenhuma avaliação nunca aparece no mapa", async () => {
+    const { tenant } = await createTenant("sem-avaliacao");
+    const student = await createStudent(tenant.id, "sem-avaliacao");
+
+    const datas = await getLastAssessmentDatesForTenant({ tenantId: tenant.id }, prisma);
+
+    expect(datas.has(student.id)).toBe(false);
+  });
+
+  it("ignora avaliação excluída logicamente ao calcular a mais recente", async () => {
+    const { tenant, owner } = await createTenant("ultima-excluida");
+    const student = await createStudent(tenant.id, "ultima-excluida");
+    const primeira = await createAssessment(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, weightKg: 80, bodyFatPercent: null, notes: null, measurementsCm: [] },
+      prisma
+    );
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const segunda = await createAssessment(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, weightKg: 79, bodyFatPercent: null, notes: null, measurementsCm: [] },
+      prisma
+    );
+    await softDeleteAssessment({ tenantId: tenant.id, actorUserId: owner.id, assessmentId: segunda.id }, prisma);
+
+    const datas = await getLastAssessmentDatesForTenant({ tenantId: tenant.id }, prisma);
+
+    expect(datas.get(student.id)?.getTime()).toBe(primeira.recordedAt.getTime());
+  });
+
+  it("isolamento: nunca considera avaliação de aluno de outro tenant", async () => {
+    const { tenant: tenantA, owner } = await createTenant("ultima-isolamento-a");
+    const { tenant: tenantB } = await createTenant("ultima-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "ultima-isolamento");
+    await createAssessment(
+      { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentA.id, weightKg: 80, bodyFatPercent: null, notes: null, measurementsCm: [] },
+      prisma
+    );
+
+    const datasDeOutroTenant = await getLastAssessmentDatesForTenant({ tenantId: tenantB.id }, prisma);
+
+    expect(datasDeOutroTenant.has(studentA.id)).toBe(false);
   });
 });

@@ -16,13 +16,7 @@
 }
 
 .brand {
-  display: block;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fitos-color-chrome-accent);
+  margin-bottom: var(--fitos-space-1);
 }
 
 .title {

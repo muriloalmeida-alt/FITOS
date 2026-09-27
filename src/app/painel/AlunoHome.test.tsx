@@ -72,8 +72,7 @@ describe("AlunoHome (FIT-040 — treino de hoje)", () => {
 
     expect(screen.getByText("Treino A")).toBeInTheDocument();
     expect(screen.getByText("Supino")).toBeInTheDocument();
-    expect(screen.getByText("Peito")).toBeInTheDocument();
-    expect(screen.getByText(/3 séries.*10 repetições.*carga: 20kg.*descanso: 60s/)).toBeInTheDocument();
+    expect(screen.getByText(/Peito.*3 séries.*10 repetições.*carga: 20kg.*descanso: 60s/)).toBeInTheDocument();
     expect(screen.getByText("Foco na execução")).toBeInTheDocument();
     expect(screen.getByText("Manter os cotovelos a 45 graus.")).toBeInTheDocument();
   });

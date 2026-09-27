@@ -11,9 +11,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: `${appName} — Fundação técnica`,
-  description:
-    "Fundação executável do FitOS: aplicação Next.js com o Design System M3 aplicado, sem funcionalidades de negócio implementadas.",
+  title: appName,
+  description: "Gestão de alunos, treinos e evolução para personal trainers e para quem treina sozinho.",
 };
 
 export default function RootLayout({

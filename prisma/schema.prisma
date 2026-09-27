@@ -105,6 +105,11 @@ enum SaasSubscriptionStatus {
   CANCELADA
 }
 
+enum BillingCycle {
+  MENSAL
+  ANUAL
+}
+
 /// Papel do usuário autenticado (FIT-009). Único critério usado pela camada
 /// de autorização (FIT-011) para distinguir personal de aluno — não deve ser
 /// confundido com `Tenant.ownerId`/`Student.userId`, que continuam sendo a
@@ -1001,18 +1006,72 @@ model Payment {
   @@map("payments")
 }
 
-/// Assinatura SaaS do FitOS contratada pelo personal (tenant). `tenantId`
-/// único: no máximo 1 assinatura por tenant. Estruturalmente separada de
-/// StudentCharge — nenhuma relação entre os dois modelos.
+/// Catálogo de planos comerciais (FIT-090/FIT-122) — preço, ciclo, limite
+/// de alunos e teste grátis nunca são valores fixos no código, sempre uma
+/// linha desta tabela (`REGRAS-DE-NEGOCIO.md`/`EPIC-12-MONETIZACAO.md`:
+/// "planos, preços, limites... configuráveis — nunca valores fixos no
+/// código"). `audience` reaproveita `TenantType` (nunca um enum paralelo
+/// para o mesmo conceito): um plano `PERSONAL` nunca aparece para um
+/// tenant `INDIVIDUAL`, e vice-versa. `studentLimit` só é significativo
+/// para `PERSONAL` (limite de alunos ativos); sempre `null` (sem limite)
+/// para `INDIVIDUAL`, que não tem alunos.
+///
+/// "Versionamento de oferta": um plano já contratado nunca tem preço ou
+/// limite editados em cima da mesma linha — muda-se a oferta criando uma
+/// nova linha (`slug` novo) e marcando a antiga `active=false`, mesmo
+/// princípio de "nunca editar, sempre um novo registro" já usado em
+/// `TrainingPlan`/`PlanAssignment`. `active=false` só impede nova
+/// contratação; quem já assina um plano retirado continua com ele até
+/// trocar ou cancelar.
+model Plan {
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  audience     TenantType
+  name         String
+  description  String?
+  priceCents   Int          @default(0)
+  billingCycle BillingCycle
+  studentLimit Int?
+  trialDays    Int?
+  position     Int          @default(0)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  subscriptions SaasSubscription[]
+
+  @@index([audience, active])
+  @@map("plans")
+}
+
+/// Assinatura SaaS do FitOS (FIT-090/FIT-122) — `PERSONAL` contratando o
+/// próprio negócio ou `INDIVIDUAL` assinando o FitOS Livre (FIT-105);
+/// `Plan.audience` sempre confere com `Tenant.type`, verificado em
+/// `src/modules/billing/subscriptions.ts`, nunca só na UI. `tenantId`
+/// único: no máximo 1 assinatura por tenant (linha reaproveitada entre
+/// contratação inicial, troca de plano e cancelamento — não um histórico;
+/// ledger/conciliação completos permanecem fora de escopo, FIT-099).
+/// Estruturalmente separada de StudentCharge — nenhuma relação entre os
+/// dois modelos. `provider` registra o meio de cobrança real
+/// (Asaas/Mercado Pago, FIT-091) — enquanto nenhum gateway estiver
+/// integrado, todo plano é de valor zero e `provider` grava o sentinela
+/// documentado em `src/modules/billing/subscriptions.ts`, nunca um nome de
+/// provedor fictício.
 model SaasSubscription {
-  id        String                 @id @default(cuid())
-  tenantId  String                 @unique
-  status    SaasSubscriptionStatus @default(ATIVA)
-  provider  String
-  createdAt DateTime               @default(now())
+  id             String                 @id @default(cuid())
+  tenantId       String                 @unique
+  planId         String
+  status         SaasSubscriptionStatus @default(ATIVA)
+  provider       String
+  canceledAt     DateTime?
+  canceledReason String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
 
+  @@index([planId])
   @@map("saas_subscriptions")
 }
 

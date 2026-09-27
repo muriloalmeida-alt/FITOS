@@ -1,0 +1,39 @@
+.item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-3);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+}
+
+.thumbnail {
+  border-radius: var(--fitos-shape-large);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.trailing {
+  flex-shrink: 0;
+}

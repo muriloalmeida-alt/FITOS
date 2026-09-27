@@ -85,7 +85,7 @@ describe("FinanceiroPage (FIT-050/053)", () => {
 
     render(await FinanceiroPage({ searchParams: emptySearchParams }));
 
-    expect(screen.getByText("Nenhuma cobrança cadastrada ainda.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma cobrança cadastrada ainda")).toBeInTheDocument();
   });
 
   it("lista cobranças com aluno, descrição, valor e status", async () => {

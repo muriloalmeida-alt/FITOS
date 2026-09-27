@@ -1,0 +1,6 @@
+.attribution {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--fitos-color-on-surface-variant);
+  opacity: 0.8;
+}

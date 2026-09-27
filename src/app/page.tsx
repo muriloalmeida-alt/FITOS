@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <main className={styles.main}>
-      <LandingHeader appName={appName} />
+      <LandingHeader />
 
       <section className={styles.hero}>
         <div className={styles.heroText}>

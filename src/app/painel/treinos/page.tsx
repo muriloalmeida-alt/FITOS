@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button } from "@/shared/ui";
+import { AppShell, Button, EmptyStateAction } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listWorkoutsForTenant } from "@/modules/workouts/workouts";
@@ -43,7 +43,11 @@ export default async function TreinosPage() {
       </div>
 
       {workouts.length === 0 ? (
-        <p className={styles.empty}>Nenhum modelo de treino ainda. Crie o primeiro para começar a montar planos.</p>
+        <EmptyStateAction
+          title="Nenhum modelo de treino ainda"
+          description="Crie o primeiro para começar a montar planos."
+          action={{ label: "+ Criar modelo", href: "/painel/treinos/novo" }}
+        />
       ) : (
         <ul className={styles.list} aria-label="Lista de modelos de treino">
           {workouts.map((workout) => (

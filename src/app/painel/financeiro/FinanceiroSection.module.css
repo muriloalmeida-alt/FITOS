@@ -24,7 +24,7 @@
   flex-direction: column;
   gap: 2px;
   padding: var(--fitos-space-3);
-  border-radius: var(--fitos-shape-medium);
+  border-radius: var(--fitos-shape-card);
   background-color: var(--fitos-color-surface-container);
   border: 1px solid var(--fitos-color-outline-variant);
 }

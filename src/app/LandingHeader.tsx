@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/shared/ui";
+import { BrandLogo, Button } from "@/shared/ui";
 import styles from "./LandingHeader.module.css";
-
-interface LandingHeaderProps {
-  appName: string;
-}
 
 /// Cabeçalho da landing comercial (FIT-110). Sticky, sempre sobre o
 /// "chrome" escuro (mesmos tokens `--fitos-color-chrome*` já usados pelo
@@ -16,14 +12,14 @@ interface LandingHeaderProps {
 /// predominantemente preto, grafite e cinza profundo"). O menu mobile é o
 /// único estado interativo desta página que precisa de client component;
 /// todo o resto da landing é Server Component.
-export function LandingHeader({ appName }: LandingHeaderProps) {
+export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className={styles.header}>
       <div className={styles.bar}>
         <Link href="/" className={styles.brand}>
-          {appName}
+          <BrandLogo variant="horizontal" background="dark" size={20} />
         </Link>
 
         <nav className={styles.desktopNav} aria-label="Navegação principal">

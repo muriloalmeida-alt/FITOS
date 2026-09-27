@@ -42,6 +42,18 @@
   --fitos-error-100: #ffdad6;
   --fitos-error-500: #ba1a1a;
 
+  /*
+   * Amarelo/âmbar — extensão M3 (não faz parte da paleta oficial base),
+   * necessária para o papel semântico "atenção" (`AttentionItem`, status
+   * pendente/atrasado de `PaymentStatus`, aluno com convite expirando):
+   * distinto de `error` (reservado a falha/destrutivo) e de `primary`
+   * (reservado a ação positiva/confirmação). "Status não depende apenas de
+   * cor" (critério de aceite do pacote) — todo consumidor deste token
+   * também usa um ícone/rótulo textual, nunca só a cor.
+   */
+  --fitos-amber-100: #ffdea6;
+  --fitos-amber-900: #271900;
+
   /* Tipografia */
   --fitos-font-family: var(--fitos-font-manrope, Manrope), system-ui, sans-serif;
 
@@ -64,6 +76,7 @@
   --fitos-shape-small: 8px;
   --fitos-shape-medium: 12px;
   --fitos-shape-large: 16px;
+  --fitos-shape-card: 24px;
   --fitos-shape-full: 999px;
 
   /* Movimento */
@@ -95,6 +108,10 @@
   --fitos-color-outline-variant: #c2c8d0;
   --fitos-color-error: #ba1a1a;
   --fitos-color-on-error: #ffffff;
+  --fitos-color-warning: #7a5900;
+  --fitos-color-on-warning: #ffffff;
+  --fitos-color-warning-container: var(--fitos-amber-100);
+  --fitos-color-on-warning-container: var(--fitos-amber-900);
 
   /*
    * Chrome de marca — fixo, não alterna com o tema (claro/escuro).
@@ -138,5 +155,9 @@
     --fitos-color-outline-variant: #424a52;
     --fitos-color-error: #ffb4ab;
     --fitos-color-on-error: #690005;
+    --fitos-color-warning: #ffb945;
+    --fitos-color-on-warning: #412d00;
+    --fitos-color-warning-container: #5c4200;
+    --fitos-color-on-warning-container: var(--fitos-amber-100);
   }
 }

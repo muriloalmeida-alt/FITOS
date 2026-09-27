@@ -1,0 +1,59 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  width: 100%;
+  text-align: left;
+  border-radius: var(--fitos-shape-card);
+  padding: var(--fitos-space-3) var(--fitos-space-4);
+  background-color: var(--fitos-color-surface-container);
+  border: 1px solid var(--fitos-color-outline-variant);
+  color: inherit;
+  text-decoration: none;
+  font-family: var(--fitos-font-family);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description {
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.statusPill {
+  flex-shrink: 0;
+  border-radius: var(--fitos-shape-full);
+  padding: var(--fitos-space-1) var(--fitos-space-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.positive {
+  background-color: var(--fitos-color-primary-container);
+  color: var(--fitos-color-on-primary-container);
+}
+
+.warning {
+  background-color: var(--fitos-color-warning-container);
+  color: var(--fitos-color-on-warning-container);
+}
+
+.neutral {
+  background-color: var(--fitos-color-surface-container-high);
+  color: var(--fitos-color-on-surface-variant);
+}

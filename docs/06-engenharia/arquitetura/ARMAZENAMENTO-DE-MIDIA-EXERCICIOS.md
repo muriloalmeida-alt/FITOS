@@ -1,6 +1,6 @@
 # Armazenamento de mídia — ilustrações do catálogo de exercícios (R2)
 
-Ver ADR-010 para a decisão e o contexto. Este documento é operacional: como configurar, rodar, verificar e reverter.
+Ver ADR-011 para a decisão e o contexto. Este documento é operacional: como configurar, rodar, verificar e reverter.
 
 ## Visão geral
 
@@ -83,18 +83,15 @@ Reporta, sem tocar rede nem banco além de leitura: `encontrados` (total do mani
 7. Abrir `/painel/exercicios` (lista e detalhe) em desktop e mobile: imagem carregando, `alt` correto, nenhum ícone de imagem quebrada.
 8. Rodar o comando de carga real uma segunda vez: esperado 100% `ignorado`, zero `importado`/`atualizado` novo, zero objeto novo no bucket.
 
-### Execução real — bloqueio registrado nesta rodada
+### Execução real — confirmada por Murilo (27/09/2026)
 
-Este agente **não executou** upload real nem validação em homologação. Dois motivos, ambos confirmados nesta sessão, não presumidos:
-
-- **Rede**: o ambiente de execução deste agente bloqueia conexões de saída para o endpoint R2 pela mesma política de proxy de egresso que já bloqueia `railway.com` (testado e confirmado nesta rodada com uma tentativa real de conexão).
-- **Credenciais**: as variáveis `R2_*` estão configuradas no serviço Railway de homologação, não neste ambiente local/sandbox; o token de acesso fornecido nesta sessão foi para o Railway (não para o R2) e também não pôde ser validado pelo mesmo bloqueio de rede.
+Este agente não tem, neste ambiente de execução, rota de rede liberada para o endpoint R2 nem credenciais R2 reais (mesmo bloqueio de proxy de egresso já registrado para `railway.com`) — por isso a carga real nunca pôde ser executada nem verificada de forma independente a partir daqui, em nenhuma rodada. Murilo (Product Owner, com acesso direto ao Railway/Cloudflare) confirmou que as imagens do lote atual já estão publicadas no bucket R2. Este documento registra essa confirmação como a origem da informação — não como uma verificação de ponta a ponta feita por este agente (o mesmo padrão já usado para outras execuções que só o Product Owner podia realizar, ex.: a carga do catálogo curado via `?source=curated` na IMP-EX-002).
 
 O que foi comprovado nesta rodada, sem depender de rede real:
 - Testes automatizados (mocks do `S3Client`, Postgres real de desenvolvimento) cobrindo upload bem-sucedido, falha de upload, falha de confirmação, idempotência, validação de manifesto, exercício inexistente/de origem errada, ausência de segredos no relatório.
-- `--dry-run` real contra o Postgres de desenvolvimento: `43 encontrados`, `0 ausentes`, `43 atualizáveis` (os 43 já tinham `imageUrl` local da FIT-111 — a migração para R2 os trataria como atualização, não importação nova), variáveis R2 corretamente reportadas como ausentes neste ambiente.
+- `--dry-run` real contra o Postgres de desenvolvimento: `203 encontrados`, `0 ausentes`, `160 novos`, `43 atualizáveis`, variáveis R2 corretamente reportadas como ausentes neste ambiente (ver seção "Ampliação FIT-118" abaixo).
 
-**Quem tiver acesso de rede e as credenciais R2 reais de homologação** pode rodar exatamente os comandos da seção "Comandos" acima, sem nenhuma mudança de código — a implementação está completa e testada, só a execução contra o ambiente real está pendente.
+**Verificação ainda em aberto, fora do alcance deste agente**: os passos 4-8 do "Procedimento de homologação e promoção" acima (contagem de objetos no bucket, `Exercise.imageUrl` no Postgres de homologação, amostragem de URLs por HTTP, `/painel/exercicios` renderizando de fato, segunda execução 100% idempotente) dependem de acesso direto ao Railway/R2/Postgres de homologação — continuam como responsabilidade de quem tiver esse acesso, mesmo após a confirmação do upload.
 
 ## Rollback
 
@@ -120,10 +117,10 @@ Um segundo lote de 208 fotografias aprovadas foi recebido (nomes de arquivo já 
 - Dimensões reais variam por arquivo (1254×1254, 512×512, 418×627 confirmados por amostragem) — nunca assumidas fixas; `width`/`height` do manifesto refletem o arquivo real de cada entrada (metadado informativo, a renderização usa contêiner fixo com `object-fit: cover` em `ExerciseThumbnail`, não é afetada por isso).
 - `--dry-run` local confirmou o resultado: `encontrados=203 já_vinculados=0 novos=160 atualizáveis=43 ausentes=0 outros_falhos=0`.
 
-**Pendência explícita**: as 5 imagens vazias precisam ser reenviadas (o restante do lote está correto); assim que chegarem, a mesma reexecução do importador as adiciona sem duplicar nada (chave determinística por slug).
+**Decisão de Produto (Murilo, 27/09/2026): aceitar 203/208 como estado final, não perseguir os 5 restantes.** As 5 imagens vazias (`alongamento-de-gluteo-deitado`, `barra-australiana`, `elevacao-lateral-inclinada`, `panturrilha-no-leg-press`, `rosca-scott-na-maquina`) deixam de ser tratadas como pendência de reenvio — `Exercise.imageUrl` permanece `null` para esses 5 exercícios de forma permanente (por decisão, não por falha técnica), com o mesmo fallback visual "Sem imagem" (`ExerciseThumbnail`) que qualquer exercício sem ilustração já usa. Se um lote corrigido for enviado no futuro, a mesma reexecução do importador os inclui sem duplicar nada (chave determinística por slug) — mas isso deixou de ser um item aberto desta História.
 
 ## Pendências reais
 
-- Cobertura de imagens: **203/208** (ver "Ampliação FIT-118" acima) — 5 exercícios aguardam reenvio de arquivo corrigido.
-- O teaser da biblioteca na landing (`src/app/page.tsx`, seção `#biblioteca`) continua servindo os arquivos locais diretamente (não consulta `Exercise.imageUrl`, não foi migrado para R2 nesta rodada) — ver ADR-010.
+- Cobertura de imagens: **203/208**, aceita como estado final por decisão de Produto (ver acima) — não é mais uma pendência em aberto.
+- O teaser da biblioteca na landing (`src/app/page.tsx`, seção `#biblioteca`) continua servindo os arquivos locais diretamente (não consulta `Exercise.imageUrl`, não foi migrado para R2 nesta rodada) — ver ADR-011.
 - Exclusão controlada de objetos órfãos no bucket (flag explícita + confirmação) não foi implementada — não havia caso de uso real para priorizar isso nesta rodada.
