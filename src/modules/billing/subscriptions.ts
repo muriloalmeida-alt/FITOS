@@ -1,7 +1,9 @@
 import "server-only";
-import type { PrismaClient, SaasSubscription, TenantType } from "@prisma/client";
+import type { Plan, PrismaClient, SaasSubscription, TenantType } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getPlanById } from "./plans";
+
+export type SaasSubscriptionWithPlan = SaasSubscription & { plan: Plan };
 
 /// Enquanto nenhum gateway de pagamento (Asaas/Mercado Pago, FIT-091) está
 /// integrado, toda assinatura é de valor zero e `SaasSubscription.provider`
@@ -22,7 +24,7 @@ export class SubscriptionError extends Error {
 export async function getSubscriptionForTenant(
   tenantId: string,
   client: PrismaClient = prisma
-): Promise<(SaasSubscription & { plan: Awaited<ReturnType<typeof getPlanById>> }) | null> {
+): Promise<SaasSubscriptionWithPlan | null> {
   const subscription = await client.saasSubscription.findUnique({
     where: { tenantId },
     include: { plan: true },
