@@ -45,6 +45,7 @@ export default async function OnboardingPage() {
           initialObjective={existingProfile?.objective ?? null}
           initialExperienceLevel={existingProfile?.experienceLevel ?? null}
           initialWeeklyAvailability={existingProfile?.weeklyAvailability ?? null}
+          alreadyAcceptedTerms={existingProfile?.termsAcceptedAt !== null && existingProfile?.termsAcceptedAt !== undefined}
         />
       </div>
     </main>

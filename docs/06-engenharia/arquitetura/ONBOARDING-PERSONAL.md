@@ -18,7 +18,7 @@ Por quê: a FIT-101 já resolveu exatamente essa mesma tensão para o workspace 
 
 **Data de nascimento (mencionada na seção 7 do pacote) foi omitida deliberadamente** — o próprio pacote condiciona isso a "se houver justificativa funcional no modelo atual"; não há nenhuma funcionalidade do FitOS que use data de nascimento do Personal.
 
-**Aceite dos termos sem link real**: não existe hoje nenhuma página de Termos de Uso/Política de Privacidade (mesma pendência documentada no rodapé da landing, FIT-110). O checkbox é apresentado com o texto honesto "Termos de uso e Política de Privacidade — em preparação" ao lado, nunca um link morto fingindo que o documento existe. `termsAcceptedAt` grava a data da submissão mesmo assim — quando a página real existir, o registro já existente permanece válido (o aceite foi genuíno, só a página ainda não existia).
+**Aceite dos termos, atualizado pela FIT-119**: o checkbox agora linka para as páginas reais `/termos-de-uso`/`/politica-de-privacidade` (rascunho, pendente de revisão jurídica final — mesma pendência documentada em `DECISOES-PENDENTES.md`, agora com mecânica completa em vez de texto de espera). `termsAcceptedAt` continua gravando a data da submissão normalmente.
 
 ## Gate obrigatório em `/painel` (decisão confirmada com Murilo)
 
@@ -62,4 +62,4 @@ Requisitos comuns (seção 6, aplicados aqui pela mesma família de fluxo da FIT
 
 ## Pendências reais
 
-- O link real de Termos de Uso/Política de Privacidade continua pendente (mesma pendência da FIT-110) — quando existir, nenhuma migração de dados é necessária; os aceites já registrados permanecem válidos.
+- FIT-119 criou as páginas reais de Termos de Uso/Política de Privacidade e linkou o checkbox a elas — mas o conteúdo é um rascunho, ainda pendente de revisão por um responsável jurídico (`DECISOES-PENDENTES.md`).

@@ -27,6 +27,7 @@ export interface CompleteIndividualOnboardingInput {
   objective: IndividualObjective;
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
+  termsAccepted: boolean;
 }
 
 function assertValid(input: CompleteIndividualOnboardingInput): void {
@@ -46,11 +47,22 @@ function assertValid(input: CompleteIndividualOnboardingInput): void {
 /// (ex.: o usuário volta e muda de ideia sobre o objetivo) sempre
 /// atualiza o mesmo registro via upsert, nunca cria um segundo — não há
 /// "histórico de onboarding" nesta História, apenas a configuração atual.
+///
+/// `termsAccepted` só é exigido na primeira conclusão (`FIT-119`) — uma
+/// vez aceito, reabrir o onboarding para ajustar objetivo/experiência/
+/// disponibilidade nunca pede um novo aceite nem sobrescreve
+/// `termsAcceptedAt` (mesmo princípio de "preserva o momento original" já
+/// usado em `endStudentBond`/`softDeleteAssessment`).
 export async function completeIndividualOnboarding(
   input: CompleteIndividualOnboardingInput,
   client: PrismaClient = prisma
 ): Promise<IndividualProfile> {
   assertValid(input);
+
+  const existing = await client.individualProfile.findUnique({ where: { tenantId: input.tenantId } });
+  if (!existing && !input.termsAccepted) {
+    throw new OnboardingError("VALIDACAO", "É necessário aceitar os termos para continuar.");
+  }
 
   return client.individualProfile.upsert({
     where: { tenantId: input.tenantId },
@@ -59,6 +71,7 @@ export async function completeIndividualOnboarding(
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
+      termsAcceptedAt: new Date(),
     },
     update: {
       objective: input.objective,

@@ -39,7 +39,8 @@ export async function POST(request: Request) {
       !body ||
       !VALID_OBJECTIVES.includes(body.objective) ||
       !VALID_EXPERIENCE_LEVELS.includes(body.experienceLevel) ||
-      !VALID_AVAILABILITIES.includes(body.weeklyAvailability)
+      !VALID_AVAILABILITIES.includes(body.weeklyAvailability) ||
+      typeof body.termsAccepted !== "boolean"
     ) {
       return Response.json(
         { error: "VALIDACAO", message: "Informe objetivo, experiência e disponibilidade válidos." },
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       objective: body.objective,
       experienceLevel: body.experienceLevel,
       weeklyAvailability: body.weeklyAvailability,
+      termsAccepted: body.termsAccepted,
     });
     return Response.json(profile, { status: 201 });
   } catch (error) {

@@ -103,6 +103,7 @@ describe("POST /api/onboarding", () => {
       objective: "GANHAR_MASSA",
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
+      termsAcceptedAt: new Date(),
     });
 
     const { POST } = await import("./route");
@@ -113,6 +114,7 @@ describe("POST /api/onboarding", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          termsAccepted: true,
           tenantId: "tenant-adulterado",
         }),
       })
@@ -126,6 +128,7 @@ describe("POST /api/onboarding", () => {
       objective: "GANHAR_MASSA",
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
+      termsAccepted: true,
     });
   });
 
@@ -141,18 +144,38 @@ describe("POST /api/onboarding", () => {
     expect(completeIndividualOnboarding).not.toHaveBeenCalled();
   });
 
-  it("retorna 400 com o motivo quando o domínio rejeita", async () => {
-    const { OnboardingError } = await vi.importActual<typeof import("@/modules/individual-onboarding/onboarding")>(
-      "@/modules/individual-onboarding/onboarding"
-    );
+  it("retorna 400 quando termsAccepted não é enviado como booleano", async () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
-    completeIndividualOnboarding.mockRejectedValue(new OnboardingError("VALIDACAO", "Objetivo inválido."));
 
     const { POST } = await import("./route");
     const response = await POST(
       new Request("http://localhost/api/onboarding", {
         method: "POST",
         body: JSON.stringify({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "UM_A_DOIS_DIAS" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(completeIndividualOnboarding).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 com o motivo quando o domínio rejeita", async () => {
+    const { OnboardingError } = await vi.importActual<typeof import("@/modules/individual-onboarding/onboarding")>(
+      "@/modules/individual-onboarding/onboarding"
+    );
+    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
+    completeIndividualOnboarding.mockRejectedValue(new OnboardingError("VALIDACAO", "É necessário aceitar os termos para continuar."));
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/onboarding", {
+        method: "POST",
+        body: JSON.stringify({
+          objective: "GANHAR_MASSA",
+          experienceLevel: "INICIANTE",
+          weeklyAvailability: "UM_A_DOIS_DIAS",
+          termsAccepted: false,
+        }),
       })
     );
     const body = await response.json();
