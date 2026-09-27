@@ -1,4 +1,4 @@
-import { AppShell, Button, Card } from "@/shared/ui";
+import { AppShell, Card, WorkoutExerciseCard, WorkoutTodayCard } from "@/shared/ui";
 import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
 import { LogoutButton } from "./LogoutButton";
 import { ALUNO_NAV_ITEMS } from "./navigation";
@@ -40,34 +40,80 @@ function prescriptionSummary(item: PrescriptionSummaryInput): string {
   return parts.length > 0 ? parts.join(" · ") : "Sem parâmetros de prescrição";
 }
 
-function TreinoDeHoje({ schedule }: { schedule: StudentTodaySchedule }) {
+function itemMeta(item: PrescriptionSummaryInput & { exercise: { muscle: string | null } }): string {
+  const summary = prescriptionSummary(item);
+  return item.exercise.muscle ? `${item.exercise.muscle} · ${summary}` : summary;
+}
+
+/// Sessão em andamento cuja atribuição não é mais "o treino de hoje" (ex.:
+/// aluno começou ontem e ainda não concluiu) — sem o nome do treino
+/// disponível aqui (`hasInProgressSession` é só um booleano, mesmo
+/// contrato de antes da FIT-120), texto sempre genérico, nunca inventado.
+function ContinuarSessaoCard() {
+  return (
+    <WorkoutTodayCard
+      eyebrow="Treino em andamento"
+      title="Você tem um treino em andamento"
+      description="Continue de onde parou."
+      action={{ label: "Continuar treino em andamento", href: "/painel/treino/sessao" }}
+    />
+  );
+}
+
+function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTodaySchedule; hasInProgressSession: boolean }) {
   if (schedule.state === "SEM_PLANO") {
-    return <p className={styles.empty}>Você ainda não tem um programa de treino atribuído. Fale com seu personal.</p>;
+    return (
+      <>
+        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
+        <p className={styles.empty}>Você ainda não tem um programa de treino atribuído. Fale com seu personal.</p>
+      </>
+    );
   }
   if (schedule.state === "PLANO_ENCERRADO") {
     return (
-      <p className={styles.empty}>
-        Seu programa &quot;{schedule.planName}&quot; foi encerrado. Fale com seu personal para receber um novo.
-      </p>
+      <>
+        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
+        <p className={styles.empty}>
+          Seu programa &quot;{schedule.planName}&quot; foi encerrado. Fale com seu personal para receber um novo.
+        </p>
+      </>
     );
   }
   if (schedule.state === "DESCANSO") {
-    return <p className={styles.empty}>Hoje é dia de descanso. Nenhum treino previsto para hoje.</p>;
+    return (
+      <>
+        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
+        <p className={styles.empty}>Hoje é dia de descanso. Nenhum treino previsto para hoje.</p>
+      </>
+    );
   }
 
   const { workout } = schedule;
   return (
     <>
-      <p className={styles.workoutName}>{workout.name}</p>
+      <WorkoutTodayCard
+        eyebrow="Treino de hoje"
+        title={workout.name}
+        description="Revise os exercícios abaixo e comece quando estiver pronto."
+        meta={`${workout.workoutExercises.length} ${workout.workoutExercises.length === 1 ? "exercício" : "exercícios"}`}
+        action={{
+          label: hasInProgressSession ? "Continuar treino em andamento" : "Começar treino",
+          href: "/painel/treino/sessao",
+        }}
+      />
+
       {workout.workoutExercises.length === 0 ? (
         <p className={styles.empty}>Este treino ainda não tem exercícios.</p>
       ) : (
         <ul className={styles.itemList} aria-label={`Exercícios de ${workout.name}, em ordem`}>
           {workout.workoutExercises.map((item) => (
-            <li key={item.id} className={styles.itemRow}>
-              <span className={styles.exerciseName}>{item.exercise.name}</span>
-              {item.exercise.muscle ? <span className={styles.exerciseMuscle}>{item.exercise.muscle}</span> : null}
-              <span className={styles.summary}>{prescriptionSummary(item)}</span>
+            <li key={item.id}>
+              <WorkoutExerciseCard
+                name={item.exercise.name}
+                meta={itemMeta(item)}
+                thumbnailSrc={item.exercise.imageUrl}
+                thumbnailAlt={item.exercise.imageAlt ?? item.exercise.name}
+              />
               {item.notes ? <span className={styles.notes}>{item.notes}</span> : null}
               {item.exercise.instructions ? <span className={styles.instructions}>{item.exercise.instructions}</span> : null}
             </li>
@@ -82,9 +128,9 @@ function TreinoDeHoje({ schedule }: { schedule: StudentTodaySchedule }) {
 /// tudo da sessão e da atribuição ativa no servidor (`/painel/page.tsx`),
 /// nunca de algo que o cliente poderia influenciar. Quatro estados
 /// honestos (ver `getTodayScheduleForStudent`) — nenhum treino é simulado.
+/// FIT-120: o hero de "Treino de hoje" (`WorkoutTodayCard`) já é a própria
+/// ação de começar/continuar a sessão — nenhum botão separado abaixo dele.
 export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession }: AlunoHomeProps) {
-  const podeIrParaSessao = hasInProgressSession || schedule.state === "TREINO_HOJE";
-
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${displayName}`} navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       <Card title="Seu vínculo">
@@ -100,12 +146,7 @@ export function AlunoHome({ displayName, tenantName, personalName, schedule, has
       </Card>
 
       <Card title="Treino de hoje">
-        <TreinoDeHoje schedule={schedule} />
-        {podeIrParaSessao ? (
-          <Button href="/painel/treino/sessao" variant="filled" className={styles.startSessionLink}>
-            {hasInProgressSession ? "Continuar treino em andamento" : "Começar treino"}
-          </Button>
-        ) : null}
+        <TreinoDeHoje schedule={schedule} hasInProgressSession={hasInProgressSession} />
       </Card>
     </AppShell>
   );

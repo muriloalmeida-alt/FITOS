@@ -895,7 +895,7 @@ export type ActivePlanAssignmentForStudent = PlanAssignment & {
   trainingPlan: TrainingPlan & {
     workouts: (Workout & {
       workoutExercises: (WorkoutExercise & {
-        exercise: { name: string; muscle: string | null; instructions: string | null };
+        exercise: { name: string; muscle: string | null; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
       })[];
     })[];
   };
@@ -919,7 +919,7 @@ export async function getActivePlanAssignmentForStudent(
             include: {
               workoutExercises: {
                 orderBy: { position: "asc" },
-                include: { exercise: { select: { name: true, muscle: true, instructions: true } } },
+                include: { exercise: { select: { name: true, muscle: true, instructions: true, imageUrl: true, imageAlt: true } } },
               },
             },
           },

@@ -375,8 +375,8 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { name: "Treino em andamento" })).toBeInTheDocument();
-    expect(screen.getByText("Treino de Peito")).toBeInTheDocument();
+    expect(screen.getByText("Treino em andamento")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Treino de Peito" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Continuar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao");
   });
 

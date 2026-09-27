@@ -1,5 +1,5 @@
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { AppShell, Button, Card } from "@/shared/ui";
+import { AppShell, Button, Card, WorkoutTodayCard } from "@/shared/ui";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
 
@@ -66,12 +66,12 @@ export function IndividualHome({
       </Card>
 
       {inProgressWorkoutName ? (
-        <Card title="Treino em andamento">
-          <p>{inProgressWorkoutName}</p>
-          <Button href="/painel/meus-treinos/sessao" variant="filled">
-            Continuar treino
-          </Button>
-        </Card>
+        <WorkoutTodayCard
+          eyebrow="Treino em andamento"
+          title={inProgressWorkoutName}
+          description="Continue de onde parou."
+          action={{ label: "Continuar treino", href: "/painel/meus-treinos/sessao" }}
+        />
       ) : null}
 
       <Card title="Meus treinos">
