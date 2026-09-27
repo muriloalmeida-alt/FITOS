@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { AppShell, Button, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
+import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
 
@@ -30,7 +31,10 @@ export default async function PerfilPage() {
     if (!profile) {
       redirect("/onboarding-personal");
     }
-    const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId } });
+    const [tenant, subscription] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
+      getSubscriptionForTenant(ctx.tenantId),
+    ]);
 
     return (
       <AppShell title="Perfil" navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
@@ -64,7 +68,16 @@ export default async function PerfilPage() {
         </Card>
 
         <Card title="Assinatura">
-          <p>Ainda não há gestão de assinatura neste MVP — em preparação.</p>
+          {subscription && subscription.plan ? (
+            <p>
+              Plano atual: <strong>{subscription.plan.name}</strong>
+            </p>
+          ) : (
+            <p>Nenhuma assinatura contratada ainda.</p>
+          )}
+          <Button href="/painel/assinatura" variant="outlined">
+            Gerenciar assinatura
+          </Button>
         </Card>
       </AppShell>
     );
