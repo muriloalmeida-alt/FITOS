@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button } from "@/shared/ui";
+import { AppShell, Button, EmptyStateAction } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listTrainingPlansForTenant } from "@/modules/workouts/workouts";
@@ -42,7 +42,11 @@ export default async function PlanosPage() {
       </div>
 
       {plans.length === 0 ? (
-        <p className={styles.empty}>Nenhum programa ainda. Crie o primeiro para agrupar seus modelos de treino.</p>
+        <EmptyStateAction
+          title="Nenhum programa ainda"
+          description="Crie o primeiro para agrupar seus modelos de treino."
+          action={{ label: "+ Criar programa", href: "/painel/treinos/planos/novo" }}
+        />
       ) : (
         <ul className={styles.list} aria-label="Lista de programas">
           {plans.map((plan) => (

@@ -85,9 +85,9 @@ Card de destaque escuro para "o treino de hoje" (jornada Aluno/Livre — `Hoje`)
 
 Card celebratório (fundo em gradiente, ícone, título, descrição) para reconhecimento de marcos de evolução — recorde pessoal, sequência de treinos, meta concluída. Sem ação própria; é sempre um cartão informativo. `src/shared/ui/AchievementCard.tsx`.
 
-### EmptyStateAction (novo, PR1)
+### EmptyStateAction (novo, PR1; encaixado em Exercícios/Treinos/Programas na PR3)
 
-Estado vazio padrão para listas sem conteúdo (nenhum aluno, nenhum treino, nenhuma cobrança ainda): título, descrição e uma ação opcional (`href` ou `onClick`). Substitui qualquer texto solto de "nenhum item encontrado" por um padrão único e consistente. `src/shared/ui/EmptyStateAction.tsx`.
+Estado vazio padrão para listas sem conteúdo (nenhum aluno, nenhum treino, nenhuma cobrança ainda): título, descrição e uma ação opcional (`href` ou `onClick`). Substitui qualquer texto solto de "nenhum item encontrado" por um padrão único e consistente. `src/shared/ui/EmptyStateAction.tsx`. Aplicado em `/painel/exercicios`, `/painel/treinos` e `/painel/treinos/planos` na PR3 (FIT-120) — o estado "sem resultado para a busca" continua um texto simples nesses três lugares (não é "lista vazia", é "filtro não encontrou nada"; a ação de convite não faz sentido ali).
 
 ### ErrorRecovery (novo, PR1)
 

@@ -48,7 +48,7 @@
   align-items: center;
   gap: var(--fitos-space-3);
   padding: var(--fitos-space-3) var(--fitos-space-4);
-  border-radius: var(--fitos-shape-medium);
+  border-radius: var(--fitos-shape-card);
   background-color: var(--fitos-color-surface-container);
   border: 1px solid var(--fitos-color-outline-variant);
   text-decoration: none;

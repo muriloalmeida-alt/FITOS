@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button, ExerciseThumbnail } from "@/shared/ui";
+import { AppShell, Button, EmptyStateAction, ExerciseThumbnail } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listCatalogExercises } from "@/modules/exercises/exercises";
@@ -111,11 +111,15 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
       </form>
 
       {result.items.length === 0 ? (
-        <p className={styles.empty}>
-          {hasFilter
-            ? "Nenhum resultado para essa busca."
-            : "Nenhum exercício no catálogo ainda. Cadastre um exercício próprio para começar."}
-        </p>
+        hasFilter ? (
+          <p className={styles.empty}>Nenhum resultado para essa busca.</p>
+        ) : (
+          <EmptyStateAction
+            title="Nenhum exercício no catálogo ainda"
+            description="Cadastre um exercício próprio para começar."
+            action={{ label: "+ Cadastrar exercício", href: "/painel/exercicios/novo" }}
+          />
+        )
       ) : (
         <ul className={styles.grid} aria-label="Lista de exercícios">
           {result.items.map((exercise) => (
