@@ -21,19 +21,19 @@
 
 ## Componentes de domínio
 
-> **PR1 do redesign mobile-first (FIT-117, "fundação visual, shell e componentes compartilhados")** implementou em `src/shared/ui/` a primeira versão em código de boa parte destas especificações, até então só descritas neste documento. Cada componente abaixo com nota **Implementado (PR1)** tem arquivo `.tsx`/`.module.css`/`.test.tsx` reais; os sem essa nota continuam apenas especificados, aguardando o PR do fluxo que os usa (PR2 em diante, conforme a ordem sugerida pelo pacote de redesign).
+> **PR1 do redesign mobile-first (FIT-117, "fundação visual, shell e componentes compartilhados")** implementou em `src/shared/ui/` a primeira versão em código de boa parte destas especificações, até então só descritas neste documento. **PR2 (FIT-120, "Personal — dashboard e alunos")** encaixou `StudentCard`, `AttentionItem` e `EvolutionMetric` nas telas reais do Personal (`PersonalHome`, `/painel/alunos`) pela primeira vez, com dados genuínos (nunca fabricados) compostos sobre os módulos já existentes. Cada componente abaixo com nota **Implementado (PRn)** tem arquivo `.tsx`/`.module.css`/`.test.tsx` reais; os sem essa nota continuam apenas especificados, aguardando o PR do fluxo que os usa.
 
 ### StudentCard
 
 Conteúdo: avatar, nome, objetivo, última atividade, adesão e sinal de atenção. Ações secundárias ficam em menu; clicar abre o perfil.
 
-**Implementado (PR1):** `src/shared/ui/StudentCard.tsx`. Primeira versão cobre avatar (reaproveita `Avatar`), nome, descrição (objetivo/última atividade) e uma pílula de status com tom (`positive`/`warning`/`neutral`) — nunca só cor, sempre com texto. Menu de ações secundárias e o "sinal de atenção" dedicado ficam para o PR2 (Personal — dashboard e alunos), quando o componente for de fato encaixado em `/painel/alunos`.
+**Implementado (PR1, encaixado em `/painel/alunos` na PR2):** `src/shared/ui/StudentCard.tsx`. Cobre avatar (reaproveita `Avatar`), nome, descrição e uma pílula de status com tom (`positive`/`warning`/`neutral`) — nunca só cor, sempre com texto. Em `/painel/alunos`, a descrição é o e-mail do aluno (mesmo dado já exibido antes do redesign) e a pílula reflete o status real do `Student` (`Ativo`/`Inativo`/`Vínculo encerrado`) — "objetivo" e "última atividade" (texto do tipo "Treinou hoje", do protótipo de referência) exigiriam uma nova consulta agregada por aluno (última sessão de treino) que não é sinal ainda exposto em nenhuma tela; registrado como pendência para uma PR futura, nunca fabricado como texto estático. Menu de ações secundárias por linha também segue pendente — a linha inteira já navega para o perfil do aluno, mesmo comportamento de antes do redesign.
 
 ### AttentionItem
 
 Conteúdo obrigatório: severidade, fato, pessoa, tempo e ação. Não usar vermelho para simples ausência; vermelho é reservado a erro, bloqueio ou risco real.
 
-**Implementado (PR1):** `src/shared/ui/AttentionItem.tsx`. Duas tonalidades (`neutral`/`warning`) usando o novo papel semântico `warning` (ver `M3-DESIGN-TOKENS.md`) — nunca vermelho/`error`, reservado a bloqueio real, conforme este mesmo documento. Ícone, título, descrição e destino opcional (`href`/`onClick`); campos "pessoa" e "tempo" ficam a critério de quem compõe o conteúdo (a descrição), sem um slot dedicado nesta primeira versão.
+**Implementado (PR1, encaixado no Início do Personal na PR2):** `src/shared/ui/AttentionItem.tsx`. Duas tonalidades (`neutral`/`warning`) usando o novo papel semântico `warning` (ver `M3-DESIGN-TOKENS.md`) — nunca vermelho/`error`, reservado a bloqueio real. A seção "Precisa de atenção" do `PersonalHome` (`getPersonalAttentionItems.ts`) é composição real sobre dados existentes, nunca fabricada: mensalidade vencida na competência atual (`listChargesForTenant`, tom `warning`) tem prioridade sobre avaliação atrasada há 60 dias ou nunca registrada (`getLastAssessmentDatesForTenant`, tom `neutral`) quando o mesmo aluno acumula os dois sinais — um item por aluno, lista sempre limitada a 5. Cada item navega para o perfil do aluno (`href`).
 
 ### ExerciseCard
 
@@ -59,7 +59,7 @@ Estados: parado, rodando, pausado e concluído. Precisa permanecer acessível du
 
 Exibe valor, período, comparação e definição. Nunca usar tendência positiva/negativa sem explicar a métrica.
 
-**Implementado (PR1) como `EvolutionMetric`:** `src/shared/ui/EvolutionMetric.tsx`. Valor, rótulo e chip de tendência opcional (`direction: "up"|"down"|"neutral"`) — sempre com símbolo textual (▲/▼/—), nunca só cor, para nunca depender de percepção de cor para o significado.
+**Implementado (PR1) como `EvolutionMetric`, encaixado no Início do Personal na PR2:** `src/shared/ui/EvolutionMetric.tsx`. Valor, rótulo e chip de tendência opcional (`direction: "up"|"down"|"neutral"`) — sempre com símbolo textual (▲/▼/—), nunca só cor, para nunca depender de percepção de cor para o significado. A "Visão geral" do `PersonalHome` usa os três números já existentes desde a FIT-060 (alunos ativos, treinos ativos, atrasado este mês), sem `trend` nesta rodada — nenhuma comparação histórica ("evoluíram na semana", do protótipo de referência) é composta hoje, e um chip de tendência sem uma métrica anterior real para comparar seria uma variação fabricada; registrado como possível PR futura, não um requisito desta.
 
 ### PaymentStatus
 

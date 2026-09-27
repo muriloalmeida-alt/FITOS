@@ -7,7 +7,9 @@ import { prisma } from "@/shared/db/prisma";
 import { getTodayScheduleForStudent, listWorkoutsForTenant } from "@/modules/workouts/workouts";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { listStudents } from "@/modules/students/students";
-import { getFinancialSummary } from "@/modules/student-finance/charges";
+import { getFinancialSummary, listChargesForTenant } from "@/modules/student-finance/charges";
+import { getLastAssessmentDatesForTenant } from "@/modules/evolution/assessments";
+import { getPersonalAttentionItems } from "./getPersonalAttentionItems";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { PersonalHome } from "./PersonalHome";
@@ -40,12 +42,31 @@ export default async function PainelPage() {
     }
     const now = new Date();
     const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const [tenant, activeStudents, activeWorkouts, financialSummary] = await Promise.all([
+    const [tenant, activeStudents, activeWorkouts, financialSummary, chargesThisMonth, lastAssessmentAtByStudentId] = await Promise.all([
       prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
-      listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 1 }),
+      listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 100 }),
       listWorkoutsForTenant({ tenantId: ctx.tenantId }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
+      listChargesForTenant({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
+      getLastAssessmentDatesForTenant({ tenantId: ctx.tenantId }),
     ]);
+
+    // "Precisa de atenção" (FIT-120): só considera cobranças vencidas da
+    // competência atual, mesma janela já usada por "Atrasado este mês" —
+    // nunca varre o histórico financeiro inteiro do tenant.
+    const overdueAmountCentsByStudentId = new Map<string, number>();
+    for (const charge of chargesThisMonth) {
+      if (charge.status === "ATRASADO") {
+        overdueAmountCentsByStudentId.set(charge.student.id, (overdueAmountCentsByStudentId.get(charge.student.id) ?? 0) + charge.amountCents);
+      }
+    }
+    const attentionItems = getPersonalAttentionItems({
+      students: activeStudents.items.map((student) => ({ id: student.id, displayName: student.displayName })),
+      overdueAmountCentsByStudentId,
+      lastAssessmentAtByStudentId,
+      now,
+    });
+
     return (
       <PersonalHome
         name={session.user.name}
@@ -54,6 +75,7 @@ export default async function PainelPage() {
         activeStudentsCount={activeStudents.total}
         activeWorkoutsCount={activeWorkouts.length}
         atrasadoCents={financialSummary.atrasadoCents}
+        attentionItems={attentionItems}
       />
     );
   }

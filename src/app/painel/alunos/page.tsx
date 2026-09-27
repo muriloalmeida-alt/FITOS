@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { StudentStatus } from "@prisma/client";
-import { AppShell, Avatar, Button } from "@/shared/ui";
+import { AppShell, Button, StudentCard, type StudentCardStatusTone } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listStudents } from "@/modules/students/students";
@@ -23,6 +23,20 @@ interface AlunosPageProps {
 
 function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+/// Rótulo e tom de cada status real de `Student` (nunca inventa um quarto
+/// estado): `VINCULO_ENCERRADO` só aparece na aba "Todos" — não tem aba
+/// própria porque, diferente de ativo/inativo, é definitivo (FIT-014).
+function statusPresentation(status: StudentStatus): { label: string; tone: StudentCardStatusTone } {
+  switch (status) {
+    case "ATIVO":
+      return { label: "Ativo", tone: "positive" };
+    case "INATIVO":
+      return { label: "Inativo", tone: "neutral" };
+    case "VINCULO_ENCERRADO":
+      return { label: "Vínculo encerrado", tone: "neutral" };
+  }
 }
 
 /// Página "Alunos" do shell do personal (FIT-013): primeira funcionalidade
@@ -56,7 +70,12 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
   const pageParam = Number.parseInt(firstValue(params.page) ?? "1", 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  const result = await listStudents({ tenantId: ctx.tenantId, search, status, page, pageSize: PAGE_SIZE });
+  const [result, ativoTotal, inativoTotal, todosTotal] = await Promise.all([
+    listStudents({ tenantId: ctx.tenantId, search, status, page, pageSize: PAGE_SIZE }),
+    listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 1 }),
+    listStudents({ tenantId: ctx.tenantId, status: "INATIVO", pageSize: 1 }),
+    listStudents({ tenantId: ctx.tenantId, pageSize: 1 }),
+  ]);
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
   const hasFilter = Boolean(search) || status === "INATIVO" || showingAll;
@@ -64,8 +83,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
   // Distingue "não há nenhum aluno" de "há alunos, mas todos inativos e a
   // lista padrão só mostra ativos" — evita uma mensagem de estado vazio
   // enganosa quando a carteira não está realmente vazia.
-  const onlyInactiveHidden =
-    result.total === 0 && !hasFilter ? (await listStudents({ tenantId: ctx.tenantId, page: 1, pageSize: 1 })).total > 0 : false;
+  const onlyInactiveHidden = result.total === 0 && !hasFilter ? todosTotal.total > 0 : false;
 
   function pageHref(targetPage: number): string {
     const next = new URLSearchParams();
@@ -74,6 +92,22 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
     next.set("page", String(targetPage));
     return `/painel/alunos?${next.toString()}`;
   }
+
+  // Segmentos sempre reiniciam para a página 1 e preservam a busca ativa
+  // (`docs/03-design/COMPONENT-LIBRARY.md` — navegação real de servidor,
+  // nunca um toggle só de cliente). "todos" continua sendo um valor de
+  // filtro explícito, não um `StudentStatus` real (mesma decisão da FIT-013).
+  function segmentHref(segmentStatusParam: string | undefined): string {
+    const next = new URLSearchParams();
+    if (search) next.set("q", search);
+    if (segmentStatusParam) next.set("status", segmentStatusParam);
+    return `/painel/alunos?${next.toString()}`;
+  }
+  const segments: { key: string; label: string; count: number; href: string; active: boolean }[] = [
+    { key: "ativos", label: "Ativos", count: ativoTotal.total, href: segmentHref(undefined), active: !showingAll && status === "ATIVO" },
+    { key: "inativos", label: "Inativos", count: inativoTotal.total, href: segmentHref("INATIVO"), active: status === "INATIVO" },
+    { key: "todos", label: "Todos", count: todosTotal.total, href: segmentHref("todos"), active: showingAll },
+  ];
 
   return (
     <AppShell title="Alunos" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
@@ -86,7 +120,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
         </Button>
       </div>
 
-      <form method="GET" className={styles.filters} aria-label="Buscar e filtrar alunos">
+      <form method="GET" className={styles.filters} aria-label="Buscar alunos">
         <input
           type="search"
           name="q"
@@ -95,15 +129,25 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
           aria-label="Buscar por nome ou e-mail"
           className={styles.searchInput}
         />
-        <select name="status" defaultValue={statusParam ?? ""} aria-label="Filtrar por status" className={styles.statusSelect}>
-          <option value="">Ativos</option>
-          <option value="INATIVO">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
+        {statusParam ? <input type="hidden" name="status" value={statusParam} /> : null}
         <Button type="submit" variant="outlined">
           Buscar
         </Button>
       </form>
+
+      <div className={styles.segmented} role="tablist" aria-label="Filtrar por status">
+        {segments.map((segment) => (
+          <Link
+            key={segment.key}
+            href={segment.href}
+            role="tab"
+            aria-selected={segment.active}
+            className={segment.active ? `${styles.segment} ${styles.segmentActive}` : styles.segment}
+          >
+            {segment.label} {segment.count}
+          </Link>
+        ))}
+      </div>
 
       {result.items.length === 0 ? (
         <p className={styles.empty}>
@@ -114,22 +158,21 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
               : "Nenhum aluno cadastrado ainda."}
         </p>
       ) : (
-        <ul className={styles.list} aria-label="Lista de alunos">
-          {result.items.map((student) => (
-            <li key={student.id}>
-              <Link href={`/painel/alunos/${student.id}`} className={styles.row}>
-                <Avatar name={student.displayName} />
-                <span className={styles.cellText}>
-                  <span className={styles.cellName}>{student.displayName}</span>
-                  <span className={styles.cellEmail}>{student.email}</span>
-                </span>
-                <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
-                  {student.status === "ATIVO" ? "Ativo" : "Inativo"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className={styles.list} aria-label="Lista de alunos">
+          {result.items.map((student) => {
+            const presentation = statusPresentation(student.status);
+            return (
+              <StudentCard
+                key={student.id}
+                name={student.displayName}
+                description={student.email}
+                statusLabel={presentation.label}
+                statusTone={presentation.tone}
+                href={`/painel/alunos/${student.id}`}
+              />
+            );
+          })}
+        </div>
       )}
 
       {totalPages > 1 ? (
