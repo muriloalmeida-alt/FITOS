@@ -19,6 +19,7 @@ import {
   requirePersonal,
   requireSession,
   requireStudent,
+  requireSubscriber,
 } from "./authContext";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
@@ -243,6 +244,31 @@ describe("requireSession / requirePersonal / requireStudent (FIT-011)", () => {
     const ctx = await requireStudent(sessionFor(user), prisma);
 
     expect(ctx).toEqual({ userId: user.id, role: "ALUNO", tenantId: tenant.id, studentId: student.id });
+  });
+
+  it("FIT-122: personal autenticado acessa requireSubscriber com tenantType PERSONAL", async () => {
+    const { user, tenant } = await createPersonalWithTenant("personal-subscriber");
+
+    const ctx = await requireSubscriber(sessionFor(user), prisma);
+
+    expect(ctx).toEqual({ userId: user.id, role: "PERSONAL", tenantId: tenant.id, tenantType: "PERSONAL" });
+  });
+
+  it("FIT-122: individual autenticado acessa requireSubscriber com tenantType INDIVIDUAL", async () => {
+    const user = await createIndividualUser("individual-subscriber");
+
+    const ctx = await requireSubscriber(sessionFor(user), prisma);
+
+    expect(ctx.role).toBe("INDIVIDUAL");
+    expect(ctx.tenantType).toBe("INDIVIDUAL");
+  });
+
+  it("FIT-122: aluno tentando requireSubscriber -> AuthError FORBIDDEN", async () => {
+    const { user: owner, tenant } = await createPersonalWithTenant("dono-para-aluno-subscriber");
+    const { user } = await createStudentFor(tenant.id, "aluno-subscriber");
+    void owner;
+
+    await expect(requireSubscriber(sessionFor(user), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
   });
 });
 

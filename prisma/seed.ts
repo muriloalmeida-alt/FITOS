@@ -4,6 +4,8 @@
  * entre tenants localmente.
  */
 import { PrismaClient } from "@prisma/client";
+import { ensurePlanCatalog } from "../src/modules/billing/planCatalog";
+import { NO_PAYMENT_PROVIDER } from "../src/modules/billing/subscriptions";
 
 const prisma = new PrismaClient();
 
@@ -34,10 +36,17 @@ async function main() {
     data: { tenantId: tenantB.id, userId: studentBUser.id, email: studentBUser.email, displayName: "Aluno Fictício B" },
   });
 
+  const planos = await ensurePlanCatalog(prisma);
+  const planoEssencial = planos.find((plano) => plano.slug === "personal-essencial");
+  const planoProfissional = planos.find((plano) => plano.slug === "personal-profissional");
+  if (!planoEssencial || !planoProfissional) {
+    throw new Error("Catálogo de planos comerciais não contém os planos esperados para o seed.");
+  }
+
   await prisma.saasSubscription.createMany({
     data: [
-      { tenantId: tenantA.id, provider: "sandbox" },
-      { tenantId: tenantB.id, provider: "sandbox" },
+      { tenantId: tenantA.id, planId: planoEssencial.id, provider: NO_PAYMENT_PROVIDER },
+      { tenantId: tenantB.id, planId: planoProfissional.id, provider: NO_PAYMENT_PROVIDER },
     ],
   });
 
@@ -62,7 +71,7 @@ async function main() {
     ],
   });
 
-  console.log("Seed sintético aplicado: 2 tenants, 2 alunos, 2 assinaturas SaaS, 2 cobranças.");
+  console.log("Seed sintético aplicado: 2 tenants, 2 alunos, catálogo de planos, 2 assinaturas SaaS, 2 cobranças.");
 }
 
 main()

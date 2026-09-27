@@ -15,12 +15,17 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// interina já usada para "Alunos" (FIT-013) e "Perfil" do aluno (FIT-016):
 /// um destino real não espera o pai conceitual da árvore de informação
 /// existir. "Treinos" continua como o item real para modelos/planos.
+/// "Assinatura" (FIT-122) é um destino real sob "Configurações" —
+/// mesma solução interina de item de nível superior próprio já usada
+/// para Alunos/Exercícios acima, mesmo sem a árvore de Configurações
+/// (item 5 de `UX-ARCHITECTURE.md`) existir por completo ainda.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
   { key: "alunos", label: "Alunos", href: "/painel/alunos" },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
   { key: "treinos", label: "Treinos", href: "/painel/treinos" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "config", label: "Configurações", comingSoon: true },
 ];
 
@@ -47,5 +52,8 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Hoje", href: "/painel" },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos" },
   { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao" },
+  // FIT-122: "Assinatura" (FitOS Livre) já é real — "Perfil" (nome/e-mail)
+  // continua comingSoon, são destinos distintos.
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
   { key: "perfil", label: "Perfil", comingSoon: true },
 ];
