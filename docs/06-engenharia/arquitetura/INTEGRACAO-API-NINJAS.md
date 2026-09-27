@@ -2,6 +2,21 @@
 
 Este documento complementa `docs/02-integracoes/INTEGRACAO-API-NINJAS.md`.
 
+> **Status: descontinuada (FIT-121, 27/09/2026).** O "Plano de retirada"
+> registrado abaixo (seção "Exceção — rota HTTP interna") foi executado:
+> a carga real do catálogo global foi concluída e confirmada pelo catálogo
+> curado FITOS (IMP-EX-002, 208/208 exercícios), condição que por si só já
+> satisfazia o plano de retirada, independentemente do status de
+> SSH/CLI ao Railway. Foram removidos pela FIT-121: `src/integrations/api-ninjas/`,
+> toda a máquina de orquestração da IMP-EX-001 (`catalogImportManifest.ts`,
+> `catalogImportOrchestrator.ts`, `catalogImportRequest.ts`,
+> `catalogImportRun.ts`), a rota `src/app/api/admin/catalog-import/route.ts`
+> (nas suas duas ramificações — API Ninjas e reuso para o catálogo curado),
+> o script `scripts/import-exercicios.ts`, o comando `catalog:import-api-ninjas`
+> e as variáveis `API_NINJAS_API_KEY`/`CATALOG_IMPORT_TRIGGER_SECRET`. O
+> restante deste documento é preservado como registro histórico da decisão,
+> dos riscos aceitos e do funcionamento real enquanto a integração existiu.
+
 ## Fluxo real (corrigido pela IMP-EX-001 — pacote pós-MVP, 21/09/2026)
 
 A versão original deste documento (Fase 0) descrevia um fluxo de consulta "sob demanda" — o adaptador chamando a API Ninjas quando o catálogo local não bastasse. **Isso nunca foi o que a EPIC-05/SPRINT-06 implementou** (nem deveria ser, por decisão explícita do pacote pós-MVP): `listCatalogExercises`/`getCatalogExerciseForTenant` (`src/modules/exercises/exercises.ts`) sempre leram exclusivamente do PostgreSQL, desde a FIT-023 — nenhuma busca do personal ou do aluno jamais chamou a rede. A redação antiga estava desalinhada com o código real; corrigida aqui para não induzir a reintroduzir consulta online por engano.

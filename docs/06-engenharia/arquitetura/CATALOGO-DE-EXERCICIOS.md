@@ -2,6 +2,19 @@
 
 Este documento detalha a implementação da EPIC-05/SPRINT-06 (FIT-020 a FIT-023): integração com a Exercises API (API Ninjas), catálogo global importado, exercícios próprios do personal, e a listagem unificada no shell autenticado. Complementa (não substitui) `docs/02-integracoes/INTEGRACAO-API-NINJAS.md`, `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md` e `docs/06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md`.
 
+> **FIT-021/IMP-EX-001 descontinuadas (FIT-121, 27/09/2026).** As seções
+> "FIT-020" e "FIT-021" abaixo descrevem código que foi removido do
+> repositório — nenhuma chamada real à API Ninjas chegou a ser feita em
+> nenhum ambiente, do início ao fim do programa (ver declaração final da
+> Sprint, ao fim deste documento, e a atualização em `ADR-004`). O catálogo
+> global do FitOS é hoje inteiramente preenchido pelo catálogo curado FITOS
+> (IMP-EX-002, seção abaixo), sem depender de nenhum fornecedor externo.
+> FIT-022 (exercícios próprios) e FIT-023 (catálogo unificado) permanecem
+> em produção sem alteração — nunca dependeram da API Ninjas. Preservado
+> deliberadamente: o valor `API_NINJAS` do enum `origin` de `Exercise`,
+> ainda usado como fixture genérica de "exercício global" por várias
+> suítes de teste não relacionadas a esta integração.
+
 ## FIT-020 — Client isolado da API Ninjas
 
 `src/integrations/api-ninjas/` é o único ponto do FitOS que conhece o endpoint, o header de autenticação e o formato bruto da Exercises API. Nenhum outro módulo importa a API Ninjas diretamente — quem precisar de exercícios externos usa este pacote, nunca `fetch` direto para `api.api-ninjas.com`.

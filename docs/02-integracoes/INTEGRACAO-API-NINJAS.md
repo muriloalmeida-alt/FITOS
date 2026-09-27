@@ -1,5 +1,17 @@
 # FitOS — Integração com API Ninjas
 
+> **Status: descontinuada (FIT-121, 27/09/2026).** A integração descrita
+> abaixo foi implementada (FIT-020/FIT-021) mas nunca teve uma chamada real
+> executada em nenhum ambiente — o catálogo global do FitOS foi
+> integralmente preenchido pelo catálogo curado próprio (IMP-EX-002, 208
+> exercícios em PT-BR), que não depende de nenhum fornecedor externo. O
+> código (`src/integrations/api-ninjas/`, orquestração de carga, rota
+> administrativa) foi removido pela FIT-121. Este documento é mantido como
+> registro histórico da decisão original — ver
+> `docs/06-engenharia/arquitetura/INTEGRACAO-API-NINJAS.md` e
+> `docs/06-engenharia/arquitetura/adr/ADR-004-API-NINJAS-EXERCICIOS.md` para
+> o detalhamento técnico e o encerramento.
+
 ## 1. Decisão
 
 A API Ninjas será fonte externa para descoberta e importação de exercícios. Ela não será responsável por montar treinos, atribuir planos ou prescrever séries, repetições, cargas e descanso.
