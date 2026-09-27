@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
 import { Button, FormAlert, SelectField, TextField } from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
@@ -196,9 +197,9 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
               checked={termsAccepted}
               onChange={(event) => setTermsAccepted(event.target.checked)}
             />
-            Li e aceito os Termos de Uso e a Política de Privacidade.
+            Li e aceito os <Link href="/termos-de-uso">Termos de Uso</Link> e a{" "}
+            <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
           </label>
-          <p className={styles.termsPending}>Termos de uso e Política de Privacidade — em preparação.</p>
           {fieldErrors.termsAccepted ? (
             <p className={styles.checkboxError} role="alert">
               {fieldErrors.termsAccepted}

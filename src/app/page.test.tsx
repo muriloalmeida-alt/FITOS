@@ -65,11 +65,14 @@ describe("LandingPage (FIT-110)", () => {
     expect(screen.getByText(/Personal, Aluno vinculado e FitOS Livre/)).toBeInTheDocument();
   });
 
-  it("nunca renderiza um link morto de página legal — só o texto de pendência", () => {
+  it("FIT-119: linka para as páginas reais de Termos de Uso e Política de Privacidade, nunca mais um texto de pendência", () => {
     render(<LandingPage />);
-    expect(screen.queryByRole("link", { name: /termos/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /privacidade/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Termos de uso e Política de Privacidade — em preparação/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute("href", "/termos-de-uso");
+    expect(screen.getByRole("link", { name: "Política de Privacidade" })).toHaveAttribute(
+      "href",
+      "/politica-de-privacidade"
+    );
+    expect(screen.queryByText(/em preparação/)).not.toBeInTheDocument();
   });
 
   it("todas as imagens têm alt text funcional (nunca vazio)", () => {

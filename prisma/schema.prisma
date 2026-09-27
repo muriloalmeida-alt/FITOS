@@ -293,8 +293,15 @@ model IndividualProfile {
   objective          IndividualObjective
   experienceLevel    ExperienceLevel
   weeklyAvailability WeeklyAvailability
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  /// Sempre preenchido no momento da primeira submissão, nunca sobrescrito
+  /// depois (mesmo princípio de "preserva o momento original" de
+  /// `endStudentBond`/`softDeleteAssessment`) — reabrir o onboarding para
+  /// mudar objetivo/experiência/disponibilidade nunca pede um novo aceite
+  /// nem altera esta data (FIT-119). `null` para perfis criados antes deste
+  /// campo existir (FIT-101 a FIT-118) — nunca fabricado retroativamente.
+  termsAcceptedAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

@@ -19,25 +19,41 @@ describe("OnboardingForm (FIT-101)", () => {
   it("mostra erros de validação e não envia quando nenhuma opção foi escolhida", async () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<OnboardingForm initialObjective={null} initialExperienceLevel={null} initialWeeklyAvailability={null} />);
+    render(
+      <OnboardingForm
+        initialObjective={null}
+        initialExperienceLevel={null}
+        initialWeeklyAvailability={null}
+        alreadyAcceptedTerms={false}
+      />
+    );
 
     await user.click(screen.getByRole("button", { name: "Concluir" }));
 
     expect(await screen.findByText("Escolha um objetivo.")).toBeInTheDocument();
     expect(screen.getByText("Escolha seu nível de experiência.")).toBeInTheDocument();
     expect(screen.getByText("Escolha sua disponibilidade.")).toBeInTheDocument();
+    expect(screen.getByText("É necessário aceitar os termos para continuar.")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("envia as três respostas e redireciona para /painel quando a resposta é ok", async () => {
+  it("envia as três respostas e o aceite dos termos, e redireciona para /painel quando a resposta é ok", async () => {
     fetchMock.mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<OnboardingForm initialObjective={null} initialExperienceLevel={null} initialWeeklyAvailability={null} />);
+    render(
+      <OnboardingForm
+        initialObjective={null}
+        initialExperienceLevel={null}
+        initialWeeklyAvailability={null}
+        alreadyAcceptedTerms={false}
+      />
+    );
 
     await user.selectOptions(screen.getByLabelText("Qual seu objetivo principal?"), "GANHAR_MASSA");
     await user.selectOptions(screen.getByLabelText("Qual sua experiência com treino?"), "INICIANTE");
     await user.selectOptions(screen.getByLabelText("Quantos dias por semana você pode treinar?"), "TRES_A_QUATRO_DIAS");
+    await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Concluir" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -49,6 +65,7 @@ describe("OnboardingForm (FIT-101)", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          termsAccepted: true,
         }),
       })
     );
@@ -61,6 +78,7 @@ describe("OnboardingForm (FIT-101)", () => {
         initialObjective="PERDER_PESO"
         initialExperienceLevel="AVANCADO"
         initialWeeklyAvailability="CINCO_OU_MAIS_DIAS"
+        alreadyAcceptedTerms={false}
       />
     );
 
@@ -69,15 +87,49 @@ describe("OnboardingForm (FIT-101)", () => {
     expect(screen.getByLabelText("Quantos dias por semana você pode treinar?")).toHaveValue("CINCO_OU_MAIS_DIAS");
   });
 
+  it("FIT-119: quando os termos já foram aceitos antes, o checkbox aparece marcado e desabilitado, sem exigir novo aceite", async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <OnboardingForm
+        initialObjective="PERDER_PESO"
+        initialExperienceLevel="AVANCADO"
+        initialWeeklyAvailability="CINCO_OU_MAIS_DIAS"
+        alreadyAcceptedTerms
+      />
+    );
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Concluir" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/onboarding",
+      expect.objectContaining({ body: expect.stringContaining('"termsAccepted":true') })
+    );
+  });
+
   it("mostra mensagem de erro quando a requisição falha", async () => {
     fetchMock.mockResolvedValue({ ok: false });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
-    render(<OnboardingForm initialObjective={null} initialExperienceLevel={null} initialWeeklyAvailability={null} />);
+    render(
+      <OnboardingForm
+        initialObjective={null}
+        initialExperienceLevel={null}
+        initialWeeklyAvailability={null}
+        alreadyAcceptedTerms={false}
+      />
+    );
 
     await user.selectOptions(screen.getByLabelText("Qual seu objetivo principal?"), "GANHAR_MASSA");
     await user.selectOptions(screen.getByLabelText("Qual sua experiência com treino?"), "INICIANTE");
     await user.selectOptions(screen.getByLabelText("Quantos dias por semana você pode treinar?"), "UM_A_DOIS_DIAS");
+    await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Concluir" }));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
