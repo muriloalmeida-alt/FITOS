@@ -1058,3 +1058,17 @@ Gates: suíte completa **1097/1097** (+3 desde o commit anterior). `tsc --noEmit
 `ADR-003-ASAAS-COMO-CANDIDATO.md`, `ASSINATURA-SAAS.md`, `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` e `src/modules/individual-onboarding/README.md` atualizados — a linguagem de "gap real, não resolvido" para tenants `INDIVIDUAL` foi removida, já que o gap foi resolvido nesta mesma sessão, poucos minutos depois de documentado.
 
 **Pendência que permanece, sem mudança**: confirmar em homologação que a criação real de cliente/assinatura de fato funciona (ler os logs `[FIT-128][assinatura-asaas]`); webhook de conciliação (ADR-010); o restante da prova técnica obrigatória do Asaas.
+
+### FIT-128 — achado real em homologação: catálogo de planos nunca reconciliado; corrigido no pré-deploy
+
+Murilo reportou, seguindo o runbook de verificação: "Não tem nenhum plano pago disponível" — ao tentar concluir um onboarding real em homologação para testar a ligação ao Asaas, nenhum plano aparecia para escolher.
+
+Investigando: `railway.json` (`deploy.preDeployCommand`) só roda `npm run db:migrate:deploy` — nunca `npm run planos:seed-comerciais`. Confirmado em `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`, escrito no primeiro deploy (FIT-008): "Nenhum seed automático foi executado ou configurado." Ou seja: a tabela `plans` do `fitos-postgres-hml` nunca recebeu o catálogo comercial (nem geração 1 da FIT-122, nem geração 2 da FIT-127) — está vazia desde o início. `listActivePlansForAudience` sempre retornou `[]` em homologação, para as duas audiências, e ninguém tinha notado até agora porque nenhum onboarding tinha sido concluído até o fim em homologação de verdade (a FIT-129 usou o banco de dev local desta sandbox, nunca homologação real).
+
+Diferente das outras falhas de dado de ambiente já registradas neste diário (import de imagens, catálogo curado) — aquelas exigem chamada de rede/custo e por isso são deliberadamente manuais — `ensurePlanCatalog`/`npm run planos:seed-comerciais` já era documentado como "idempotente... seguro para rodar quantas vezes for preciso em qualquer ambiente, inclusive produção", sem nenhuma chamada externa. Não havia razão técnica para mantê-lo manual, só convenção com os outros scripts "execução manual apenas". Corrigido a causa raiz, não só o dado: `railway.json` agora roda `npm run db:migrate:deploy && npm run planos:seed-comerciais` a cada deploy — o próprio deploy que este PR dispara ao ser mesclado já reconcilia o catálogo em homologação, sem precisar de ninguém com acesso ao Railway rodar nada manualmente.
+
+`scripts/seed-planos-comerciais.ts` e `AMBIENTES-E-DEPLOY.md` atualizados para refletir que o seed agora é automático, mantendo a execução manual documentada como ainda válida (ex.: reconciliar sem esperar o próximo deploy).
+
+Gates: suíte completa **1097/1097** (nenhum teste novo — mudança de infraestrutura/config, não de lógica). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos.
+
+**Pendência**: confirmar, depois do merge e do próximo deploy automático, que o catálogo de fato aparece em homologação (mesmo runbook de verificação já aberto no PR #166 cobre isso — agora um pré-requisito dele, não mais bloqueado).

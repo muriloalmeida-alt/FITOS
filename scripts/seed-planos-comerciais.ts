@@ -1,14 +1,19 @@
 /**
  * FIT-122 — comando administrativo que reconcilia a tabela `plans` com o
- * catálogo oficial (`src/modules/billing/planCatalog.ts`). Execução manual
- * apenas — nunca chamado pelo build ou deploy; `prisma/seed.ts` chama a
- * mesma função `ensurePlanCatalog` diretamente para o banco de
+ * catálogo oficial (`src/modules/billing/planCatalog.ts`). `prisma/seed.ts`
+ * chama a mesma função `ensurePlanCatalog` diretamente para o banco de
  * desenvolvimento, sem passar por este script.
  *
  * Idempotente: upsert por `slug`, seguro para rodar quantas vezes for
- * preciso em qualquer ambiente, inclusive produção.
+ * preciso em qualquer ambiente, inclusive produção — por isso, desde a
+ * FIT-128, também roda automaticamente a cada deploy (`railway.json`,
+ * `deploy.preDeployCommand`), depois das migrations. Achado real: o
+ * catálogo nunca tinha sido reconciliado em homologação desde o primeiro
+ * deploy (FIT-008, "Nenhum seed automático foi executado ou configurado"),
+ * deixando o onboarding sem nenhum plano pago para escolher.
  *
- * Uso:
+ * Uso manual (ainda válido, ex.: para reconciliar um ambiente sem esperar
+ * o próximo deploy):
  *   npm run planos:seed-comerciais
  */
 import { PrismaClient } from "@prisma/client";
