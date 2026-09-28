@@ -1072,3 +1072,28 @@ Diferente das outras falhas de dado de ambiente já registradas neste diário (i
 Gates: suíte completa **1097/1097** (nenhum teste novo — mudança de infraestrutura/config, não de lógica). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos.
 
 **Pendência**: confirmar, depois do merge e do próximo deploy automático, que o catálogo de fato aparece em homologação (mesmo runbook de verificação já aberto no PR #166 cobre isso — agora um pré-requisito dele, não mais bloqueado).
+
+### FIT-128 — causa raiz real: `railway.json` nunca era a fonte de verdade do serviço (28/09/2026)
+
+Depois do merge e deploy do PR #166 (commit `7b7574d`, branch `main` confirmada como a branch implantada, commit confirmado como o mais recente no deployment), Murilo reportou que o plano pago **ainda** não aparecia no onboarding — o fix do PR #166 não tinha resolvido nada na prática, apesar do código estar correto e do deploy ter pego o commit certo.
+
+Investigação eliminou, em ordem, as causas mais prováveis a partir do código (`planCatalog.ts`, `plans.ts`, as páginas de onboarding — todas corretas, sem cache estático envolvido, já que dependem de `headers()`/sessão e por isso são renderizadas dinamicamente) antes de suspeitar do próprio pipeline de deploy. A causa raiz real: o serviço `fitos-web-hml` no Railway tinha um **"Pre-Deploy Command" configurado manualmente no painel**, sobrepondo o que está declarado em `railway.json`. Esse valor manual ainda era o comando antigo (só `npm run db:migrate:deploy`, sem o seed) — ou seja, **desde a criação do serviço (FIT-008) até este momento, o `railway.json` versionado neste repositório nunca foi, de fato, a fonte de verdade do pré-deploy desse serviço**: qualquer edição futura desse arquivo seria silenciosamente ignorada enquanto o override manual existisse.
+
+Murilo corrigiu o valor diretamente no painel do Railway (para bater com `railway.json`) e disparou um novo deploy manual. Confirmado por captura de tela do próprio onboarding em homologação: os três planos pagos do Personal (Personal 20, Personal 50, Personal Ilimitado, com preço e "30 dias grátis") agora aparecem corretamente no passo 3 do wizard.
+
+**Isto é um risco operacional geral, não específico da FIT-128** — registrado em `AMBIENTES-E-DEPLOY.md`: qualquer mudança futura em `railway.json` (não só `preDeployCommand`, potencialmente `healthcheckPath`/`startCommand`/etc.) pode ser silenciosamente ignorada se o painel do serviço tiver algum override manual equivalente. Não há, a partir deste sandbox (sem credenciais Railway), forma de auditar isso preventivamente para os demais campos — fica registrado como algo a verificar manualmente sempre que uma mudança em `railway.json` não produzir o efeito esperado no ambiente real.
+
+Nenhuma mudança de código nesta entrada — só a correção operacional (fora do Git, feita por Murilo no painel) e este registro de conhecimento.
+
+### FIT-128 — ligação real ao Asaas Sandbox confirmada de ponta a ponta (28/09/2026)
+
+Depois da correção do override no Railway, Murilo concluiu o runbook de verificação até o fim: cadastro real de teste como Personal (dados fictícios, CPF de teste válido, plano pago `personal-20`) em homologação. Dois resultados confirmam o sucesso:
+
+1. **Painel do Asaas Sandbox**: o cliente "Espaço de Master" aparece em "Meus Clientes" — evidência visual de que `createAsaasCustomer` de fato criou um cliente real via `POST /customers`.
+2. **Log do próprio deploy** (`fitos-web-hml`, linha completa): `[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.` — confirma que `createAsaasSubscription` também funcionou, não só a criação do cliente.
+
+**Isto fecha, empiricamente, o item (a) da ADR-010** ("trocar `NO_PAYMENT_PROVIDER` por uma chamada real ao provedor"): o contrato do Asaas v3 documentado publicamente e implementado em `asaasClient.ts`/`subscriptions.ts` está correto na prática, para o fluxo de criação (Personal, plano pago, CPF de teste válido). Não é mais uma suposição bem fundamentada — é um resultado real observado.
+
+`ASSINATURA-SAAS.md`, `ADR-003-ASAAS-COMO-CANDIDATO.md` e `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` atualizados para refletir a confirmação real, substituindo a linguagem de "ainda não verificado" por "confirmado em homologação em 28/09/2026".
+
+**Pendência que permanece, sem mudança**: o restante da prova técnica obrigatória do Asaas continua não verificado empiricamente — renovação, falha/inadimplência/recuperação, cancelamento, reconciliação — porque nenhum desses cenários foi exercido neste teste (só a criação inicial). O webhook de conciliação (ADR-010, item (c)) continua não iniciado; sem ele, o FitOS não tem hoje nenhuma forma de saber quando uma cobrança real é paga, falha ou atrasa — é o próximo trabalho de código pendente desta História, ainda sem branch aberta.
