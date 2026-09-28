@@ -7,6 +7,7 @@ import {
   createAsaasSubscription,
   findAsaasCustomerByCpfCnpj,
   listAsaasCustomers,
+  tokenizeAsaasCreditCard,
   updateAsaasSubscription,
 } from "./asaasClient";
 
@@ -242,6 +243,70 @@ describe("updateAsaasSubscription", () => {
       "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
       expect.objectContaining({ method: "PUT", body: JSON.stringify({ value: 69.9, cycle: "MONTHLY" }) })
     );
+  });
+
+  it("aceita creditCardToken junto de billingType CREDIT_CARD", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: "sub_1", customer: "cus_1", status: "ACTIVE" }));
+
+    await updateAsaasSubscription({ apiKey: FAKE_KEY, fetchImpl }, "sub_1", {
+      billingType: "CREDIT_CARD",
+      creditCardToken: "tok_1",
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ billingType: "CREDIT_CARD", creditCardToken: "tok_1" }),
+      })
+    );
+  });
+});
+
+describe("tokenizeAsaasCreditCard", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const input = {
+    customer: "cus_1",
+    creditCard: { holderName: "Fulano de Tal", number: "4111111111111111", expiryMonth: "10", expiryYear: "2030", ccv: "123" },
+    creditCardHolderInfo: {
+      name: "Fulano de Tal",
+      email: "fulano@example.test",
+      cpfCnpj: "11144477735",
+      postalCode: "01310100",
+      addressNumber: "100",
+      phone: "11912345678",
+    },
+  };
+
+  it("faz POST /creditCard/tokenize com o corpo informado e devolve só o retorno mascarado", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { creditCardNumber: "1111", creditCardBrand: "VISA", creditCardToken: "tok_1" }));
+
+    const result = await tokenizeAsaasCreditCard({ apiKey: FAKE_KEY, fetchImpl }, input);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/creditCard/tokenize",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) })
+    );
+    expect(result).toEqual({ creditCardNumber: "1111", creditCardBrand: "VISA", creditCardToken: "tok_1" });
+  });
+
+  it("cartão recusado pelo Asaas lança AsaasApiError saneado, nunca com o número/CVV enviados", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(400, { errors: [{ code: "invalid_creditCard", description: "Cartão de crédito inválido." }] })
+    );
+
+    const error = await captureAsaasApiError(tokenizeAsaasCreditCard({ apiKey: FAKE_KEY, fetchImpl }, input));
+
+    expect(error.kind).toBe("resposta_de_erro");
+    expect(error.status).toBe(400);
+    expect(error.message).toBe("Cartão de crédito inválido.");
+    expect(error.message).not.toContain(input.creditCard.number);
+    expect(error.message).not.toContain(input.creditCard.ccv);
   });
 });
 

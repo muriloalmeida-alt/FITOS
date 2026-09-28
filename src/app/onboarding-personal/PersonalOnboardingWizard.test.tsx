@@ -17,11 +17,26 @@ const PLANS = [
     studentLimit: null,
     trialDays: 30,
   },
+  { id: "plan-gratis", name: "Plano Grátis", description: null, priceCents: 0, billingCycle: "MENSAL", studentLimit: 5, trialDays: null },
 ];
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
+
+/// Preenche os campos de cartão do checkout embutido (FIT-128) com dados
+/// de teste válidos — usado nos testes que escolhem um plano pago, já que
+/// o passo 4 exige cartão nesse caso.
+async function fillValidCardFields(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("Nome impresso no cartão"), "Fulano de Tal");
+  await user.type(screen.getByLabelText("Número do cartão"), "4111111111111111");
+  await user.type(screen.getByLabelText("Mês (MM)"), "10");
+  await user.type(screen.getByLabelText("Ano (AAAA)"), "2030");
+  await user.type(screen.getByLabelText("CVV"), "123");
+  await user.type(screen.getByLabelText("CEP"), "01310100");
+  await user.type(screen.getByLabelText("Número do endereço"), "100");
+  await user.type(screen.getByLabelText("Celular"), "11987654321");
+}
 
 /// Avança da tela inicial até o passo 3 (seleção de plano), assumindo o
 /// mesmo preenchimento válido usado pelos demais testes desta suíte.
@@ -93,8 +108,13 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     expect(screen.queryByText("Revisão")).not.toBeInTheDocument();
   });
 
-  it("fluxo completo: passo 1 -> 2 -> 3 -> 4 -> submete com o plano escolhido e redireciona para o retorno da API", async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ redirectTo: "/painel/alunos/novo" }) });
+  it("fluxo completo: passo 1 -> 2 -> 3 -> 4 -> cadastra cartão, submete com o plano escolhido e redireciona", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/onboarding-personal") {
+        return { ok: true, json: async () => ({ redirectTo: "/painel/alunos/novo" }) };
+      }
+      return { ok: true, json: async () => ({ creditCardLast4: "1111", creditCardBrand: "VISA" }) };
+    });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
@@ -117,11 +137,14 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     expect(screen.getByText("111.444.777-35")).toBeInTheDocument();
     expect(screen.getByText("Até 20 alunos")).toBeInTheDocument();
     expect(screen.getByText("Personal 20 — R$ 49,90/mês (30 dias grátis)")).toBeInTheDocument();
+    expect(screen.getByText("Dados de pagamento")).toBeInTheDocument();
 
+    await fillValidCardFields(user);
     await user.click(screen.getByRole("button", { name: "Concluir" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock).toHaveBeenCalledWith(
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
       "/api/onboarding-personal",
       expect.objectContaining({
         method: "POST",
@@ -136,7 +159,59 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
         }),
       })
     );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/tenancy/minha-assinatura/cartao",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          cardHolderName: "Fulano de Tal",
+          cardNumber: "4111 1111 1111 1111",
+          cardExpiryMonth: "10",
+          cardExpiryYear: "2030",
+          cardCcv: "123",
+          postalCode: "01310-100",
+          addressNumber: "100",
+          phone: "(11) 98765-4321",
+        }),
+      })
+    );
     await waitFor(() => expect(push).toHaveBeenCalledWith("/painel/alunos/novo"));
+  });
+
+  it("passo 4: um plano gratuito nunca mostra nem exige cartão", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ redirectTo: "/painel" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
+    await advanceToStep3(user);
+
+    await user.click(screen.getByLabelText(/Plano Grátis/));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("Revisão")).toBeInTheDocument();
+    expect(screen.queryByText("Dados de pagamento")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Número do cartão")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Concluir" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/painel"));
+  });
+
+  it("passo 4: rejeita concluir com dados de cartão inválidos/incompletos, nunca chama a API", async () => {
+    const user = userEvent.setup();
+    render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
+    await advanceToStep3(user);
+
+    await user.click(screen.getByLabelText(/Personal 20/));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByText("Revisão");
+
+    await user.click(screen.getByRole("button", { name: "Concluir" }));
+
+    expect(await screen.findByText("Informe um número de cartão válido.")).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("passo 2: exige faixa de alunos, nome do espaço e aceite dos termos", async () => {
@@ -186,9 +261,33 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     await advanceToStep3(user);
     await user.click(screen.getByLabelText(/Personal 20/));
     await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByText("Revisão");
+    await fillValidCardFields(user);
     await user.click(await screen.findByRole("button", { name: "Concluir" }));
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("mostra mensagem de erro quando o checkout de cartão falha, sem redirecionar", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/onboarding-personal") {
+        return { ok: true, json: async () => ({ redirectTo: "/painel" }) };
+      }
+      return { ok: false, json: async () => ({ error: "CARTAO_RECUSADO", message: "Cartão de crédito inválido." }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
+
+    await advanceToStep3(user);
+    await user.click(screen.getByLabelText(/Personal 20/));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByText("Revisão");
+    await fillValidCardFields(user);
+    await user.click(await screen.findByRole("button", { name: "Concluir" }));
+
+    expect(await screen.findByText("Cartão de crédito inválido.")).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
   });
 });

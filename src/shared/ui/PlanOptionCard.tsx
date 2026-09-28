@@ -33,9 +33,8 @@ interface PlanOptionCardProps {
 /// Personal e pelo do FitOS Livre: os dois precisam da mesma decisão
 /// ("qual plano/produto"), sempre a partir do catálogo real do backend
 /// (`listActivePlansForAudience`), nunca uma lista fixa na interface.
-/// Nunca pede dados de cartão/Pix aqui — nenhum gateway de pagamento está
-/// integrado ainda (FIT-128); a contratação em si já é real
-/// (`SaasSubscription`), só a cobrança de fato não existe.
+/// Nunca pede dados de cartão aqui — essa é uma etapa separada
+/// (`CreditCardFields`, FIT-128), só quando o plano escolhido é pago.
 export function PlanOptionCard({ plan, groupName, selected, onSelect, disabled, showStudentLimit = true }: PlanOptionCardProps) {
   const cycleLabel = BILLING_CYCLE_LABEL[plan.billingCycle] ?? "mês";
   return (

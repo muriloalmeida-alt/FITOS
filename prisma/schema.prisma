@@ -1034,6 +1034,16 @@ model SaasSubscription {
   /// coleta CPF/CNPJ, gap conhecido) e sempre para planos de preço zero.
   externalCustomerId     String?
   externalSubscriptionId String?
+  /// Últimos 4 dígitos e bandeira do cartão tokenizado no Asaas (FIT-128,
+  /// checkout embutido no FitOS — nunca o número completo, nunca o CVV,
+  /// nunca o token em si: `attachCreditCardToSubscription`
+  /// (`src/modules/billing/checkout.ts`) só grava o que a própria resposta
+  /// de `POST /v3/creditCard/tokenize` já devolve mascarado, exclusivamente
+  /// para exibição em `/painel/assinatura` ("Cartão terminado em ****").
+  /// `null` enquanto nenhum cartão tiver sido cadastrado — nunca obrigatório
+  /// para um plano de preço zero.
+  creditCardLast4  String?
+  creditCardBrand  String?
   canceledAt     DateTime?
   canceledReason String?
   /// Fim do período de teste grátis desta contratação — `null` quando não
