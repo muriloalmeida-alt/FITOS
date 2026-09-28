@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const requireIndividual = vi.fn();
 const completeIndividualOnboarding = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
+const subscribeTenantToPlan = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
@@ -23,6 +24,11 @@ vi.mock("@/modules/individual-onboarding/onboarding", async () => {
     completeIndividualOnboarding: (...args: unknown[]) => completeIndividualOnboarding(...args),
     getIndividualOnboardingProfile: (...args: unknown[]) => getIndividualOnboardingProfile(...args),
   };
+});
+
+vi.mock("@/modules/billing/subscriptions", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
+  return { ...actual, subscribeTenantToPlan: (...args: unknown[]) => subscribeTenantToPlan(...args) };
 });
 
 describe("GET /api/onboarding", () => {
@@ -95,7 +101,7 @@ describe("POST /api/onboarding", () => {
     expect(response.status).toBe(401);
   });
 
-  it("conclui o onboarding usando o tenantId da sessão, ignorando qualquer tenantId enviado no corpo", async () => {
+  it("conclui o onboarding usando o tenantId da sessão, ignorando qualquer tenantId enviado no corpo, e contrata o plano escolhido", async () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
     completeIndividualOnboarding.mockResolvedValue({
       id: "p1",
@@ -105,6 +111,7 @@ describe("POST /api/onboarding", () => {
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
       termsAcceptedAt: new Date(),
     });
+    subscribeTenantToPlan.mockResolvedValue({ id: "sub1" });
 
     const { POST } = await import("./route");
     const response = await POST(
@@ -115,6 +122,7 @@ describe("POST /api/onboarding", () => {
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
           termsAccepted: true,
+          planId: "plan-individual-livre-v2",
           tenantId: "tenant-adulterado",
         }),
       })
@@ -129,6 +137,12 @@ describe("POST /api/onboarding", () => {
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
       termsAccepted: true,
+    });
+    expect(subscribeTenantToPlan).toHaveBeenCalledWith({
+      tenantId: "tenant-real",
+      tenantType: "INDIVIDUAL",
+      planId: "plan-individual-livre-v2",
+      actorUserId: "u1",
     });
   });
 
@@ -151,7 +165,32 @@ describe("POST /api/onboarding", () => {
     const response = await POST(
       new Request("http://localhost/api/onboarding", {
         method: "POST",
-        body: JSON.stringify({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "UM_A_DOIS_DIAS" }),
+        body: JSON.stringify({
+          objective: "GANHAR_MASSA",
+          experienceLevel: "INICIANTE",
+          weeklyAvailability: "UM_A_DOIS_DIAS",
+          planId: "plan-individual-livre-v2",
+        }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(completeIndividualOnboarding).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando planId está ausente, mesmo com os demais campos válidos", async () => {
+    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/onboarding", {
+        method: "POST",
+        body: JSON.stringify({
+          objective: "GANHAR_MASSA",
+          experienceLevel: "INICIANTE",
+          weeklyAvailability: "UM_A_DOIS_DIAS",
+          termsAccepted: true,
+        }),
       })
     );
 
@@ -175,6 +214,7 @@ describe("POST /api/onboarding", () => {
           experienceLevel: "INICIANTE",
           weeklyAvailability: "UM_A_DOIS_DIAS",
           termsAccepted: false,
+          planId: "plan-individual-livre-v2",
         }),
       })
     );
@@ -182,5 +222,32 @@ describe("POST /api/onboarding", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBe("VALIDACAO");
+  });
+
+  it("retorna o erro de assinatura quando o plano é rejeitado, sem quebrar depois de salvar o perfil", async () => {
+    const { SubscriptionError } = await vi.importActual<typeof import("@/modules/billing/subscriptions")>(
+      "@/modules/billing/subscriptions"
+    );
+    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
+    completeIndividualOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
+    subscribeTenantToPlan.mockRejectedValue(new SubscriptionError("PLANO_INATIVO", "Este plano não está mais disponível para contratação."));
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/onboarding", {
+        method: "POST",
+        body: JSON.stringify({
+          objective: "GANHAR_MASSA",
+          experienceLevel: "INICIANTE",
+          weeklyAvailability: "UM_A_DOIS_DIAS",
+          termsAccepted: true,
+          planId: "plan-individual-livre",
+        }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toBe("PLANO_INATIVO");
   });
 });

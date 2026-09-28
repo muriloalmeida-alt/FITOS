@@ -12,7 +12,7 @@ Decisão original (FIT-122/ADR-010): construir toda a mecânica de negócio (cat
 - **Trial de 30 dias, concedido uma única vez por tenant (FIT-127)**: `trialUsedAt` é gravado na primeira vez que qualquer plano com `trialDays` é concedido a um tenant e nunca mais é limpo — uma troca de plano posterior (mesmo para outro plano com trial) nunca concede um novo trial nem reinicia a contagem (`trialEndsAt` da troca é copiado do valor já existente, não recalculado). Backend decide a elegibilidade sozinho — nenhuma escolha de UI concede ou nega trial.
 - Rotas: `GET`/`POST /api/tenancy/minha-assinatura` (consultar/contratar/trocar), `POST /api/tenancy/minha-assinatura/cancelar` — todas atrás de `requireSubscriber()` (`PERSONAL` ou `INDIVIDUAL`, nunca `ALUNO`). UI em `/painel/assinatura` — já lê nome/preço/trial dinamicamente da tabela `plans`, nenhuma mudança de UI foi necessária para os novos preços aparecerem.
 - **Nunca implementado aqui** (permanece na fila, agora FIT-128/EPIC-16): gateway real, meios de pagamento, renovação automática, recuperação de pagamento/inadimplência (não pode existir sem cobrança real), ledger/conciliação.
-- **Ainda pendente, fora do escopo desta História**: wiring de seleção de plano dentro do onboarding guiado (FIT-126, que agora reaproveita este catálogo real em vez de placeholders).
+- **Wiring de seleção de plano dentro do onboarding guiado, concluído na FIT-126**: `/onboarding-personal` e `/onboarding` (FitOS Livre) agora têm uma etapa real de seleção de plano que chama `subscribeTenantToPlan` na conclusão — ver `ONBOARDING-PERSONAL.md`. Contas já existentes antes da FIT-126 não são migradas retroativamente (pendência registrada lá, não aqui).
 
 ## Separação obrigatória
 

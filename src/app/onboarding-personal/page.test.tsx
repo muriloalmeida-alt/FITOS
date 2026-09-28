@@ -4,6 +4,8 @@ import { render, screen } from "@testing-library/react";
 const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
 const findUniqueOrThrowTenant = vi.fn();
+const listActivePlansForAudience = vi.fn();
+const getSubscriptionForTenant = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -19,6 +21,14 @@ vi.mock("@/modules/tenancy/authContext", async () => {
 
 vi.mock("@/shared/db/prisma", () => ({
   prisma: { tenant: { findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowTenant(...args) } },
+}));
+
+vi.mock("@/modules/billing/plans", () => ({
+  listActivePlansForAudience: (...args: unknown[]) => listActivePlansForAudience(...args),
+}));
+
+vi.mock("@/modules/billing/subscriptions", () => ({
+  getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -51,15 +61,20 @@ describe("OnboardingPersonalPage (FIT-113)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("personal autenticado: renderiza o wizard, pré-preenchido com o nome atual do tenant", async () => {
+  it("personal autenticado: renderiza o wizard, pré-preenchido com o nome atual do tenant e o catálogo real de planos", async () => {
     getServerSession.mockResolvedValue({ user: { id: "u1" } });
     getAuthContext.mockResolvedValue({ authenticated: true, role: "PERSONAL", userId: "u1", tenantId: "t1", studentId: null });
     findUniqueOrThrowTenant.mockResolvedValue({ id: "t1", name: "Espaço de Fulano" });
+    listActivePlansForAudience.mockResolvedValue([
+      { id: "plan-1", name: "Personal 20", description: null, priceCents: 4990, billingCycle: "MENSAL", studentLimit: 20, trialDays: 30 },
+    ]);
+    getSubscriptionForTenant.mockResolvedValue(null);
 
     const { default: OnboardingPersonalPage } = await import("./page");
     render(await OnboardingPersonalPage());
 
-    expect(screen.getByText("Passo 1 de 3")).toBeInTheDocument();
+    expect(screen.getByText("Passo 1 de 4")).toBeInTheDocument();
+    expect(listActivePlansForAudience).toHaveBeenCalledWith("PERSONAL");
     expect(redirect).not.toHaveBeenCalled();
   });
 });

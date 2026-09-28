@@ -4,6 +4,7 @@ const requirePersonal = vi.fn();
 const completePersonalOnboarding = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const listStudents = vi.fn();
+const subscribeTenantToPlan = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
@@ -24,6 +25,11 @@ vi.mock("@/modules/personal-onboarding/onboarding", async () => {
 vi.mock("@/modules/students/students", async () => {
   const actual = await vi.importActual<typeof import("@/modules/students/students")>("@/modules/students/students");
   return { ...actual, listStudents: (...args: unknown[]) => listStudents(...args) };
+});
+
+vi.mock("@/modules/billing/subscriptions", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
+  return { ...actual, subscribeTenantToPlan: (...args: unknown[]) => subscribeTenantToPlan(...args) };
 });
 
 describe("GET /api/onboarding-personal", () => {
@@ -83,6 +89,7 @@ describe("POST /api/onboarding-personal", () => {
   it("conclui usando o tenantId da sessão, ignorando tenantId do corpo; redireciona para cadastrar o primeiro aluno quando o tenant não tem nenhum", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
+    subscribeTenantToPlan.mockResolvedValue({ id: "sub1" });
     listStudents.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 1 });
 
     const { POST } = await import("./route");
@@ -94,6 +101,7 @@ describe("POST /api/onboarding-personal", () => {
           studentRangeEstimate: "COMECANDO_AGORA",
           businessName: "Meu Espaço",
           termsAccepted: true,
+          planId: "plan-personal-20",
           tenantId: "tenant-adulterado",
         }),
       })
@@ -110,11 +118,18 @@ describe("POST /api/onboarding-personal", () => {
       businessName: "Meu Espaço",
       termsAccepted: true,
     });
+    expect(subscribeTenantToPlan).toHaveBeenCalledWith({
+      tenantId: "tenant-real",
+      tenantType: "PERSONAL",
+      planId: "plan-personal-20",
+      actorUserId: "u1",
+    });
   });
 
   it("redireciona para /painel quando o tenant já tem pelo menos um aluno", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
+    subscribeTenantToPlan.mockResolvedValue({ id: "sub1" });
     listStudents.mockResolvedValue({ items: [], total: 3, page: 1, pageSize: 1 });
 
     const { POST } = await import("./route");
@@ -126,6 +141,7 @@ describe("POST /api/onboarding-personal", () => {
           studentRangeEstimate: "MAIS_DE_50",
           businessName: "Meu Espaço",
           termsAccepted: true,
+          planId: "plan-personal-ilimitado-v2",
         }),
       })
     );
@@ -146,6 +162,26 @@ describe("POST /api/onboarding-personal", () => {
     expect(completePersonalOnboarding).not.toHaveBeenCalled();
   });
 
+  it("retorna 400 quando planId está ausente, mesmo com os demais campos válidos", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/onboarding-personal", {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "(11) 91234-5678",
+          studentRangeEstimate: "ATE_20",
+          businessName: "Meu Espaço",
+          termsAccepted: true,
+        }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(completePersonalOnboarding).not.toHaveBeenCalled();
+  });
+
   it("retorna 400 com o motivo quando o domínio rejeita", async () => {
     const { OnboardingError } = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>(
       "@/modules/personal-onboarding/onboarding"
@@ -157,12 +193,48 @@ describe("POST /api/onboarding-personal", () => {
     const response = await POST(
       new Request("http://localhost/api/onboarding-personal", {
         method: "POST",
-        body: JSON.stringify({ phone: "123", studentRangeEstimate: "ATE_20", businessName: "Nome", termsAccepted: true }),
+        body: JSON.stringify({
+          phone: "123",
+          studentRangeEstimate: "ATE_20",
+          businessName: "Nome",
+          termsAccepted: true,
+          planId: "plan-personal-20",
+        }),
       })
     );
     const body = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error).toBe("VALIDACAO");
+  });
+
+  it("retorna o erro de assinatura quando o plano é rejeitado (ex.: downgrade acima do limite), sem quebrar depois de salvar o perfil", async () => {
+    const { SubscriptionError } = await vi.importActual<typeof import("@/modules/billing/subscriptions")>(
+      "@/modules/billing/subscriptions"
+    );
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
+    subscribeTenantToPlan.mockRejectedValue(
+      new SubscriptionError("LIMITE_ABAIXO_DO_USO_ATUAL", "Você tem mais alunos ativos do que este plano permite.")
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/onboarding-personal", {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "(11) 91234-5678",
+          studentRangeEstimate: "MAIS_DE_50",
+          businessName: "Meu Espaço",
+          termsAccepted: true,
+          planId: "plan-personal-20",
+        }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toBe("LIMITE_ABAIXO_DO_USO_ATUAL");
+    expect(completePersonalOnboarding).toHaveBeenCalledTimes(1);
   });
 });

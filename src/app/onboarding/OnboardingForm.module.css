@@ -17,3 +17,32 @@
   font-size: 13px;
   color: var(--fitos-color-error);
 }
+
+.planList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+}
+
+.backButton {
+  background: none;
+  border: none;
+  padding: var(--fitos-space-2);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  cursor: pointer;
+}
+
+.backButton:disabled {
+  color: var(--fitos-color-outline);
+  cursor: not-allowed;
+}

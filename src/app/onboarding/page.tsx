@@ -4,6 +4,8 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { OnboardingForm } from "./OnboardingForm";
 import styles from "./page.module.css";
 
@@ -28,7 +30,11 @@ export default async function OnboardingPage() {
     redirect("/painel");
   }
 
-  const existingProfile = await getIndividualOnboardingProfile(ctx.tenantId);
+  const [existingProfile, plans, subscription] = await Promise.all([
+    getIndividualOnboardingProfile(ctx.tenantId),
+    listActivePlansForAudience("INDIVIDUAL"),
+    getSubscriptionForTenant(ctx.tenantId),
+  ]);
 
   return (
     <main className={styles.main}>
@@ -46,6 +52,16 @@ export default async function OnboardingPage() {
           initialExperienceLevel={existingProfile?.experienceLevel ?? null}
           initialWeeklyAvailability={existingProfile?.weeklyAvailability ?? null}
           alreadyAcceptedTerms={existingProfile?.termsAcceptedAt !== null && existingProfile?.termsAcceptedAt !== undefined}
+          plans={plans.map((plan) => ({
+            id: plan.id,
+            name: plan.name,
+            description: plan.description,
+            priceCents: plan.priceCents,
+            billingCycle: plan.billingCycle,
+            studentLimit: plan.studentLimit,
+            trialDays: plan.trialDays,
+          }))}
+          initialPlanId={subscription?.planId ?? null}
         />
       </div>
     </main>
