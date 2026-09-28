@@ -1,6 +1,7 @@
 import "server-only";
 import type { PrismaClient, Student, StudentStatus } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 
 /// Camada de domínio de alunos (FIT-013): cadastro e listagem. `tenantId`
 /// nunca é um parâmetro opcional/inferido — todo chamador já deve tê-lo
@@ -22,11 +23,32 @@ export class StudentError extends Error {
       | "VALIDACAO"
       | "EMAIL_BLOQUEADO_POS_ATIVACAO"
       | "NAO_ENCONTRADO"
-      | "ESTADO_INVALIDO",
+      | "ESTADO_INVALIDO"
+      | "LIMITE_DE_ALUNOS_ATINGIDO",
     message: string
   ) {
     super(message);
     this.name = "StudentError";
+  }
+}
+
+/// Impõe `Plan.studentLimit` (FIT-127 — antes documentado como "não
+/// imposto em nenhuma rota", ADR-010 item 6) sempre que um aluno passa a
+/// contar como ativo (cadastro novo ou reativação). Sem assinatura ativa,
+/// ou com um plano sem limite (`studentLimit: null`), nunca bloqueia —
+/// impor um limite sem plano contratado seria uma regra nova não pedida
+/// aqui, não uma consequência do requisito de negócio.
+async function assertActiveStudentLimitNotExceeded(tenantId: string, client: PrismaClient): Promise<void> {
+  const subscription = await getSubscriptionForTenant(tenantId, client);
+  if (!subscription || subscription.status !== "ATIVA" || subscription.plan.studentLimit === null) {
+    return;
+  }
+  const activeCount = await client.student.count({ where: { tenantId, status: "ATIVO" } });
+  if (activeCount >= subscription.plan.studentLimit) {
+    throw new StudentError(
+      "LIMITE_DE_ALUNOS_ATINGIDO",
+      `Seu plano (${subscription.plan.name}) permite até ${String(subscription.plan.studentLimit)} aluno(s) ativo(s). Faça upgrade de plano para adicionar mais.`
+    );
   }
 }
 
@@ -75,6 +97,8 @@ export async function createStudent(input: CreateStudentInput, client: PrismaCli
   if (existingAccount) {
     throw new StudentError("EMAIL_JA_POSSUI_CONTA", "Este e-mail já possui uma conta no FitOS.");
   }
+
+  await assertActiveStudentLimitNotExceeded(input.tenantId, client);
 
   try {
     return await client.student.create({
@@ -309,6 +333,8 @@ export async function reactivateStudent(input: StudentLifecycleInput, client: Pr
   if (current.status === "ATIVO") {
     return current;
   }
+
+  await assertActiveStudentLimitNotExceeded(input.tenantId, client);
 
   const [, updated] = await client.$transaction([
     client.auditEvent.create({

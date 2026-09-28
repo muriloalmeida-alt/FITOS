@@ -3,6 +3,8 @@
 Status: **Aceito** (FIT-122, fora da numeração original do EPIC-12/EPIC-13)
 Data: 27 de setembro de 2026
 
+> **Atualização (28/09/2026, FIT-127/EPIC-16/ADR-013):** o preço zero descrito aqui foi substituído por preços reais + 30 dias de trial — os 4 slugs originais desta ADR foram desativados (`active: false`), nunca removidos; quem já os assinava continua exatamente como estava. O gateway de pagamento real continua adiado, agora como FIT-128.
+
 ## Contexto
 
 O EPIC-12 (Monetização) está pausado na `FIT-091` (prova técnica do Asaas) por bloqueio real de rede ao sandbox nesta sessão — sem alternativa até esse bloqueio ser resolvido externamente. Isso deixa toda a mecânica de assinatura (catálogo de planos, contratar, trocar, cancelar) presa atrás de uma dependência de infraestrutura que ninguém nesta sessão pode destravar, mesmo sendo trabalho que não depende, em si, de nenhum gateway real.
@@ -39,4 +41,4 @@ Decisão explícita de Murilo (Product Owner): "Vamos criar toda a mecânica dei
 
 - Quando a FIT-091 (ou equivalente) finalmente integrar um gateway real, o trabalho é: (a) trocar `NO_PAYMENT_PROVIDER` por uma chamada real ao provedor dentro de `subscribeTenantToPlan`/`cancelSubscription`; (b) decidir preços reais (nova versão de cada plano, nunca editar o existente); (c) implementar webhook/conciliação. Nenhuma mudança de schema adicional é esperada para isso além de campos específicos do provedor (ex.: `externalSubscriptionId`).
 - `FIT-105` (assinar o FitOS Livre) deixa de estar bloqueada **no nível do motor** — a mecânica que ela pedia já existe e já aceita `INDIVIDUAL`. A História em si (uma tela dedicada dentro da jornada do FitOS Livre, se diferente de `/painel/assinatura`) continua não implementada — decisão de produto para quando for priorizada.
-- `studentLimit` continua sem nenhuma imposição real — um personal pode ter mais alunos ativos do que seu plano "permite" sem nenhum bloqueio, hoje. Sinalizado aqui para não ser confundido com um bug quando a imposição for eventualmente pedida.
+- `studentLimit` continua sem nenhuma imposição real — um personal pode ter mais alunos ativos do que seu plano "permite" sem nenhum bloqueio, hoje. Sinalizado aqui para não ser confundido com um bug quando a imposição for eventualmente pedida. **Atualização (FIT-127): agora é imposto** — ver `ASSINATURA-SAAS.md`.
