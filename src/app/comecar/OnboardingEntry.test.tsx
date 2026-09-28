@@ -10,7 +10,7 @@ describe("OnboardingEntry (FIT-112)", () => {
   it("os três caminhos levam a rotas reais, nenhum contrato novo", () => {
     render(<OnboardingEntry />);
 
-    expect(screen.getByRole("link", { name: "Continuar" })).toHaveAttribute("href", "/criar-conta?modo=personal");
+    expect(screen.getByRole("link", { name: "Continuar" })).toHaveAttribute("href", "/comecar?modo=personal");
     expect(screen.getByRole("link", { name: "Conhecer o FitOS Livre" })).toHaveAttribute("href", "/treino-sozinho");
     expect(screen.getByLabelText("Já tem um código de convite?")).toBeInTheDocument();
   });

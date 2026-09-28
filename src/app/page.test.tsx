@@ -1,87 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import exerciseImageManifest from "@/modules/exercises/data/manifesto-imagens-exercicios.json";
-import LandingPage from "./page";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+const getServerSession = vi.fn();
+const redirect = vi.fn((_url: string) => {
+  throw new Error("NEXT_REDIRECT");
+});
+
+vi.mock("@/modules/identity/session", () => ({
+  getServerSession: (...args: unknown[]) => getServerSession(...args),
 }));
 
-describe("LandingPage (FIT-110)", () => {
-  it("renderiza o cabeçalho com Entrar e Criar conta grátis", () => {
-    render(<LandingPage />);
-    const enterLinks = screen.getAllByRole("link", { name: "Entrar" });
-    expect(enterLinks.length).toBeGreaterThan(0);
-    for (const link of enterLinks) {
-      expect(link).toHaveAttribute("href", "/entrar");
-    }
-    expect(screen.getAllByRole("link", { name: /Criar conta grátis/ })[0]).toHaveAttribute("href", "/criar-conta");
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => redirect(url),
+}));
+
+describe("RootPage (FIT-125)", () => {
+  it("sem sessão: redireciona para /entrar", async () => {
+    getServerSession.mockResolvedValue(null);
+    const { default: RootPage } = await import("./page");
+
+    await expect(RootPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
-  it("renderiza o hero com o texto exato do pacote e os dois CTAs", () => {
-    render(<LandingPage />);
-    expect(screen.getByRole("heading", { level: 1, name: "Seu trabalho. Em movimento." })).toBeInTheDocument();
-    expect(screen.getByText("Gestão fitness, sem peso extra")).toBeInTheDocument();
-    expect(
-      screen.getByText("Alunos, treinos e evolução em um só lugar. Menos planilha, mais tempo para transformar resultados.")
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Começar agora" })).toHaveAttribute("href", "/criar-conta");
-    expect(screen.getByRole("link", { name: "Conhecer o FitOS" })).toHaveAttribute("href", "#recursos");
-  });
+  it("com sessão: redireciona para /painel, sem decidir o papel aqui (quem decide é /painel)", async () => {
+    getServerSession.mockResolvedValue({ user: { id: "u1", email: "personal@example.test" } });
+    const { default: RootPage } = await import("./page");
 
-  it("renderiza os três pilares de benefícios", () => {
-    render(<LandingPage />);
-    expect(screen.getByText("Alunos sob controle")).toBeInTheDocument();
-    expect(screen.getByText("Treinos que evoluem")).toBeInTheDocument();
-    expect(screen.getByText("Financeiro simples")).toBeInTheDocument();
-  });
-
-  it("renderiza os três caminhos (Personal / Aluno com convite / FitOS Livre) com links reais", () => {
-    render(<LandingPage />);
-    expect(screen.getByRole("heading", { name: "Sou Personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Treino com Personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "FitOS Livre" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Conhecer o FitOS Livre" })).toHaveAttribute("href", "/treino-sozinho");
-    expect(screen.getByLabelText("Já tem um código de convite?")).toBeInTheDocument();
-  });
-
-  it("FIT-112: o CTA do cartão 'Sou Personal' já leva direto à etapa 2 (?modo=personal), sem repetir a decisão", () => {
-    render(<LandingPage />);
-    const links = screen.getAllByRole("link", { name: /Criar conta grátis/ });
-    expect(links.some((link) => link.getAttribute("href") === "/criar-conta?modo=personal")).toBe(true);
-  });
-
-  it("renderiza a seção Personal/aluno e o CTA final", () => {
-    render(<LandingPage />);
-    expect(screen.getByText(/O acesso do seu aluno é sempre restrito ao seu espaço/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Pronto para colocar sua rotina em movimento?" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Criar meu perfil" })).toHaveAttribute("href", "/criar-conta");
-  });
-
-  it("FIT-111/FIT-118: renderiza o teaser da biblioteca ilustrada com a quantidade real do manifesto, nunca hardcoded", () => {
-    render(<LandingPage />);
-    expect(screen.getByRole("heading", { name: "Biblioteca ilustrada de exercícios" })).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`${exerciseImageManifest.length} de 208 exercícios do catálogo já ilustrados`))).toBeInTheDocument();
-    expect(screen.getByText(/biblioteca completa em expansão/)).toBeInTheDocument();
-    expect(screen.getByText(/Personal, Aluno vinculado e FitOS Livre/)).toBeInTheDocument();
-  });
-
-  it("FIT-119: linka para as páginas reais de Termos de Uso e Política de Privacidade, nunca mais um texto de pendência", () => {
-    render(<LandingPage />);
-    expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute("href", "/termos-de-uso");
-    expect(screen.getByRole("link", { name: "Política de Privacidade" })).toHaveAttribute(
-      "href",
-      "/politica-de-privacidade"
-    );
-    expect(screen.queryByText(/em preparação/)).not.toBeInTheDocument();
-  });
-
-  it("todas as imagens têm alt text funcional (nunca vazio)", () => {
-    render(<LandingPage />);
-    const images = screen.getAllByRole("img");
-    expect(images.length).toBeGreaterThan(0);
-    for (const image of images) {
-      expect(image.getAttribute("alt")).toBeTruthy();
-    }
+    await expect(RootPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/painel");
   });
 });

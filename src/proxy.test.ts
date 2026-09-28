@@ -38,4 +38,19 @@ describe("proxy (proteção otimista de rota)", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("redireciona para /painel quando usuário com sessão acessa /comecar", () => {
+    const response = proxy(requestFor("/comecar", "better-auth.session_token=algum-token"));
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/painel");
+  });
+
+  it("permite acesso a /comecar quando não há sessão", () => {
+    const response = proxy(requestFor("/comecar"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
 });

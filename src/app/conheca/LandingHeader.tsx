@@ -18,7 +18,7 @@ export function LandingHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.bar}>
-        <Link href="/" className={styles.brand}>
+        <Link href="/conheca" className={styles.brand}>
           <BrandLogo variant="horizontal" background="dark" size={20} />
         </Link>
 
@@ -32,7 +32,7 @@ export function LandingHeader() {
           <Link href="#biblioteca" className={styles.navLink}>
             Exercícios
           </Link>
-          <Link href="#comecar" className={styles.navLink}>
+          <Link href="#caminhos" className={styles.navLink}>
             Começar
           </Link>
         </nav>
@@ -41,7 +41,7 @@ export function LandingHeader() {
           <Link href="/entrar" className={styles.enterLink}>
             Entrar
           </Link>
-          <Button href="/criar-conta" variant="filled" className={styles.ctaButton}>
+          <Button href="/comecar" variant="filled" className={styles.ctaButton}>
             Criar conta grátis
           </Button>
         </div>
@@ -69,13 +69,13 @@ export function LandingHeader() {
           <Link href="#biblioteca" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
             Exercícios
           </Link>
-          <Link href="#comecar" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
+          <Link href="#caminhos" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
             Começar
           </Link>
           <Link href="/entrar" className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
             Entrar
           </Link>
-          <Button href="/criar-conta" variant="filled" className={styles.mobileCta}>
+          <Button href="/comecar" variant="filled" className={styles.mobileCta}>
             Criar conta grátis
           </Button>
         </nav>

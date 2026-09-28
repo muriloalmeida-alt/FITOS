@@ -8,6 +8,6 @@ describe("TreinoSozinhoPage (FIT-101)", () => {
 
     expect(screen.getByRole("heading", { name: "Treino sozinho, sem personal" })).toBeInTheDocument();
     const cta = screen.getByRole("link", { name: "Criar meu espaço individual" });
-    expect(cta).toHaveAttribute("href", "/criar-conta?modo=individual");
+    expect(cta).toHaveAttribute("href", "/comecar?modo=individual");
   });
 });

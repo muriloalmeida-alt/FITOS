@@ -6,7 +6,7 @@ import { LandingHeader } from "./LandingHeader";
 describe("LandingHeader (FIT-110)", () => {
   it("renderiza a marca e os links de navegação", () => {
     render(<LandingHeader />);
-    expect(screen.getByRole("link", { name: "FitOS" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "FitOS" })).toHaveAttribute("href", "/conheca");
     expect(screen.getAllByRole("link", { name: "Recursos" })[0]).toHaveAttribute("href", "#recursos");
     expect(screen.getAllByRole("link", { name: "Para quem" })[0]).toHaveAttribute("href", "#para-quem");
   });
