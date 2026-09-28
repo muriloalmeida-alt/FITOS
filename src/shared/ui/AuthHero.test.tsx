@@ -3,25 +3,31 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { AuthHero } from "./AuthHero";
 
 describe("AuthHero", () => {
-  it("renderiza a imagem (decorativa, alt vazio), o eyebrow e o headline", () => {
-    const { container } = render(<AuthHero eyebrow="FitOS" headline="Todo progresso começa com movimento." />);
+  it("renderiza a foto de fundo (decorativa, alt vazio), a marca e o headline", () => {
+    const { container } = render(<AuthHero headline="Todo progresso começa com movimento." />);
 
-    expect(screen.getByText("FitOS")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
     expect(screen.getByText("Todo progresso começa com movimento.")).toBeInTheDocument();
-    const image = container.querySelector("img");
-    expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute("alt", "");
+    const photo = container.querySelector('img[alt=""]');
+    expect(photo).toBeInTheDocument();
   });
 
-  it("mantém o gradiente e o PulseLine como o próprio conteúdo se a imagem falhar ao carregar (fallback, não erro)", () => {
-    const { container } = render(<AuthHero eyebrow="FitOS" headline="Todo progresso começa com movimento." />);
+  it("aceita eyebrow opcional e uma segunda linha do headline em laranja (FIT-131)", () => {
+    render(<AuthHero eyebrow="FitOS Livre" headline="Movimento começa" headlineAccent="com um plano." />);
 
-    const image = container.querySelector("img");
-    expect(image).not.toBeNull();
-    fireEvent.error(image!);
+    expect(screen.getByText("FitOS Livre")).toBeInTheDocument();
+    expect(screen.getByText("com um plano.")).toBeInTheDocument();
+  });
 
-    expect(container.querySelector("img")).not.toBeInTheDocument();
-    expect(screen.getByText("FitOS")).toBeInTheDocument();
+  it("mantém a marca e o headline como o próprio conteúdo se a foto falhar ao carregar (fallback, não erro)", () => {
+    const { container } = render(<AuthHero headline="Todo progresso começa com movimento." />);
+
+    const photo = container.querySelector('img[alt=""]');
+    expect(photo).not.toBeNull();
+    fireEvent.error(photo!);
+
+    expect(container.querySelector('img[alt=""]')).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
     expect(screen.getByText("Todo progresso começa com movimento.")).toBeInTheDocument();
   });
 });

@@ -18,7 +18,8 @@ describe("PlanOptionCard (FIT-126)", () => {
     render(<PlanOptionCard plan={PLAN} groupName="plano" selected={false} onSelect={() => {}} />);
 
     expect(screen.getByText("Personal 20")).toBeInTheDocument();
-    expect(screen.getByText("R$ 49,90 / mês")).toBeInTheDocument();
+    expect(screen.getByText("R$ 49,90")).toBeInTheDocument();
+    expect(screen.getByText("/mês")).toBeInTheDocument();
     expect(screen.getByText("Alunos ativos: até 20")).toBeInTheDocument();
     expect(screen.getByText("30 dias grátis, depois R$ 49,90/mês")).toBeInTheDocument();
   });
@@ -49,5 +50,13 @@ describe("PlanOptionCard (FIT-126)", () => {
     render(<PlanOptionCard plan={PLAN} groupName="plano" selected onSelect={() => {}} />);
 
     expect(screen.getByRole("radio")).toBeChecked();
+  });
+
+  it("mostra o rótulo 'Selecionado' só quando o próprio usuário escolheu este cartão — nunca um 'mais escolhido' fixo (FIT-131)", () => {
+    const { rerender } = render(<PlanOptionCard plan={PLAN} groupName="plano" selected={false} onSelect={() => {}} />);
+    expect(screen.queryByText("Selecionado")).not.toBeInTheDocument();
+
+    rerender(<PlanOptionCard plan={PLAN} groupName="plano" selected onSelect={() => {}} />);
+    expect(screen.getByText("Selecionado")).toBeInTheDocument();
   });
 });

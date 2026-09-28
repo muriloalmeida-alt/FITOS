@@ -1,26 +1,38 @@
 .main {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  background-color: var(--fitos-color-chrome);
 }
 
 .formColumn {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--fitos-space-4);
+  flex-direction: column;
+  gap: var(--fitos-space-6);
+  padding: 0 var(--fitos-space-4) var(--fitos-space-6);
+  margin-top: calc(var(--fitos-shape-large) * -1);
 }
 
 @media (min-width: 840px) {
+  .main {
+    flex-direction: row;
+    background-color: var(--fitos-color-surface);
+  }
+
   .formColumn {
     flex: 0 0 50%;
+    align-items: center;
+    justify-content: center;
     padding: var(--fitos-space-8);
+    margin-top: 0;
   }
 }
 
 .card {
   width: 100%;
   max-width: 420px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--fitos-space-6);
@@ -58,10 +70,40 @@
   gap: var(--fitos-space-4);
 }
 
+/*
+ * No compact (pacote visual 2026), o rodapé fica fora do cartão branco,
+ * sobre o fundo navy da página (ver print mobile tela-01) — por isso o
+ * texto claro aqui. Em desktop, a coluna toda passa a branca (`.main`
+ * acima) e o rodapé herda o mesmo tom escuro do resto do formulário.
+ */
 .footer {
   margin: 0;
+  max-width: 420px;
+  width: 100%;
+  margin-inline: auto;
   font-size: 14px;
   line-height: 20px;
   text-align: center;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-on-chrome-variant);
+}
+
+.footer a {
+  color: var(--fitos-orange-300);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.footer a:hover,
+.footer a:focus-visible {
+  text-decoration: underline;
+}
+
+@media (min-width: 840px) {
+  .footer {
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  .footer a {
+    color: var(--fitos-color-primary);
+  }
 }

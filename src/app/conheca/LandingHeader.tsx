@@ -19,7 +19,7 @@ export function LandingHeader() {
     <header className={styles.header}>
       <div className={styles.bar}>
         <Link href="/conheca" className={styles.brand}>
-          <BrandLogo variant="horizontal" background="dark" size={20} />
+          <BrandLogo variant="horizontal" background="light" size={20} />
         </Link>
 
         <nav className={styles.desktopNav} aria-label="Navegação principal">

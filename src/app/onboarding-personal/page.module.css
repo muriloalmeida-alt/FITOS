@@ -1,9 +1,30 @@
 .main {
   min-height: 100vh;
   display: flex;
+}
+
+/*
+ * O painel fotográfico (`AuthHero`) fica reservado ao desktop nesta
+ * rodada (pacote visual 2026, FIT-131) — diferente de `/entrar`, que já
+ * ganhou o tratamento também em 390px. O mobile inset/com cantos
+ * arredondados do print (tela 04) é uma composição própria, não a mesma
+ * banda de borda a borda de `/entrar`; construir os dois ao mesmo tempo
+ * fugia do escopo desta rodada. Pendência explícita, não escondida — ver
+ * PR2.
+ */
+.formColumn {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--fitos-space-4);
+}
+
+@media (min-width: 840px) {
+  .formColumn {
+    flex: 0 0 50%;
+    padding: var(--fitos-space-8);
+  }
 }
 
 .card {

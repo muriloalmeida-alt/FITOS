@@ -15,7 +15,7 @@ describe("CriarContaPage (FIT-112)", () => {
     render(await CriarContaPage({ searchParams: makeSearchParams() }));
 
     expect(screen.getByText("Passo 1 de 2")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sou Personal" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sou personal" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tenho convite do meu personal" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "FitOS Livre" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Nome completo")).not.toBeInTheDocument();

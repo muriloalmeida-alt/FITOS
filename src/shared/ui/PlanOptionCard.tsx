@@ -35,10 +35,20 @@ interface PlanOptionCardProps {
 /// (`listActivePlansForAudience`), nunca uma lista fixa na interface.
 /// Nunca pede dados de cartão aqui — essa é uma etapa separada
 /// (`CreditCardFields`, FIT-128), só quando o plano escolhido é pago.
+///
+/// O pacote visual 2026 (FIT-131, tela 05) destaca um cartão como "MAIS
+/// ESCOLHIDO" com fundo navy — decisão de produto que este componente não
+/// tem como afirmar de verdade (não existe hoje nenhum dado real de
+/// popularidade de plano no catálogo, e "nenhum valor de print hardcoded"
+/// é critério de aceite explícito do próprio pacote). O mesmo contraste
+/// visual (cartão navy elevado entre cartões claros) é aplicado aqui a um
+/// estado real e verificável: o cartão que o próprio usuário selecionou
+/// (`selected`), rotulado "Selecionado" — nunca uma preferência
+/// fabricada.
 export function PlanOptionCard({ plan, groupName, selected, onSelect, disabled, showStudentLimit = true }: PlanOptionCardProps) {
   const cycleLabel = BILLING_CYCLE_LABEL[plan.billingCycle] ?? "mês";
   return (
-    <label className={styles.card}>
+    <label className={selected ? `${styles.card} ${styles.cardSelected}` : styles.card}>
       <input
         className={styles.input}
         type="radio"
@@ -49,10 +59,12 @@ export function PlanOptionCard({ plan, groupName, selected, onSelect, disabled, 
         disabled={disabled}
       />
       <span className={styles.body}>
+        {selected ? <span className={styles.selectedBadge}>Selecionado</span> : null}
         <span className={styles.name}>{plan.name}</span>
         {plan.description ? <span className={styles.description}>{plan.description}</span> : null}
-        <span className={styles.price}>
-          {formatCentsBRL(plan.priceCents)} / {cycleLabel}
+        <span className={styles.priceRow}>
+          <span className={styles.price}>{formatCentsBRL(plan.priceCents)}</span>
+          <span className={styles.priceCycle}>/{cycleLabel}</span>
         </span>
         {showStudentLimit ? (
           <span className={styles.detail}>
