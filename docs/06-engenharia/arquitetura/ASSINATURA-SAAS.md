@@ -16,6 +16,7 @@ Decisão original (FIT-122/ADR-010): construir toda a mecânica de negócio (cat
 - **FIT-128, continuação (28/09/2026)**: CPF/CNPJ agora coletado — `PersonalProfile.cpfCnpj` (migration, validação real por dígito verificador em `src/shared/lib/cpfCnpj.ts`), obrigatório na Etapa 2 do onboarding do Personal desde esta mudança (contas existentes que não reabrirem o onboarding continuam com `cpfCnpj: null`).
 - **FIT-128, wiring real em melhor esforço (28/09/2026)**: meio(s) de pagamento decididos por Murilo — Pix, cartão de crédito e carteiras digitais (`billingType: "UNDEFINED"` no Asaas, nunca um único meio fixo). `subscribeTenantToPlan`/`cancelSubscription` agora tentam criar/atualizar/cancelar cliente e assinatura reais no Asaas para qualquer tenant (`PERSONAL` ou `INDIVIDUAL`) com plano de preço real e CPF/CNPJ informado — mas em **modo de melhor esforço**: qualquer falha nunca bloqueia o usuário, sempre volta para `NO_PAYMENT_PROVIDER` (decisão deliberada, ver `ADR-003`). `SaasSubscription.externalCustomerId`/`externalSubscriptionId` guardam os ids reais quando a ligação tem sucesso. CPF/CNPJ agora coletado em ambos `PersonalProfile` e `IndividualProfile` (este último, extensão decidida por Murilo na mesma sessão — `individual-livre-v2` também é um plano pago real). Webhook de conciliação (ADR-010) continua não iniciado.
 - **Wiring de seleção de plano dentro do onboarding guiado, concluído na FIT-126**: `/onboarding-personal` e `/onboarding` (FitOS Livre) agora têm uma etapa real de seleção de plano que chama `subscribeTenantToPlan` na conclusão — ver `ONBOARDING-PERSONAL.md`. Contas já existentes antes da FIT-126 não são migradas retroativamente (pendência registrada lá, não aqui).
+- **FIT-128, confirmado empiricamente em homologação (28/09/2026)**: cadastro real de teste (Personal, CPF de teste válido, plano pago) produziu cliente e assinatura reais no Asaas Sandbox — confirmado tanto pelo painel do Asaas (cliente visível em "Meus Clientes") quanto pelo log da aplicação (`[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.`). O contrato do Asaas v3 implementado em `asaasClient.ts`/`subscriptions.ts` está correto na prática para o fluxo de criação — não é mais uma suposição, é um resultado real observado. Renovação, falha/inadimplência, cancelamento e reconciliação continuam não exercidos (só a criação inicial foi testada).
 
 ## Separação obrigatória
 
@@ -32,7 +33,7 @@ Asaas é candidato primário; Mercado Pago é fallback. A aprovação depende de
 
 ## Prova técnica obrigatória do Asaas
 
-- criar cliente e assinatura com dados fictícios;
+- ✅ criar cliente e assinatura com dados fictícios — **confirmado em homologação, 28/09/2026** (ver FIT-128 acima);
 - ativar e consultar situação;
 - receber e autenticar webhooks;
 - garantir idempotência e tolerância a reenvio/desordem;
