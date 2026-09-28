@@ -924,3 +924,21 @@ Branch `feature/fit-126-onboarding-guiado` a partir de `main` já com a FIT-127 
 Gates: suíte completa **1053/1053** (duas falhas de timeout em `activation.integration.test.ts`/`workouts.integration.test.ts` durante a primeira corrida completa foram reproduzidas isoladamente como passando — contenção de conexões PostgreSQL sob carga da suíte inteira, não uma regressão desta História; confirmado com uma segunda corrida completa 1053/1053 verde). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos. Documentação atualizada: `ONBOARDING-PERSONAL.md` (etapa de plano, wizard genérico, pendências reais), `ASSINATURA-SAAS.md` (pendência de wiring marcada como concluída), `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md`.
 
 **Pendências reais, explícitas**: (1) contas Personal/Individual já existentes antes desta História nunca são levadas de volta a um destes wizards para escolher um plano — o gate de `/painel` só verifica a existência do perfil, não da assinatura; migrar essas contas retroativamente é uma decisão de produto própria, fora do escopo de "onboarding guiado" (e o documento de decisão exige nunca cobrar usuário gratuito existente sem uma nova escolha explícita, então isso não pode ser automático). (2) "Mostrar o plano do profissional como contexto" na tela de ativação do aluno (seção do pacote sobre o Aluno) foi deliberadamente deferido — o próprio pacote marca isso como "só como contexto", e o critério real de aceite ("nunca cobrar o aluno pelo vínculo") já está garantido sem essa exibição. (3) Nenhuma evidência visual própria da nova etapa de seleção de plano ainda — fica para a FIT-129 (revisão visual integral), que cobre evidências de todas as telas ainda não capturadas em homologação real.
+
+PR #159 mesclado em `main` (`0ffc00c`) após CI verde. Issue #151 fechada.
+
+### FIT-128 — bloqueio de rede reconfirmado (28/09/2026), antes de qualquer código
+
+Antes de escrever qualquer linha de integração com o Asaas, reconfirmei a conectividade de rede deste ambiente, exatamente como o próprio `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` (seção "Dependências e sequenciamento") exigia — o bloqueio da FIT-091 era de um ambiente de dev anterior, então merecia reconfirmação, não reaproveitamento automático da conclusão antiga.
+
+```
+curl https://api-sandbox.asaas.com/v3/customers → CONNECT tunnel failed, 403 (connect_rejected)
+curl https://api.asaas.com/v3/customers        → CONNECT tunnel failed, 403 (connect_rejected)
+curl https://api.mercadopago.com                → CONNECT tunnel failed, 403 (connect_rejected)
+```
+
+Confirmado via `curl -sS "$HTTPS_PROXY/__agentproxy/status"`: o proxy de saída deste ambiente aplica uma lista de permissão (`noProxy`) que só cobre domínios conhecidos (registries de pacotes, API da Anthropic) — qualquer domínio de terceiro fora dela, **incluindo tanto o Asaas quanto o Mercado Pago** (o fallback documentado em `ASSINATURA-SAAS.md`), é recusado pelo gateway da organização (`connect_rejected`, 403 no `CONNECT`). Não é instabilidade, não é específico do Asaas, e não é algo que uma nova tentativa ou uma troca de provedor resolveria — é política de rede no nível do ambiente.
+
+**Decisão**: nunca construir a integração "no escuro". A "prova técnica obrigatória do Asaas" (criar cliente/assinatura reais, autenticar webhooks, validar renovação/inadimplência, reconciliar estado) exige, pela própria natureza, chamadas reais a um provedor real — sem elas, qualquer código escrito seria não verificado, e declarar a História concluída sobre isso violaria diretamente a instrução vigente de nunca declarar sucesso havendo falha real. O precedente já aberto nesta base (FIT-091/EPIC-12, ADR-003) para exatamente esse cenário é pausar a História explicitamente, documentar o bloqueio, e não fabricar uma integração não testável — seguido aqui sem alteração.
+
+FIT-128 **pausada por bloqueio real de rede**, decisão sobre como proceder (mecânica sem chamada real, aguardar acesso de rede, ou executar a prova técnica fora deste sandbox) posta a Murilo antes de qualquer código. Nenhuma linha de produção foi escrita para o Asaas nesta sessão.
