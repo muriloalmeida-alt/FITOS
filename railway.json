@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "preDeployCommand": "npm run db:migrate:deploy",
+    "preDeployCommand": "npm run db:migrate:deploy && npm run planos:seed-comerciais",
     "startCommand": "npm run start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
