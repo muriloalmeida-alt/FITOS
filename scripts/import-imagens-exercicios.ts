@@ -31,7 +31,11 @@
  * script/ambiente): nunca faz upload nem qualquer operação S3 autenticada
  * (sem `HeadObjectCommand`/`PutObjectCommand`, sem instanciar `S3Client`);
  * só exige `R2_PUBLIC_BASE_URL`; valida cada objeto por HTTP (a própria URL
- * pública) antes de gravar `imageUrl`/`imageAlt`. Ver
+ * pública) antes de gravar `imageUrl`/`imageAlt`. A URL pública é montada
+ * sem o prefixo `exercises/` da chave interna (`stripExercisePrefixForPublicUrl`)
+ * — o bucket real publica os objetos na raiz (ex.:
+ * `https://pub-....r2.dev/abdominal-bicicleta.webp`, nunca
+ * `.../exercises/abdominal-bicicleta.webp`). Ver
  * `docs/06-engenharia/arquitetura/ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`,
  * seção "Modo --public-only", para o runbook completo. Nunca combine com
  * `--revert` — `--revert` é uma operação só de banco, independente de modo
@@ -51,7 +55,13 @@ import {
   type BuildImageUrl,
   type UploadImage,
 } from "../src/modules/exercises/importExerciseImages";
-import { buildPublicImageUrl, listMissingR2EnvVars, readPublicOnlyR2Config, readR2Config } from "../src/modules/exercises/r2Config";
+import {
+  buildPublicImageUrl,
+  listMissingR2EnvVars,
+  readPublicOnlyR2Config,
+  readR2Config,
+  stripExercisePrefixForPublicUrl,
+} from "../src/modules/exercises/r2Config";
 import { createR2Client, uploadAndVerifyObject } from "../src/modules/exercises/r2Client";
 import { createPublicOnlyUploadImage } from "../src/modules/exercises/publicUrlValidator";
 
@@ -128,7 +138,7 @@ async function main(): Promise<void> {
       );
       try {
         const publicConfig = readPublicOnlyR2Config();
-        buildImageUrl = (objectKey) => buildPublicImageUrl(publicConfig, objectKey);
+        buildImageUrl = (objectKey) => buildPublicImageUrl(publicConfig, stripExercisePrefixForPublicUrl(objectKey));
         uploadImage = createPublicOnlyUploadImage(publicConfig);
       } catch (error) {
         console.error(

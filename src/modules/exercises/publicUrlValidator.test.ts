@@ -124,7 +124,7 @@ describe("validatePublicImageUrl", () => {
 });
 
 describe("createPublicOnlyUploadImage", () => {
-  it("monta a URL a partir da base pública configurada + chave do objeto, e a valida", async () => {
+  it("monta a URL a partir da base pública configurada + chave do objeto sem o prefixo 'exercises/', e a valida", async () => {
     const fetchImpl = fetchStub(() => response(200));
     const uploadImage = createPublicOnlyUploadImage({ publicBaseUrl: "https://pub-exemplo.r2.dev" }, { fetchImpl, retryDelayMs: 0 });
 
@@ -133,7 +133,7 @@ describe("createPublicOnlyUploadImage", () => {
     ).resolves.toBeUndefined();
 
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://pub-exemplo.r2.dev/exercises/abdominal-bicicleta.webp",
+      "https://pub-exemplo.r2.dev/abdominal-bicicleta.webp",
       expect.objectContaining({ method: "HEAD" })
     );
   });

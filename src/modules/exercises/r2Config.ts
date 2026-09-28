@@ -96,3 +96,18 @@ export const PUBLIC_ONLY_REQUIRED_ENV_VAR = "R2_PUBLIC_BASE_URL";
 export function readPublicOnlyR2Config(): Pick<R2Config, "publicBaseUrl"> {
   return { publicBaseUrl: stripTrailingSlash(requiredEnv(PUBLIC_ONLY_REQUIRED_ENV_VAR)) };
 }
+
+const EXERCISE_OBJECT_PREFIX_WITH_SLASH = `${EXERCISE_OBJECT_PREFIX}/`;
+
+/// O bucket real publica os objetos na raiz (ex.:
+/// `https://pub-....r2.dev/abdominal-bicicleta.webp`), sem o prefixo
+/// `exercises/` usado internamente por `buildExerciseObjectKey` (e pelo modo
+/// S3, cuja chave no bucket inclui esse prefixo). Usado só pelo modo
+/// `--public-only`, que aponta para objetos já publicados fora deste script —
+/// nunca altera a chave usada pelo modo S3, só a URL pública montada a partir
+/// dela.
+export function stripExercisePrefixForPublicUrl(objectKey: string): string {
+  return objectKey.startsWith(EXERCISE_OBJECT_PREFIX_WITH_SLASH)
+    ? objectKey.slice(EXERCISE_OBJECT_PREFIX_WITH_SLASH.length)
+    : objectKey;
+}
