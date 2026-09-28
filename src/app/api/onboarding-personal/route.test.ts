@@ -98,6 +98,7 @@ describe("POST /api/onboarding-personal", () => {
         method: "POST",
         body: JSON.stringify({
           phone: "(11) 91234-5678",
+          cpfCnpj: "111.444.777-35",
           studentRangeEstimate: "COMECANDO_AGORA",
           businessName: "Meu Espaço",
           termsAccepted: true,
@@ -114,6 +115,7 @@ describe("POST /api/onboarding-personal", () => {
       tenantId: "tenant-real",
       phone: "(11) 91234-5678",
       cref: undefined,
+      cpfCnpj: "111.444.777-35",
       studentRangeEstimate: "COMECANDO_AGORA",
       businessName: "Meu Espaço",
       termsAccepted: true,
@@ -138,6 +140,7 @@ describe("POST /api/onboarding-personal", () => {
         method: "POST",
         body: JSON.stringify({
           phone: "(11) 91234-5678",
+          cpfCnpj: "111.444.777-35",
           studentRangeEstimate: "MAIS_DE_50",
           businessName: "Meu Espaço",
           termsAccepted: true,
@@ -195,6 +198,7 @@ describe("POST /api/onboarding-personal", () => {
         method: "POST",
         body: JSON.stringify({
           phone: "123",
+          cpfCnpj: "111.444.777-35",
           studentRangeEstimate: "ATE_20",
           businessName: "Nome",
           termsAccepted: true,
@@ -224,6 +228,7 @@ describe("POST /api/onboarding-personal", () => {
         method: "POST",
         body: JSON.stringify({
           phone: "(11) 91234-5678",
+          cpfCnpj: "111.444.777-35",
           studentRangeEstimate: "MAIS_DE_50",
           businessName: "Meu Espaço",
           termsAccepted: true,

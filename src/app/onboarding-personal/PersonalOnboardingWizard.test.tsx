@@ -27,6 +27,7 @@ vi.mock("next/navigation", () => ({
 /// mesmo preenchimento válido usado pelos demais testes desta suíte.
 async function advanceToStep3(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Celular"), "11912345678");
+  await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
   await user.click(screen.getByRole("button", { name: "Continuar" }));
   await user.selectOptions(await screen.findByLabelText("Quantos alunos você tem hoje, aproximadamente?"), "ATE_20");
   await user.click(screen.getByRole("checkbox"));
@@ -60,6 +61,27 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     expect(screen.getByLabelText("Celular")).toHaveValue("(11) 91234-5678");
   });
 
+  it("aplica a máscara de CPF/CNPJ ao digitar", async () => {
+    const user = userEvent.setup();
+    render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
+
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
+
+    expect(screen.getByLabelText("CPF ou CNPJ")).toHaveValue("111.444.777-35");
+  });
+
+  it("passo 1: rejeita CPF/CNPJ inválido, nunca avança para o passo 2", async () => {
+    const user = userEvent.setup();
+    render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
+
+    await user.type(screen.getByLabelText("Celular"), "11912345678");
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477736");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("Informe um CPF ou CNPJ válido.")).toBeInTheDocument();
+    expect(screen.queryByText("Perfil profissional")).not.toBeInTheDocument();
+  });
+
   it("passo 3: exige um plano selecionado antes de ir para a revisão", async () => {
     const user = userEvent.setup();
     render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
@@ -78,6 +100,7 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
 
     await user.type(screen.getByLabelText("Celular"), "11912345678");
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(await screen.findByText("Perfil profissional")).toBeInTheDocument();
@@ -91,6 +114,7 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
 
     expect(await screen.findByText("Revisão")).toBeInTheDocument();
     expect(screen.getByText("(11) 91234-5678")).toBeInTheDocument();
+    expect(screen.getByText("111.444.777-35")).toBeInTheDocument();
     expect(screen.getByText("Até 20 alunos")).toBeInTheDocument();
     expect(screen.getByText("Personal 20 — R$ 49,90/mês (30 dias grátis)")).toBeInTheDocument();
 
@@ -104,6 +128,7 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
         body: JSON.stringify({
           phone: "(11) 91234-5678",
           cref: undefined,
+          cpfCnpj: "111.444.777-35",
           studentRangeEstimate: "ATE_20",
           businessName: "Espaço de Fulano",
           termsAccepted: true,
@@ -119,6 +144,7 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     render(<PersonalOnboardingWizard initialBusinessName="" plans={PLANS} initialPlanId={null} />);
 
     await user.type(screen.getByLabelText("Celular"), "11912345678");
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     await user.click(await screen.findByRole("button", { name: "Continuar" }));
@@ -133,6 +159,7 @@ describe("PersonalOnboardingWizard (FIT-113/FIT-126)", () => {
     render(<PersonalOnboardingWizard initialBusinessName="Espaço de Fulano" plans={PLANS} initialPlanId={null} />);
 
     await user.type(screen.getByLabelText("Celular"), "11912345678");
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await screen.findByText("Perfil profissional");
 

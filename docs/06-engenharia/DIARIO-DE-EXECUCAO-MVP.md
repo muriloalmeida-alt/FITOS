@@ -994,3 +994,23 @@ Antes de escrever qualquer chamada de criação de cliente/assinatura real, veri
 **Testes** (novos): `asaasClient.test.ts` (9 testes — autentica com `access_token`/`User-Agent` na base URL do Sandbox por padrão; retorna o corpo em sucesso; erro HTTP lança `AsaasApiError` com status/código/descrição saneados sem a chave; erro de rede/timeout categorizados; nunca lança com corpo não-JSON; aceita base URL customizada; `listAsaasCustomers` faz `GET /customers?limit=1` por padrão e respeita um `limit` customizado). Testes do diagnóstico/`instrumentation` removidos junto com o código.
 
 **Pendência explícita, para o próximo PR (2/2), ainda não iniciado**: decidir onde/como coletar CPF/CNPJ no onboarding (provavelmente `PersonalProfile`, já que quem paga a assinatura SaaS é sempre o personal — decisão que cabe a Murilo, não a este PR), migration correspondente, e só então o wiring real em `subscribeTenantToPlan`/`cancelSubscription` (ADR-010). O restante da prova técnica obrigatória do Asaas (`ASSINATURA-SAAS.md`) — criar cliente/assinatura reais, webhooks autenticados/idempotentes, renovação, falha/recuperação, cancelamento, conciliação, meios de pagamento reais, custo/compatibilidade Railway — continua inteiramente pendente.
+
+### FIT-128 — CPF/CNPJ coletado em PersonalProfile; wiring real ainda pendente
+
+Murilo confirmou onde coletar CPF/CNPJ (a pergunta deixada em aberto no PR #164): `PersonalProfile`, nunca `IndividualProfile` — quem paga a assinatura SaaS é sempre o personal, nunca o aluno/individual.
+
+**Schema**: `PersonalProfile.cpfCnpj` (`String?`, migration `20260928151012_add_cpf_cnpj_to_personal_profile`). Nullable deliberadamente — o mesmo raciocínio já usado para `IndividualProfile.termsAcceptedAt` (FIT-119): perfis concluídos antes deste campo existir ficam com `null`, nunca um dado fabricado retroativamente; reabrir o onboarding passa a exigir o campo.
+
+**Validação real, não só contagem de dígitos**: `src/shared/lib/cpfCnpj.ts` implementa o algoritmo de dígito verificador da Receita Federal para CPF (11 dígitos) e CNPJ (14 dígitos) — `formatCpfCnpj` aplica a máscara progressiva conforme a quantidade de dígitos digitados (CPF até 11, CNPJ a partir do 12º), `isValidCpfCnpj` rejeita sequências de dígitos iguais (`00000000000` etc., matematicamente "válidas" pelo dígito verificador mas nunca um documento real) e qualquer tamanho diferente de 11/14. Testado com os exemplos públicos de teste amplamente conhecidos "111.444.777-35" (CPF) e "11.222.333/0001-81" (CNPJ) — nunca documentos reais.
+
+**Domínio e API**: `CompletePersonalOnboardingInput.cpfCnpj` passou a ser obrigatório (não mais opcional como `cref`); `assertValid` chama `isValidCpfCnpj` e rejeita com `OnboardingError` antes de gravar qualquer coisa (mesmo padrão de celular inválido). `/api/onboarding-personal` exige `cpfCnpj: string` no corpo, senão 400 antes de chamar o domínio.
+
+**UI**: novo campo "CPF ou CNPJ" na Etapa 2 do wizard (`/onboarding-personal`), ao lado de celular/CREF, com máscara ao digitar e mensagem de erro real ("Informe um CPF ou CNPJ válido.") quando o dígito verificador não bate — nunca só "obrigatório". Aparece na Revisão (Etapa 4) junto dos demais dados.
+
+**Testes** (novos/atualizados): `cpfCnpj.test.ts` (11 testes — máscara progressiva CPF/CNPJ, dígito verificador real válido/inválido para os dois formatos, sequências repetidas sempre inválidas, tamanho errado sempre inválido); `onboarding.integration.test.ts` (+1 teste: CPF/CNPJ inválido rejeitado sem gravar; demais testes atualizados para exigir `cpfCnpj`); `route.test.ts` e `PersonalOnboardingWizard.test.tsx` atualizados/+2 novos (máscara ao digitar, rejeição de CPF/CNPJ inválido no passo 1).
+
+Gates: suíte completa **1076/1076** (+14 desde o PR #164 — 11 do novo `cpfCnpj.test.ts`, +1 de integração, +2 do wizard). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos. Migration aplicada em `fitos_dev` e `fitos_test` (dev/CI local).
+
+`ADR-003-ASAAS-COMO-CANDIDATO.md`, `ASSINATURA-SAAS.md`, `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` e `ONBOARDING-PERSONAL.md` atualizados com o mesmo relato.
+
+**Pendência explícita, ainda para uma História separada**: o wiring real — chamar `src/modules/billing/asaasClient.ts` de dentro de `subscribeTenantToPlan`/`cancelSubscription` para criar cliente/assinatura de fato no Asaas (ADR-010). Isso exige antes decidir o(s) meio(s) de pagamento (`billingType` do Asaas: boleto/cartão/Pix/todos) — uma decisão de produto que só Murilo pode tomar, ainda não perguntada. O webhook de conciliação continua não iniciado. Contas existentes que nunca reabrirem o onboarding continuam com `cpfCnpj: null`, o que bloqueará a criação real de cliente para elas até que o façam.

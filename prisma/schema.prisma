@@ -330,6 +330,15 @@ model PersonalProfile {
   tenantId             String                       @unique
   phone                String
   cref                 String?
+  /// CPF/CNPJ do personal (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento, ainda não
+  /// ligado (`src/modules/billing/asaasClient.ts`). Obrigatório para toda
+  /// nova submissão do onboarding (`completePersonalOnboarding` valida com
+  /// `isValidCpfCnpj`) — `null` só para perfis concluídos antes deste
+  /// campo existir (mesmo princípio de `IndividualProfile.termsAcceptedAt`
+  /// desde a FIT-119: nunca fabricado retroativamente; reabrir o
+  /// onboarding passa a exigi-lo).
+  cpfCnpj              String?
   studentRangeEstimate PersonalStudentRangeEstimate
   /// Sempre preenchido no momento da submissão (não um campo booleano) —
   /// rastreabilidade de quando o aceite ocorreu. Não existe hoje nenhuma
