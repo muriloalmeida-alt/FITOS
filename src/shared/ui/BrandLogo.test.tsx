@@ -3,21 +3,27 @@ import { render, screen } from "@testing-library/react";
 import { BrandLogo } from "./BrandLogo";
 
 describe("BrandLogo", () => {
-  it("variante horizontal: renderiza o texto real 'Fit' + 'OS', acessível por si só", () => {
+  it("variante horizontal: usa o vetor oficial escuro em fundo escuro (padrão)", () => {
     render(<BrandLogo variant="horizontal" />);
-    expect(screen.getByText("Fit")).toBeInTheDocument();
-    expect(screen.getByText("OS")).toBeInTheDocument();
+    const img = screen.getByRole("img", { name: "FitOS" });
+    expect(img).toHaveAttribute("src", expect.stringContaining("fitos-horizontal-escuro.svg"));
   });
 
-  it("variante horizontal: o símbolo ao lado do texto é sempre decorativo", () => {
-    const { container } = render(<BrandLogo variant="horizontal" />);
-    const svg = container.querySelector("svg");
-    expect(svg).toHaveAttribute("aria-hidden", "true");
+  it("variante horizontal: usa o vetor oficial claro em fundo claro", () => {
+    render(<BrandLogo variant="horizontal" background="light" />);
+    const img = screen.getByRole("img", { name: "FitOS" });
+    expect(img).toHaveAttribute("src", expect.stringContaining("fitos-horizontal-claro.svg"));
   });
 
-  it("variante symbol sem decorative: tem nome acessível (role=img + aria-label)", () => {
+  it("variante horizontal decorativa: sem nome acessível", () => {
+    render(<BrandLogo variant="horizontal" decorative />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("variante symbol sem decorative: tem nome acessível", () => {
     render(<BrandLogo variant="symbol" />);
-    expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
+    const img = screen.getByRole("img", { name: "FitOS" });
+    expect(img).toHaveAttribute("src", expect.stringContaining("fitos-icone.svg"));
   });
 
   it("variante symbol com decorative=true: some do papel acessível", () => {

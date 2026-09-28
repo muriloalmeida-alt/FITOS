@@ -4,6 +4,8 @@
 **Data:** 15 de setembro de 2026  
 **Responsável:** Product Design
 
+> **Atualização (28/09/2026, ADR-012):** a cor de ação foi trocada de **verde-lima** (`Motion Lime`, `#9DDB4A`) para **laranja** (`#FF7847`), por decisão de produto do EPIC-16 — a base **OS Navy** (`#101C2C`) não mudou. Este documento é preservado como registro do benchmark e do racional original (a lógica de "base estrutural + cor de ação + apoio" continua válida); onde ele diz "verde-lima"/"Motion Lime", leia-se hoje o laranja da marca oficial (`docs/03-design/MARCA-FITOS-OFICIAL.md`).
+
 ## 1. Síntese executiva
 
 O FitOS deve ocupar um espaço visual ainda pouco explorado pelos principais concorrentes: **a plataforma de operação do personal trainer**, e não apenas mais um aplicativo de treinos.

@@ -53,4 +53,6 @@ Descritos na íntegra em cada sub-issue GitHub (#149–#154) e no documento de d
 
 ## Estado
 
-Em andamento — iniciado em 28/09/2026 com o levantamento acima e a criação das Issues. Cada História será registrada aqui conforme concluída.
+Em andamento — iniciado em 28/09/2026 com o levantamento acima e a criação das Issues.
+
+- **FIT-124 (concluída, 28/09/2026)**: ADR-012 (ruptura de paleta navy+laranja), `tokens.css`/`M3-DESIGN-TOKENS.md` atualizados, `BrandLogo.tsx` reescrito para usar os vetores oficiais (`public/marca/`), favicon/manifest/ícones PWA novos (`src/app/icon.svg`, `apple-icon.png`, `manifest.ts`). Evidência visual real via Playwright em `/` e `/entrar` (360/768/1024/1440px). Telas autenticadas cobertas por teste (`AppShell.test.tsx`), evidência visual delas fica para a FIT-129. Suíte 1017/1017, gates limpos. Ver diário para detalhe completo.

@@ -88,8 +88,9 @@ describe("ProgressoPage (FIT-042)", () => {
     expect(screen.getByText("18.5%")).toBeInTheDocument();
     expect(screen.getByText("Cintura: 85.5cm")).toBeInTheDocument();
     expect(screen.getByText("Evolução consistente")).toBeInTheDocument();
-    // Só uma avaliação com peso — gráfico exige ao menos 2 pontos.
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    // Só uma avaliação com peso — gráfico exige ao menos 2 pontos (a marca no
+    // cabeçalho do AppShell é a única imagem esperada na página).
+    expect(screen.getAllByRole("img")).toHaveLength(1);
   });
 
   it("mostra o gráfico de evolução (equivalente ao texto/tabela) quando há duas ou mais avaliações com peso", async () => {
@@ -102,8 +103,8 @@ describe("ProgressoPage (FIT-042)", () => {
 
     render(await ProgressoPage());
 
-    const chart = screen.getByRole("img");
-    expect(chart).toHaveAccessibleName(/82.5kg.*80kg/);
+    const chart = screen.getByRole("img", { name: /82.5kg.*80kg/ });
+    expect(chart).toBeInTheDocument();
     expect(screen.getByText("82.5kg")).toBeInTheDocument();
     expect(screen.getByText("80kg")).toBeInTheDocument();
   });

@@ -120,7 +120,6 @@ describe("AppShell", () => {
         <p>Conteúdo</p>
       </AppShell>
     );
-    expect(screen.getByText("Fit")).toBeInTheDocument();
-    expect(screen.getByText("OS")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
   });
 });
