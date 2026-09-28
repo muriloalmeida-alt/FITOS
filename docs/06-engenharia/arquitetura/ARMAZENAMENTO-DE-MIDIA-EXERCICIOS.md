@@ -52,7 +52,39 @@ npm run catalog:import-imagens-exercicios
 # Reverte só os vínculos de banco (imageUrl/imageAlt = null) dos exercícios
 # referenciados pelo manifesto atual. Nunca apaga objetos do bucket.
 npm run catalog:import-imagens-exercicios -- --revert
+
+# Modo --public-only (ver seção dedicada abaixo) — vincula objetos já
+# publicados no bucket, sem nenhuma operação S3 autenticada.
+npm run catalog:import-imagens-exercicios -- --public-only --dry-run
+npm run catalog:import-imagens-exercicios -- --public-only
 ```
+
+## Modo `--public-only`
+
+**Finalidade.** Os uploads S3 autenticados (`HeadObjectCommand`/`PutObjectCommand`) passaram a falhar com `Access Denied` neste ambiente, mesmo com os 203 objetos já publicados no bucket `fitos-exercicios` e acessíveis publicamente (ex.: `https://pub-76bc00d74c5a4bf98ccac51eb4c92de3.r2.dev/abdominal-bicicleta.webp`). Como o upload já aconteceu por outro canal (fora deste script/ambiente), o único trabalho real que falta é **vincular** o catálogo à URL pública — não repetir o upload. `--public-only` existe exatamente para esse cenário: reaproveita `importExerciseImages` (mesma trava de idempotência, mesmo "nunca cria exercício novo", mesmo `--dry-run`) trocando só a etapa de upload por uma validação HTTP da URL pública, via `createPublicOnlyUploadImage`/`validatePublicImageUrl` (`src/modules/exercises/publicUrlValidator.ts`).
+
+**Quando usar.** Só quando os objetos já estiverem de fato no bucket (confirmado por fora, ex.: pelo Product Owner com acesso ao Cloudflare) e o caminho de credencial S3 estiver bloqueado/indisponível para esta execução — nunca como substituto padrão do modo S3 (que continua sendo o caminho correto quando as credenciais funcionam, porque só ele efetivamente envia um objeto novo ao bucket).
+
+**Variáveis necessárias.** Só `R2_PUBLIC_BASE_URL` (`readPublicOnlyR2Config`) — nunca `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_ENDPOINT`/`R2_BUCKET_NAME`. Ausente → o script aborta antes de qualquer escrita (dry-run ou real), citando só o nome da variável.
+
+**Garantia de nunca enviar nem excluir objetos.** `publicUrlValidator.ts` não importa `./r2Client` nem `@aws-sdk/client-s3` — impossibilidade estrutural, não só comportamental, de `HeadObjectCommand`/`PutObjectCommand`/`S3Client` nesse caminho. A única operação de rede é uma requisição HTTP `HEAD` (ou `GET` com `Range: bytes=0-0` quando o provedor recusa `HEAD` com 405/501) contra a própria URL pública, seguindo redirecionamentos, com timeout por tentativa (`AbortController`) e retentativa curta só para `429`/5xx/erro de rede — nunca para `404`/`403`/outros 4xx, que falham na primeira tentativa. Só uma resposta `2xx` é aceita; qualquer outra marca o item como `falho` (nunca atualiza aquele `Exercise`) sem abortar o restante do lote.
+
+**Comando de dry-run:**
+```bash
+npm run catalog:import-imagens-exercicios -- --public-only --dry-run
+```
+Nunca chama a rede de validação (o `--dry-run` de `importExerciseImages` retorna antes de chamar `uploadImage`, mesmo comportamento do modo S3) — só confirma manifesto, monta a URL alvo a partir de `R2_PUBLIC_BASE_URL` e reporta `novos`/`atualizáveis`/`já_vinculados` como sempre.
+
+**Comando real:**
+```bash
+npm run catalog:import-imagens-exercicios -- --public-only
+```
+
+**Reversão (só de banco).** Igual ao modo S3 — `--revert` nunca depende do modo de storage usado na carga original:
+```bash
+npm run catalog:import-imagens-exercicios -- --revert
+```
+`--public-only` combinado com `--revert` é recusado explicitamente pelo script (exit code 1, nenhuma ação): `--revert` é uma operação só de banco, então a combinação seria ambígua sem agregar nenhum comportamento novo — rode `--revert` sozinho.
 
 ### Saída do `--dry-run`
 
@@ -83,15 +115,19 @@ Reporta, sem tocar rede nem banco além de leitura: `encontrados` (total do mani
 7. Abrir `/painel/exercicios` (lista e detalhe) em desktop e mobile: imagem carregando, `alt` correto, nenhum ícone de imagem quebrada.
 8. Rodar o comando de carga real uma segunda vez: esperado 100% `ignorado`, zero `importado`/`atualizado` novo, zero objeto novo no bucket.
 
-### Execução real — confirmada por Murilo (27/09/2026)
+### Execução real — histórico
 
-Este agente não tem, neste ambiente de execução, rota de rede liberada para o endpoint R2 nem credenciais R2 reais (mesmo bloqueio de proxy de egresso já registrado para `railway.com`) — por isso a carga real nunca pôde ser executada nem verificada de forma independente a partir daqui, em nenhuma rodada. Murilo (Product Owner, com acesso direto ao Railway/Cloudflare) confirmou que as imagens do lote atual já estão publicadas no bucket R2. Este documento registra essa confirmação como a origem da informação — não como uma verificação de ponta a ponta feita por este agente (o mesmo padrão já usado para outras execuções que só o Product Owner podia realizar, ex.: a carga do catálogo curado via `?source=curated` na IMP-EX-002).
+Este agente não tem, neste ambiente de execução, rota de rede liberada para o endpoint R2 nem credenciais R2 reais (mesmo bloqueio de proxy de egresso já registrado para `railway.com`) — por isso a carga real nunca pôde ser executada nem verificada de forma independente a partir daqui, em nenhuma rodada.
 
-O que foi comprovado nesta rodada, sem depender de rede real:
-- Testes automatizados (mocks do `S3Client`, Postgres real de desenvolvimento) cobrindo upload bem-sucedido, falha de upload, falha de confirmação, idempotência, validação de manifesto, exercício inexistente/de origem errada, ausência de segredos no relatório.
-- `--dry-run` real contra o Postgres de desenvolvimento: `203 encontrados`, `0 ausentes`, `160 novos`, `43 atualizáveis`, variáveis R2 corretamente reportadas como ausentes neste ambiente (ver seção "Ampliação FIT-118" abaixo).
+- **27/09/2026** — Murilo (Product Owner, com acesso direto ao Railway/Cloudflare) confirmou que as imagens do lote atual já estavam publicadas no bucket R2.
+- **Tentativa seguinte em homologação**: o modo S3 (upload autenticado) falhou com `Access Denied` em todas as 203 entradas (`encontrados=203 outros_falhos=203 importados=0 atualizados=0`) — as credenciais configuradas no serviço `fitos-web-hml` não têm (ou perderam) permissão para `HeadObjectCommand`/`PutObjectCommand`, mesmo os objetos já estando publicamente acessíveis pela própria URL R2.dev. Como nenhum item chegou a ser gravado (todos falharam antes de qualquer `client.exercise.update`), não havia carga parcial para reparar.
+- **Correção (28/09/2026, FIT-111/IMP-EX-003)**: adicionado o modo `--public-only` (seção dedicada acima) — vincula o catálogo às URLs já públicas via validação HTTP, sem depender de nenhuma credencial S3. Testado neste ambiente ponta a ponta contra um servidor HTTP local simulando o bucket público (já que o R2 real segue inalcançável por rede daqui): 203/203 processados com sucesso (160 importados + 43 atualizados, 0 falhos), segunda execução 100% idempotente (203 já_vinculados, zero chamada de rede desnecessária) — ver evidências completas no PR desta mudança.
 
-**Verificação ainda em aberto, fora do alcance deste agente**: os passos 4-8 do "Procedimento de homologação e promoção" acima (contagem de objetos no bucket, `Exercise.imageUrl` no Postgres de homologação, amostragem de URLs por HTTP, `/painel/exercicios` renderizando de fato, segunda execução 100% idempotente) dependem de acesso direto ao Railway/R2/Postgres de homologação — continuam como responsabilidade de quem tiver esse acesso, mesmo após a confirmação do upload.
+O que foi comprovado neste ambiente, sem depender de rede R2 real:
+- Testes automatizados (mocks de `fetch`/`S3Client`, Postgres real de desenvolvimento) cobrindo os dois modos: upload/validação bem-sucedidos, falhas (403/404/`Access Denied`/confirmação divergente), idempotência, validação de manifesto, exercício inexistente/de origem errada, ausência de segredos no relatório, retentativa limitada para 429/5xx/rede, fallback HEAD→GET.
+- `--public-only` real ponta a ponta contra um servidor HTTP local (não mockado) servindo os 203 arquivos de `public/media/exercises/`, com um `Exercise` real do Postgres de desenvolvimento: 203/203 vinculados, idempotência confirmada numa segunda execução, revertido ao final (dado de teste local, não homologação).
+
+**Verificação ainda em aberto, fora do alcance deste agente**: rodar `--public-only` de fato contra o R2 real em homologação e os passos 4-8 do "Procedimento de homologação e promoção" acima (contagem de objetos no bucket, `Exercise.imageUrl` no Postgres de homologação, amostragem de URLs por HTTP, `/painel/exercicios` renderizando de fato) dependem de acesso direto ao Railway/R2/Postgres de homologação — continuam como responsabilidade de quem tiver esse acesso.
 
 ## Rollback
 

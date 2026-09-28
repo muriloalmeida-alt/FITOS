@@ -82,3 +82,17 @@ export function buildExerciseObjectKey(slug: string, extension: string): string 
 export function buildPublicImageUrl(config: Pick<R2Config, "publicBaseUrl">, objectKey: string): string {
   return `${config.publicBaseUrl}/${objectKey}`;
 }
+
+/// Único nome exigido pelo modo `--public-only` (FIT-111/IMP-EX-003) — os
+/// objetos já estão publicados no bucket (upload feito fora deste
+/// ambiente); vincular o catálogo à URL pública não precisa de nenhuma
+/// credencial S3, só da base pública.
+export const PUBLIC_ONLY_REQUIRED_ENV_VAR = "R2_PUBLIC_BASE_URL";
+
+/// Configuração mínima do modo público: lê e normaliza só `R2_PUBLIC_BASE_URL`
+/// (mesma normalização de barra final de `readR2Config`), nunca as
+/// credenciais/endpoint S3 — nunca instancia nem exige `R2ConfigError` para
+/// as demais variáveis, que este modo não usa.
+export function readPublicOnlyR2Config(): Pick<R2Config, "publicBaseUrl"> {
+  return { publicBaseUrl: stripTrailingSlash(requiredEnv(PUBLIC_ONLY_REQUIRED_ENV_VAR)) };
+}

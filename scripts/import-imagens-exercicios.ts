@@ -5,7 +5,7 @@
  *
  * Storage: Cloudflare R2 (migração pós-FIT-111 — ver
  * docs/06-engenharia/arquitetura/ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md e
- * ADR-010). O asset físico é lido de `public/media/exercises/<slug>.<ext>`
+ * ADR-011). O asset físico é lido de `public/media/exercises/<slug>.<ext>`
  * (fonte local versionada), enviado ao bucket R2 e só então o banco recebe
  * a URL pública correspondente.
  *
@@ -17,12 +17,26 @@
  *   npm run catalog:import-imagens-exercicios -- --dry-run
  *   npm run catalog:import-imagens-exercicios
  *   npm run catalog:import-imagens-exercicios -- --revert
+ *   npm run catalog:import-imagens-exercicios -- --public-only
+ *   npm run catalog:import-imagens-exercicios -- --public-only --dry-run
  *
  * `--dry-run` nunca requer as variáveis R2 configuradas (não faz upload,
  * não faz nenhuma chamada de rede) — valida manifesto, presença/legibilidade
  * dos assets locais e, se as variáveis R2 estiverem ausentes, avisa quais
  * (só o nome, nunca o valor) sem bloquear o restante da validação.
  * A execução real exige a configuração R2 completa.
+ *
+ * `--public-only` (FIT-111/IMP-EX-003) — modo alternativo explícito para
+ * quando os objetos já estão publicados no bucket (upload feito fora deste
+ * script/ambiente): nunca faz upload nem qualquer operação S3 autenticada
+ * (sem `HeadObjectCommand`/`PutObjectCommand`, sem instanciar `S3Client`);
+ * só exige `R2_PUBLIC_BASE_URL`; valida cada objeto por HTTP (a própria URL
+ * pública) antes de gravar `imageUrl`/`imageAlt`. Ver
+ * `docs/06-engenharia/arquitetura/ARMAZENAMENTO-DE-MIDIA-EXERCICIOS.md`,
+ * seção "Modo --public-only", para o runbook completo. Nunca combine com
+ * `--revert` — `--revert` é uma operação só de banco, independente de modo
+ * de storage; a combinação é ambígua e o script recusa antes de tocar em
+ * qualquer coisa.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -37,8 +51,9 @@ import {
   type BuildImageUrl,
   type UploadImage,
 } from "../src/modules/exercises/importExerciseImages";
-import { buildPublicImageUrl, listMissingR2EnvVars, readR2Config } from "../src/modules/exercises/r2Config";
+import { buildPublicImageUrl, listMissingR2EnvVars, readPublicOnlyR2Config, readR2Config } from "../src/modules/exercises/r2Config";
 import { createR2Client, uploadAndVerifyObject } from "../src/modules/exercises/r2Client";
+import { createPublicOnlyUploadImage } from "../src/modules/exercises/publicUrlValidator";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MANIFEST_PATH = path.join(
@@ -68,6 +83,17 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
   const revert = args.includes("--revert");
+  const publicOnly = args.includes("--public-only");
+
+  if (publicOnly && revert) {
+    console.error(
+      "[catalog:import-imagens-exercicios] --public-only e --revert não podem ser combinados: --revert é uma operação " +
+        "só de banco (limpa imageUrl/imageAlt), independente do modo de storage — a combinação seria ambígua. " +
+        "Rode --revert sozinho."
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   const manifestContent = await readFile(MANIFEST_PATH, "utf-8");
   const manifest = parseExerciseImageManifest(manifestContent);
@@ -92,35 +118,54 @@ async function main(): Promise<void> {
       return;
     }
 
-    const missingR2Vars = listMissingR2EnvVars();
-    if (missingR2Vars.length > 0) {
-      console.warn(
-        `[catalog:import-imagens-exercicios] variável(is) R2 ausente(s) (apenas nomes, nunca valores): ${missingR2Vars.join(", ")}.`
-      );
-    }
-
-    if (!dryRun && missingR2Vars.length > 0) {
-      console.error(
-        "[catalog:import-imagens-exercicios] execução real requer todas as variáveis R2 configuradas — abortando antes de qualquer upload."
-      );
-      process.exitCode = 1;
-      return;
-    }
-
     let buildImageUrl: BuildImageUrl;
     let uploadImage: UploadImage;
-    if (missingR2Vars.length === 0) {
-      const r2Config = readR2Config();
-      const r2Client = createR2Client(r2Config);
-      buildImageUrl = (objectKey) => buildPublicImageUrl(r2Config, objectKey);
-      uploadImage = async ({ key, body, contentType }) =>
-        uploadAndVerifyObject({ client: r2Client, bucket: r2Config.bucketName, key, body, contentType });
+
+    if (publicOnly) {
+      console.log(
+        "[catalog:import-imagens-exercicios] modo --public-only: nenhuma operação S3 autenticada será executada " +
+          "(sem upload, sem HeadObject/PutObject) — cada objeto é validado pela própria URL pública."
+      );
+      try {
+        const publicConfig = readPublicOnlyR2Config();
+        buildImageUrl = (objectKey) => buildPublicImageUrl(publicConfig, objectKey);
+        uploadImage = createPublicOnlyUploadImage(publicConfig);
+      } catch (error) {
+        console.error(
+          `[catalog:import-imagens-exercicios] ${error instanceof Error ? error.message : String(error)} — abortando antes de qualquer escrita.`
+        );
+        process.exitCode = 1;
+        return;
+      }
     } else {
-      // dry-run com config incompleta: URL alvo não pode ser calculada de
-      // verdade — usamos um marcador só para o relatório não quebrar,
-      // deixando explícito que aquele valor não é a URL final real.
-      buildImageUrl = (objectKey) => `(config R2 incompleta — URL indisponível para simulação) ${objectKey}`;
-      uploadImage = createUnconfiguredUploader(missingR2Vars);
+      const missingR2Vars = listMissingR2EnvVars();
+      if (missingR2Vars.length > 0) {
+        console.warn(
+          `[catalog:import-imagens-exercicios] variável(is) R2 ausente(s) (apenas nomes, nunca valores): ${missingR2Vars.join(", ")}.`
+        );
+      }
+
+      if (!dryRun && missingR2Vars.length > 0) {
+        console.error(
+          "[catalog:import-imagens-exercicios] execução real requer todas as variáveis R2 configuradas — abortando antes de qualquer upload."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (missingR2Vars.length === 0) {
+        const r2Config = readR2Config();
+        const r2Client = createR2Client(r2Config);
+        buildImageUrl = (objectKey) => buildPublicImageUrl(r2Config, objectKey);
+        uploadImage = async ({ key, body, contentType }) =>
+          uploadAndVerifyObject({ client: r2Client, bucket: r2Config.bucketName, key, body, contentType });
+      } else {
+        // dry-run com config incompleta: URL alvo não pode ser calculada de
+        // verdade — usamos um marcador só para o relatório não quebrar,
+        // deixando explícito que aquele valor não é a URL final real.
+        buildImageUrl = (objectKey) => `(config R2 incompleta — URL indisponível para simulação) ${objectKey}`;
+        uploadImage = createUnconfiguredUploader(missingR2Vars);
+      }
     }
 
     const result = await importExerciseImages(
