@@ -18,6 +18,7 @@ async function fillStep1AndAdvance(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText("Qual seu objetivo principal?"), "GANHAR_MASSA");
   await user.selectOptions(screen.getByLabelText("Qual sua experiência com treino?"), "INICIANTE");
   await user.selectOptions(screen.getByLabelText("Quantos dias por semana você pode treinar?"), "TRES_A_QUATRO_DIAS");
+  await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
   await user.click(screen.getByRole("button", { name: "Continuar" }));
 }
 
@@ -27,13 +28,14 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("passo 1: mostra erros de validação e nunca avança para o passo 2 sem as três respostas", async () => {
+  it("passo 1: mostra erros de validação e nunca avança para o passo 2 sem as respostas obrigatórias", async () => {
     const user = userEvent.setup();
     render(
       <OnboardingForm
         initialObjective={null}
         initialExperienceLevel={null}
         initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId={null}
@@ -45,6 +47,31 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
     expect(await screen.findByText("Escolha um objetivo.")).toBeInTheDocument();
     expect(screen.getByText("Escolha seu nível de experiência.")).toBeInTheDocument();
     expect(screen.getByText("Escolha sua disponibilidade.")).toBeInTheDocument();
+    expect(screen.getByText("Informe um CPF ou CNPJ válido.")).toBeInTheDocument();
+    expect(screen.queryByText(/dias grátis/)).not.toBeInTheDocument();
+  });
+
+  it("passo 1: rejeita CPF/CNPJ inválido, nunca avança para o passo 2", async () => {
+    const user = userEvent.setup();
+    render(
+      <OnboardingForm
+        initialObjective={null}
+        initialExperienceLevel={null}
+        initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
+        alreadyAcceptedTerms={false}
+        plans={PLANS}
+        initialPlanId={null}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText("Qual seu objetivo principal?"), "GANHAR_MASSA");
+    await user.selectOptions(screen.getByLabelText("Qual sua experiência com treino?"), "INICIANTE");
+    await user.selectOptions(screen.getByLabelText("Quantos dias por semana você pode treinar?"), "TRES_A_QUATRO_DIAS");
+    await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477736");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("Informe um CPF ou CNPJ válido.")).toBeInTheDocument();
     expect(screen.queryByText(/dias grátis/)).not.toBeInTheDocument();
   });
 
@@ -55,6 +82,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
         initialObjective={null}
         initialExperienceLevel={null}
         initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId={null}
@@ -77,6 +105,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
         initialObjective={null}
         initialExperienceLevel={null}
         initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId={null}
@@ -97,6 +126,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          cpfCnpj: "111.444.777-35",
           termsAccepted: true,
           planId: "plan-livre",
         }),
@@ -112,6 +142,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
         initialObjective={null}
         initialExperienceLevel={null}
         initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId={null}
@@ -123,14 +154,16 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
     await user.click(screen.getByRole("button", { name: "← Voltar" }));
 
     expect(screen.getByLabelText("Qual seu objetivo principal?")).toHaveValue("GANHAR_MASSA");
+    expect(screen.getByLabelText("CPF ou CNPJ")).toHaveValue("111.444.777-35");
   });
 
-  it("pré-seleciona as respostas e o plano já existentes (reabrir o onboarding)", async () => {
+  it("pré-seleciona as respostas, o CPF/CNPJ e o plano já existentes (reabrir o onboarding)", async () => {
     render(
       <OnboardingForm
         initialObjective="PERDER_PESO"
         initialExperienceLevel="AVANCADO"
         initialWeeklyAvailability="CINCO_OU_MAIS_DIAS"
+        initialCpfCnpj="111.444.777-35"
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId="plan-livre"
@@ -140,6 +173,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
     expect(screen.getByLabelText("Qual seu objetivo principal?")).toHaveValue("PERDER_PESO");
     expect(screen.getByLabelText("Qual sua experiência com treino?")).toHaveValue("AVANCADO");
     expect(screen.getByLabelText("Quantos dias por semana você pode treinar?")).toHaveValue("CINCO_OU_MAIS_DIAS");
+    expect(screen.getByLabelText("CPF ou CNPJ")).toHaveValue("111.444.777-35");
   });
 
   it("FIT-119: quando os termos já foram aceitos antes, o checkbox aparece marcado e desabilitado, sem exigir novo aceite", async () => {
@@ -151,6 +185,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
         initialObjective="PERDER_PESO"
         initialExperienceLevel="AVANCADO"
         initialWeeklyAvailability="CINCO_OU_MAIS_DIAS"
+        initialCpfCnpj="111.444.777-35"
         alreadyAcceptedTerms
         plans={PLANS}
         initialPlanId="plan-livre"
@@ -180,6 +215,7 @@ describe("OnboardingForm (FIT-101/FIT-126)", () => {
         initialObjective={null}
         initialExperienceLevel={null}
         initialWeeklyAvailability={null}
+        initialCpfCnpj={null}
         alreadyAcceptedTerms={false}
         plans={PLANS}
         initialPlanId={null}

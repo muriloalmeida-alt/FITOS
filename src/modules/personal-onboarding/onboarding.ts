@@ -2,6 +2,7 @@ import "server-only";
 import type { PersonalProfile, PersonalStudentRangeEstimate, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
+import { isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 
 export class OnboardingError extends Error {
   constructor(
@@ -21,6 +22,12 @@ export interface CompletePersonalOnboardingInput {
   tenantId: string;
   phone: string;
   cref?: string;
+  /// Obrigatório (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento. `null` no
+  /// banco existe só para perfis concluídos antes deste campo existir
+  /// (ver comentário do campo em `schema.prisma`); toda nova submissão,
+  /// inclusive reabrir um onboarding antigo, passa a exigi-lo.
+  cpfCnpj: string;
   studentRangeEstimate: PersonalStudentRangeEstimate;
   businessName: string;
   termsAccepted: boolean;
@@ -32,6 +39,9 @@ function assertValid(input: CompletePersonalOnboardingInput): void {
   }
   if (input.cref !== undefined && input.cref.trim().length > MAX_CREF_LENGTH) {
     throw new OnboardingError("VALIDACAO", `O CREF deve ter no máximo ${MAX_CREF_LENGTH} caracteres.`);
+  }
+  if (!isValidCpfCnpj(input.cpfCnpj)) {
+    throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
   }
   if (!VALID_STUDENT_RANGES.includes(input.studentRangeEstimate)) {
     throw new OnboardingError("VALIDACAO", "Faixa de alunos inválida.");
@@ -72,12 +82,14 @@ export async function completePersonalOnboarding(
         tenantId: input.tenantId,
         phone: input.phone,
         cref: cref || null,
+        cpfCnpj: input.cpfCnpj,
         studentRangeEstimate: input.studentRangeEstimate,
         termsAcceptedAt: new Date(),
       },
       update: {
         phone: input.phone,
         cref: cref || null,
+        cpfCnpj: input.cpfCnpj,
         studentRangeEstimate: input.studentRangeEstimate,
         termsAcceptedAt: new Date(),
       },

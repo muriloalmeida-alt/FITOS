@@ -293,6 +293,13 @@ model IndividualProfile {
   objective          IndividualObjective
   experienceLevel    ExperienceLevel
   weeklyAvailability WeeklyAvailability
+  /// CPF/CNPJ do usuário (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento do plano
+  /// pago do FitOS Livre (`individual-livre-v2`). Mesmo tratamento de
+  /// `PersonalProfile.cpfCnpj`: obrigatório para toda nova submissão do
+  /// onboarding, `null` só para perfis concluídos antes deste campo
+  /// existir — nunca fabricado retroativamente.
+  cpfCnpj String?
   /// Sempre preenchido no momento da primeira submissão, nunca sobrescrito
   /// depois (mesmo princípio de "preserva o momento original" de
   /// `endStudentBond`/`softDeleteAssessment`) — reabrir o onboarding para
@@ -330,6 +337,15 @@ model PersonalProfile {
   tenantId             String                       @unique
   phone                String
   cref                 String?
+  /// CPF/CNPJ do personal (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento, ainda não
+  /// ligado (`src/modules/billing/asaasClient.ts`). Obrigatório para toda
+  /// nova submissão do onboarding (`completePersonalOnboarding` valida com
+  /// `isValidCpfCnpj`) — `null` só para perfis concluídos antes deste
+  /// campo existir (mesmo princípio de `IndividualProfile.termsAcceptedAt`
+  /// desde a FIT-119: nunca fabricado retroativamente; reabrir o
+  /// onboarding passa a exigi-lo).
+  cpfCnpj              String?
   studentRangeEstimate PersonalStudentRangeEstimate
   /// Sempre preenchido no momento da submissão (não um campo booleano) —
   /// rastreabilidade de quando o aceite ocorreu. Não existe hoje nenhuma
@@ -1010,6 +1026,14 @@ model SaasSubscription {
   planId         String
   status         SaasSubscriptionStatus @default(ATIVA)
   provider       String
+  /// Id do cliente/assinatura reais no Asaas (FIT-128, ADR-010) — só
+  /// preenchidos quando a ligação de melhor esforço em
+  /// `tryEnsureAsaasSubscription` (`src/modules/billing/subscriptions.ts`)
+  /// tiver sucesso. `null` enquanto `provider` for `NO_PAYMENT_PROVIDER`
+  /// (inclui todo tenant `INDIVIDUAL` — `IndividualProfile` ainda não
+  /// coleta CPF/CNPJ, gap conhecido) e sempre para planos de preço zero.
+  externalCustomerId     String?
+  externalSubscriptionId String?
   canceledAt     DateTime?
   canceledReason String?
   /// Fim do período de teste grátis desta contratação — `null` quando não

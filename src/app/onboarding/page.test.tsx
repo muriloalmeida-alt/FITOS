@@ -103,6 +103,7 @@ describe("OnboardingPage (FIT-101)", () => {
       objective: "PERDER_PESO",
       experienceLevel: "AVANCADO",
       weeklyAvailability: "CINCO_OU_MAIS_DIAS",
+      cpfCnpj: "111.444.777-35",
       termsAcceptedAt: new Date(),
     });
     listActivePlansForAudience.mockResolvedValue([

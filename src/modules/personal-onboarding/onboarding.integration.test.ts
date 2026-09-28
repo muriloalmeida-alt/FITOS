@@ -10,6 +10,9 @@ import { completePersonalOnboarding, getPersonalOnboardingProfile, OnboardingErr
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+/// CPF de teste matematicamente válido, publicamente conhecido e usado em
+/// tutoriais/testes de validação de CPF — nunca um documento real.
+const VALID_CPF = "111.444.777-35";
 
 afterAll(async () => {
   await prisma.personalProfile.deleteMany({ where: { tenant: { owner: { email: { contains: run } } } } });
@@ -36,6 +39,7 @@ describe("completePersonalOnboarding (FIT-113)", () => {
       {
         tenantId: tenant.id,
         phone: "(11) 91234-5678",
+        cpfCnpj: VALID_CPF,
         studentRangeEstimate: "COMECANDO_AGORA",
         businessName: "Estúdio Fulano",
         termsAccepted: true,
@@ -46,6 +50,7 @@ describe("completePersonalOnboarding (FIT-113)", () => {
     expect(profile.tenantId).toBe(tenant.id);
     expect(profile.phone).toBe("(11) 91234-5678");
     expect(profile.cref).toBeNull();
+    expect(profile.cpfCnpj).toBe(VALID_CPF);
     expect(profile.termsAcceptedAt).toBeInstanceOf(Date);
 
     const updatedTenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenant.id } });
@@ -60,6 +65,7 @@ describe("completePersonalOnboarding (FIT-113)", () => {
         tenantId: tenant.id,
         phone: "(11) 91234-5678",
         cref: "012345-G/SP",
+        cpfCnpj: VALID_CPF,
         studentRangeEstimate: "ATE_20",
         businessName: "Espaço com CREF",
         termsAccepted: true,
@@ -74,11 +80,25 @@ describe("completePersonalOnboarding (FIT-113)", () => {
     const { tenant } = await createPersonalTenant("reaberto");
 
     await completePersonalOnboarding(
-      { tenantId: tenant.id, phone: "(11) 91234-5678", studentRangeEstimate: "ATE_20", businessName: "Nome 1", termsAccepted: true },
+      {
+        tenantId: tenant.id,
+        phone: "(11) 91234-5678",
+        cpfCnpj: VALID_CPF,
+        studentRangeEstimate: "ATE_20",
+        businessName: "Nome 1",
+        termsAccepted: true,
+      },
       prisma
     );
     const updated = await completePersonalOnboarding(
-      { tenantId: tenant.id, phone: "(21) 98888-7777", studentRangeEstimate: "MAIS_DE_50", businessName: "Nome 2", termsAccepted: true },
+      {
+        tenantId: tenant.id,
+        phone: "(21) 98888-7777",
+        cpfCnpj: VALID_CPF,
+        studentRangeEstimate: "MAIS_DE_50",
+        businessName: "Nome 2",
+        termsAccepted: true,
+      },
       prisma
     );
 
@@ -94,7 +114,27 @@ describe("completePersonalOnboarding (FIT-113)", () => {
 
     await expect(
       completePersonalOnboarding(
-        { tenantId: tenant.id, phone: "123", studentRangeEstimate: "ATE_20", businessName: "Nome", termsAccepted: true },
+        { tenantId: tenant.id, phone: "123", cpfCnpj: VALID_CPF, studentRangeEstimate: "ATE_20", businessName: "Nome", termsAccepted: true },
+        prisma
+      )
+    ).rejects.toBeInstanceOf(OnboardingError);
+
+    expect(await getPersonalOnboardingProfile(tenant.id, prisma)).toBeNull();
+  });
+
+  it("rejeita CPF/CNPJ inválido, sem gravar nem atualizar o tenant", async () => {
+    const { tenant } = await createPersonalTenant("cpf-invalido");
+
+    await expect(
+      completePersonalOnboarding(
+        {
+          tenantId: tenant.id,
+          phone: "(11) 91234-5678",
+          cpfCnpj: "111.444.777-36",
+          studentRangeEstimate: "ATE_20",
+          businessName: "Nome",
+          termsAccepted: true,
+        },
         prisma
       )
     ).rejects.toBeInstanceOf(OnboardingError);
@@ -107,7 +147,14 @@ describe("completePersonalOnboarding (FIT-113)", () => {
 
     await expect(
       completePersonalOnboarding(
-        { tenantId: tenant.id, phone: "(11) 91234-5678", studentRangeEstimate: "ATE_20", businessName: "Nome", termsAccepted: false },
+        {
+          tenantId: tenant.id,
+          phone: "(11) 91234-5678",
+          cpfCnpj: VALID_CPF,
+          studentRangeEstimate: "ATE_20",
+          businessName: "Nome",
+          termsAccepted: false,
+        },
         prisma
       )
     ).rejects.toBeInstanceOf(OnboardingError);
@@ -118,7 +165,14 @@ describe("completePersonalOnboarding (FIT-113)", () => {
 
     await expect(
       completePersonalOnboarding(
-        { tenantId: tenant.id, phone: "(11) 91234-5678", studentRangeEstimate: "ATE_20", businessName: "   ", termsAccepted: true },
+        {
+          tenantId: tenant.id,
+          phone: "(11) 91234-5678",
+          cpfCnpj: VALID_CPF,
+          studentRangeEstimate: "ATE_20",
+          businessName: "   ",
+          termsAccepted: true,
+        },
         prisma
       )
     ).rejects.toBeInstanceOf(OnboardingError);

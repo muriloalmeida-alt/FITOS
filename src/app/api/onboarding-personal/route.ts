@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     if (
       !body ||
       typeof body.phone !== "string" ||
+      typeof body.cpfCnpj !== "string" ||
       !VALID_STUDENT_RANGES.includes(body.studentRangeEstimate) ||
       typeof body.businessName !== "string" ||
       typeof body.termsAccepted !== "boolean" ||
@@ -50,7 +51,10 @@ export async function POST(request: Request) {
       body.planId.trim() === ""
     ) {
       return Response.json(
-        { error: "VALIDACAO", message: "Informe celular, faixa de alunos, nome do espaço, um plano e o aceite dos termos." },
+        {
+          error: "VALIDACAO",
+          message: "Informe celular, CPF/CNPJ, faixa de alunos, nome do espaço, um plano e o aceite dos termos.",
+        },
         { status: 400 }
       );
     }
@@ -59,6 +63,7 @@ export async function POST(request: Request) {
       tenantId: ctx.tenantId,
       phone: body.phone,
       cref: typeof body.cref === "string" ? body.cref : undefined,
+      cpfCnpj: body.cpfCnpj,
       studentRangeEstimate: body.studentRangeEstimate,
       businessName: body.businessName,
       termsAccepted: body.termsAccepted,

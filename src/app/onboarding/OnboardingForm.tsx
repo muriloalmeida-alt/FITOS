@@ -4,13 +4,17 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { Button, FormAlert, PlanOptionCard, SelectField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
+import { Button, FormAlert, PlanOptionCard, SelectField, TextField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
+import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import styles from "./OnboardingForm.module.css";
 
 interface OnboardingFormProps {
   initialObjective: IndividualObjective | null;
   initialExperienceLevel: ExperienceLevel | null;
   initialWeeklyAvailability: WeeklyAvailability | null;
+  /// CPF/CNPJ já informado numa conclusão anterior (FIT-128, Issue #153)
+  /// — `null` para perfis concluídos antes deste campo existir.
+  initialCpfCnpj: string | null;
   /// Já aceitou os termos numa conclusão anterior (FIT-119) — reabrir o
   /// onboarding para ajustar objetivo/experiência/disponibilidade nunca
   /// exige um novo aceite; o checkbox aparece pré-marcado e desabilitado
@@ -50,6 +54,7 @@ interface FieldErrors {
   objective?: string;
   experienceLevel?: string;
   weeklyAvailability?: string;
+  cpfCnpj?: string;
   planId?: string;
   termsAccepted?: string;
 }
@@ -64,10 +69,17 @@ const TOTAL_STEPS = 2;
 /// formulário sem nenhuma etapa de plano — a contratação do FitOS Livre
 /// nunca existia dentro do próprio onboarding, era só uma configuração de
 /// preferências (FIT-101).
+///
+/// **CPF/CNPJ na Etapa 1 (FIT-128, Issue #153)**: obrigatório desde que o
+/// Asaas exige `cpfCnpj` para criar um cliente real (`POST /v3/customers`)
+/// — decisão de Murilo de estender o mesmo tratamento de
+/// `PersonalOnboardingWizard` ao FitOS Livre, já que `individual-livre-v2`
+/// também é um plano pago real.
 export function OnboardingForm({
   initialObjective,
   initialExperienceLevel,
   initialWeeklyAvailability,
+  initialCpfCnpj,
   alreadyAcceptedTerms,
   plans,
   initialPlanId,
@@ -77,6 +89,7 @@ export function OnboardingForm({
   const [objective, setObjective] = useState<IndividualObjective | "">(initialObjective ?? "");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | "">(initialExperienceLevel ?? "");
   const [weeklyAvailability, setWeeklyAvailability] = useState<WeeklyAvailability | "">(initialWeeklyAvailability ?? "");
+  const [cpfCnpj, setCpfCnpj] = useState(initialCpfCnpj ?? "");
   const [planId, setPlanId] = useState(initialPlanId ?? "");
   const [termsAccepted, setTermsAccepted] = useState(alreadyAcceptedTerms);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -87,6 +100,7 @@ export function OnboardingForm({
     objective !== (initialObjective ?? "") ||
     experienceLevel !== (initialExperienceLevel ?? "") ||
     weeklyAvailability !== (initialWeeklyAvailability ?? "") ||
+    cpfCnpj !== (initialCpfCnpj ?? "") ||
     planId !== (initialPlanId ?? "");
 
   useUnsavedChangesGuard(hasData, isSubmitting);
@@ -97,6 +111,7 @@ export function OnboardingForm({
     if (!objective) errors.objective = "Escolha um objetivo.";
     if (!experienceLevel) errors.experienceLevel = "Escolha seu nível de experiência.";
     if (!weeklyAvailability) errors.weeklyAvailability = "Escolha sua disponibilidade.";
+    if (!isValidCpfCnpj(cpfCnpj)) errors.cpfCnpj = "Informe um CPF ou CNPJ válido.";
     setFieldErrors(errors);
     setFormError(null);
     if (Object.keys(errors).length > 0) {
@@ -130,7 +145,7 @@ export function OnboardingForm({
     const response = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, experienceLevel, weeklyAvailability, termsAccepted, planId }),
+      body: JSON.stringify({ objective, experienceLevel, weeklyAvailability, cpfCnpj, termsAccepted, planId }),
     });
     setIsSubmitting(false);
 
@@ -178,6 +193,18 @@ export function OnboardingForm({
             value={weeklyAvailability}
             onChange={(event) => setWeeklyAvailability(event.target.value as WeeklyAvailability)}
             error={fieldErrors.weeklyAvailability}
+            required
+          />
+          <TextField
+            label="CPF ou CNPJ"
+            name="cpfCnpj"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            value={cpfCnpj}
+            onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))}
+            error={fieldErrors.cpfCnpj}
             required
           />
 

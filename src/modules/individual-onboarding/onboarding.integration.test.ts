@@ -10,6 +10,9 @@ import { completeIndividualOnboarding, getIndividualOnboardingProfile, Onboardin
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+/// CPF de teste matematicamente válido, publicamente conhecido e usado em
+/// tutoriais/testes de validação de CPF — nunca um documento real.
+const VALID_CPF = "111.444.777-35";
 
 afterAll(async () => {
   await prisma.individualProfile.deleteMany({ where: { tenant: { owner: { email: { contains: run } } } } });
@@ -38,6 +41,7 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
         objective: "GANHAR_MASSA",
         experienceLevel: "INICIANTE",
         weeklyAvailability: "TRES_A_QUATRO_DIAS",
+        cpfCnpj: VALID_CPF,
         termsAccepted: true,
       },
       prisma
@@ -45,6 +49,7 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
 
     expect(profile.tenantId).toBe(tenant.id);
     expect(profile.objective).toBe("GANHAR_MASSA");
+    expect(profile.cpfCnpj).toBe(VALID_CPF);
     expect(profile.termsAcceptedAt).not.toBeNull();
 
     const stored = await getIndividualOnboardingProfile(tenant.id, prisma);
@@ -61,7 +66,28 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          cpfCnpj: VALID_CPF,
           termsAccepted: false,
+        },
+        prisma
+      )
+    ).rejects.toMatchObject({ kind: "VALIDACAO" });
+
+    expect(await getIndividualOnboardingProfile(tenant.id, prisma)).toBeNull();
+  });
+
+  it("rejeita CPF/CNPJ inválido, sem gravar nada", async () => {
+    const { tenant } = await createIndividualTenant("cpf-invalido");
+
+    await expect(
+      completeIndividualOnboarding(
+        {
+          tenantId: tenant.id,
+          objective: "GANHAR_MASSA",
+          experienceLevel: "INICIANTE",
+          weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          cpfCnpj: "111.444.777-36",
+          termsAccepted: true,
         },
         prisma
       )
@@ -79,6 +105,7 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
         objective: "PERDER_PESO",
         experienceLevel: "AVANCADO",
         weeklyAvailability: "UM_A_DOIS_DIAS",
+        cpfCnpj: VALID_CPF,
         termsAccepted: true,
       },
       prisma
@@ -89,6 +116,7 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
         objective: "SAUDE_E_BEM_ESTAR",
         experienceLevel: "INTERMEDIARIO",
         weeklyAvailability: "CINCO_OU_MAIS_DIAS",
+        cpfCnpj: VALID_CPF,
         termsAccepted: false,
       },
       prisma
@@ -111,6 +139,7 @@ describe("completeIndividualOnboarding (FIT-101)", () => {
           objective: "QUALQUER_COISA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "UM_A_DOIS_DIAS",
+          cpfCnpj: VALID_CPF,
           termsAccepted: true,
         },
         prisma

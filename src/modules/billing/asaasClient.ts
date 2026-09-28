@@ -155,3 +155,93 @@ export async function listAsaasCustomers(
     method: "GET",
   });
 }
+
+/// Métodos de escrita abaixo (`createAsaasCustomer` em diante) seguem o
+/// contrato público documentado do Asaas v3 — nunca exercidos contra a
+/// API real ainda (só a leitura acima foi). `src/modules/billing/
+/// subscriptions.ts` só os usa em modo "melhor esforço" (nunca bloqueia o
+/// usuário se algo aqui falhar) até que o resultado real seja confirmado
+/// em homologação, mesmo padrão de cautela do diagnóstico original.
+
+export interface AsaasCustomerInput {
+  name: string;
+  cpfCnpj: string;
+  externalReference?: string;
+}
+
+export interface AsaasCustomer {
+  id: string;
+  name: string;
+  cpfCnpj: string;
+}
+
+/// Busca um cliente já existente pelo CPF/CNPJ — usada antes de criar um
+/// novo, para nunca duplicar o cadastro no Asaas se uma tentativa anterior
+/// já tiver criado o cliente mas falhado antes de salvar o
+/// `externalCustomerId` localmente.
+export async function findAsaasCustomerByCpfCnpj(config: AsaasClientConfig, cpfCnpj: string): Promise<AsaasCustomer | null> {
+  const result = await asaasRequest<AsaasListResponse<AsaasCustomer>>(
+    config,
+    `/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}`,
+    { method: "GET" }
+  );
+  return result.data[0] ?? null;
+}
+
+export async function createAsaasCustomer(config: AsaasClientConfig, input: AsaasCustomerInput): Promise<AsaasCustomer> {
+  return asaasRequest<AsaasCustomer>(config, "/customers", { method: "POST", body: JSON.stringify(input) });
+}
+
+/// `UNDEFINED` deixa o próprio pagador escolher o meio de pagamento
+/// (Pix/cartão/carteira digital, conforme habilitado na conta) a cada
+/// cobrança — decisão de Murilo (FIT-128): a assinatura SaaS do FitOS
+/// aceita Pix, cartão de crédito e carteiras digitais, nunca só um único
+/// meio fixo por assinatura.
+export type AsaasBillingType = "UNDEFINED" | "BOLETO" | "CREDIT_CARD" | "PIX";
+export type AsaasBillingCycle = "MONTHLY" | "YEARLY";
+
+export interface AsaasSubscriptionInput {
+  customer: string;
+  billingType: AsaasBillingType;
+  value: number;
+  nextDueDate: string;
+  cycle: AsaasBillingCycle;
+  description?: string;
+  externalReference?: string;
+}
+
+export interface AsaasSubscription {
+  id: string;
+  customer: string;
+  status: string;
+}
+
+export async function createAsaasSubscription(config: AsaasClientConfig, input: AsaasSubscriptionInput): Promise<AsaasSubscription> {
+  return asaasRequest<AsaasSubscription>(config, "/subscriptions", { method: "POST", body: JSON.stringify(input) });
+}
+
+export interface UpdateAsaasSubscriptionInput {
+  billingType?: AsaasBillingType;
+  value?: number;
+  cycle?: AsaasBillingCycle;
+  description?: string;
+}
+
+/// Nunca inclui `nextDueDate`: mudar a data da próxima cobrança de uma
+/// assinatura real já em curso poderia disparar uma cobrança fora de
+/// hora — uma troca de plano só atualiza valor/ciclo/descrição, nunca
+/// quando a próxima cobrança acontece.
+export async function updateAsaasSubscription(
+  config: AsaasClientConfig,
+  subscriptionId: string,
+  input: UpdateAsaasSubscriptionInput
+): Promise<AsaasSubscription> {
+  return asaasRequest<AsaasSubscription>(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function cancelAsaasSubscription(config: AsaasClientConfig, subscriptionId: string): Promise<void> {
+  await asaasRequest(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "DELETE" });
+}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
 import { Button, FormAlert, PlanOptionCard, SelectField, TextField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
+import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
 import { formatCentsBRL } from "@/shared/lib/money";
 import styles from "./page.module.css";
@@ -26,6 +27,7 @@ type Step = 1 | 2 | 3 | 4;
 interface FieldErrors {
   phone?: string;
   cref?: string;
+  cpfCnpj?: string;
   studentRangeEstimate?: string;
   businessName?: string;
   termsAccepted?: string;
@@ -40,6 +42,12 @@ interface FieldErrors {
 /// sessão, mesmo padrão de qualquer formulário de múltiplos passos: estado
 /// de cliente é suficiente, a rota em si já é a "URL navegável" que a
 /// seção 6 do pacote pede.
+///
+/// **Passo 1, CPF/CNPJ (FIT-128, Issue #153)**: obrigatório desde que o
+/// Asaas exige `cpfCnpj` para criar um cliente real (`POST /v3/customers`)
+/// — nenhum onboarding do FitOS coletava esse dado antes. Decisão de
+/// Murilo: cabe em `PersonalProfile`, nunca em `IndividualProfile`, porque
+/// quem paga a assinatura SaaS é sempre o personal.
 ///
 /// "Nome do espaço/negócio" nunca é um campo novo — grava direto em
 /// `Tenant.name` (já existe desde a FIT-010), nunca uma coluna duplicada.
@@ -64,6 +72,7 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
   const [step, setStep] = useState<Step>(1);
   const [phone, setPhone] = useState("");
   const [cref, setCref] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const [studentRangeEstimate, setStudentRangeEstimate] = useState<PersonalStudentRangeEstimate | "">("");
   const [businessName, setBusinessName] = useState(initialBusinessName);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -75,6 +84,7 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
   const hasData =
     phone.trim() !== "" ||
     cref.trim() !== "" ||
+    cpfCnpj.trim() !== "" ||
     studentRangeEstimate !== "" ||
     businessName.trim() !== initialBusinessName.trim() ||
     planId !== (initialPlanId ?? "");
@@ -88,6 +98,9 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
     const errors: FieldErrors = {};
     if (!isValidBrazilianPhone(phone)) {
       errors.phone = "Informe um celular válido, com DDD.";
+    }
+    if (!isValidCpfCnpj(cpfCnpj)) {
+      errors.cpfCnpj = "Informe um CPF ou CNPJ válido.";
     }
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
@@ -146,6 +159,7 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
       body: JSON.stringify({
         phone,
         cref: cref.trim() || undefined,
+        cpfCnpj,
         studentRangeEstimate,
         businessName,
         termsAccepted,
@@ -192,6 +206,18 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
             value={cref}
             onChange={(event) => setCref(event.target.value)}
             error={fieldErrors.cref}
+          />
+          <TextField
+            label="CPF ou CNPJ"
+            name="cpfCnpj"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            value={cpfCnpj}
+            onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))}
+            error={fieldErrors.cpfCnpj}
+            required
           />
 
           <Button type="submit" variant="filled">
@@ -290,6 +316,8 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
             <dd>Personal</dd>
             <dt>Celular</dt>
             <dd>{phone}</dd>
+            <dt>CPF/CNPJ</dt>
+            <dd>{cpfCnpj}</dd>
             {cref.trim() ? (
               <>
                 <dt>CREF</dt>

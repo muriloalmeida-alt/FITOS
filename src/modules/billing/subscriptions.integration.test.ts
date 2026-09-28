@@ -2,15 +2,54 @@
 //
 // Testes de integração de contratação/troca/cancelamento de assinatura SaaS
 // (FIT-122) contra PostgreSQL real (banco de testes).
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import {
+  ASAAS_PROVIDER,
   NO_PAYMENT_PROVIDER,
   cancelSubscription,
   getSubscriptionForTenant,
   subscribeTenantToPlan,
 } from "./subscriptions";
+
+const FAKE_KEY = "$aact_sandbox_fake_key_never_real_1234567890";
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status });
+}
+
+/// Mock de `fetch` que roteia por método/URL, imitando as respostas reais
+/// do Asaas v3 documentadas — nunca exercido contra a API real (só a
+/// leitura foi, via o diagnóstico da FIT-128). Cada rota tem uma resposta
+/// padrão de sucesso, substituível por `overrides` para simular falhas.
+function createAsaasFetchMock(
+  overrides: Partial<Record<"findCustomer" | "createCustomer" | "createSubscription" | "updateSubscription" | "cancelSubscription", () => Response | Promise<Response>>> = {}
+) {
+  return vi.fn(async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    if (method === "GET" && url.includes("/customers?cpfCnpj=")) {
+      return (
+        (await overrides.findCustomer?.()) ??
+        jsonResponse(200, { object: "list", hasMore: false, totalCount: 0, limit: 10, offset: 0, data: [] })
+      );
+    }
+    if (method === "POST" && url.endsWith("/customers")) {
+      return (await overrides.createCustomer?.()) ?? jsonResponse(200, { id: "cus_1", name: "Tenant", cpfCnpj: "11144477735" });
+    }
+    if (method === "POST" && url.endsWith("/subscriptions")) {
+      return (await overrides.createSubscription?.()) ?? jsonResponse(200, { id: "sub_1", customer: "cus_1", status: "ACTIVE" });
+    }
+    if (method === "PUT" && url.includes("/subscriptions/")) {
+      return (await overrides.updateSubscription?.()) ?? jsonResponse(200, { id: "sub_1", customer: "cus_1", status: "ACTIVE" });
+    }
+    if (method === "DELETE" && url.includes("/subscriptions/")) {
+      return (await overrides.cancelSubscription?.()) ?? jsonResponse(200, { deleted: true });
+    }
+    throw new Error(`URL não mapeada no mock: ${method} ${url}`);
+  });
+}
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
@@ -35,7 +74,13 @@ async function createTenant(label: string, type: "PERSONAL" | "INDIVIDUAL" = "PE
 
 async function createPlan(
   label: string,
-  overrides: Partial<{ audience: "PERSONAL" | "INDIVIDUAL"; active: boolean; studentLimit: number | null; trialDays: number | null }> = {}
+  overrides: Partial<{
+    audience: "PERSONAL" | "INDIVIDUAL";
+    active: boolean;
+    studentLimit: number | null;
+    trialDays: number | null;
+    priceCents: number;
+  }> = {}
 ) {
   return prisma.plan.create({
     data: {
@@ -46,6 +91,32 @@ async function createPlan(
       active: overrides.active ?? true,
       studentLimit: overrides.studentLimit,
       trialDays: overrides.trialDays,
+      priceCents: overrides.priceCents ?? 0,
+    },
+  });
+}
+
+async function createPersonalProfile(tenantId: string, cpfCnpj: string | null) {
+  await prisma.personalProfile.create({
+    data: {
+      tenantId,
+      phone: "(11) 91234-5678",
+      cpfCnpj,
+      studentRangeEstimate: "ATE_20",
+      termsAcceptedAt: new Date(),
+    },
+  });
+}
+
+async function createIndividualProfile(tenantId: string, cpfCnpj: string | null) {
+  await prisma.individualProfile.create({
+    data: {
+      tenantId,
+      objective: "GANHAR_MASSA",
+      experienceLevel: "INICIANTE",
+      weeklyAvailability: "TRES_A_QUATRO_DIAS",
+      cpfCnpj,
+      termsAcceptedAt: new Date(),
     },
   });
 }
@@ -216,6 +287,208 @@ describe("subscribeTenantToPlan (FIT-122)", () => {
   });
 });
 
+describe("subscribeTenantToPlan — ligação de melhor esforço ao Asaas (FIT-128)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sem API_ASAAS configurada, mantém NO_PAYMENT_PROVIDER mesmo com plano de preço real (PERSONAL)", async () => {
+    const { tenant, owner } = await createTenant("asaas-sem-chave");
+    const plano = await createPlan("asaas-sem-chave", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      {}
+    );
+
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+    expect(assinatura.externalCustomerId).toBeNull();
+    expect(assinatura.externalSubscriptionId).toBeNull();
+  });
+
+  it("plano de preço zero nunca tenta a ligação real, mesmo com CPF/CNPJ e chave configurados", async () => {
+    const { tenant, owner } = await createTenant("asaas-preco-zero");
+    const plano = await createPlan("asaas-preco-zero", { priceCents: 0 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+  });
+
+  it("tenant PERSONAL sem CPF/CNPJ informado nunca tenta a ligação real", async () => {
+    const { tenant, owner } = await createTenant("asaas-sem-cpf");
+    const plano = await createPlan("asaas-sem-cpf", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, null);
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+  });
+
+  it("tenant INDIVIDUAL sem CPF/CNPJ informado nunca tenta a ligação real, mesmo com plano de preço real e chave configurada", async () => {
+    const { tenant, owner } = await createTenant("asaas-individual-sem-cpf", "INDIVIDUAL");
+    const plano = await createPlan("asaas-individual-sem-cpf", { audience: "INDIVIDUAL", priceCents: 1990 });
+    await createIndividualProfile(tenant.id, null);
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "INDIVIDUAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+  });
+
+  it("tenant INDIVIDUAL com plano pago, CPF/CNPJ e chave: cria cliente e assinatura reais no Asaas (mesmo tratamento do PERSONAL)", async () => {
+    const { tenant, owner } = await createTenant("asaas-individual-sucesso", "INDIVIDUAL");
+    const plano = await createPlan("asaas-individual-sucesso", { audience: "INDIVIDUAL", priceCents: 1990 });
+    await createIndividualProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "INDIVIDUAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.provider).toBe(ASAAS_PROVIDER);
+    expect(assinatura.externalCustomerId).toBe("cus_1");
+    expect(assinatura.externalSubscriptionId).toBe("sub_1");
+  });
+
+  it("PERSONAL com plano pago, CPF/CNPJ e chave: cria cliente e assinatura reais no Asaas", async () => {
+    const { tenant, owner } = await createTenant("asaas-sucesso");
+    const plano = await createPlan("asaas-sucesso", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.provider).toBe(ASAAS_PROVIDER);
+    expect(assinatura.externalCustomerId).toBe("cus_1");
+    expect(assinatura.externalSubscriptionId).toBe("sub_1");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/customers?cpfCnpj="),
+      expect.objectContaining({ method: "GET" })
+    );
+    expect(fetchImpl).toHaveBeenCalledWith("https://api-sandbox.asaas.com/v3/customers", expect.objectContaining({ method: "POST" }));
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("reaproveita um cliente Asaas já existente pelo CPF/CNPJ (nunca duplica o cadastro)", async () => {
+    const { tenant, owner } = await createTenant("asaas-reaproveita-cliente");
+    const plano = await createPlan("asaas-reaproveita-cliente", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock({
+      findCustomer: () =>
+        jsonResponse(200, {
+          object: "list",
+          hasMore: false,
+          totalCount: 1,
+          limit: 10,
+          offset: 0,
+          data: [{ id: "cus_existente", name: "Tenant", cpfCnpj: "11144477735" }],
+        }),
+    });
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.externalCustomerId).toBe("cus_existente");
+    expect(fetchImpl).not.toHaveBeenCalledWith("https://api-sandbox.asaas.com/v3/customers", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("troca de plano numa assinatura já ligada ao Asaas: atualiza a assinatura existente (PUT), nunca cria cliente/assinatura de novo", async () => {
+    const { tenant, owner } = await createTenant("asaas-troca");
+    const planoA = await createPlan("asaas-troca-a", { priceCents: 4990 });
+    const planoB = await createPlan("asaas-troca-b", { priceCents: 6990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+    await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: planoA.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+    fetchImpl.mockClear();
+
+    const trocada = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: planoB.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(trocada.externalCustomerId).toBe("cus_1");
+    expect(trocada.externalSubscriptionId).toBe("sub_1");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({ method: "PUT" })
+    );
+    expect(fetchImpl).not.toHaveBeenCalledWith(expect.stringContaining("/customers"), expect.anything());
+    expect(fetchImpl).not.toHaveBeenCalledWith("https://api-sandbox.asaas.com/v3/subscriptions", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("falha do Asaas (ex.: erro de rede) nunca bloqueia a contratação — nunca lança, volta para NO_PAYMENT_PROVIDER", async () => {
+    const { tenant, owner } = await createTenant("asaas-falha-rede");
+    const plano = await createPlan("asaas-falha-rede", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+    expect(assinatura.externalCustomerId).toBeNull();
+    expect(assinatura.externalSubscriptionId).toBeNull();
+  });
+
+  it("falha do Asaas (resposta de erro HTTP) nunca bloqueia a contratação", async () => {
+    const { tenant, owner } = await createTenant("asaas-falha-http");
+    const plano = await createPlan("asaas-falha-http", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock({
+      createCustomer: () => jsonResponse(401, { errors: [{ code: "invalid_access_token", description: "Chave inválida." }] }),
+    });
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+  });
+});
+
 describe("cancelSubscription (FIT-122)", () => {
   it("cancela, registra motivo e AuditEvent", async () => {
     const { tenant, owner } = await createTenant("cancelar");
@@ -263,6 +536,69 @@ describe("cancelSubscription (FIT-122)", () => {
     await expect(
       cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Qualquer" }, prisma)
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+});
+
+describe("cancelSubscription — cancelamento remoto de melhor esforço no Asaas (FIT-128)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("chama DELETE no Asaas quando a assinatura tem externalSubscriptionId, e cancela localmente", async () => {
+    const { tenant, owner } = await createTenant("asaas-cancelar");
+    const plano = await createPlan("asaas-cancelar", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, {
+      apiKey: FAKE_KEY,
+      fetchImpl,
+    });
+    fetchImpl.mockClear();
+
+    const cancelada = await cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Não preciso mais" }, prisma, {
+      apiKey: FAKE_KEY,
+      fetchImpl,
+    });
+
+    expect(cancelada.status).toBe("CANCELADA");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("cancela localmente mesmo quando a chamada remota ao Asaas falha — nunca bloqueia o usuário", async () => {
+    const { tenant, owner } = await createTenant("asaas-cancelar-falha");
+    const plano = await createPlan("asaas-cancelar-falha", { priceCents: 4990 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, {
+      apiKey: FAKE_KEY,
+      fetchImpl,
+    });
+    const failingFetch = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
+
+    const cancelada = await cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Não preciso mais" }, prisma, {
+      apiKey: FAKE_KEY,
+      fetchImpl: failingFetch,
+    });
+
+    expect(cancelada.status).toBe("CANCELADA");
+    expect(cancelada.canceledReason).toBe("Não preciso mais");
+  });
+
+  it("nunca chama o Asaas quando a assinatura não tem externalSubscriptionId (nunca esteve ligada ao provedor)", async () => {
+    const { tenant, owner } = await createTenant("asaas-cancelar-sem-ligacao");
+    const plano = await createPlan("asaas-cancelar-sem-ligacao");
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma);
+    const fetchImpl = vi.fn();
+
+    await cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Não preciso mais" }, prisma, {
+      apiKey: FAKE_KEY,
+      fetchImpl,
+    });
+
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 
