@@ -36,3 +36,7 @@ Ao iniciar a FIT-091 (#96, EPIC-12), a sessão de engenharia confirmou que `api.
 ```
 
 A prova técnica real precisa rodar em um ambiente que alcance o Asaas (Railway ou a máquina do Product Owner) — não é executável desta sessão. Decisão de Murilo: pausar o EPIC-12 na FIT-091 e seguir para o EPIC-13 (FitOS Livre, #97), que não depende de pagamento, até a prova poder ser feita. Nenhum fato do contrato Asaas foi confirmado ou refutado por esta atualização — apenas a inviabilidade de testar a partir daqui.
+
+## Atualização — bloqueio reconfirmado e diagnóstico temporário via Railway (FIT-128, 28/09/2026)
+
+Reconfirmado na FIT-128 (EPIC-16): mesmo bloqueio, agora também para `api.mercadopago.com` (fallback documentado). Como Murilo autorizou execução em homologação/Sandbox (nunca produção), foi adicionado um **diagnóstico temporário** — `src/modules/billing/asaasSandboxDiagnostic.ts`, disparado uma única vez por `src/instrumentation.ts` na inicialização do servidor, só quando `NEXT_PUBLIC_APP_ENV=homologacao` — que faz um único `GET /v3/customers?limit=1` no Sandbox usando a variável já existente `API_ASAAS`, e loga só status/duração/formato da resposta (nunca a chave, headers, corpo completo ou dado de cliente). Não é o adaptador real: é só a confirmação de conectividade/autenticação que faltava, a partir de um ambiente (Railway) que de fato alcança a internet — ver `docs/06-engenharia/RUNBOOK-DIAGNOSTICO-ASAAS-HOMOLOGACAO.md`. Slated para remoção depois que o resultado for lido.
