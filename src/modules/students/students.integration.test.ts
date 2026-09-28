@@ -14,15 +14,18 @@ import {
   StudentError,
   updateStudent,
 } from "./students";
+import { subscribeTenantToPlan } from "@/modules/billing/subscriptions";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 afterAll(async () => {
+  await prisma.saasSubscription.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.student.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.tenant.deleteMany({ where: { name: { contains: run } } });
   await prisma.user.deleteMany({ where: { email: { contains: run } } });
+  await prisma.plan.deleteMany({ where: { slug: { contains: run } } });
   await prisma.$disconnect();
 });
 
@@ -31,6 +34,20 @@ async function createTenant(label: string) {
     data: { email: `dono-${label}-${run}@example.test`, name: `Dono ${label}`, role: "PERSONAL" },
   });
   return prisma.tenant.create({ data: { ownerId: owner.id, name: `Tenant ${label} ${run}` } });
+}
+
+async function subscribeToLimitedPlan(tenantId: string, ownerId: string, label: string, studentLimit: number | null) {
+  const plano = await prisma.plan.create({
+    data: { slug: `${run}-${label}`, audience: "PERSONAL", name: `Plano ${label}`, billingCycle: "MENSAL", studentLimit },
+  });
+  await subscribeTenantToPlan({ tenantId, tenantType: "PERSONAL", planId: plano.id, actorUserId: ownerId }, prisma);
+  return plano;
+}
+
+async function createActiveStudent(tenantId: string, label: string) {
+  return prisma.student.create({
+    data: { tenantId, email: `aluno-limite-${label}-${run}@example.test`, displayName: `Aluno ${label}`, status: "ATIVO" },
+  });
 }
 
 describe("createStudent (FIT-013)", () => {
@@ -422,5 +439,61 @@ describe("endStudentBond (FIT-106)", () => {
     await expect(
       reactivateStudent({ tenantId: tenant.id, studentId: student.id, actorUserId: tenant.ownerId }, prisma)
     ).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+  });
+});
+
+describe("studentLimit (FIT-127)", () => {
+  it("createStudent: bloqueia (LIMITE_DE_ALUNOS_ATINGIDO) ao tentar exceder o limite do plano", async () => {
+    const tenant = await createTenant("limite-criar");
+    await subscribeToLimitedPlan(tenant.id, tenant.ownerId, "limite-criar", 1);
+    await createStudent({ tenantId: tenant.id, name: "Aluno 1", email: `limite-criar-1-${run}@example.test` }, prisma);
+
+    await expect(
+      createStudent({ tenantId: tenant.id, name: "Aluno 2", email: `limite-criar-2-${run}@example.test` }, prisma)
+    ).rejects.toMatchObject({ kind: "LIMITE_DE_ALUNOS_ATINGIDO" });
+  });
+
+  it("createStudent: nunca bloqueia quando o plano não tem limite (studentLimit null)", async () => {
+    const tenant = await createTenant("limite-ilimitado");
+    await subscribeToLimitedPlan(tenant.id, tenant.ownerId, "limite-ilimitado", null);
+    await createStudent({ tenantId: tenant.id, name: "Aluno 1", email: `limite-ilimitado-1-${run}@example.test` }, prisma);
+
+    await expect(
+      createStudent({ tenantId: tenant.id, name: "Aluno 2", email: `limite-ilimitado-2-${run}@example.test` }, prisma)
+    ).resolves.toBeDefined();
+  });
+
+  it("createStudent: nunca bloqueia um tenant sem assinatura (limite só se aplica com plano contratado)", async () => {
+    const tenant = await createTenant("limite-sem-assinatura");
+
+    await expect(
+      createStudent({ tenantId: tenant.id, name: "Aluno", email: `limite-sem-assinatura-${run}@example.test` }, prisma)
+    ).resolves.toBeDefined();
+  });
+
+  it("reactivateStudent: bloqueia (LIMITE_DE_ALUNOS_ATINGIDO) se reativar excederia o limite atual", async () => {
+    const tenant = await createTenant("limite-reativar");
+    await subscribeToLimitedPlan(tenant.id, tenant.ownerId, "limite-reativar", 1);
+    const alunoAtivo = await createStudent({ tenantId: tenant.id, name: "Ativo", email: `limite-reativar-ativo-${run}@example.test` }, prisma);
+    const alunoInativo = await createActiveStudent(tenant.id, "ja-inativo");
+    await prisma.student.update({ where: { id: alunoInativo.id }, data: { status: "INATIVO" } });
+    void alunoAtivo;
+
+    await expect(
+      reactivateStudent({ tenantId: tenant.id, studentId: alunoInativo.id, actorUserId: tenant.ownerId }, prisma)
+    ).rejects.toMatchObject({ kind: "LIMITE_DE_ALUNOS_ATINGIDO" });
+  });
+
+  it("reactivateStudent: permite reativar quando o resultado fica dentro do limite", async () => {
+    const tenant = await createTenant("limite-reativar-ok");
+    await subscribeToLimitedPlan(tenant.id, tenant.ownerId, "limite-reativar-ok", 2);
+    const alunoAtivo = await createStudent({ tenantId: tenant.id, name: "Ativo", email: `limite-reativar-ok-ativo-${run}@example.test` }, prisma);
+    const alunoInativo = await createActiveStudent(tenant.id, "reativar-ok");
+    await prisma.student.update({ where: { id: alunoInativo.id }, data: { status: "INATIVO" } });
+    void alunoAtivo;
+
+    const reativado = await reactivateStudent({ tenantId: tenant.id, studentId: alunoInativo.id, actorUserId: tenant.ownerId }, prisma);
+
+    expect(reativado.status).toBe("ATIVO");
   });
 });

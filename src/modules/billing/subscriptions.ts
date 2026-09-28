@@ -13,13 +13,20 @@ export const NO_PAYMENT_PROVIDER = "sem_integracao";
 
 export class SubscriptionError extends Error {
   constructor(
-    public readonly kind: "VALIDACAO" | "NAO_ENCONTRADO" | "PLANO_INATIVO" | "AUDIENCIA_INCOMPATIVEL",
+    public readonly kind:
+      | "VALIDACAO"
+      | "NAO_ENCONTRADO"
+      | "PLANO_INATIVO"
+      | "AUDIENCIA_INCOMPATIVEL"
+      | "LIMITE_ABAIXO_DO_USO_ATUAL",
     message: string
   ) {
     super(message);
     this.name = "SubscriptionError";
   }
 }
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function getSubscriptionForTenant(
   tenantId: string,
@@ -46,6 +53,18 @@ export interface SubscribeTenantToPlanInput {
 /// troca — um plano retirado continua servindo quem já o assina, mas não
 /// pode ser escolhido de novo. Reativa uma assinatura cancelada (troca de
 /// plano após cancelamento é só uma nova contratação).
+///
+/// **Downgrade acima do limite** (FIT-127): rejeita a troca se o tenant já
+/// tem mais alunos ativos do que o novo plano permitiria — nunca deixa um
+/// tenant "invisivelmente" acima do próprio limite. Consulta `Student`
+/// diretamente (contagem, não uma dependência do módulo `students`).
+///
+/// **Trial de 30 dias, concedido uma única vez por tenant** (FIT-127):
+/// `trialUsedAt` é gravado na primeira vez que qualquer plano com
+/// `trialDays` é concedido a este tenant e nunca mais é limpo — uma troca de
+/// plano posterior (mesmo para outro plano com trial) nunca concede um novo
+/// trial nem reinicia a contagem; `trialEndsAt` da troca é copiado do valor
+/// já existente, não recalculado.
 export async function subscribeTenantToPlan(
   input: SubscribeTenantToPlanInput,
   client: PrismaClient = prisma
@@ -61,7 +80,25 @@ export async function subscribeTenantToPlan(
     throw new SubscriptionError("PLANO_INATIVO", "Este plano não está mais disponível para contratação.");
   }
 
+  if (plan.studentLimit !== null) {
+    const activeStudentCount = await client.student.count({ where: { tenantId: input.tenantId, status: "ATIVO" } });
+    if (activeStudentCount > plan.studentLimit) {
+      throw new SubscriptionError(
+        "LIMITE_ABAIXO_DO_USO_ATUAL",
+        `Você tem ${String(activeStudentCount)} aluno(s) ativo(s), mas este plano permite até ${String(plan.studentLimit)}. Inative alunos ou escolha um plano com limite maior.`
+      );
+    }
+  }
+
   return client.$transaction(async (tx) => {
+    const existing = await tx.saasSubscription.findUnique({ where: { tenantId: input.tenantId } });
+    const now = new Date();
+    const grantsNewTrial = plan.trialDays !== null && !existing?.trialUsedAt;
+    const trialEndsAt = grantsNewTrial
+      ? new Date(now.getTime() + plan.trialDays! * MILLISECONDS_PER_DAY)
+      : (existing?.trialEndsAt ?? null);
+    const trialUsedAt = existing?.trialUsedAt ?? (grantsNewTrial ? now : null);
+
     const subscription = await tx.saasSubscription.upsert({
       where: { tenantId: input.tenantId },
       create: {
@@ -69,6 +106,8 @@ export async function subscribeTenantToPlan(
         planId: plan.id,
         status: "ATIVA",
         provider: NO_PAYMENT_PROVIDER,
+        trialEndsAt,
+        trialUsedAt,
       },
       update: {
         planId: plan.id,
@@ -76,6 +115,8 @@ export async function subscribeTenantToPlan(
         provider: NO_PAYMENT_PROVIDER,
         canceledAt: null,
         canceledReason: null,
+        trialEndsAt,
+        trialUsedAt,
       },
     });
 

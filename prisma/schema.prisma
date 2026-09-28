@@ -1012,6 +1012,16 @@ model SaasSubscription {
   provider       String
   canceledAt     DateTime?
   canceledReason String?
+  /// Fim do período de teste grátis desta contratação — `null` quando não
+  /// há trial em curso (plano sem `trialDays`, trial já expirado/consumido,
+  /// ou nunca contratado). Nunca reiniciado numa troca de plano dentro do
+  /// mesmo tenant — ver `trialUsedAt` (FIT-127).
+  trialEndsAt    DateTime?
+  /// Marca a primeira vez que este tenant recebeu um trial, para sempre —
+  /// nunca é limpo, nem numa troca de plano. `subscribeTenantToPlan` só
+  /// concede um novo `trialEndsAt` quando este campo ainda está `null`;
+  /// nunca reinicia o trial trocando de plano (regra explícita do EPIC-16).
+  trialUsedAt    DateTime?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 

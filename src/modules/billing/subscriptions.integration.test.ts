@@ -33,7 +33,10 @@ async function createTenant(label: string, type: "PERSONAL" | "INDIVIDUAL" = "PE
   return { owner, tenant };
 }
 
-async function createPlan(label: string, overrides: Partial<{ audience: "PERSONAL" | "INDIVIDUAL"; active: boolean }> = {}) {
+async function createPlan(
+  label: string,
+  overrides: Partial<{ audience: "PERSONAL" | "INDIVIDUAL"; active: boolean; studentLimit: number | null; trialDays: number | null }> = {}
+) {
   return prisma.plan.create({
     data: {
       slug: `${run}-${label}`,
@@ -41,7 +44,15 @@ async function createPlan(label: string, overrides: Partial<{ audience: "PERSONA
       name: `Plano ${label}`,
       billingCycle: "MENSAL",
       active: overrides.active ?? true,
+      studentLimit: overrides.studentLimit,
+      trialDays: overrides.trialDays,
     },
+  });
+}
+
+async function createActiveStudent(tenantId: string, label: string) {
+  return prisma.student.create({
+    data: { tenantId, email: `aluno-${label}-${run}@example.test`, displayName: `Aluno ${label}`, status: "ATIVO" },
   });
 }
 
@@ -127,6 +138,81 @@ describe("subscribeTenantToPlan (FIT-122)", () => {
         prisma
       )
     ).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("FIT-127: concede trial na primeira contratação de um plano com trialDays", async () => {
+    const { tenant, owner } = await createTenant("trial-primeira");
+    const plano = await createPlan("trial-primeira", { trialDays: 30 });
+
+    const antes = new Date();
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma
+    );
+
+    expect(assinatura.trialUsedAt).not.toBeNull();
+    expect(assinatura.trialEndsAt).not.toBeNull();
+    const diasDeTrial = Math.round((assinatura.trialEndsAt!.getTime() - antes.getTime()) / (24 * 60 * 60 * 1000));
+    expect(diasDeTrial).toBe(30);
+  });
+
+  it("FIT-127: plano sem trialDays nunca concede trial", async () => {
+    const { tenant, owner } = await createTenant("sem-trial");
+    const plano = await createPlan("sem-trial", { trialDays: null });
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id },
+      prisma
+    );
+
+    expect(assinatura.trialUsedAt).toBeNull();
+    expect(assinatura.trialEndsAt).toBeNull();
+  });
+
+  it("FIT-127: trocar de plano nunca concede um novo trial nem reinicia a contagem (trialUsedAt já setado)", async () => {
+    const { tenant, owner } = await createTenant("trial-troca");
+    const planoA = await createPlan("trial-troca-a", { trialDays: 30 });
+    const planoB = await createPlan("trial-troca-b", { trialDays: 30 });
+
+    const primeira = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: planoA.id, actorUserId: owner.id },
+      prisma
+    );
+    const segunda = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: planoB.id, actorUserId: owner.id },
+      prisma
+    );
+
+    expect(segunda.trialUsedAt?.getTime()).toBe(primeira.trialUsedAt?.getTime());
+    expect(segunda.trialEndsAt?.getTime()).toBe(primeira.trialEndsAt?.getTime());
+  });
+
+  it("FIT-127: rejeita troca para plano com studentLimit menor que a quantidade de alunos ativos (LIMITE_ABAIXO_DO_USO_ATUAL)", async () => {
+    const { tenant, owner } = await createTenant("downgrade");
+    const planoAmplo = await createPlan("downgrade-amplo", { studentLimit: 50 });
+    const planoRestrito = await createPlan("downgrade-restrito", { studentLimit: 1 });
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: planoAmplo.id, actorUserId: owner.id }, prisma);
+    await createActiveStudent(tenant.id, "downgrade-1");
+    await createActiveStudent(tenant.id, "downgrade-2");
+
+    await expect(
+      subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: planoRestrito.id, actorUserId: owner.id }, prisma)
+    ).rejects.toMatchObject({ kind: "LIMITE_ABAIXO_DO_USO_ATUAL" });
+  });
+
+  it("FIT-127: permite troca quando a quantidade de alunos ativos está dentro do novo limite", async () => {
+    const { tenant, owner } = await createTenant("downgrade-ok");
+    const planoAmplo = await createPlan("downgrade-ok-amplo", { studentLimit: 50 });
+    const planoMenor = await createPlan("downgrade-ok-menor", { studentLimit: 5 });
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: planoAmplo.id, actorUserId: owner.id }, prisma);
+    await createActiveStudent(tenant.id, "downgrade-ok-1");
+
+    const trocada = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "PERSONAL", planId: planoMenor.id, actorUserId: owner.id },
+      prisma
+    );
+
+    expect(trocada.planId).toBe(planoMenor.id);
   });
 });
 
