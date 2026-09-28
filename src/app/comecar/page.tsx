@@ -14,7 +14,7 @@ interface CriarContaPageProps {
   searchParams: Promise<{ modo?: string }>;
 }
 
-/// Entrada do onboarding (FIT-112, seção 6 do pacote): `/criar-conta` sem
+/// Entrada do onboarding (FIT-112, seção 6 do pacote): `/comecar` sem
 /// `?modo=` nunca mais assume personal silenciosamente — mostra a
 /// "primeira decisão" com os três caminhos explícitos (`OnboardingEntry`).
 /// `?modo=individual`/`?modo=personal` (FIT-101/ADR-007) são a etapa 2,

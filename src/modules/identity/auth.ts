@@ -51,8 +51,9 @@ export const auth = betterAuth({
       // FIT-101: aceito do cliente (`input: true`), mas restrito por
       // `validator.input` a `SELF_SERVICE_ROLES` — qualquer outro valor
       // (em especial `"ALUNO"`, mas também qualquer string arbitrária) é
-      // rejeitado com 400 antes de chegar ao banco. `/criar-conta` (modo
-      // padrão, sem escolha) e `/criar-conta?modo=individual` (FIT-101) são
+      // rejeitado com 400 antes de chegar ao banco. `/comecar` (modo
+      // padrão, sem escolha; renomeada de `/criar-conta` na FIT-125) e
+      // `/comecar?modo=individual` (FIT-101) são
       // as duas únicas rotas públicas que chamam `signUp.email`; nenhuma
       // delas jamais repassa um valor vindo de query string/payload do
       // usuário além de exatamente `"PERSONAL"` ou `"INDIVIDUAL"` — a

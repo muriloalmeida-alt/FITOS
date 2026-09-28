@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 /// Tela 1 (Entrada) do onboarding "Treino sozinho" (FIT-101,
 /// `04_FASE_2_2_FITOS_LIVRE.md` do pacote pós-MVP): proposta de valor e
 /// escolha explícita do modo individual, antes do cadastro em si
-/// (`/criar-conta?modo=individual`). Página pública, sem sessão — mesmo
-/// padrão de `/entrar`/`/criar-conta`.
+/// (`/comecar?modo=individual`). Página pública, sem sessão — mesmo
+/// padrão de `/entrar`/`/comecar`.
 export default function TreinoSozinhoPage() {
   return (
     <main className={styles.main}>
@@ -43,7 +43,7 @@ export default function TreinoSozinhoPage() {
           </p>
         </Card>
 
-        <Button href="/criar-conta?modo=individual" variant="filled" className={styles.cta}>
+        <Button href="/comecar?modo=individual" variant="filled" className={styles.cta}>
           Criar meu espaço individual
         </Button>
       </div>

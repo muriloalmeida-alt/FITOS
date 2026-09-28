@@ -28,7 +28,7 @@ export default function EntrarPage() {
           </Suspense>
 
           <p className={styles.footer}>
-            Ainda não tem conta de personal? <Link href="/criar-conta">Criar conta</Link>
+            Ainda não tem conta de personal? <Link href="/comecar">Criar conta</Link>
           </p>
         </div>
       </div>

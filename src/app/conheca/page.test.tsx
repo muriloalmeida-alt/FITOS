@@ -1,0 +1,87 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import exerciseImageManifest from "@/modules/exercises/data/manifesto-imagens-exercicios.json";
+import LandingPage from "./page";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+describe("LandingPage (FIT-110)", () => {
+  it("renderiza o cabeçalho com Entrar e Criar conta grátis", () => {
+    render(<LandingPage />);
+    const enterLinks = screen.getAllByRole("link", { name: "Entrar" });
+    expect(enterLinks.length).toBeGreaterThan(0);
+    for (const link of enterLinks) {
+      expect(link).toHaveAttribute("href", "/entrar");
+    }
+    expect(screen.getAllByRole("link", { name: /Criar conta grátis/ })[0]).toHaveAttribute("href", "/comecar");
+  });
+
+  it("renderiza o hero com o texto exato do pacote e os dois CTAs", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "Seu trabalho. Em movimento." })).toBeInTheDocument();
+    expect(screen.getByText("Gestão fitness, sem peso extra")).toBeInTheDocument();
+    expect(
+      screen.getByText("Alunos, treinos e evolução em um só lugar. Menos planilha, mais tempo para transformar resultados.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Começar agora" })).toHaveAttribute("href", "/comecar");
+    expect(screen.getByRole("link", { name: "Conhecer o FitOS" })).toHaveAttribute("href", "#recursos");
+  });
+
+  it("renderiza os três pilares de benefícios", () => {
+    render(<LandingPage />);
+    expect(screen.getByText("Alunos sob controle")).toBeInTheDocument();
+    expect(screen.getByText("Treinos que evoluem")).toBeInTheDocument();
+    expect(screen.getByText("Financeiro simples")).toBeInTheDocument();
+  });
+
+  it("renderiza os três caminhos (Personal / Aluno com convite / FitOS Livre) com links reais", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("heading", { name: "Sou Personal" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Treino com Personal" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "FitOS Livre" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Conhecer o FitOS Livre" })).toHaveAttribute("href", "/treino-sozinho");
+    expect(screen.getByLabelText("Já tem um código de convite?")).toBeInTheDocument();
+  });
+
+  it("FIT-112: o CTA do cartão 'Sou Personal' já leva direto à etapa 2 (?modo=personal), sem repetir a decisão", () => {
+    render(<LandingPage />);
+    const links = screen.getAllByRole("link", { name: /Criar conta grátis/ });
+    expect(links.some((link) => link.getAttribute("href") === "/comecar?modo=personal")).toBe(true);
+  });
+
+  it("renderiza a seção Personal/aluno e o CTA final", () => {
+    render(<LandingPage />);
+    expect(screen.getByText(/O acesso do seu aluno é sempre restrito ao seu espaço/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pronto para colocar sua rotina em movimento?" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Criar meu perfil" })).toHaveAttribute("href", "/comecar");
+  });
+
+  it("FIT-111/FIT-118: renderiza o teaser da biblioteca ilustrada com a quantidade real do manifesto, nunca hardcoded", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("heading", { name: "Biblioteca ilustrada de exercícios" })).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${exerciseImageManifest.length} de 208 exercícios do catálogo já ilustrados`))).toBeInTheDocument();
+    expect(screen.getByText(/biblioteca completa em expansão/)).toBeInTheDocument();
+    expect(screen.getByText(/Personal, Aluno vinculado e FitOS Livre/)).toBeInTheDocument();
+  });
+
+  it("FIT-119: linka para as páginas reais de Termos de Uso e Política de Privacidade, nunca mais um texto de pendência", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute("href", "/termos-de-uso");
+    expect(screen.getByRole("link", { name: "Política de Privacidade" })).toHaveAttribute(
+      "href",
+      "/politica-de-privacidade"
+    );
+    expect(screen.queryByText(/em preparação/)).not.toBeInTheDocument();
+  });
+
+  it("todas as imagens têm alt text funcional (nunca vazio)", () => {
+    render(<LandingPage />);
+    const images = screen.getAllByRole("img");
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect(image.getAttribute("alt")).toBeTruthy();
+    }
+  });
+});

@@ -36,7 +36,7 @@ function validate(values: { name: string; email: string; password: string; confi
 
 interface CriarContaFormProps {
   /// "individual" é a escolha explícita do onboarding "Treino sozinho"
-  /// (FIT-101, `/criar-conta?modo=individual`) — qualquer outro valor
+  /// (FIT-101, `/comecar?modo=individual`) — qualquer outro valor
   /// (incluindo ausente) permanece o cadastro de personal de sempre.
   /// Nunca lido de um campo de formulário: o literal já vem fixado pela
   /// própria página server-side a partir da query string (ver ADR-007).
@@ -76,7 +76,7 @@ export function CriarContaForm({ mode = "personal" }: CriarContaFormProps) {
     if (hasData && !window.confirm("Você tem dados preenchidos que serão perdidos. Quer mesmo voltar?")) {
       return;
     }
-    router.push("/criar-conta");
+    router.push("/comecar");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

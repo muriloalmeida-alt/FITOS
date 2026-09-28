@@ -98,7 +98,7 @@ describe("CriarContaForm", () => {
     await user.click(screen.getByRole("button", { name: "← Voltar" }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith("/criar-conta");
+    expect(push).toHaveBeenCalledWith("/comecar");
   });
 
   it("FIT-112: Voltar com dados preenchidos pede confirmação; cancelar não navega", async () => {
@@ -123,7 +123,7 @@ describe("CriarContaForm", () => {
     await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
     await user.click(screen.getByRole("button", { name: "← Voltar" }));
 
-    expect(push).toHaveBeenCalledWith("/criar-conta");
+    expect(push).toHaveBeenCalledWith("/comecar");
   });
 
   it("mostra mensagem genérica de erro quando o cadastro falha, sem revelar o motivo exato", async () => {

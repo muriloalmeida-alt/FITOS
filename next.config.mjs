@@ -30,6 +30,13 @@ const nextConfig = {
   images: {
     remotePatterns: buildExerciseImageRemotePatterns(),
   },
+  // FIT-125/EPIC-16: `/criar-conta` foi renomeada para `/comecar` — redirect
+  // permanente para não quebrar links já compartilhados/indexados (a query
+  // string, ex.: `?modo=personal`, é preservada automaticamente pelo Next.js
+  // quando o destino não declara os mesmos parâmetros).
+  async redirects() {
+    return [{ source: "/criar-conta", destination: "/comecar", permanent: true }];
+  },
 };
 
 export default nextConfig;

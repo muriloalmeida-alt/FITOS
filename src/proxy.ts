@@ -10,7 +10,7 @@ import { getSessionCookie } from "better-auth/cookies";
 /// (`getServerSession`, `src/modules/identity/session.ts`) — esconder uma
 /// rota aqui não substitui essa checagem.
 const PROTECTED_PREFIXES = ["/painel"];
-const AUTH_ONLY_ROUTES = ["/entrar", "/criar-conta"];
+const AUTH_ONLY_ROUTES = ["/entrar", "/comecar"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -31,5 +31,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/painel/:path*", "/entrar", "/criar-conta"],
+  matcher: ["/painel/:path*", "/entrar", "/comecar"],
 };
