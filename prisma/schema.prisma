@@ -293,6 +293,13 @@ model IndividualProfile {
   objective          IndividualObjective
   experienceLevel    ExperienceLevel
   weeklyAvailability WeeklyAvailability
+  /// CPF/CNPJ do usuário (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento do plano
+  /// pago do FitOS Livre (`individual-livre-v2`). Mesmo tratamento de
+  /// `PersonalProfile.cpfCnpj`: obrigatório para toda nova submissão do
+  /// onboarding, `null` só para perfis concluídos antes deste campo
+  /// existir — nunca fabricado retroativamente.
+  cpfCnpj String?
   /// Sempre preenchido no momento da primeira submissão, nunca sobrescrito
   /// depois (mesmo princípio de "preserva o momento original" de
   /// `endStudentBond`/`softDeleteAssessment`) — reabrir o onboarding para

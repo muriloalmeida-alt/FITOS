@@ -51,6 +51,7 @@ export default async function OnboardingPage() {
           initialObjective={existingProfile?.objective ?? null}
           initialExperienceLevel={existingProfile?.experienceLevel ?? null}
           initialWeeklyAvailability={existingProfile?.weeklyAvailability ?? null}
+          initialCpfCnpj={existingProfile?.cpfCnpj ?? null}
           alreadyAcceptedTerms={existingProfile?.termsAcceptedAt !== null && existingProfile?.termsAcceptedAt !== undefined}
           plans={plans.map((plan) => ({
             id: plan.id,

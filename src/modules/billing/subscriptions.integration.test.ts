@@ -108,6 +108,19 @@ async function createPersonalProfile(tenantId: string, cpfCnpj: string | null) {
   });
 }
 
+async function createIndividualProfile(tenantId: string, cpfCnpj: string | null) {
+  await prisma.individualProfile.create({
+    data: {
+      tenantId,
+      objective: "GANHAR_MASSA",
+      experienceLevel: "INICIANTE",
+      weeklyAvailability: "TRES_A_QUATRO_DIAS",
+      cpfCnpj,
+      termsAcceptedAt: new Date(),
+    },
+  });
+}
+
 async function createActiveStudent(tenantId: string, label: string) {
   return prisma.student.create({
     data: { tenantId, email: `aluno-${label}-${run}@example.test`, displayName: `Aluno ${label}`, status: "ATIVO" },
@@ -327,9 +340,10 @@ describe("subscribeTenantToPlan — ligação de melhor esforço ao Asaas (FIT-1
     expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
   });
 
-  it("tenant INDIVIDUAL nunca tenta a ligação real, mesmo com plano de preço real e chave configurada", async () => {
-    const { tenant, owner } = await createTenant("asaas-individual", "INDIVIDUAL");
-    const plano = await createPlan("asaas-individual", { audience: "INDIVIDUAL", priceCents: 1990 });
+  it("tenant INDIVIDUAL sem CPF/CNPJ informado nunca tenta a ligação real, mesmo com plano de preço real e chave configurada", async () => {
+    const { tenant, owner } = await createTenant("asaas-individual-sem-cpf", "INDIVIDUAL");
+    const plano = await createPlan("asaas-individual-sem-cpf", { audience: "INDIVIDUAL", priceCents: 1990 });
+    await createIndividualProfile(tenant.id, null);
     const fetchImpl = createAsaasFetchMock();
 
     const assinatura = await subscribeTenantToPlan(
@@ -340,6 +354,23 @@ describe("subscribeTenantToPlan — ligação de melhor esforço ao Asaas (FIT-1
 
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(assinatura.provider).toBe(NO_PAYMENT_PROVIDER);
+  });
+
+  it("tenant INDIVIDUAL com plano pago, CPF/CNPJ e chave: cria cliente e assinatura reais no Asaas (mesmo tratamento do PERSONAL)", async () => {
+    const { tenant, owner } = await createTenant("asaas-individual-sucesso", "INDIVIDUAL");
+    const plano = await createPlan("asaas-individual-sucesso", { audience: "INDIVIDUAL", priceCents: 1990 });
+    await createIndividualProfile(tenant.id, "111.444.777-35");
+    const fetchImpl = createAsaasFetchMock();
+
+    const assinatura = await subscribeTenantToPlan(
+      { tenantId: tenant.id, tenantType: "INDIVIDUAL", planId: plano.id, actorUserId: owner.id },
+      prisma,
+      { apiKey: FAKE_KEY, fetchImpl }
+    );
+
+    expect(assinatura.provider).toBe(ASAAS_PROVIDER);
+    expect(assinatura.externalCustomerId).toBe("cus_1");
+    expect(assinatura.externalSubscriptionId).toBe("sub_1");
   });
 
   it("PERSONAL com plano pago, CPF/CNPJ e chave: cria cliente e assinatura reais no Asaas", async () => {

@@ -48,12 +48,13 @@ export async function POST(request: Request) {
       !VALID_OBJECTIVES.includes(body.objective) ||
       !VALID_EXPERIENCE_LEVELS.includes(body.experienceLevel) ||
       !VALID_AVAILABILITIES.includes(body.weeklyAvailability) ||
+      typeof body.cpfCnpj !== "string" ||
       typeof body.termsAccepted !== "boolean" ||
       typeof body.planId !== "string" ||
       body.planId.trim() === ""
     ) {
       return Response.json(
-        { error: "VALIDACAO", message: "Informe objetivo, experiência, disponibilidade e um plano válidos." },
+        { error: "VALIDACAO", message: "Informe objetivo, experiência, disponibilidade, CPF/CNPJ e um plano válidos." },
         { status: 400 }
       );
     }
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
       objective: body.objective,
       experienceLevel: body.experienceLevel,
       weeklyAvailability: body.weeklyAvailability,
+      cpfCnpj: body.cpfCnpj,
       termsAccepted: body.termsAccepted,
     });
 

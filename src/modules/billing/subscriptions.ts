@@ -52,18 +52,19 @@ interface AsaasWiringResult {
 /// nunca bloqueia `subscribeTenantToPlan`. Decisão deliberada: os métodos
 /// de escrita do Asaas (`createAsaasCustomer` em diante) nunca foram
 /// exercidos contra a API real, só a leitura (diagnóstico da FIT-128) —
-/// tornar o cadastro de um novo Personal dependente, de forma bloqueante,
-/// de uma API externa ainda não comprovada seria repetir exatamente o
-/// erro que este projeto sempre evitou (integração no escuro). A
-/// confirmação real (mesmo padrão do diagnóstico: ler os logs de
-/// homologação) é o próximo passo, não uma suposição feita aqui.
+/// tornar o cadastro de um novo Personal/Individual dependente, de forma
+/// bloqueante, de uma API externa ainda não comprovada seria repetir
+/// exatamente o erro que este projeto sempre evitou (integração no
+/// escuro). A confirmação real (mesmo padrão do diagnóstico: ler os logs
+/// de homologação) é o próximo passo, não uma suposição feita aqui.
 ///
-/// Só tenta a ligação real quando `tenantType === "PERSONAL"` (única
-/// entidade com CPF/CNPJ hoje — `IndividualProfile` não coleta o dado,
-/// gap conhecido) e `plan.priceCents > 0` (nada a cobrar num plano
-/// gratuito). `billingType: "UNDEFINED"` deixa o Asaas oferecer Pix,
-/// cartão de crédito e carteiras digitais a cada cobrança, conforme
-/// habilitado na conta — decisão de Murilo, nunca um único meio fixo.
+/// Só tenta a ligação real quando `plan.priceCents > 0` (nada a cobrar
+/// num plano gratuito) e o tenant já informou CPF/CNPJ — `PersonalProfile`
+/// (FIT-128) ou `IndividualProfile` (FIT-128, extensão ao FitOS Livre,
+/// já que `individual-livre-v2` também é um plano pago real).
+/// `billingType: "UNDEFINED"` deixa o Asaas oferecer Pix, cartão de
+/// crédito e carteiras digitais a cada cobrança, conforme habilitado na
+/// conta — decisão de Murilo, nunca um único meio fixo.
 async function tryEnsureAsaasSubscription(params: {
   tenantType: TenantType;
   tenantId: string;
@@ -79,7 +80,7 @@ async function tryEnsureAsaasSubscription(params: {
     externalSubscriptionId: params.existing?.externalSubscriptionId ?? null,
   };
 
-  if (params.tenantType !== "PERSONAL" || params.plan.priceCents <= 0) {
+  if (params.plan.priceCents <= 0) {
     return fallback;
   }
 
@@ -90,24 +91,27 @@ async function tryEnsureAsaasSubscription(params: {
   const config = { apiKey, fetchImpl: params.deps.fetchImpl };
 
   try {
-    const [tenant, personalProfile] = await Promise.all([
+    const [tenant, profile] = await Promise.all([
       params.client.tenant.findUniqueOrThrow({ where: { id: params.tenantId } }),
-      params.client.personalProfile.findUnique({ where: { tenantId: params.tenantId } }),
+      params.tenantType === "PERSONAL"
+        ? params.client.personalProfile.findUnique({ where: { tenantId: params.tenantId } })
+        : params.client.individualProfile.findUnique({ where: { tenantId: params.tenantId } }),
     ]);
-    if (!personalProfile?.cpfCnpj) {
+    if (!profile?.cpfCnpj) {
       console.log(`${ASAAS_LOG_PREFIX} pulado: CPF/CNPJ ainda não informado para este tenant.`);
       return fallback;
     }
+    const cpfCnpj = profile.cpfCnpj;
 
     let customerId = fallback.externalCustomerId;
     if (!customerId) {
-      const found = await findAsaasCustomerByCpfCnpj(config, personalProfile.cpfCnpj);
+      const found = await findAsaasCustomerByCpfCnpj(config, cpfCnpj);
       customerId =
         found?.id ??
         (
           await createAsaasCustomer(config, {
             name: tenant.name,
-            cpfCnpj: personalProfile.cpfCnpj,
+            cpfCnpj,
             externalReference: params.tenantId,
           })
         ).id;

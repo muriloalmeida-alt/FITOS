@@ -1038,3 +1038,23 @@ Gates: suíte completa **1094/1094** (+18 desde o PR #165). `tsc --noEmit`/`esli
 `ADR-003-ASAAS-COMO-CANDIDATO.md`, `ASSINATURA-SAAS.md` e `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` atualizados com o mesmo relato.
 
 **Pendência explícita, ainda para Histórias separadas**: confirmar em homologação que a criação real de cliente/assinatura de fato funciona (ler os logs `[FIT-128][assinatura-asaas]` após um cadastro real de Personal com plano pago); webhook de conciliação (ADR-010, item (c)) — ainda não iniciado; decisão de como (e se) tratar tenants `INDIVIDUAL` pagantes sem CPF/CNPJ; o restante da prova técnica obrigatória do Asaas (`ASSINATURA-SAAS.md`) — renovação, falha/inadimplência/recuperação, cancelamento sem apagar histórico, reconciliação, validação real dos meios de pagamento disponíveis à conta, custo/compatibilidade Railway — continua pendente.
+
+### FIT-128 — CPF/CNPJ estendido ao IndividualProfile; ligação real também para o FitOS Livre
+
+Murilo revisou minha própria caracterização: eu tinha resumido a decisão anterior como "quem paga a assinatura SaaS é sempre o personal, nunca o aluno/individual" — generalização que eu mesmo fabriquei ao documentar. Na prática, `individual-livre-v2` (R$19,90, FitOS Livre) já é um plano pago real desde a FIT-127, e `ASSINATURA-SAAS.md` sempre documentou os dois fluxos que pagam a assinatura: "PERSONAL contratando o próprio negócio ou INDIVIDUAL assinando o FitOS Livre". Murilo corrigiu: `IndividualProfile` deve coletar CPF/CNPJ também.
+
+Estendido o mesmo tratamento já usado em `PersonalProfile`:
+
+- **Schema**: `IndividualProfile.cpfCnpj` (`String?`, migration `20260928154554_add_cpf_cnpj_to_individual_profile`) — nullable pelo mesmo motivo de sempre: perfis concluídos antes deste campo existir ficam com `null`, nunca um dado fabricado retroativamente.
+- **Domínio**: `CompleteIndividualOnboardingInput.cpfCnpj` passou a ser obrigatório (validado por `isValidCpfCnpj`, mesmo módulo `src/shared/lib/cpfCnpj.ts` já usado pelo Personal); `completeIndividualOnboarding` grava o campo no upsert.
+- **API**: `/api/onboarding` (rota do onboarding "Treino sozinho") exige `cpfCnpj: string` no corpo.
+- **UI**: novo campo "CPF ou CNPJ" na Etapa 1 do `OnboardingForm` (`/onboarding`), junto de objetivo/experiência/disponibilidade — mesma máscara e mensagem de erro do wizard do Personal.
+- **Wiring real**: `tryEnsureAsaasSubscription` (`src/modules/billing/subscriptions.ts`) generalizado — antes só buscava `PersonalProfile` e só tentava a ligação para `tenantType === "PERSONAL"`; agora busca o CPF/CNPJ em `PersonalProfile` ou `IndividualProfile` conforme o tipo do tenant, e tenta a ligação para qualquer tenant com plano de preço real e CPF/CNPJ informado. Mesmas garantias de sempre (melhor esforço, nunca bloqueia, nunca lança).
+
+**Testes** (novos/atualizados): `onboarding.integration.test.ts` (individual, +1: CPF/CNPJ inválido rejeitado sem gravar; demais testes atualizados para exigir `cpfCnpj`); `route.test.ts` (`/api/onboarding`) atualizado; `OnboardingForm.test.tsx` (+2: máscara/validação do novo campo, reaproveitando o padrão já usado no wizard do Personal); `page.test.tsx` atualizado; `subscriptions.integration.test.ts`: o teste "tenant INDIVIDUAL nunca tenta a ligação real" foi substituído por dois testes que refletem o novo comportamento (sem CPF/CNPJ nunca tenta; com CPF/CNPJ e plano pago, cria cliente/assinatura reais — mesmo tratamento do PERSONAL).
+
+Gates: suíte completa **1097/1097** (+3 desde o commit anterior). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos. Migration aplicada em `fitos_dev` e `fitos_test`.
+
+`ADR-003-ASAAS-COMO-CANDIDATO.md`, `ASSINATURA-SAAS.md`, `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` e `src/modules/individual-onboarding/README.md` atualizados — a linguagem de "gap real, não resolvido" para tenants `INDIVIDUAL` foi removida, já que o gap foi resolvido nesta mesma sessão, poucos minutos depois de documentado.
+
+**Pendência que permanece, sem mudança**: confirmar em homologação que a criação real de cliente/assinatura de fato funciona (ler os logs `[FIT-128][assinatura-asaas]`); webhook de conciliação (ADR-010); o restante da prova técnica obrigatória do Asaas.

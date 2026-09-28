@@ -1,6 +1,7 @@
 import "server-only";
 import type { ExperienceLevel, IndividualObjective, IndividualProfile, PrismaClient, WeeklyAvailability } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 
 export class OnboardingError extends Error {
   constructor(
@@ -27,6 +28,12 @@ export interface CompleteIndividualOnboardingInput {
   objective: IndividualObjective;
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
+  /// Obrigatório (FIT-128, Issue #153) — exigido pelo Asaas em
+  /// `POST /v3/customers` para a integração real de pagamento do plano
+  /// pago do FitOS Livre. `null` no banco existe só para perfis
+  /// concluídos antes deste campo existir; toda nova submissão, inclusive
+  /// reabrir um onboarding antigo, passa a exigi-lo.
+  cpfCnpj: string;
   termsAccepted: boolean;
 }
 
@@ -39,6 +46,9 @@ function assertValid(input: CompleteIndividualOnboardingInput): void {
   }
   if (!VALID_AVAILABILITIES.includes(input.weeklyAvailability)) {
     throw new OnboardingError("VALIDACAO", "Disponibilidade semanal inválida.");
+  }
+  if (!isValidCpfCnpj(input.cpfCnpj)) {
+    throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
   }
 }
 
@@ -71,12 +81,14 @@ export async function completeIndividualOnboarding(
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
+      cpfCnpj: input.cpfCnpj,
       termsAcceptedAt: new Date(),
     },
     update: {
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
+      cpfCnpj: input.cpfCnpj,
     },
   });
 }

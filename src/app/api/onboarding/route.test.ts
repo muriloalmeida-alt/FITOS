@@ -121,6 +121,7 @@ describe("POST /api/onboarding", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "TRES_A_QUATRO_DIAS",
+          cpfCnpj: "111.444.777-35",
           termsAccepted: true,
           planId: "plan-individual-livre-v2",
           tenantId: "tenant-adulterado",
@@ -136,6 +137,7 @@ describe("POST /api/onboarding", () => {
       objective: "GANHAR_MASSA",
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
+      cpfCnpj: "111.444.777-35",
       termsAccepted: true,
     });
     expect(subscribeTenantToPlan).toHaveBeenCalledWith({
@@ -213,6 +215,7 @@ describe("POST /api/onboarding", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "UM_A_DOIS_DIAS",
+          cpfCnpj: "111.444.777-35",
           termsAccepted: false,
           planId: "plan-individual-livre-v2",
         }),
@@ -240,6 +243,7 @@ describe("POST /api/onboarding", () => {
           objective: "GANHAR_MASSA",
           experienceLevel: "INICIANTE",
           weeklyAvailability: "UM_A_DOIS_DIAS",
+          cpfCnpj: "111.444.777-35",
           termsAccepted: true,
           planId: "plan-individual-livre",
         }),
