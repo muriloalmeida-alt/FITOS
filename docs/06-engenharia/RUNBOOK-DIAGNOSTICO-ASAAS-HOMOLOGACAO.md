@@ -1,5 +1,7 @@
 # Runbook — diagnóstico de acesso à API Asaas em homologação (FIT-128)
 
+**Concluído em 28/09/2026** — resultado já confirmado por Murilo a partir do log real de `fitos-web-hml`: `HTTP 200`, `497ms`, formato de listagem válido. O diagnóstico temporário descrito abaixo (`asaasSandboxDiagnostic.ts`/`instrumentation.ts`) foi removido do repositório depois de cumprir seu propósito — este documento fica só como registro histórico de como a verificação foi feita e do resultado obtido, nunca precisa ser executado de novo para a FIT-128. Ver `ADR-003-ASAAS-COMO-CANDIDATO.md` ("Atualização — conectividade/autenticação confirmadas...") e `src/modules/billing/asaasClient.ts` (cliente HTTP real que generaliza a mecânica provada aqui).
+
 Documento autocontido para quem tem acesso direto ao Railway e à API do Asaas, mas não escreve no Git deste repositório. Nenhum passo aqui exige `git`/PR — é só ler logs (ou, no fallback manual, rodar um comando) e devolver o resultado saneado (sem chave, sem dado de cliente) para Murilo/Claude continuarem o trabalho de código.
 
 ## Contexto (resumo, sem precisar ler o repositório)
