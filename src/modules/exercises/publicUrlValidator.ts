@@ -1,6 +1,6 @@
 import "server-only";
 import type { UploadImage } from "./importExerciseImages";
-import { buildPublicImageUrl, type R2Config } from "./r2Config";
+import { buildPublicImageUrl, stripExercisePrefixForPublicUrl, type R2Config } from "./r2Config";
 
 /// Validação do modo `--public-only` (FIT-111/IMP-EX-003): os 203 objetos já
 /// estão publicados no bucket R2 (upload feito fora deste ambiente, fora do
@@ -121,8 +121,11 @@ export async function validatePublicImageUrl(url: string, options: ValidatePubli
 
 /// `UploadImage` para o modo `--public-only`: em vez de enviar o objeto,
 /// recalcula a mesma URL pública que `importExerciseImages` já usou para
-/// `buildImageUrl` (pura, sem custo) e a valida por HTTP. Lança exatamente
-/// como `uploadAndVerifyObject` (S3) lançaria numa falha — o chamador
+/// `buildImageUrl` (pura, sem custo) e a valida por HTTP. A chave interna
+/// (`exercises/<slug>.<ext>`) tem o prefixo `exercises/` removido antes de
+/// montar a URL — o bucket real publica os objetos na raiz, sem esse
+/// prefixo (`stripExercisePrefixForPublicUrl`). Lança exatamente como
+/// `uploadAndVerifyObject` (S3) lançaria numa falha — o chamador
 /// (`importExerciseImages`) já trata isso como falha isolada do item, nunca
 /// atualizando o banco para aquele item, sem abortar o restante do lote.
 export function createPublicOnlyUploadImage(
@@ -130,7 +133,7 @@ export function createPublicOnlyUploadImage(
   options: ValidatePublicImageUrlOptions = {}
 ): UploadImage {
   return async ({ key }) => {
-    const url = buildPublicImageUrl(config, key);
+    const url = buildPublicImageUrl(config, stripExercisePrefixForPublicUrl(key));
     await validatePublicImageUrl(url, options);
   };
 }

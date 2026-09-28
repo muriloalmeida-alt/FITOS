@@ -8,6 +8,7 @@ import {
   readPublicOnlyR2Config,
   readR2Config,
   REQUIRED_R2_ENV_VARS,
+  stripExercisePrefixForPublicUrl,
 } from "./r2Config";
 
 const ALL_VARS = [...REQUIRED_R2_ENV_VARS, "R2_REGION"] as const;
@@ -131,5 +132,21 @@ describe("readPublicOnlyR2Config", () => {
   it("nunca exige R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_ENDPOINT/R2_BUCKET_NAME", () => {
     process.env.R2_PUBLIC_BASE_URL = "https://pub-exemplo.r2.dev";
     expect(() => readPublicOnlyR2Config()).not.toThrow();
+  });
+});
+
+describe("stripExercisePrefixForPublicUrl", () => {
+  it("remove o prefixo 'exercises/' de uma chave interna", () => {
+    expect(stripExercisePrefixForPublicUrl("exercises/agachamento-livre.webp")).toBe("agachamento-livre.webp");
+  });
+
+  it("mantém a chave inalterada quando já não tem o prefixo", () => {
+    expect(stripExercisePrefixForPublicUrl("agachamento-livre.webp")).toBe("agachamento-livre.webp");
+  });
+
+  it("não remove o prefixo no meio da chave, só quando está no início", () => {
+    expect(stripExercisePrefixForPublicUrl("outros/exercises/agachamento-livre.webp")).toBe(
+      "outros/exercises/agachamento-livre.webp"
+    );
   });
 });
