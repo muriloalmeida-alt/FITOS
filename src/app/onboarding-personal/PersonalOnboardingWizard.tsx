@@ -1,19 +1,27 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
-import { Button, FormAlert, SelectField, TextField } from "@/shared/ui";
+import { Button, FormAlert, PlanOptionCard, SelectField, TextField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
 import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
+import { formatCentsBRL } from "@/shared/lib/money";
 import styles from "./page.module.css";
 
 interface PersonalOnboardingWizardProps {
   initialBusinessName: string;
+  /// Catálogo real de planos do Personal (FIT-127), nunca uma lista fixa
+  /// na interface — vem do servidor (`listActivePlansForAudience`).
+  plans: PlanOptionCardPlan[];
+  /// Plano já contratado, se este onboarding está sendo reaberto (reabrir
+  /// nunca concede um novo trial — `subscribeTenantToPlan` já garante isso
+  /// no servidor; aqui é só o valor pré-selecionado no passo 3).
+  initialPlanId: string | null;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 interface FieldErrors {
   phone?: string;
@@ -21,16 +29,17 @@ interface FieldErrors {
   studentRangeEstimate?: string;
   businessName?: string;
   termsAccepted?: string;
+  planId?: string;
 }
 
-/// Onboarding profissional do Personal (FIT-113, seção 7 do pacote). Três
-/// sub-etapas dentro de uma única rota real (`/onboarding-personal`) —
-/// diferente da decisão de caminho da FIT-112 (que precisava de URLs
-/// próprias, por ser bookmarkable/compartilhável entre três produtos
-/// diferentes), aqui é um único fluxo linear de uma sessão, mesmo padrão
-/// de qualquer formulário de múltiplos passos: estado de cliente é
-/// suficiente, a rota em si já é a "URL navegável" que a seção 6 do
-/// pacote pede.
+/// Onboarding profissional do Personal (FIT-113/FIT-126, seção 7 do
+/// pacote). Quatro sub-etapas dentro de uma única rota real
+/// (`/onboarding-personal`) — diferente da decisão de caminho da FIT-112
+/// (que precisava de URLs próprias, por ser bookmarkable/compartilhável
+/// entre três produtos diferentes), aqui é um único fluxo linear de uma
+/// sessão, mesmo padrão de qualquer formulário de múltiplos passos: estado
+/// de cliente é suficiente, a rota em si já é a "URL navegável" que a
+/// seção 6 do pacote pede.
 ///
 /// "Nome do espaço/negócio" nunca é um campo novo — grava direto em
 /// `Tenant.name` (já existe desde a FIT-010), nunca uma coluna duplicada.
@@ -38,7 +47,19 @@ interface FieldErrors {
 /// deliberadamente omitida: nenhuma funcionalidade atual do FitOS usa essa
 /// informação para o Personal, e o próprio pacote só pede o campo "se
 /// houver justificativa funcional no modelo atual" — não há.
-export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboardingWizardProps) {
+///
+/// **Passo 3, seleção de plano (FIT-126)**: catálogo real (`plans`, vindo
+/// do servidor — nunca fixo aqui), com trial de 30 dias já embutido no
+/// disclosure de cada cartão. "Dados de cobrança" (seção 7 do pacote)
+/// nunca ganhou campos de cartão/Pix — nenhum gateway está integrado ainda
+/// (FIT-128, ADR-010); pedir esses dados agora seria fabricar uma coleta
+/// sem nenhum destino real. A submissão final chama
+/// `subscribeTenantToPlan` (mesma função de `/painel/assinatura`, FIT-122)
+/// através de `/api/onboarding-personal` — nunca duas fontes de verdade
+/// para "contratar um plano".
+const TOTAL_STEPS = 4;
+
+export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPlanId }: PersonalOnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [phone, setPhone] = useState("");
@@ -46,26 +67,21 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
   const [studentRangeEstimate, setStudentRangeEstimate] = useState<PersonalStudentRangeEstimate | "">("");
   const [businessName, setBusinessName] = useState(initialBusinessName);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [planId, setPlanId] = useState(initialPlanId ?? "");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const hasData = phone.trim() !== "" || cref.trim() !== "" || studentRangeEstimate !== "" || businessName.trim() !== initialBusinessName.trim();
+  const hasData =
+    phone.trim() !== "" ||
+    cref.trim() !== "" ||
+    studentRangeEstimate !== "" ||
+    businessName.trim() !== initialBusinessName.trim() ||
+    planId !== (initialPlanId ?? "");
 
-  /// Requisito comum do onboarding (seção 6 do pacote, aplicado aqui por
-  /// ser a mesma família de fluxo da FIT-112): fechar a aba/navegar para
-  /// fora do site com dados preenchidos pede confirmação nativa do
-  /// navegador.
-  useEffect(() => {
-    if (!hasData || isSubmitting) {
-      return;
-    }
-    function handleBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasData, isSubmitting]);
+  useUnsavedChangesGuard(hasData, isSubmitting);
+
+  const selectedPlan = plans.find((plan) => plan.id === planId);
 
   function goToStep2(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +115,24 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
     setStep(3);
   }
 
+  function goToStep4(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const errors: FieldErrors = {};
+    if (!planId) {
+      errors.planId = "Escolha um plano para continuar.";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+    setStep(4);
+  }
+
+  function selectPlan(id: string) {
+    setPlanId(id);
+    setFieldErrors((current) => ({ ...current, planId: undefined }));
+  }
+
   async function handleSubmit() {
     if (isSubmitting) {
       return;
@@ -115,6 +149,7 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
         studentRangeEstimate,
         businessName,
         termsAccepted,
+        planId,
       }),
     });
 
@@ -130,7 +165,7 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
 
   return (
     <>
-      <p className={styles.stepIndicator}>Passo {step} de 3</p>
+      <WizardProgress step={step} totalSteps={TOTAL_STEPS} />
 
       {step === 1 ? (
         <form className={styles.form} onSubmit={goToStep2} noValidate>
@@ -218,6 +253,34 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
       ) : null}
 
       {step === 3 ? (
+        <form className={styles.form} onSubmit={goToStep4} noValidate>
+          <h1 className={styles.title}>Escolha seu plano</h1>
+          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
+          <p className={styles.checkboxLabel}>Todos os planos têm 30 dias grátis antes da primeira cobrança.</p>
+
+          <div className={styles.planList}>
+            {plans.map((plan) => (
+              <PlanOptionCard key={plan.id} plan={plan} groupName="planId" selected={planId === plan.id} onSelect={() => selectPlan(plan.id)} />
+            ))}
+          </div>
+          {fieldErrors.planId ? (
+            <p className={styles.checkboxError} role="alert">
+              {fieldErrors.planId}
+            </p>
+          ) : null}
+
+          <div className={styles.actions}>
+            <button type="button" className={styles.backButton} onClick={() => setStep(2)}>
+              ← Voltar
+            </button>
+            <Button type="submit" variant="filled">
+              Continuar
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
+      {step === 4 ? (
         <div className={styles.form}>
           <h1 className={styles.title}>Revisão</h1>
           {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
@@ -237,10 +300,18 @@ export function PersonalOnboardingWizard({ initialBusinessName }: PersonalOnboar
             <dd>{studentRangeLabel(studentRangeEstimate)}</dd>
             <dt>Nome do espaço/negócio</dt>
             <dd>{businessName}</dd>
+            <dt>Plano</dt>
+            <dd>
+              {selectedPlan
+                ? `${selectedPlan.name} — ${formatCentsBRL(selectedPlan.priceCents)}/mês${
+                    selectedPlan.trialDays !== null ? ` (${selectedPlan.trialDays} dias grátis)` : ""
+                  }`
+                : "—"}
+            </dd>
           </dl>
 
           <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(2)} disabled={isSubmitting}>
+            <button type="button" className={styles.backButton} onClick={() => setStep(3)} disabled={isSubmitting}>
               ← Voltar
             </button>
             <Button type="button" variant="filled" onClick={handleSubmit} disabled={isSubmitting}>

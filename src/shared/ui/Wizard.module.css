@@ -1,0 +1,28 @@
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.progressLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fitos-color-primary);
+}
+
+.progressTrack {
+  height: 6px;
+  border-radius: var(--fitos-shape-full);
+  background-color: var(--fitos-color-outline-variant);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--fitos-color-primary);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}

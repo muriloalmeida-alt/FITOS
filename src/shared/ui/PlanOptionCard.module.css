@@ -1,0 +1,59 @@
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fitos-space-3);
+  padding: var(--fitos-space-4);
+  border: 1px solid var(--fitos-color-outline-variant);
+  border-radius: var(--fitos-shape-medium);
+  cursor: pointer;
+}
+
+.card:has(.input:checked) {
+  border-color: var(--fitos-color-primary);
+  border-width: 2px;
+  padding: calc(var(--fitos-space-4) - 1px);
+}
+
+.input {
+  margin-top: 4px;
+  accent-color: var(--fitos-color-primary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fitos-color-on-surface);
+}
+
+.description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.price {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.detail {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.trial {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+}

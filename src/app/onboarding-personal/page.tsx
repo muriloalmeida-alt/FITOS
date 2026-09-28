@@ -4,6 +4,8 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { PersonalOnboardingWizard } from "./PersonalOnboardingWizard";
 import styles from "./page.module.css";
 
@@ -26,12 +28,28 @@ export default async function OnboardingPersonalPage() {
     redirect("/painel");
   }
 
-  const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } });
+  const [tenant, plans, subscription] = await Promise.all([
+    prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } }),
+    listActivePlansForAudience("PERSONAL"),
+    getSubscriptionForTenant(ctx.tenantId),
+  ]);
 
   return (
     <main className={styles.main}>
       <div className={styles.card}>
-        <PersonalOnboardingWizard initialBusinessName={tenant.name} />
+        <PersonalOnboardingWizard
+          initialBusinessName={tenant.name}
+          plans={plans.map((plan) => ({
+            id: plan.id,
+            name: plan.name,
+            description: plan.description,
+            priceCents: plan.priceCents,
+            billingCycle: plan.billingCycle,
+            studentLimit: plan.studentLimit,
+            trialDays: plan.trialDays,
+          }))}
+          initialPlanId={subscription?.planId ?? null}
+        />
       </div>
     </main>
   );
