@@ -15,6 +15,12 @@ describe("BrandLogo", () => {
     expect(img).toHaveAttribute("src", expect.stringContaining("fitos-horizontal-claro.svg"));
   });
 
+  it("variante horizontal: usa o vetor sem retângulo de fundo sobre fotografia (FIT-131)", () => {
+    render(<BrandLogo variant="horizontal" background="photo" />);
+    const img = screen.getByRole("img", { name: "FitOS" });
+    expect(img).toHaveAttribute("src", expect.stringContaining("fitos-horizontal-foto.svg"));
+  });
+
   it("variante horizontal decorativa: sem nome acessível", () => {
     render(<BrandLogo variant="horizontal" decorative />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();

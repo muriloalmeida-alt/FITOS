@@ -29,14 +29,14 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
 /// ainda.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "inicio", label: "Início", href: "/painel" },
-  { key: "alunos", label: "Alunos", href: "/painel/alunos" },
-  { key: "treinos", label: "Treinos", href: "/painel/treinos" },
-  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
-  { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil" },
-  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
-  { key: "config", label: "Configurações", comingSoon: true },
+  { key: "inicio", label: "Início", href: "/painel", icon: "inicio" },
+  { key: "alunos", label: "Alunos", href: "/painel/alunos", icon: "alunos" },
+  { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos" },
+  { key: "exercicios", label: "Exercícios", href: "/painel/exercicios", icon: "exercicios" },
+  { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil" },
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
+  { key: "config", label: "Configurações", comingSoon: true, icon: "config" },
 ];
 
 /// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"
@@ -44,10 +44,10 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
 /// "Progresso" passa a ser real na FIT-042 (própria evolução, somente
 /// leitura). Agenda e Mensagens continuam fora do MVP.
 export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "hoje", label: "Hoje", href: "/painel" },
-  { key: "treino", label: "Treino", href: "/painel/treino" },
-  { key: "progresso", label: "Progresso", href: "/painel/progresso" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil" },
+  { key: "hoje", label: "Hoje", href: "/painel", icon: "inicio" },
+  { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos" },
+  { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil" },
 ];
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
@@ -56,14 +56,20 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
 /// (builder, FIT-102) e "Progresso" (histórico/frequência/recordes/
 /// medidas/metas, FIT-104, em `/painel/minha-evolucao` — rota própria,
 /// nunca `/painel/progresso`, que é exclusiva do `requireStudent()` do
-/// aluno) já são reais; "Perfil" ainda não tem nenhuma rota, mesma
-/// solução interina de `comingSoon` já usada acima para o personal.
+/// aluno) já são reais.
+///
+/// "Perfil" não tem rota própria ainda — diferente do personal/aluno
+/// (que mostram "Perfil" `comingSoon`, "Em breve"), o pacote visual 2026
+/// (FIT-131) instrui explicitamente a não exibir o item para o papel
+/// INDIVIDUAL enquanto a rota não existir, em vez de um destino
+/// permanente desabilitado. Decisão escopada só ao Livre — o
+/// "Configurações" do personal continua `comingSoon`, o pacote não pediu
+/// o mesmo para ele. Efeito colateral: com só 4 destinos reais, a barra
+/// compacta do Livre nunca precisa do overflow "Mais".
 export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "hoje", label: "Hoje", href: "/painel" },
-  { key: "treinos", label: "Treinos", href: "/painel/meus-treinos" },
-  { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao" },
-  // FIT-122: "Assinatura" (FitOS Livre) já é real — "Perfil" (nome/e-mail)
-  // continua comingSoon, são destinos distintos.
-  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura" },
-  { key: "perfil", label: "Perfil", comingSoon: true },
+  { key: "hoje", label: "Hoje", href: "/painel", icon: "inicio" },
+  { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos" },
+  { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao", icon: "evolucao" },
+  // FIT-122: "Assinatura" (FitOS Livre) já é real.
+  { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];

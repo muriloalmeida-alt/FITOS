@@ -2,7 +2,7 @@ import Image from "next/image";
 import styles from "./BrandLogo.module.css";
 
 export type BrandLogoVariant = "horizontal" | "symbol";
-export type BrandLogoBackground = "dark" | "light";
+export type BrandLogoBackground = "dark" | "light" | "photo";
 
 interface BrandLogoProps {
   variant?: BrandLogoVariant;
@@ -27,7 +27,22 @@ interface BrandLogoProps {
 /// desenha seu próprio fundo navy — funciona sobre o chrome navy do shell
 /// ou sobre foto/overlay escuro); `background="light"` usa a variante
 /// "claro" (transparente, texto navy — para fundo claro/branco).
+///
+/// `background="photo"` (FIT-131, pacote visual 2026) usa
+/// `fitos-horizontal-foto.svg` — derivado do vetor "escuro" oficial com
+/// somente o retângulo de fundo externo 438×160 removido (ícone, formas e
+/// wordmark permanecem idênticos ao original, nunca redesenhados). Existe
+/// exclusivamente para renderizar sobre fotografia com gradiente contínuo
+/// na própria imagem — nunca usar `background="dark"` sobre foto, o
+/// retângulo navy embutido nela cria a tarja retangular que esta variante
+/// existe para evitar.
 const HORIZONTAL_ASPECT_RATIO = 438 / 160;
+
+const HORIZONTAL_SRC_BY_BACKGROUND: Record<BrandLogoBackground, string> = {
+  dark: "/marca/fitos-horizontal-escuro.svg",
+  light: "/marca/fitos-horizontal-claro.svg",
+  photo: "/marca/fitos-horizontal-foto.svg",
+};
 
 export function BrandLogo({ variant = "horizontal", background = "dark", size = 32, title = "FitOS", decorative = false, className }: BrandLogoProps) {
   const alt = decorative ? "" : title;
@@ -47,7 +62,7 @@ export function BrandLogo({ variant = "horizontal", background = "dark", size = 
     );
   }
 
-  const src = background === "dark" ? "/marca/fitos-horizontal-escuro.svg" : "/marca/fitos-horizontal-claro.svg";
+  const src = HORIZONTAL_SRC_BY_BACKGROUND[background];
   return (
     <Image
       src={src}

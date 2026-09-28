@@ -135,6 +135,24 @@
   --fitos-color-chrome-accent: var(--fitos-orange-300);
   --fitos-color-chrome-active-bg: var(--fitos-orange-300);
   --fitos-color-chrome-active-fg: var(--fitos-navy-900);
+  /*
+   * Rail de navegação desktop (244px, ADR-014/pacote visual 2026): fundo
+   * da linha selecionada — distinto do indicador `chrome-active-bg`
+   * (pílula clara da navegação inferior mobile). Mesmo tom em claro/escuro
+   * (é uma superfície de chrome fixa, não segue o tema).
+   */
+  --fitos-color-chrome-active-row: #27374a;
+
+  /*
+   * Superfícies editoriais (ADR-014, pacote visual 2026) — telas públicas/
+   * de entrada (login, landing, onboarding, seleção de plano). Distintas
+   * das superfícies internas do painel (`surface`/`on-surface-variant`/
+   * `outline-variant`), que continuam inalteradas.
+   */
+  --fitos-color-surface-editorial: #f5f7f8;
+  --fitos-color-surface-warm: #fff0e8;
+  --fitos-color-on-surface-secondary: #637584;
+  --fitos-color-outline-soft: #dbe4e8;
 }
 
 /* Tema escuro — segue prefers-color-scheme, sem alterar tokens primitivos */
@@ -165,5 +183,11 @@
     --fitos-color-on-warning: #412d00;
     --fitos-color-warning-container: #5c4200;
     --fitos-color-on-warning-container: var(--fitos-amber-100);
+
+    /* Superfícies editoriais (ADR-014) — equivalentes escuros. */
+    --fitos-color-surface-editorial: #0e1722;
+    --fitos-color-surface-warm: #3a2415;
+    --fitos-color-on-surface-secondary: #a9b3ba;
+    --fitos-color-outline-soft: #33404a;
   }
 }
