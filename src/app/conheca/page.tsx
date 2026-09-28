@@ -46,7 +46,17 @@ export default function LandingPage() {
       <LandingHeader />
 
       <section className={styles.hero}>
-        <div className={styles.heroText}>
+        <Image
+          src="/media/brand/visual-2026/scene-runner.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          style={{ objectPosition: "78% 35%" }}
+          className={styles.heroImage}
+        />
+        <div className={styles.heroOverlay} />
+        <div className={styles.heroContent}>
           <p className={styles.eyebrow}>Gestão fitness, sem peso extra</p>
           <h1 className={styles.heroTitle}>Seu trabalho. Em movimento.</h1>
           <p className={styles.heroDescription}>
@@ -57,21 +67,10 @@ export default function LandingPage() {
             <Button href="/comecar" variant="filled">
               Começar agora
             </Button>
-            <Button href="#recursos" variant="outlined">
+            <Button href="#recursos" variant="outlined" className={styles.heroSecondaryCta}>
               Conhecer o {appName}
             </Button>
           </div>
-        </div>
-        <div className={styles.heroImageWrapper}>
-          <Image
-            src="/media/landing/fitos-landing-hero-principal.webp"
-            alt="Personal trainer acompanhando de perto a execução de um exercício com halteres do seu aluno"
-            width={900}
-            height={1125}
-            priority
-            sizes="(min-width: 900px) 420px, 90vw"
-            className={styles.heroImage}
-          />
         </div>
       </section>
 

@@ -7,6 +7,7 @@ export { FormAlert } from "./FormAlert";
 export { AppShell, type AppShellNavItem } from "./AppShell";
 export { PulseLine, type PulseLineVariant } from "./PulseLine";
 export { AuthHero } from "./AuthHero";
+export { PathPhotoCard } from "./PathPhotoCard";
 export { Avatar } from "./Avatar";
 export { ExerciseThumbnail } from "./ExerciseThumbnail";
 export { AttentionItem } from "./AttentionItem";

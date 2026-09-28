@@ -5,6 +5,18 @@
   background: linear-gradient(160deg, var(--fitos-navy-900) 0%, var(--fitos-navy-700) 100%);
 }
 
+/*
+ * Pacote visual 2026 (FIT-131): a foto também aparece em 390px, como
+ * banda superior de altura fixa — diferente do padrão anterior (a foto só
+ * existia como painel lateral em desktop, `display: none` no compact).
+ */
+.heroCompactVisible {
+  display: block;
+  height: 62vh;
+  min-height: 460px;
+  max-height: 640px;
+}
+
 .image {
   object-fit: cover;
 }
@@ -12,12 +24,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    var(--fitos-color-chrome) 0%,
-    rgba(16, 28, 44, 0.55) 45%,
-    rgba(16, 28, 44, 0.1) 100%
-  );
+  background: linear-gradient(200deg, rgba(16, 28, 44, 0.15) 0%, rgba(16, 28, 44, 0.62) 55%, rgba(16, 28, 44, 0.92) 100%);
 }
 
 .content {
@@ -31,8 +38,8 @@
   gap: var(--fitos-space-3);
 }
 
-.pulse {
-  width: 96px;
+.logo {
+  margin-bottom: var(--fitos-space-2);
 }
 
 .eyebrow {
@@ -54,10 +61,25 @@
   color: var(--fitos-color-on-chrome);
 }
 
+.headlineAccent {
+  color: var(--fitos-orange-500);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fitos-navy-100);
+}
+
 @media (min-width: 840px) {
-  .hero {
+  .hero,
+  .heroCompactVisible {
     display: block;
     flex: 1;
     min-height: 100vh;
+    height: auto;
+    max-height: none;
   }
 }

@@ -1,12 +1,15 @@
+/*
+ * Cabeçalho da landing comercial (FIT-110) — branco/claro sobre a
+ * hero fotográfica (pacote visual 2026, FIT-131, tela 02), nunca mais o
+ * chrome escuro que a versão anterior usava. Sticky, com borda inferior
+ * sutil (`outline-soft`) para se destacar de fundos claros abaixo dele.
+ */
 .header {
   position: sticky;
   top: 0;
   z-index: 30;
-  background-color: var(--fitos-color-chrome);
-  border-bottom: 1px solid var(--fitos-color-chrome-container);
-  --fitos-color-primary: var(--fitos-color-chrome-accent);
-  --fitos-color-on-primary: var(--fitos-color-chrome-active-fg);
-  --fitos-color-outline: var(--fitos-color-on-chrome-variant);
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--fitos-color-outline-soft);
 }
 
 .bar {
@@ -33,13 +36,13 @@
 .navLink {
   font-size: 14px;
   font-weight: 600;
-  color: var(--fitos-color-on-chrome-variant);
+  color: var(--fitos-color-on-surface-secondary);
   text-decoration: none;
 }
 
 .navLink:hover,
 .navLink:focus-visible {
-  color: var(--fitos-color-on-chrome);
+  color: var(--fitos-navy-900);
 }
 
 .desktopActions {
@@ -51,7 +54,7 @@
 .enterLink {
   font-size: 14px;
   font-weight: 650;
-  color: var(--fitos-color-on-chrome);
+  color: var(--fitos-navy-900);
   text-decoration: none;
   min-height: 48px;
   display: inline-flex;
@@ -66,9 +69,9 @@
   min-width: 48px;
   min-height: 48px;
   border-radius: var(--fitos-shape-small);
-  border: 1px solid var(--fitos-color-on-chrome-variant);
+  border: 1px solid var(--fitos-color-outline-soft);
   background: transparent;
-  color: var(--fitos-color-on-chrome);
+  color: var(--fitos-navy-900);
   font-size: 20px;
   cursor: pointer;
 }
@@ -86,9 +89,9 @@
   align-items: center;
   font-size: 15px;
   font-weight: 600;
-  color: var(--fitos-color-on-chrome);
+  color: var(--fitos-navy-900);
   text-decoration: none;
-  border-bottom: 1px solid var(--fitos-color-chrome-container);
+  border-bottom: 1px solid var(--fitos-color-outline-soft);
 }
 
 .mobileCta {

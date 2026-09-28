@@ -14,7 +14,12 @@ export const metadata: Metadata = {
 export default function EntrarPage() {
   return (
     <main className={styles.main}>
-      <AuthHero eyebrow={appName} headline="Todo progresso começa com movimento." />
+      <AuthHero
+        headline="Movimento começa"
+        headlineAccent="com um plano."
+        image={{ src: "/media/brand/visual-2026/scene-solo.png", objectPosition: "62% 30%" }}
+        showOnMobile
+      />
 
       <div className={styles.formColumn}>
         <div className={styles.card}>
@@ -26,11 +31,11 @@ export default function EntrarPage() {
           <Suspense fallback={<div className={styles.form} aria-hidden />}>
             <EntrarForm />
           </Suspense>
-
-          <p className={styles.footer}>
-            Ainda não tem conta de personal? <Link href="/comecar">Criar conta</Link>
-          </p>
         </div>
+
+        <p className={styles.footer}>
+          Ainda não tem conta de personal? <Link href="/comecar">Criar conta</Link>
+        </p>
       </div>
     </main>
   );
