@@ -5,6 +5,7 @@ import {
   buildExerciseObjectKey,
   buildPublicImageUrl,
   listMissingR2EnvVars,
+  readPublicOnlyR2Config,
   readR2Config,
   REQUIRED_R2_ENV_VARS,
 } from "./r2Config";
@@ -107,5 +108,28 @@ describe("buildPublicImageUrl", () => {
     expect(buildPublicImageUrl(config, "exercises/agachamento-livre.webp")).toBe(
       "https://media.fitos.example.com/exercises/agachamento-livre.webp"
     );
+  });
+});
+
+describe("readPublicOnlyR2Config", () => {
+  it("lê e normaliza só R2_PUBLIC_BASE_URL, sem exigir nenhuma credencial S3", () => {
+    process.env.R2_PUBLIC_BASE_URL = "https://pub-exemplo.r2.dev/";
+    expect(readPublicOnlyR2Config()).toEqual({ publicBaseUrl: "https://pub-exemplo.r2.dev" });
+  });
+
+  it("lança R2ConfigError citando só o nome da variável quando R2_PUBLIC_BASE_URL está ausente", () => {
+    let caught: unknown;
+    try {
+      readPublicOnlyR2Config();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(R2ConfigError);
+    expect((caught as Error).message).toContain("R2_PUBLIC_BASE_URL");
+  });
+
+  it("nunca exige R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_ENDPOINT/R2_BUCKET_NAME", () => {
+    process.env.R2_PUBLIC_BASE_URL = "https://pub-exemplo.r2.dev";
+    expect(() => readPublicOnlyR2Config()).not.toThrow();
   });
 });
