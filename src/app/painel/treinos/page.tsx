@@ -49,18 +49,28 @@ export default async function TreinosPage() {
           action={{ label: "+ Criar modelo", href: "/painel/treinos/novo" }}
         />
       ) : (
-        <ul className={styles.list} aria-label="Lista de modelos de treino">
-          {workouts.map((workout) => (
-            <li key={workout.id}>
-              <Link href={`/painel/treinos/${workout.id}`} className={styles.row}>
-                <span className={styles.cellName}>{workout.name}</span>
-                {workout.suggestedDays.length > 0 ? (
-                  <span className={styles.cellDays}>{workout.suggestedDays.join(", ")}</span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          <Link href="/painel/treinos/novo" className={styles.nextStepCard}>
+            <p className={styles.nextStepEyebrow}>Próximo passo</p>
+            <p className={styles.nextStepTitle}>Crie um treino memorável</p>
+            <span className={styles.nextStepArrow} aria-hidden="true">
+              ↗
+            </span>
+          </Link>
+
+          <ul className={styles.list} aria-label="Lista de modelos de treino">
+            {workouts.map((workout) => (
+              <li key={workout.id}>
+                <Link href={`/painel/treinos/${workout.id}`} className={styles.row}>
+                  <span className={styles.cellName}>{workout.name}</span>
+                  {workout.suggestedDays.length > 0 ? (
+                    <span className={styles.cellDays}>{workout.suggestedDays.join(", ")}</span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </AppShell>
   );
