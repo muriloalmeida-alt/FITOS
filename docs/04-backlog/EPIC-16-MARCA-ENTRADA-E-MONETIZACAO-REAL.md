@@ -132,7 +132,11 @@ Depois do PR #166 mesclado e implantado (commit/branch confirmados corretos), o 
 
 ### FIT-128 — ligação real ao Asaas Sandbox confirmada de ponta a ponta (28/09/2026)
 
-Com o catálogo corrigido, Murilo concluiu o runbook até o fim: cadastro real de teste (Personal, plano pago) em homologação. Confirmado por dois canais independentes — cliente visível no painel do Asaas Sandbox e a linha de log `[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.` — que a criação real de cliente e assinatura funciona. Detalhe completo em `ASSINATURA-SAAS.md`, `ADR-003-ASAAS-COMO-CANDIDATO.md` e no diário. Próximo trabalho pendente: webhook de conciliação (ADR-010, item (c)), ainda não iniciado; o restante da prova técnica obrigatória do Asaas (renovação, falha/inadimplência, cancelamento, reconciliação) continua não exercido.
+Com o catálogo corrigido, Murilo concluiu o runbook até o fim: cadastro real de teste (Personal, plano pago) em homologação. Confirmado por dois canais independentes — cliente visível no painel do Asaas Sandbox e a linha de log `[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.` — que a criação real de cliente e assinatura funciona. Detalhe completo em `ASSINATURA-SAAS.md`, `ADR-003-ASAAS-COMO-CANDIDATO.md` e no diário.
+
+### FIT-128 — webhook de conciliação implementado (ADR-010, item c) (28/09/2026)
+
+Implementado `POST /api/webhooks/asaas` — recebe eventos reais de pagamento do Asaas (pago, atrasado) e atualiza `SaasSubscription.status` de acordo, autenticado por token compartilhado. Fecha o item (c) da ADR-010 no código; a verificação contra uma entrega real do Asaas (não só o contrato público documentado) é o próximo passo que depende de acesso ao Railway/Asaas — ver `RUNBOOK-VERIFICACAO-WEBHOOK-ASAAS-HOMOLOGACAO.md`. Detalhe completo em `ASSINATURA-SAAS.md` e `ADR-003-ASAAS-COMO-CANDIDATO.md`. O restante da prova técnica obrigatória do Asaas (renovação, falha/inadimplência/recuperação, cancelamento, reconciliação completa, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continua não exercido.
 
 ### Nota de sequenciamento: FIT-127 antes da FIT-126
 

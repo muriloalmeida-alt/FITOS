@@ -67,4 +67,10 @@ Achado real ao seguir o runbook em homologação: nenhum plano pago aparecia no 
 
 Com o catálogo corrigido, o runbook foi concluído até o fim: cadastro real de teste (Personal, CPF de teste válido, plano pago) produziu, confirmado por dois canais independentes — painel do Asaas Sandbox (cliente "Espaço de Master" visível em "Meus Clientes") e log da aplicação (`[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.`) — um cliente e uma assinatura reais no Asaas Sandbox. **A primeira linha da prova técnica obrigatória (`ASSINATURA-SAAS.md`: "criar cliente e assinatura com dados fictícios") está confirmada.**
 
-Ainda **`Proposto — condicionado à prova técnica`**, não `Aceito`: as demais linhas da prova (renovação, falha/inadimplência/recuperação, cancelamento, reconciliação, webhooks autenticados/idempotentes, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continuam não exercidas. Webhook de conciliação (ADR-010, item (c)) continua não iniciado — sem ele, não há hoje forma de saber quando uma cobrança real é paga, falha ou atrasa.
+Ainda **`Proposto — condicionado à prova técnica`**, não `Aceito`: as demais linhas da prova (renovação, falha/inadimplência/recuperação, cancelamento, reconciliação, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continuam não exercidas.
+
+## Atualização — webhook de conciliação implementado, ADR-010 item (c) (FIT-128, 28/09/2026)
+
+`POST /api/webhooks/asaas` (`src/app/api/webhooks/asaas/route.ts`) recebe eventos de pagamento e reconcilia `SaasSubscription.status` (`src/modules/billing/asaasWebhook.ts`). Segue o contrato público documentado do Asaas v3 (header de autenticação `asaas-access-token`, formato `{event, payment: {id, subscription, customer}}`) — **ainda não exercido contra uma entrega real do Asaas**, mesma cautela usada para o cliente de escrita antes de ser confirmado (que, quando testado, bateu com a documentação pública). Detalhe completo em `ASSINATURA-SAAS.md`; verificação real pendente em `RUNBOOK-VERIFICACAO-WEBHOOK-ASAAS-HOMOLOGACAO.md`.
+
+Com isso, os itens (a), (b) e (c) da ADR-010 estão implementados — (a) e a criação real de cliente/assinatura já confirmadas empiricamente; o webhook (c), ainda não. Webhook de conciliação não está mais "não iniciado" como as atualizações anteriores registravam.
