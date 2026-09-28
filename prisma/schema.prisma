@@ -1019,6 +1019,14 @@ model SaasSubscription {
   planId         String
   status         SaasSubscriptionStatus @default(ATIVA)
   provider       String
+  /// Id do cliente/assinatura reais no Asaas (FIT-128, ADR-010) — só
+  /// preenchidos quando a ligação de melhor esforço em
+  /// `tryEnsureAsaasSubscription` (`src/modules/billing/subscriptions.ts`)
+  /// tiver sucesso. `null` enquanto `provider` for `NO_PAYMENT_PROVIDER`
+  /// (inclui todo tenant `INDIVIDUAL` — `IndividualProfile` ainda não
+  /// coleta CPF/CNPJ, gap conhecido) e sempre para planos de preço zero.
+  externalCustomerId     String?
+  externalSubscriptionId String?
   canceledAt     DateTime?
   canceledReason String?
   /// Fim do período de teste grátis desta contratação — `null` quando não

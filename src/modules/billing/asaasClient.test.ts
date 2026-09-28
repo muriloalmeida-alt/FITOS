@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AsaasApiError, asaasRequest, listAsaasCustomers } from "./asaasClient";
+import {
+  AsaasApiError,
+  asaasRequest,
+  cancelAsaasSubscription,
+  createAsaasCustomer,
+  createAsaasSubscription,
+  findAsaasCustomerByCpfCnpj,
+  listAsaasCustomers,
+  updateAsaasSubscription,
+} from "./asaasClient";
 
 const FAKE_KEY = "$aact_sandbox_fake_key_never_real_1234567890";
 
@@ -130,6 +139,125 @@ describe("listAsaasCustomers (única chamada provada contra o Asaas real)", () =
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://api-sandbox.asaas.com/v3/customers?limit=5",
       expect.anything()
+    );
+  });
+});
+
+describe("findAsaasCustomerByCpfCnpj", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("retorna o primeiro cliente encontrado pelo CPF/CNPJ", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(200, {
+        object: "list",
+        hasMore: false,
+        totalCount: 1,
+        limit: 10,
+        offset: 0,
+        data: [{ id: "cus_1", name: "Fulano", cpfCnpj: "11144477735" }],
+      })
+    );
+
+    const result = await findAsaasCustomerByCpfCnpj({ apiKey: FAKE_KEY, fetchImpl }, "11144477735");
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/customers?cpfCnpj=11144477735",
+      expect.objectContaining({ method: "GET" })
+    );
+    expect(result).toEqual({ id: "cus_1", name: "Fulano", cpfCnpj: "11144477735" });
+  });
+
+  it("retorna null quando nenhum cliente é encontrado", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(200, { object: "list", hasMore: false, totalCount: 0, limit: 10, offset: 0, data: [] })
+    );
+
+    const result = await findAsaasCustomerByCpfCnpj({ apiKey: FAKE_KEY, fetchImpl }, "11144477735");
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("createAsaasCustomer", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("faz POST /customers com o corpo informado", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: "cus_1", name: "Fulano", cpfCnpj: "11144477735" }));
+
+    const result = await createAsaasCustomer(
+      { apiKey: FAKE_KEY, fetchImpl },
+      { name: "Fulano", cpfCnpj: "11144477735", externalReference: "tenant-1" }
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/customers",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ name: "Fulano", cpfCnpj: "11144477735", externalReference: "tenant-1" }),
+      })
+    );
+    expect(result.id).toBe("cus_1");
+  });
+});
+
+describe("createAsaasSubscription", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("faz POST /subscriptions com o corpo informado", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: "sub_1", customer: "cus_1", status: "ACTIVE" }));
+
+    const result = await createAsaasSubscription(
+      { apiKey: FAKE_KEY, fetchImpl },
+      { customer: "cus_1", billingType: "UNDEFINED", value: 49.9, cycle: "MONTHLY", nextDueDate: "2026-10-28" }
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ customer: "cus_1", billingType: "UNDEFINED", value: 49.9, cycle: "MONTHLY", nextDueDate: "2026-10-28" }),
+      })
+    );
+    expect(result.id).toBe("sub_1");
+  });
+});
+
+describe("updateAsaasSubscription", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("faz PUT /subscriptions/{id} sem nunca incluir nextDueDate", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: "sub_1", customer: "cus_1", status: "ACTIVE" }));
+
+    await updateAsaasSubscription({ apiKey: FAKE_KEY, fetchImpl }, "sub_1", { value: 69.9, cycle: "MONTHLY" });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ value: 69.9, cycle: "MONTHLY" }) })
+    );
+  });
+});
+
+describe("cancelAsaasSubscription", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("faz DELETE /subscriptions/{id}", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { deleted: true }));
+
+    await cancelAsaasSubscription({ apiKey: FAKE_KEY, fetchImpl }, "sub_1");
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({ method: "DELETE" })
     );
   });
 });

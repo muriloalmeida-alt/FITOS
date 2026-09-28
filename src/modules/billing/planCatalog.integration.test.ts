@@ -59,11 +59,22 @@ describe("ensurePlanCatalog (FIT-127)", () => {
   it("listActivePlansForAudience nunca retorna a geração 1 (desativada) — só a geração 2", async () => {
     await ensurePlanCatalog(prisma);
 
+    // `arrayContaining`/`not.toContain`, nunca igualdade exata da lista
+    // inteira: o banco de testes é compartilhado com outros arquivos de
+    // teste (ex.: subscriptions.integration.test.ts) que criam seus
+    // próprios planos `PERSONAL` ativos e rodam em paralelo — a lista
+    // completa nunca é estável entre arquivos, só a ausência da geração 1.
     const personal = await listActivePlansForAudience("PERSONAL", prisma);
     const individual = await listActivePlansForAudience("INDIVIDUAL", prisma);
+    const personalSlugs = personal.map((p) => p.slug);
+    const individualSlugs = individual.map((p) => p.slug);
 
-    expect(personal.map((p) => p.slug).sort()).toEqual(["personal-20", "personal-50", "personal-ilimitado-v2"].sort());
-    expect(individual.map((p) => p.slug)).toEqual(["individual-livre-v2"]);
+    expect(personalSlugs).toEqual(expect.arrayContaining(["personal-20", "personal-50", "personal-ilimitado-v2"]));
+    expect(individualSlugs).toEqual(expect.arrayContaining(["individual-livre-v2"]));
+    for (const slugGeracao1 of ["personal-essencial", "personal-profissional", "personal-ilimitado", "individual-livre"]) {
+      expect(personalSlugs).not.toContain(slugGeracao1);
+      expect(individualSlugs).not.toContain(slugGeracao1);
+    }
   });
 
   it("rodar de novo não altera o preço de um slug já existente (idempotência de valor, não só de contagem)", async () => {

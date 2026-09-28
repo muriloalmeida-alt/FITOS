@@ -2,14 +2,155 @@ import "server-only";
 import type { Plan, PrismaClient, SaasSubscription, TenantType } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getPlanById } from "./plans";
+import {
+  AsaasApiError,
+  cancelAsaasSubscription,
+  createAsaasCustomer,
+  createAsaasSubscription,
+  findAsaasCustomerByCpfCnpj,
+  updateAsaasSubscription,
+  type AsaasBillingCycle,
+} from "./asaasClient";
 
 export type SaasSubscriptionWithPlan = SaasSubscription & { plan: Plan };
 
-/// Enquanto nenhum gateway de pagamento (Asaas/Mercado Pago, FIT-091) está
-/// integrado, toda assinatura é de valor zero e `SaasSubscription.provider`
-/// precisa mesmo assim de um valor — este sentinela documenta essa lacuna
-/// explicitamente, nunca um nome de provedor fictício.
+/// Enquanto a ligação real ao Asaas (FIT-128) não tiver sucesso para este
+/// tenant — todo tenant `INDIVIDUAL` hoje, qualquer plano de preço zero,
+/// ou qualquer falha na tentativa de melhor esforço abaixo —
+/// `SaasSubscription.provider` precisa mesmo assim de um valor — este
+/// sentinela documenta essa lacuna explicitamente, nunca um nome de
+/// provedor fictício.
 export const NO_PAYMENT_PROVIDER = "sem_integracao";
+
+/// Único provedor real ligado até agora (FIT-128) — nunca fabricado, só
+/// gravado quando `tryEnsureAsaasSubscription` de fato criar/atualizar o
+/// cliente e a assinatura no Asaas com sucesso.
+export const ASAAS_PROVIDER = "asaas";
+
+const ASAAS_LOG_PREFIX = "[FIT-128][assinatura-asaas]";
+
+function mapBillingCycleToAsaas(cycle: "MENSAL" | "ANUAL"): AsaasBillingCycle {
+  return cycle === "ANUAL" ? "YEARLY" : "MONTHLY";
+}
+
+export interface AsaasWiringDeps {
+  apiKey?: string;
+  fetchImpl?: typeof fetch;
+}
+
+interface AsaasWiringResult {
+  provider: string;
+  externalCustomerId: string | null;
+  externalSubscriptionId: string | null;
+}
+
+/// Liga a assinatura local a um cliente/assinatura reais no Asaas — em
+/// modo de **melhor esforço**: qualquer falha (rede, resposta de erro,
+/// chave ausente, CPF/CNPJ ainda não informado) é logada de forma saneada
+/// (nunca a chave, nunca o corpo completo) e a função sempre devolve o
+/// fallback (`NO_PAYMENT_PROVIDER`, ids preservados) — **nunca lança**,
+/// nunca bloqueia `subscribeTenantToPlan`. Decisão deliberada: os métodos
+/// de escrita do Asaas (`createAsaasCustomer` em diante) nunca foram
+/// exercidos contra a API real, só a leitura (diagnóstico da FIT-128) —
+/// tornar o cadastro de um novo Personal dependente, de forma bloqueante,
+/// de uma API externa ainda não comprovada seria repetir exatamente o
+/// erro que este projeto sempre evitou (integração no escuro). A
+/// confirmação real (mesmo padrão do diagnóstico: ler os logs de
+/// homologação) é o próximo passo, não uma suposição feita aqui.
+///
+/// Só tenta a ligação real quando `tenantType === "PERSONAL"` (única
+/// entidade com CPF/CNPJ hoje — `IndividualProfile` não coleta o dado,
+/// gap conhecido) e `plan.priceCents > 0` (nada a cobrar num plano
+/// gratuito). `billingType: "UNDEFINED"` deixa o Asaas oferecer Pix,
+/// cartão de crédito e carteiras digitais a cada cobrança, conforme
+/// habilitado na conta — decisão de Murilo, nunca um único meio fixo.
+async function tryEnsureAsaasSubscription(params: {
+  tenantType: TenantType;
+  tenantId: string;
+  plan: Plan;
+  existing: SaasSubscription | null;
+  trialEndsAt: Date | null;
+  client: PrismaClient;
+  deps: AsaasWiringDeps;
+}): Promise<AsaasWiringResult> {
+  const fallback: AsaasWiringResult = {
+    provider: NO_PAYMENT_PROVIDER,
+    externalCustomerId: params.existing?.externalCustomerId ?? null,
+    externalSubscriptionId: params.existing?.externalSubscriptionId ?? null,
+  };
+
+  if (params.tenantType !== "PERSONAL" || params.plan.priceCents <= 0) {
+    return fallback;
+  }
+
+  const apiKey = params.deps.apiKey ?? process.env.API_ASAAS;
+  if (!apiKey) {
+    return fallback;
+  }
+  const config = { apiKey, fetchImpl: params.deps.fetchImpl };
+
+  try {
+    const [tenant, personalProfile] = await Promise.all([
+      params.client.tenant.findUniqueOrThrow({ where: { id: params.tenantId } }),
+      params.client.personalProfile.findUnique({ where: { tenantId: params.tenantId } }),
+    ]);
+    if (!personalProfile?.cpfCnpj) {
+      console.log(`${ASAAS_LOG_PREFIX} pulado: CPF/CNPJ ainda não informado para este tenant.`);
+      return fallback;
+    }
+
+    let customerId = fallback.externalCustomerId;
+    if (!customerId) {
+      const found = await findAsaasCustomerByCpfCnpj(config, personalProfile.cpfCnpj);
+      customerId =
+        found?.id ??
+        (
+          await createAsaasCustomer(config, {
+            name: tenant.name,
+            cpfCnpj: personalProfile.cpfCnpj,
+            externalReference: params.tenantId,
+          })
+        ).id;
+    }
+
+    const cycle = mapBillingCycleToAsaas(params.plan.billingCycle);
+    const value = params.plan.priceCents / 100;
+    let subscriptionId = fallback.externalSubscriptionId;
+    if (subscriptionId) {
+      await updateAsaasSubscription(config, subscriptionId, {
+        billingType: "UNDEFINED",
+        value,
+        cycle,
+        description: params.plan.name,
+      });
+    } else {
+      const now = new Date();
+      const nextDueDate = params.trialEndsAt && params.trialEndsAt > now ? params.trialEndsAt : now;
+      const created = await createAsaasSubscription(config, {
+        customer: customerId,
+        billingType: "UNDEFINED",
+        value,
+        cycle,
+        nextDueDate: nextDueDate.toISOString().slice(0, 10),
+        description: params.plan.name,
+        externalReference: params.tenantId,
+      });
+      subscriptionId = created.id;
+    }
+
+    console.log(`${ASAAS_LOG_PREFIX} sucesso: cliente e assinatura ligados ao Asaas Sandbox.`);
+    return { provider: ASAAS_PROVIDER, externalCustomerId: customerId, externalSubscriptionId: subscriptionId };
+  } catch (error) {
+    if (error instanceof AsaasApiError) {
+      console.error(
+        `${ASAAS_LOG_PREFIX} falha: kind=${error.kind} status=${error.status ?? "-"} codigo=${error.codigo ?? "-"} mensagem=${error.message}`
+      );
+    } else {
+      console.error(`${ASAAS_LOG_PREFIX} falha inesperada ao tentar ligar ao Asaas.`);
+    }
+    return fallback;
+  }
+}
 
 export class SubscriptionError extends Error {
   constructor(
@@ -67,7 +208,8 @@ export interface SubscribeTenantToPlanInput {
 /// já existente, não recalculado.
 export async function subscribeTenantToPlan(
   input: SubscribeTenantToPlanInput,
-  client: PrismaClient = prisma
+  client: PrismaClient = prisma,
+  deps: AsaasWiringDeps = {}
 ): Promise<SaasSubscription> {
   const plan = await getPlanById(input.planId, client);
   if (!plan) {
@@ -90,29 +232,46 @@ export async function subscribeTenantToPlan(
     }
   }
 
-  return client.$transaction(async (tx) => {
-    const existing = await tx.saasSubscription.findUnique({ where: { tenantId: input.tenantId } });
-    const now = new Date();
-    const grantsNewTrial = plan.trialDays !== null && !existing?.trialUsedAt;
-    const trialEndsAt = grantsNewTrial
-      ? new Date(now.getTime() + plan.trialDays! * MILLISECONDS_PER_DAY)
-      : (existing?.trialEndsAt ?? null);
-    const trialUsedAt = existing?.trialUsedAt ?? (grantsNewTrial ? now : null);
+  const existing = await client.saasSubscription.findUnique({ where: { tenantId: input.tenantId } });
+  const now = new Date();
+  const grantsNewTrial = plan.trialDays !== null && !existing?.trialUsedAt;
+  const trialEndsAt = grantsNewTrial
+    ? new Date(now.getTime() + plan.trialDays! * MILLISECONDS_PER_DAY)
+    : (existing?.trialEndsAt ?? null);
+  const trialUsedAt = existing?.trialUsedAt ?? (grantsNewTrial ? now : null);
 
+  /// Chamada de rede (melhor esforço) feita fora da transação — nunca
+  /// dentro de `client.$transaction`, que precisa ficar curta e nunca
+  /// esperar por uma API externa.
+  const asaas = await tryEnsureAsaasSubscription({
+    tenantType: input.tenantType,
+    tenantId: input.tenantId,
+    plan,
+    existing,
+    trialEndsAt,
+    client,
+    deps,
+  });
+
+  return client.$transaction(async (tx) => {
     const subscription = await tx.saasSubscription.upsert({
       where: { tenantId: input.tenantId },
       create: {
         tenantId: input.tenantId,
         planId: plan.id,
         status: "ATIVA",
-        provider: NO_PAYMENT_PROVIDER,
+        provider: asaas.provider,
+        externalCustomerId: asaas.externalCustomerId,
+        externalSubscriptionId: asaas.externalSubscriptionId,
         trialEndsAt,
         trialUsedAt,
       },
       update: {
         planId: plan.id,
         status: "ATIVA",
-        provider: NO_PAYMENT_PROVIDER,
+        provider: asaas.provider,
+        externalCustomerId: asaas.externalCustomerId,
+        externalSubscriptionId: asaas.externalSubscriptionId,
         canceledAt: null,
         canceledReason: null,
         trialEndsAt,
@@ -145,9 +304,18 @@ export interface CancelSubscriptionInput {
 /// de idempotência de `softDeleteAssessment`. Exige `reason` não vazio —
 /// cancelamento sem motivo registrado não é aceitável para uma decisão
 /// financeira, mesmo com valor zero.
+///
+/// **Cancelamento remoto no Asaas (FIT-128), também em melhor esforço**:
+/// se `externalSubscriptionId` existir, tenta cancelar no Asaas antes do
+/// cancelamento local — mas o cancelamento local **sempre** acontece,
+/// mesmo se a chamada remota falhar. Bloquear a capacidade do próprio
+/// usuário de cancelar a assinatura por causa de uma API externa instável
+/// seria pior do que uma divergência remota temporária, que a
+/// conciliação (webhook, ADR-010, ainda não implementada) resolve depois.
 export async function cancelSubscription(
   input: CancelSubscriptionInput,
-  client: PrismaClient = prisma
+  client: PrismaClient = prisma,
+  deps: AsaasWiringDeps = {}
 ): Promise<SaasSubscription> {
   const reason = input.reason.trim();
   if (reason.length === 0) {
@@ -160,6 +328,24 @@ export async function cancelSubscription(
   }
   if (current.status === "CANCELADA") {
     return current;
+  }
+
+  if (current.externalSubscriptionId) {
+    const apiKey = deps.apiKey ?? process.env.API_ASAAS;
+    if (apiKey) {
+      try {
+        await cancelAsaasSubscription({ apiKey, fetchImpl: deps.fetchImpl }, current.externalSubscriptionId);
+        console.log(`${ASAAS_LOG_PREFIX} sucesso: assinatura cancelada no Asaas Sandbox.`);
+      } catch (error) {
+        if (error instanceof AsaasApiError) {
+          console.error(
+            `${ASAAS_LOG_PREFIX} falha ao cancelar no Asaas: kind=${error.kind} status=${error.status ?? "-"} mensagem=${error.message}`
+          );
+        } else {
+          console.error(`${ASAAS_LOG_PREFIX} falha inesperada ao cancelar no Asaas.`);
+        }
+      }
+    }
   }
 
   return client.$transaction(async (tx) => {
