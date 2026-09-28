@@ -15,6 +15,14 @@
   color: var(--fitos-color-on-chrome);
 }
 
+/* Barra superior desktop: 78px fixos (ADR-014, pacote visual 2026, rail de 244px). */
+@media (min-width: 840px) {
+  .topBar {
+    min-height: 78px;
+    align-items: center;
+  }
+}
+
 .brand {
   margin-bottom: var(--fitos-space-1);
 }
@@ -68,7 +76,11 @@
   padding-bottom: calc(var(--fitos-space-16) + var(--fitos-space-4));
 }
 
-/* Navegação — compact (mobile): barra inferior fixa, até 4 destinos + "Mais" */
+/*
+ * Navegação — compact (mobile): barra inferior fixa, até 4 destinos + "Mais".
+ * Altura ~68px (ADR-014/pacote visual 2026) + área segura do dispositivo,
+ * nunca cortada por notch/home indicator.
+ */
 .bottomNav {
   position: fixed;
   bottom: 0;
@@ -78,7 +90,8 @@
   align-items: center;
   justify-content: space-around;
   gap: var(--fitos-space-1);
-  padding: var(--fitos-space-2);
+  min-height: 68px;
+  padding: var(--fitos-space-2) var(--fitos-space-2) calc(var(--fitos-space-2) + env(safe-area-inset-bottom));
   background-color: var(--fitos-color-chrome);
   border-top: 1px solid var(--fitos-color-chrome-container);
 }
@@ -110,42 +123,65 @@
   cursor: pointer;
 }
 
-/* Navegação — medium/expanded (desktop): rail lateral com todos os destinos */
+/*
+ * Navegação — medium/expanded (desktop): rail lateral com todos os
+ * destinos. 244px (ADR-014/pacote visual 2026) — nunca simultâneo com
+ * `.bottomNav` (ver media query abaixo, que troca um pelo outro).
+ */
 .sideRail {
   display: none;
   flex-direction: column;
   gap: var(--fitos-space-1);
-  width: 220px;
+  width: 244px;
   flex-shrink: 0;
   padding: var(--fitos-space-4) var(--fitos-space-2);
   border-right: 1px solid var(--fitos-color-chrome-container);
   background-color: var(--fitos-color-chrome);
 }
 
+/* Mobile (padrão): ícone acima do rótulo, mesmo eixo vertical centrado. */
 .navItem,
 .navItemDisabled {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--fitos-space-1);
+  gap: 2px;
   min-height: 48px;
   min-width: 48px;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  border-radius: var(--fitos-shape-small);
+  padding: var(--fitos-space-1) var(--fitos-space-2);
+  border-radius: var(--fitos-shape-medium);
   font-family: var(--fitos-font-family);
   font-size: 12px;
+  line-height: 16px;
   font-weight: 650;
   text-decoration: none;
   color: var(--fitos-color-on-chrome-variant);
 }
 
+.navIcon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.navLabel {
+  white-space: nowrap;
+}
+
+/*
+ * Indicador ativo — pílula pálida (ADR-014/pacote visual 2026): fundo
+ * `surface-warm` (`#FFF0E8`) com ícone laranja, ~40×34px na navegação
+ * inferior mobile. No rail desktop, a regra abaixo troca para a linha
+ * selecionada `chrome-active-row` (`#27374A`) — dois tratamentos de
+ * "ativo" para duas superfícies de navegação distintas.
+ */
 .navItemActive {
-  color: var(--fitos-color-chrome-active-fg);
-  background-color: var(--fitos-color-chrome-active-bg);
+  color: var(--fitos-orange-500);
+  background-color: var(--fitos-color-surface-warm);
 }
 
 .navItemDisabled {
-  flex-direction: column;
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -163,12 +199,30 @@
 
   .sideRail {
     display: flex;
+    gap: 0;
   }
 
+  /*
+   * Rail desktop: linha de 60px (ADR-014/pacote visual 2026), ícone +
+   * título alinhados horizontalmente e centrados na vertical.
+   */
   .sideRail .navItem,
   .sideRail .navItemDisabled {
+    flex-direction: row;
     justify-content: flex-start;
+    gap: var(--fitos-space-3);
     width: 100%;
+    min-height: 60px;
+    border-radius: var(--fitos-shape-medium);
+  }
+
+  .sideRail .navItemActive {
+    color: #ffffff;
+    background-color: var(--fitos-color-chrome-active-row);
+  }
+
+  .sideRail .navItemActive .navIcon {
+    color: var(--fitos-orange-500);
   }
 
   .content {

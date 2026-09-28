@@ -83,6 +83,36 @@ Hierarquia de tokens:
 }
 ```
 
+## Superfícies editoriais e navegação (ADR-014, pacote visual 2026)
+
+Tokens aditivos para as telas públicas/editoriais do pacote visual 2026 (login, landing, onboarding, seleção de plano) e para o rail de navegação desktop (244px). Nunca substituem `surface`/`onSurfaceVariant`/`outlineVariant` (tema claro/escuro acima), que continuam reservados às superfícies internas do painel autenticado. Ver ADR-014 para a justificativa de cada valor.
+
+Tema claro:
+
+```json
+{
+  "surfaceEditorial":"#F5F7F8",
+  "surfaceWarm":"#FFF0E8",
+  "onSurfaceSecondary":"#637584",
+  "outlineSoft":"#DBE4E8",
+  "chromeActiveRow":"#27374A"
+}
+```
+
+Tema escuro:
+
+```json
+{
+  "surfaceEditorial":"#0E1722",
+  "surfaceWarm":"#3A2415",
+  "onSurfaceSecondary":"#A9B3BA",
+  "outlineSoft":"#33404A",
+  "chromeActiveRow":"#27374A"
+}
+```
+
+`chromeActiveRow` é fixo (não alterna com o tema) — é chrome de marca, como `chrome`/`chromeContainer`, sempre azul-noturno independente do tema claro/escuro do conteúdo.
+
 ## Tipografia
 
 Família: `Manrope, system-ui, sans-serif`.

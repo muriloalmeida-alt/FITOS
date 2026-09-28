@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "./BrandLogo";
+import { NavIcon, type NavIconName } from "./NavIcon";
 import styles from "./AppShell.module.css";
 
 /// Item de navegação do shell autenticado (FIT-012). `href` só existe para
@@ -10,12 +11,16 @@ import styles from "./AppShell.module.css";
 /// (Alunos, Treinos, Financeiro, Configurações, Treino, Progresso, Perfil
 /// de aluno) usa `comingSoon: true` e nunca recebe `href`, para nunca
 /// simular uma funcionalidade que ainda não existe (aparece com o rótulo
-/// "Em breve", desabilitado, e não navega para nenhum lugar).
+/// "Em breve", desabilitado, e não navega para nenhum lugar). `icon`
+/// (FIT-131, pacote visual 2026) é opcional — item sem ele continua
+/// renderizando só o rótulo, mesmo comportamento de antes desta rodada
+/// (cobre fixtures de teste que não precisam de ícone).
 export interface AppShellNavItem {
   key: string;
   label: string;
   href?: string;
   comingSoon?: boolean;
+  icon?: NavIconName;
 }
 
 interface AppShellProps {
@@ -42,6 +47,7 @@ function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean 
   if (item.comingSoon || !item.href) {
     return (
       <span className={styles.navItemDisabled} aria-disabled="true">
+        {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
         <span>{item.label}</span>
         <span className={styles.comingSoonBadge}>Em breve</span>
       </span>
@@ -54,7 +60,8 @@ function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean 
       className={isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem}
       aria-current={isActive ? "page" : undefined}
     >
-      {item.label}
+      {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
+      <span className={styles.navLabel}>{item.label}</span>
     </Link>
   );
 }
