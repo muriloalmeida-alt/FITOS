@@ -67,4 +67,20 @@ Achado real ao seguir o runbook em homologação: nenhum plano pago aparecia no 
 
 Com o catálogo corrigido, o runbook foi concluído até o fim: cadastro real de teste (Personal, CPF de teste válido, plano pago) produziu, confirmado por dois canais independentes — painel do Asaas Sandbox (cliente "Espaço de Master" visível em "Meus Clientes") e log da aplicação (`[FIT-128][assinatura-asaas] sucesso: cliente e assinatura ligados ao Asaas Sandbox.`) — um cliente e uma assinatura reais no Asaas Sandbox. **A primeira linha da prova técnica obrigatória (`ASSINATURA-SAAS.md`: "criar cliente e assinatura com dados fictícios") está confirmada.**
 
-Ainda **`Proposto — condicionado à prova técnica`**, não `Aceito`: as demais linhas da prova (renovação, falha/inadimplência/recuperação, cancelamento, reconciliação, webhooks autenticados/idempotentes, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continuam não exercidas. Webhook de conciliação (ADR-010, item (c)) continua não iniciado — sem ele, não há hoje forma de saber quando uma cobrança real é paga, falha ou atrasa.
+Ainda **`Proposto — condicionado à prova técnica`**, não `Aceito`: as demais linhas da prova (renovação, falha/inadimplência/recuperação, cancelamento, reconciliação, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continuam não exercidas.
+
+## Atualização — webhook de conciliação implementado, ADR-010 item (c) (FIT-128, 28/09/2026)
+
+`POST /api/webhooks/asaas` (`src/app/api/webhooks/asaas/route.ts`) recebe eventos de pagamento e reconcilia `SaasSubscription.status` (`src/modules/billing/asaasWebhook.ts`). Segue o contrato público documentado do Asaas v3 (header de autenticação `asaas-access-token`, formato `{event, payment: {id, subscription, customer}}`) — **ainda não exercido contra uma entrega real do Asaas**, mesma cautela usada para o cliente de escrita antes de ser confirmado (que, quando testado, bateu com a documentação pública). Detalhe completo em `ASSINATURA-SAAS.md`; verificação real pendente em `RUNBOOK-VERIFICACAO-WEBHOOK-ASAAS-HOMOLOGACAO.md`.
+
+Com isso, os itens (a), (b) e (c) da ADR-010 estão implementados — (a) e a criação real de cliente/assinatura já confirmadas empiricamente; o webhook (c), ainda não. Webhook de conciliação não está mais "não iniciado" como as atualizações anteriores registravam.
+
+## Atualização — checkout embutido no FitOS: cartão de crédito implementado (FIT-128, 28/09/2026)
+
+Murilo decidiu que o checkout deve ocorrer inteiramente dentro do FitOS — "toda a transação deve ocorrer no FitOS e o Asaas deve ser o gateway. No FitOS o cliente deve completar 100% do processo de checkout" — nunca um redirecionamento para uma página hospedada pelo Asaas (o padrão de integração mais simples, mas explicitamente rejeitado). Meios de pagamento decididos para esta v1: cartão de crédito, mais Apple Pay/Google Pay como atalho para o mesmo cartão; Pix e boleto ficam fora do escopo.
+
+**Cartão de crédito implementado**: `attachCreditCardToSubscription` (`src/modules/billing/checkout.ts`) tokeniza o cartão (`POST /v3/creditCard/tokenize`) e o vincula à assinatura já criada pela ligação de melhor esforço (`updateAsaasSubscription`, `billingType: "CREDIT_CARD"` + `creditCardToken`) — a partir daí, o Asaas cobra esse cartão automaticamente a cada vencimento. O cartão só é tokenizado no checkout, nunca cobrado nesse momento (a cobrança real continua só ao fim do trial de 30 dias). Segue o contrato público documentado do Asaas v3 — **ainda não exercido contra uma entrega real do Asaas**, mesma cautela de sempre; verificação pendente em `RUNBOOK-VERIFICACAO-CHECKOUT-CARTAO-ASAAS-HOMOLOGACAO.md`.
+
+**Apple Pay/Google Pay, deliberadamente não construídos ainda**: sem confirmação de que a API do Asaas aceita esses tokens fora do checkout hospedado dele, implementar essa integração agora seria adivinhar um contrato não verificado — exatamente o tipo de "integração no escuro" que este projeto sempre evitou. Registrado como pendência explícita, a resolver depois que Murilo/seu GPT confirmarem com o suporte/documentação real do Asaas se existe esse caminho.
+
+Detalhe completo em `ASSINATURA-SAAS.md` e no diário.

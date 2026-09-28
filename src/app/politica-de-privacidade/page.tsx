@@ -41,8 +41,11 @@ export default function PoliticaDePrivacidadePage() {
             </li>
             <li>Avaliação física: peso, percentual de gordura e medidas corporais, quando registrados.</li>
             <li>
-              Financeiro: cobranças e pagamentos manuais entre personal e aluno — nunca dado de cartão, já que
-              nenhuma integração de pagamento real está ativa hoje.
+              Financeiro: cobranças e pagamentos manuais entre personal e aluno — nunca dado de cartão, esse
+              controle é sempre manual, sem nenhuma integração de pagamento. Já a assinatura do próprio FitOS
+              (do personal ou do FitOS Livre), quando o plano é pago, processa o cartão através do Asaas, nosso
+              parceiro de pagamentos: o número completo e o código de segurança passam só em trânsito até o
+              Asaas, nunca ficam guardados pelo FitOS — só os últimos 4 dígitos e a bandeira, para identificação.
             </li>
           </ul>
           <p>Fotos de evolução são opcionais e, quando existirem, exigem autorização explícita do aluno.</p>
@@ -54,7 +57,9 @@ export default function PoliticaDePrivacidadePage() {
             Exclusivamente para operar o produto: permitir que o personal acompanhe seus alunos, que o
             praticante do FitOS Livre acompanhe sua própria evolução, e para o controle financeiro manual
             entre personal e aluno. Não vendemos nem compartilhamos esses dados com terceiros para
-            publicidade.
+            publicidade. A única exceção é o Asaas, nosso parceiro de pagamentos: quando a assinatura do
+            próprio FitOS é paga, os dados do cartão e do titular são compartilhados com ele exclusivamente
+            para processar essa cobrança, nunca para qualquer outra finalidade.
           </p>
         </section>
 

@@ -1097,3 +1097,68 @@ Depois da correção do override no Railway, Murilo concluiu o runbook de verifi
 `ASSINATURA-SAAS.md`, `ADR-003-ASAAS-COMO-CANDIDATO.md` e `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` atualizados para refletir a confirmação real, substituindo a linguagem de "ainda não verificado" por "confirmado em homologação em 28/09/2026".
 
 **Pendência que permanece, sem mudança**: o restante da prova técnica obrigatória do Asaas continua não verificado empiricamente — renovação, falha/inadimplência/recuperação, cancelamento, reconciliação — porque nenhum desses cenários foi exercido neste teste (só a criação inicial). O webhook de conciliação (ADR-010, item (c)) continua não iniciado; sem ele, o FitOS não tem hoje nenhuma forma de saber quando uma cobrança real é paga, falha ou atrasa — é o próximo trabalho de código pendente desta História, ainda sem branch aberta.
+
+### FIT-128 — webhook de conciliação implementado (ADR-010, item (c))
+
+Murilo pediu para seguir direto para o webhook de conciliação — a peça que faltava para o FitOS saber quando uma cobrança real do Asaas é paga ou atrasa, já que `subscribeTenantToPlan`/`cancelSubscription` só criam/atualizam/cancelam a assinatura no Asaas, nunca ficaram sabendo o que acontece depois disso.
+
+**`SaasSubscriptionStatus.INADIMPLENTE`** já existia desde a FIT-007 (reservado, nunca usado por código real) — a UI de `/painel/assinatura` já tinha até o rótulo "Inadimplente" pronto. Este é exatamente o gatilho que faltava para ele passar a ser gravado de verdade.
+
+**`src/modules/billing/asaasWebhook.ts`** (novo): `parseAsaasWebhookPayload` valida o formato mínimo esperado do payload do Asaas (`{event, payment: {id, subscription, customer}}` — nunca confia em nenhum campo sem checar o tipo primeiro) e `reconcileAsaasPaymentEvent` aplica a transição de estado:
+
+- `PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`/`PAYMENT_RECEIVED_IN_CASH` → `ATIVA`.
+- `PAYMENT_OVERDUE` → `INADIMPLENTE`.
+- Qualquer outro evento (`PAYMENT_DELETED`, `PAYMENT_REFUNDED`, etc.) → ignorado, sem mudança de estado — decisão deliberada de não adivinhar o que uma transição não verificada empiricamente significa, mesma cautela de sempre neste projeto com o Asaas.
+
+Busca a assinatura local por `externalSubscriptionId` (caminho esperado) e cai para `externalCustomerId` quando o pagamento não tiver assinatura associada. Nenhuma correspondência encontrada nunca é erro — pode ser dado do Sandbox sem relação com o FitOS.
+
+**Idempotência e desordem, documentadas com honestidade em vez de fingidas resolvidas**: a operação é sempre um `set` de status (nunca um incremento), então reentregar o mesmo evento duas vezes produz o mesmo resultado — idempotência a reenvio garantida e testada. Uma assinatura já `CANCELADA` localmente nunca é reaberta por um evento tardio (mesmo princípio já usado em `cancelSubscription`: a autoridade local sempre vence). O que **não** foi construído: uma guarda contra dois eventos de pagamento *distintos* da mesma assinatura chegando fora de ordem (ex.: um `PAYMENT_OVERDUE` antigo entregue depois de um `PAYMENT_RECEIVED` mais recente) — construir essa guarda sem nenhum tráfego real para testá-la seria exatamente o tipo de complexidade não verificável que este projeto evita; documentada como limitação conhecida em código e em `ASSINATURA-SAAS.md`, não escondida.
+
+**Autenticação do webhook**: `POST /api/webhooks/asaas` (`src/app/api/webhooks/asaas/route.ts`) exige o header `asaas-access-token` (nome publicamente documentado do Asaas v3, ainda não confirmado contra uma entrega real) batendo com `API_ASAAS_WEBHOOK_TOKEN` — comparação em tempo constante via `secretsMatch` (`src/shared/lib/secretCompare.ts`, helper que já existia no repositório mas nunca tinha sido usado por nenhum código real até agora — órfão desde antes da FIT-121, aproveitado aqui em vez de duplicado). Nunca a mesma chave `API_ASAAS` (que é para requisições que o FitOS faz *ao* Asaas, nunca o contrário). Sem a variável configurada, a rota recusa tudo com 503; token errado ou ausente, 401; payload não reconhecível, 400. Qualquer requisição autenticada com payload reconhecível sempre responde 200 — mesmo sem assinatura local correspondente — para nunca fazer o Asaas reentregar o mesmo evento indefinidamente por um caso que não é um erro nosso.
+
+**Testes** (novos): `secretCompare.test.ts` (5 testes — o helper nunca tinha teste, apesar de já existir); `asaasWebhook.test.ts` (6 testes, unitário, `parseAsaasWebhookPayload`); `asaasWebhook.integration.test.ts` (8 testes contra Postgres real — `PAYMENT_RECEIVED`/`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED_IN_CASH` aplicam `ATIVA`; `PAYMENT_OVERDUE` aplica `INADIMPLENTE`; idempotência a reenvio; nunca reabre assinatura `CANCELADA`; cai para `externalCustomerId` sem `subscription`; ignora sem erro quando não há assinatura correspondente; ignora evento não tratado); `route.test.ts` (6 testes — 503 sem variável configurada, 401 sem/com token errado, 400 com payload não reconhecível, 200 com token e payload válidos, 200 mesmo sem assinatura correspondente).
+
+Gates: suíte completa **1122/1122** (+25 desde o PR #167). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos. `.env.example` documenta a nova variável `API_ASAAS_WEBHOOK_TOKEN`.
+
+`ASSINATURA-SAAS.md`, `ADR-010-MECANICA-DE-ASSINATURA-SEM-GATEWAY.md`, `ADR-003-ASAAS-COMO-CANDIDATO.md` e `EPIC-16-MARCA-ENTRADA-E-MONETIZACAO-REAL.md` atualizados: item (c) da ADR-010 deixa de estar "não iniciado", primeira linha do checklist "receber e autenticar webhooks" marcada como implementada (verificação real pendente). Novo runbook: `RUNBOOK-VERIFICACAO-WEBHOOK-ASAAS-HOMOLOGACAO.md` — autocontido para Murilo/GPT configurarem o webhook no painel do Asaas Sandbox e confirmarem contra uma entrega real, mesmo padrão dos runbooks anteriores desta História.
+
+**Pendência explícita**: o formato do payload e o nome do header de autenticação seguem o contrato público documentado do Asaas v3, mas **nunca foram exercidos contra uma entrega real** — só a criação de cliente/assinatura (métodos de escrita) foi confirmada até agora, nunca o lado de entrada (webhook). Confirmar isso depende de Murilo/GPT com acesso ao Railway/Asaas, seguindo o runbook novo. O restante da prova técnica obrigatória do Asaas (renovação, cancelamento sem apagar histórico, meios de pagamento reais disponíveis à conta, custo/compatibilidade Railway) continua pendente.
+
+### FIT-128 — checkout embutido no FitOS: decisão de Murilo e implementação do cartão de crédito
+
+Murilo tomou uma decisão de produto que muda a forma como a assinatura SaaS é cobrada: "toda a transação deve ocorrer no FitOS e o Asaas deve ser o gateway. No FitOS o cliente deve completar 100% do processo de checkout" — nunca um redirecionamento para uma página hospedada pelo Asaas (o padrão mais comum de integração com gateways, mas explicitamente rejeitado aqui).
+
+Duas decisões de escopo levantadas e respondidas por Murilo antes de escrever qualquer código:
+
+1. **Interação com o trial de 30 dias**: o cartão só é *tokenizado e vinculado* no checkout — nenhuma cobrança acontece nesse momento. A cobrança real só ocorre quando o trial termina, exatamente o mecanismo de `nextDueDate` já existente desde o wiring da FIT-128 original.
+2. **Meios de pagamento da v1**: cartão de crédito, mais Apple Pay/Google Pay como atalho para preencher o mesmo cartão. Pix e boleto ficam fora desta v1 (documentado abaixo por quê).
+
+**Implementado nesta rodada: cartão de crédito manual.** Tokenização real via `POST /v3/creditCard/tokenize` do Asaas (contrato público, mesma cautela de sempre — ainda não exercido contra uma entrega real, ver pendência abaixo), depois vinculado à assinatura já criada pela ligação de melhor esforço (`updateAsaasSubscription` com `billingType: "CREDIT_CARD"` + `creditCardToken`) — a partir daí, o Asaas cobra esse cartão automaticamente a cada vencimento, sem nenhuma ação adicional do cliente.
+
+**Apple Pay/Google Pay, deliberadamente não implementados ainda**: diferente do cartão manual (cujo contrato de tokenização server-to-server é publicamente documentado e já bateu com a realidade para os outros métodos de escrita do Asaas), não há confirmação de que a API do Asaas aceita diretamente um token de Apple Pay/Google Pay fora do checkout hospedado dele — a integração mais comum dessas carteiras com gateways brasileiros passa por um widget/checkout próprio do provedor, não por um parâmetro de API de pagamento direto. Construir essa integração sem essa confirmação seria adivinhar um contrato não verificado, exatamente o tipo de "integração no escuro" que este projeto sempre evitou. Decisão: entregar o cartão manual agora (o caminho comprovadamente viável) e registrar esta lacuna explicitamente, em vez de construir algo especulativo — Murilo/seu GPT podem confirmar com o suporte/documentação real do Asaas se existe um caminho de API para isso; se existir, é um incremento futuro sobre a mesma base (`checkout.ts`/`asaasClient.ts`).
+
+**Schema**: `SaasSubscription.creditCardLast4`/`creditCardBrand` (`String?`, migration `20260928192930_add_credit_card_display_to_saas_subscription`) — só os últimos 4 dígitos e a bandeira, exatamente o que a própria resposta do Asaas já devolve mascarado. Nunca o número completo, nunca o CVV, nunca o token em si persistidos.
+
+**`src/shared/lib/creditCard.ts`** (novo): validação real de cartão — `isValidCreditCardNumber` implementa o algoritmo de Luhn (dígito verificador real, mesmo princípio de `cpfCnpj.ts`), `isValidCreditCardExpiry` rejeita mês/ano vencido por competência, `isValidCreditCardCcv` (3-4 dígitos), `formatPostalCode`/`isValidPostalCode` (CEP). Todas testadas com os números de teste públicos e amplamente conhecidos do setor (Visa `4111 1111 1111 1111`, Mastercard `5555 5555 5555 4444`), nunca um cartão real.
+
+**`src/modules/billing/asaasClient.ts`**: `tokenizeAsaasCreditCard` (novo) + `UpdateAsaasSubscriptionInput.creditCardToken` (novo campo opcional).
+
+**`src/modules/billing/checkout.ts`** (novo módulo): `attachCreditCardToSubscription` — diferente de `tryEnsureAsaasSubscription` (melhor esforço, nunca lança), esta função **nunca é de melhor esforço**: o cliente está completando uma ação de checkout agora mesmo, então qualquer falha (cartão recusado, assinatura ainda não ligada ao Asaas) precisa chegar até ele como um erro real e acionável, nunca um fallback silencioso. Busca nome/e-mail/CPF-CNPJ já coletados (`Tenant`/`User`/`PersonalProfile`/`IndividualProfile`) — o checkout nunca pede de novo o que o onboarding já perguntou; só CEP, número do endereço e celular são novos (exigidos pelo `creditCardHolderInfo` do Asaas, nunca antes coletados em nenhum onboarding).
+
+**`POST /api/tenancy/minha-assinatura/cartao`** (nova rota): valida os campos server-side (nunca confia só na validação do cliente) antes de chamar o domínio. `tenantId`/`tenantType` sempre da sessão. Reaproveitada por três lugares:
+
+- **Onboarding do Personal** (`PersonalOnboardingWizard`, Etapa 4): quando o plano escolhido é pago, o checkout de cartão aparece dentro da própria etapa de revisão, antes de concluir.
+- **Onboarding do FitOS Livre** (`OnboardingForm`, Etapa 2): mesmo tratamento.
+- **`/painel/assinatura`** (nova seção "Cartão de cobrança", `CartaoForm`): para contratações que mudam de um plano grátis para um pago depois do onboarding, ou para atualizar um cartão vencido — mostra "Cartão terminado em ****" quando já existe um, com opção de atualizar.
+
+Um plano de preço zero nunca pede cartão em nenhum dos três lugares (mesma condição já usada pela ligação de melhor esforço: `priceCents > 0`).
+
+**Componente compartilhado `CreditCardFields`/`validateCreditCardFields`** (`src/shared/ui/`): os campos e a validação existem uma única vez, reaproveitados nos três lugares — nunca três formulários independentes divergindo com o tempo.
+
+**Testes** (novos): `creditCard.test.ts` (17 testes); `asaasClient.test.ts` (+2: tokenização com sucesso e cartão recusado); `checkout.integration.test.ts` (8 testes contra Postgres real — sem assinatura, sem ligação ao Asaas, sem CPF/CNPJ, sem chave configurada, sucesso Personal e Individual, cartão recusado, falha de rede); `cartao/route.test.ts` (9 testes); `secretCompare` já cobria a comparação em tempo constante reaproveitada. `PersonalOnboardingWizard.test.tsx`/`OnboardingForm.test.tsx` estendidos (+8 juntos: plano pago exige cartão válido, plano grátis nunca exige, falha do checkout mostra erro sem redirecionar) e `CartaoForm.test.tsx` (5 testes, novo).
+
+Gates: suíte completa **1170/1170** (+48 desde o PR #168). `tsc --noEmit`/`eslint .`/`npm run build`/`npm audit --omit=dev` limpos. Migration aplicada em `fitos_dev` e `fitos_test`.
+
+**Achado corrigido no caminho**: `termos-de-uso`/`politica-de-privacidade` ainda diziam "nenhuma integração de pagamento real está ativa" — desatualizado desde a confirmação real da FIT-128 em homologação. Corrigido para descrever com precisão o que de fato acontece agora: cartão processado pelo Asaas, número completo/CVV nunca armazenados pelo FitOS, e a política de privacidade agora declara explicitamente o Asaas como o único terceiro com quem dados são compartilhados (LGPD).
+
+**Pendência explícita**: a tokenização de cartão segue o contrato público documentado do Asaas v3, mas **nunca foi exercida contra uma entrega real** — mesma cautela de sempre. Confirmar isso (com um cartão de teste do próprio Asaas Sandbox, nunca um cartão real) depende de Murilo/GPT com acesso ao Railway/Asaas. Apple Pay/Google Pay continuam não implementados, pendentes de confirmação de que o Asaas oferece um caminho de API para isso. Pix/boleto ficam fora do escopo desta v1 por decisão de Murilo.

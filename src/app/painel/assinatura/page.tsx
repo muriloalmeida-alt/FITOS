@@ -10,6 +10,7 @@ import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { SelecionarPlanoButton } from "./SelecionarPlanoButton";
 import { CancelarAssinaturaForm } from "./CancelarAssinaturaForm";
+import { CartaoForm } from "./CartaoForm";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -29,10 +30,9 @@ const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
 
 /// Gestão da assinatura SaaS do FitOS (FIT-122) — exclusiva de `PERSONAL`
 /// (o próprio negócio) e `INDIVIDUAL` (FitOS Livre, FIT-105), nunca de
-/// `ALUNO` (que não assina nada diretamente). Todo plano exibido tem preço
-/// zero neste momento (nenhum gateway de pagamento integrado, FIT-091) —
-/// a contratação aqui é real (grava `SaasSubscription`), só a cobrança em
-/// si ainda não existe.
+/// `ALUNO` (que não assina nada diretamente). Planos pagos têm cobrança
+/// real via Asaas desde a FIT-128 — checkout embutido aqui mesmo
+/// (`CartaoForm`), nunca um redirecionamento para uma página do Asaas.
 export default async function AssinaturaPage() {
   let ctx;
   try {
@@ -51,6 +51,11 @@ export default async function AssinaturaPage() {
 
   const navItems = ctx.role === "PERSONAL" ? PERSONAL_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS;
   const isActiveSubscription = subscription?.status === "ATIVA";
+  /// Cartão só faz sentido para um plano pago, com a assinatura ainda em
+  /// curso (nunca para uma já `CANCELADA` — cadastrar cartão para uma
+  /// assinatura cancelada não tem nenhum efeito real, já que
+  /// `subscribeTenantToPlan` reativa via contratação, não via cartão).
+  const needsCheckout = subscription && subscription.plan.priceCents > 0 && subscription.status !== "CANCELADA";
 
   return (
     <AppShell title="Assinatura" navItems={navItems} activeKey="assinatura" trailing={<LogoutButton />}>
@@ -72,6 +77,12 @@ export default async function AssinaturaPage() {
           <p>Nenhuma assinatura contratada ainda.</p>
         )}
       </Card>
+
+      {needsCheckout ? (
+        <Card title="Cartão de cobrança">
+          <CartaoForm creditCardLast4={subscription.creditCardLast4} creditCardBrand={subscription.creditCardBrand} />
+        </Card>
+      ) : null}
 
       <Card title="Planos disponíveis">
         {plans.length === 0 ? (

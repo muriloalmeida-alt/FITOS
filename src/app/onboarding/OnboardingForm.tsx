@@ -4,7 +4,20 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { Button, FormAlert, PlanOptionCard, SelectField, TextField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
+import {
+  Button,
+  CreditCardFields,
+  EMPTY_CREDIT_CARD_FIELDS,
+  FormAlert,
+  PlanOptionCard,
+  SelectField,
+  TextField,
+  WizardProgress,
+  useUnsavedChangesGuard,
+  validateCreditCardFields,
+  type CreditCardFieldsValue,
+  type PlanOptionCardPlan,
+} from "@/shared/ui";
 import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import styles from "./OnboardingForm.module.css";
 
@@ -59,6 +72,8 @@ interface FieldErrors {
   termsAccepted?: string;
 }
 
+type CardFieldErrors = Partial<Record<keyof CreditCardFieldsValue, string>>;
+
 const TOTAL_STEPS = 2;
 
 /// Onboarding do FitOS Livre (FIT-101/FIT-126) — duas sub-etapas dentro de
@@ -92,16 +107,21 @@ export function OnboardingForm({
   const [cpfCnpj, setCpfCnpj] = useState(initialCpfCnpj ?? "");
   const [planId, setPlanId] = useState(initialPlanId ?? "");
   const [termsAccepted, setTermsAccepted] = useState(alreadyAcceptedTerms);
+  const [card, setCard] = useState<CreditCardFieldsValue>(EMPTY_CREDIT_CARD_FIELDS);
+  const [cardErrors, setCardErrors] = useState<CardFieldErrors>({});
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedPlan = plans.find((plan) => plan.id === planId);
 
   const hasData =
     objective !== (initialObjective ?? "") ||
     experienceLevel !== (initialExperienceLevel ?? "") ||
     weeklyAvailability !== (initialWeeklyAvailability ?? "") ||
     cpfCnpj !== (initialCpfCnpj ?? "") ||
-    planId !== (initialPlanId ?? "");
+    planId !== (initialPlanId ?? "") ||
+    Object.values(card).some((value) => value.trim() !== "");
 
   useUnsavedChangesGuard(hasData, isSubmitting);
 
@@ -137,7 +157,14 @@ export function OnboardingForm({
     setFieldErrors(errors);
     setFormError(null);
 
-    if (Object.keys(errors).length > 0) {
+    const requiresCard = (selectedPlan?.priceCents ?? 0) > 0;
+    if (requiresCard) {
+      const cardValidationErrors = validateCreditCardFields(card);
+      setCardErrors(cardValidationErrors);
+      if (Object.keys(errors).length > 0 || Object.keys(cardValidationErrors).length > 0) {
+        return;
+      }
+    } else if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -147,13 +174,28 @@ export function OnboardingForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ objective, experienceLevel, weeklyAvailability, cpfCnpj, termsAccepted, planId }),
     });
-    setIsSubmitting(false);
 
     if (!response.ok) {
+      setIsSubmitting(false);
       setFormError("Não foi possível salvar suas respostas. Verifique e tente novamente.");
       return;
     }
 
+    if (requiresCard) {
+      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(card),
+      });
+      if (!cardResponse.ok) {
+        setIsSubmitting(false);
+        const cardBody = await cardResponse.json().catch(() => null);
+        setFormError(cardBody?.message ?? "Não foi possível processar o cartão. Verifique os dados e tente novamente.");
+        return;
+      }
+    }
+
+    setIsSubmitting(false);
     router.push("/painel");
   }
 
@@ -236,6 +278,16 @@ export function OnboardingForm({
             <p className={styles.checkboxError} role="alert">
               {fieldErrors.planId}
             </p>
+          ) : null}
+
+          {selectedPlan && selectedPlan.priceCents > 0 ? (
+            <>
+              <p className={styles.checkboxLabel}>
+                Seu cartão só é cadastrado agora — a primeira cobrança acontece só depois dos{" "}
+                {selectedPlan.trialDays ?? 30} dias grátis.
+              </p>
+              <CreditCardFields value={card} onChange={setCard} errors={cardErrors} />
+            </>
           ) : null}
 
           <label className={styles.checkboxLabel}>

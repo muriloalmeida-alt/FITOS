@@ -4,7 +4,20 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
-import { Button, FormAlert, PlanOptionCard, SelectField, TextField, WizardProgress, useUnsavedChangesGuard, type PlanOptionCardPlan } from "@/shared/ui";
+import {
+  Button,
+  CreditCardFields,
+  EMPTY_CREDIT_CARD_FIELDS,
+  FormAlert,
+  PlanOptionCard,
+  SelectField,
+  TextField,
+  WizardProgress,
+  useUnsavedChangesGuard,
+  validateCreditCardFields,
+  type CreditCardFieldsValue,
+  type PlanOptionCardPlan,
+} from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
 import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
@@ -34,6 +47,8 @@ interface FieldErrors {
   planId?: string;
 }
 
+type CardFieldErrors = Partial<Record<keyof CreditCardFieldsValue, string>>;
+
 /// Onboarding profissional do Personal (FIT-113/FIT-126, seção 7 do
 /// pacote). Quatro sub-etapas dentro de uma única rota real
 /// (`/onboarding-personal`) — diferente da decisão de caminho da FIT-112
@@ -58,13 +73,21 @@ interface FieldErrors {
 ///
 /// **Passo 3, seleção de plano (FIT-126)**: catálogo real (`plans`, vindo
 /// do servidor — nunca fixo aqui), com trial de 30 dias já embutido no
-/// disclosure de cada cartão. "Dados de cobrança" (seção 7 do pacote)
-/// nunca ganhou campos de cartão/Pix — nenhum gateway está integrado ainda
-/// (FIT-128, ADR-010); pedir esses dados agora seria fabricar uma coleta
-/// sem nenhum destino real. A submissão final chama
-/// `subscribeTenantToPlan` (mesma função de `/painel/assinatura`, FIT-122)
-/// através de `/api/onboarding-personal` — nunca duas fontes de verdade
-/// para "contratar um plano".
+/// disclosure de cada cartão. A submissão final chama `subscribeTenantToPlan`
+/// (mesma função de `/painel/assinatura`, FIT-122) através de
+/// `/api/onboarding-personal` — nunca duas fontes de verdade para
+/// "contratar um plano".
+///
+/// **Passo 4, checkout embutido de cartão (FIT-128)**: decisão de Murilo —
+/// "toda a transação deve ocorrer no FitOS, o Asaas deve ser o gateway; o
+/// cliente deve completar 100% do processo de checkout" — nunca um
+/// redirecionamento para uma página do Asaas. Só aparece quando o plano
+/// escolhido tem preço real (`priceCents > 0`); um plano gratuito nunca
+/// pede cartão. O cartão só é *tokenizado* agora (nunca cobrado de
+/// imediato) — a cobrança real só ocorre quando o trial de 30 dias
+/// termina, mesmo mecanismo de `nextDueDate` já existente. Enviado a
+/// `/api/tenancy/minha-assinatura/cartao` só depois que o onboarding em
+/// si (perfil + seleção de plano) já foi salvo com sucesso.
 const TOTAL_STEPS = 4;
 
 export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPlanId }: PersonalOnboardingWizardProps) {
@@ -77,6 +100,8 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
   const [businessName, setBusinessName] = useState(initialBusinessName);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [planId, setPlanId] = useState(initialPlanId ?? "");
+  const [card, setCard] = useState<CreditCardFieldsValue>(EMPTY_CREDIT_CARD_FIELDS);
+  const [cardErrors, setCardErrors] = useState<CardFieldErrors>({});
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,7 +112,8 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
     cpfCnpj.trim() !== "" ||
     studentRangeEstimate !== "" ||
     businessName.trim() !== initialBusinessName.trim() ||
-    planId !== (initialPlanId ?? "");
+    planId !== (initialPlanId ?? "") ||
+    Object.values(card).some((value) => value.trim() !== "");
 
   useUnsavedChangesGuard(hasData, isSubmitting);
 
@@ -150,6 +176,16 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
     if (isSubmitting) {
       return;
     }
+
+    const requiresCard = (selectedPlan?.priceCents ?? 0) > 0;
+    if (requiresCard) {
+      const errors = validateCreditCardFields(card);
+      setCardErrors(errors);
+      if (Object.keys(errors).length > 0) {
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setFormError(null);
 
@@ -174,6 +210,21 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
     }
 
     const body = await response.json();
+
+    if (requiresCard) {
+      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(card),
+      });
+      if (!cardResponse.ok) {
+        setIsSubmitting(false);
+        const cardBody = await cardResponse.json().catch(() => null);
+        setFormError(cardBody?.message ?? "Não foi possível processar o cartão. Verifique os dados e tente novamente.");
+        return;
+      }
+    }
+
     router.push(body.redirectTo ?? "/painel");
   }
 
@@ -337,6 +388,17 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
                 : "—"}
             </dd>
           </dl>
+
+          {selectedPlan && selectedPlan.priceCents > 0 ? (
+            <>
+              <h2 className={styles.title}>Dados de pagamento</h2>
+              <p className={styles.checkboxLabel}>
+                Seu cartão só é cadastrado agora — a primeira cobrança acontece só depois dos{" "}
+                {selectedPlan.trialDays ?? 30} dias grátis.
+              </p>
+              <CreditCardFields value={card} onChange={setCard} errors={cardErrors} />
+            </>
+          ) : null}
 
           <div className={styles.actions}>
             <button type="button" className={styles.backButton} onClick={() => setStep(3)} disabled={isSubmitting}>

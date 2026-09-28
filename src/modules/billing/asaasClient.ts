@@ -225,6 +225,14 @@ export interface UpdateAsaasSubscriptionInput {
   value?: number;
   cycle?: AsaasBillingCycle;
   description?: string;
+  /// Presente só quando o checkout embutido (FIT-128) tokenizou um cartão
+  /// para esta assinatura — `updateAsaasSubscription` então também manda
+  /// `billingType: "CREDIT_CARD"` (nunca `UNDEFINED` depois que existe um
+  /// cartão cadastrado): a partir daí, o Asaas cobra automaticamente esse
+  /// cartão a cada vencimento, sem nenhuma ação adicional do cliente —
+  /// exatamente o "cliente completa 100% do checkout uma vez" decidido
+  /// por Murilo.
+  creditCardToken?: string;
 }
 
 /// Nunca inclui `nextDueDate`: mudar a data da próxima cobrança de uma
@@ -244,4 +252,56 @@ export async function updateAsaasSubscription(
 
 export async function cancelAsaasSubscription(config: AsaasClientConfig, subscriptionId: string): Promise<void> {
   await asaasRequest(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "DELETE" });
+}
+
+/// Tokenização de cartão de crédito (FIT-128, checkout embutido no
+/// FitOS — decisão de Murilo: "toda a transação deve ocorrer no FitOS, o
+/// Asaas deve ser o gateway"). O número completo do cartão e o CVV
+/// passam por este cliente só em trânsito, nunca persistidos em disco
+/// nem logados em nenhum lugar (`checkout.ts` só grava o retorno já
+/// mascarado). Segue o contrato público documentado do Asaas v3
+/// (`POST /v3/creditCard/tokenize`) — ainda não exercido contra a API
+/// real, mesma cautela de sempre com métodos de escrita novos.
+export interface AsaasCreditCardInput {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+}
+
+export interface AsaasCreditCardHolderInfo {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone: string;
+}
+
+export interface AsaasTokenizeCreditCardInput {
+  customer: string;
+  creditCard: AsaasCreditCardInput;
+  creditCardHolderInfo: AsaasCreditCardHolderInfo;
+}
+
+/// Resposta já mascarada pelo próprio Asaas — `creditCardNumber` aqui é
+/// só os últimos 4 dígitos (nome do campo é do Asaas, não deste código;
+/// nunca o número completo). `creditCardToken` é o único valor reusável
+/// para cobrar este cartão depois, nunca persistido localmente (o Asaas
+/// já o associa à assinatura via `updateAsaasSubscription`).
+export interface AsaasTokenizedCreditCard {
+  creditCardNumber: string;
+  creditCardBrand: string;
+  creditCardToken: string;
+}
+
+export async function tokenizeAsaasCreditCard(
+  config: AsaasClientConfig,
+  input: AsaasTokenizeCreditCardInput
+): Promise<AsaasTokenizedCreditCard> {
+  return asaasRequest<AsaasTokenizedCreditCard>(config, "/creditCard/tokenize", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

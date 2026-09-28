@@ -1,0 +1,15 @@
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.row {
+  display: flex;
+  gap: var(--fitos-space-3);
+}
+
+.row > * {
+  flex: 1;
+  min-width: 0;
+}

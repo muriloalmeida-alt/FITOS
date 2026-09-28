@@ -70,3 +70,27 @@
   color: var(--fitos-color-primary);
   white-space: nowrap;
 }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--fitos-space-3);
+}
+
+.backButton {
+  background: none;
+  border: none;
+  padding: var(--fitos-space-2);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  cursor: pointer;
+}

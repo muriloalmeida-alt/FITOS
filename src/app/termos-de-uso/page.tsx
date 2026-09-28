@@ -62,8 +62,9 @@ export default function TermosDeUsoPage() {
           <p>
             O controle financeiro entre personal e aluno (mensalidades, pagamentos) é manual — o {appName}{" "}
             registra o que o personal informa, mas não processa pagamento entre eles. A assinatura do próprio{" "}
-            {appName} (para o personal ou para o FitOS Livre) segue os planos exibidos em cada conta; enquanto
-            nenhuma integração de pagamento estiver ativa, toda contratação é de valor zero.
+            {appName} (para o personal ou para o FitOS Livre) segue os planos exibidos em cada conta e, para um
+            plano pago, é cobrada de verdade através do Asaas, nosso parceiro de pagamentos — o cartão é cadastrado
+            aqui mesmo, dentro do {appName}, nunca em um site de terceiros.
           </p>
         </section>
 
