@@ -15,7 +15,7 @@ Hierarquia de tokens:
 ```json
 {
   "navy": {"50":"#EEF3F8","100":"#D5E0EA","300":"#91A6BA","500":"#506A82","700":"#263E55","900":"#101C2C"},
-  "lime": {"50":"#F4FCE8","100":"#E3F8C4","300":"#BDF478","500":"#9DDB4A","700":"#5C970D","900":"#294900"},
+  "orange": {"50":"#FFF2ED","100":"#FFDFD4","300":"#FFAD8F","500":"#FF7847","700":"#CC3600","900":"#701E00"},
   "teal": {"50":"#E4FBF7","100":"#BDF2EA","300":"#6CD4C7","500":"#21A69A","700":"#00766D","900":"#004E48"},
   "neutral": {"0":"#FFFFFF","50":"#F8FAFC","100":"#EDF1F4","300":"#C7CDD3","500":"#727A82","700":"#424A52","900":"#18212B"},
   "error": {"500":"#BA1A1A","100":"#FFDAD6"},
@@ -23,16 +23,18 @@ Hierarquia de tokens:
 }
 ```
 
-`amber` é uma extensão do M3 (o padrão oficial não define papel semântico de "atenção"/aviso, só `error`). Existe porque o pacote de redesign distingue "precisa de atenção" (convite expirando, avaliação vencendo, cobrança atrasada — reversível, não é falha) de `error` (reservado a destrutivo/fatal). Todo uso de `warning` é sempre acompanhado de ícone ou rótulo textual — nunca só a cor (critério de aceite "status não depende apenas de cor").
+**Marca oficial (ADR-012, 28/09/2026):** `navy` + `orange` substitui `navy` + `lime` como paleta oficial — `navy.900` (`#101C2C`) já era o azul-noturno da nova marca, sem mudança; `orange.500` (`#FF7847`) é o valor exato do laranja da marca, com os demais degraus derivados por interpolação HSL e verificados por contraste WCAG (ver ADR-012). `lime` foi removido — não há mais verde na paleta oficial, em nenhuma tela.
+
+`amber` é uma extensão do M3 (o padrão oficial não define papel semântico de "atenção"/aviso, só `error`). Existe porque o pacote de redesign distingue "precisa de atenção" (convite expirando, avaliação vencendo, cobrança atrasada — reversível, não é falha) de `error` (reservado a destrutivo/fatal). Todo uso de `warning` é sempre acompanhado de ícone ou rótulo textual — nunca só a cor (critério de aceite "status não depende apenas de cor"). `amber` continua distinto de `primary` mesmo após a troca para laranja — nunca confundir aviso com ação positiva.
 
 ## Tema claro
 
 ```json
 {
-  "primary":"#3F6600",
+  "primary":"#CC3600",
   "onPrimary":"#FFFFFF",
-  "primaryContainer":"#BDF478",
-  "onPrimaryContainer":"#102000",
+  "primaryContainer":"#FFAD8F",
+  "onPrimaryContainer":"#701E00",
   "secondary":"#506173",
   "onSecondary":"#FFFFFF",
   "secondaryContainer":"#D4E5F8",
@@ -57,10 +59,10 @@ Hierarquia de tokens:
 
 ```json
 {
-  "primary":"#A2D95C",
-  "onPrimary":"#1E3700",
-  "primaryContainer":"#2F4E00",
-  "onPrimaryContainer":"#BDF478",
+  "primary":"#FFAD8F",
+  "onPrimary":"#701E00",
+  "primaryContainer":"#5E1900",
+  "onPrimaryContainer":"#FFAD8F",
   "secondary":"#B8C8DB",
   "onSecondary":"#233240",
   "secondaryContainer":"#39495A",

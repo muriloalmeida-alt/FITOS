@@ -13,13 +13,18 @@
   --fitos-navy-700: #263e55;
   --fitos-navy-900: #101c2c;
 
-  /* Primitivos — lime */
-  --fitos-lime-50: #f4fce8;
-  --fitos-lime-100: #e3f8c4;
-  --fitos-lime-300: #bdf478;
-  --fitos-lime-500: #9ddb4a;
-  --fitos-lime-700: #5c970d;
-  --fitos-lime-900: #294900;
+  /*
+   * Primitivos — orange (marca oficial, ADR-012: substitui `lime` como
+   * accent/primary). `orange-500` é o valor exato da marca (`#FF7847`); os
+   * demais degraus são interpolação HSL do mesmo matiz, verificados por
+   * contraste WCAG (ver ADR-012).
+   */
+  --fitos-orange-50: #fff2ed;
+  --fitos-orange-100: #ffdfd4;
+  --fitos-orange-300: #ffad8f;
+  --fitos-orange-500: #ff7847;
+  --fitos-orange-700: #cc3600;
+  --fitos-orange-900: #701e00;
 
   /* Primitivos — teal */
   --fitos-teal-50: #e4fbf7;
@@ -87,10 +92,10 @@
   --fitos-motion-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* Tema claro (padrão) — semântico */
-  --fitos-color-primary: #3f6600;
+  --fitos-color-primary: var(--fitos-orange-700);
   --fitos-color-on-primary: #ffffff;
-  --fitos-color-primary-container: #bdf478;
-  --fitos-color-on-primary-container: #102000;
+  --fitos-color-primary-container: var(--fitos-orange-300);
+  --fitos-color-on-primary-container: var(--fitos-orange-900);
   --fitos-color-secondary: #506173;
   --fitos-color-on-secondary: #ffffff;
   --fitos-color-secondary-container: #d4e5f8;
@@ -119,25 +124,26 @@
    * docs/03-design/BENCHMARK-IDENTIDADE-VISUAL.md: a estrutura do shell
    * (cabeçalho e navegação) é sempre azul-noturno, como uma moldura
    * constante ao redor do conteúdo (que segue o tema normalmente).
-   * Construído inteiramente a partir dos primitivos navy/lime já
-   * documentados em M3-DESIGN-TOKENS.md — nenhuma cor nova introduzida.
+   * Construído inteiramente a partir dos primitivos navy/orange já
+   * documentados em M3-DESIGN-TOKENS.md (ADR-012) — nenhuma cor nova
+   * introduzida além da paleta oficial.
    */
   --fitos-color-chrome: var(--fitos-navy-900);
   --fitos-color-chrome-container: var(--fitos-navy-700);
   --fitos-color-on-chrome: var(--fitos-navy-50);
   --fitos-color-on-chrome-variant: var(--fitos-navy-300);
-  --fitos-color-chrome-accent: var(--fitos-lime-300);
-  --fitos-color-chrome-active-bg: var(--fitos-lime-300);
+  --fitos-color-chrome-accent: var(--fitos-orange-300);
+  --fitos-color-chrome-active-bg: var(--fitos-orange-300);
   --fitos-color-chrome-active-fg: var(--fitos-navy-900);
 }
 
 /* Tema escuro — segue prefers-color-scheme, sem alterar tokens primitivos */
 @media (prefers-color-scheme: dark) {
   :root {
-    --fitos-color-primary: #a2d95c;
-    --fitos-color-on-primary: #1e3700;
-    --fitos-color-primary-container: #2f4e00;
-    --fitos-color-on-primary-container: #bdf478;
+    --fitos-color-primary: var(--fitos-orange-300);
+    --fitos-color-on-primary: var(--fitos-orange-900);
+    --fitos-color-primary-container: #5e1900;
+    --fitos-color-on-primary-container: var(--fitos-orange-300);
     --fitos-color-secondary: #b8c8db;
     --fitos-color-on-secondary: #233240;
     --fitos-color-secondary-container: #39495a;
