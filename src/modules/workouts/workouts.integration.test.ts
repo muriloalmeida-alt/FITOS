@@ -56,6 +56,11 @@ afterAll(async () => {
   // propósito no teste "imutabilidade de snapshot" abaixo.
   await prisma.$executeRawUnsafe('ALTER TABLE "workout_exercises" DISABLE TRIGGER "workout_exercises_snapshot_immutability_guard"');
   await prisma.$executeRawUnsafe('ALTER TABLE "workouts" DISABLE TRIGGER "workouts_snapshot_immutability_guard"');
+  // FIT-137: `workout_sessions_workoutId_tenantId_fkey` é `onDelete: Restrict`
+  // — precisa remover as sessões (criadas pelos testes de
+  // `getWeeklyRhythmForStudent`) antes do DELETE do próprio workout, senão
+  // a limpeza falha com violação de FK.
+  await prisma.workoutSession.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.workoutExercise.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.workout.deleteMany({ where: { tenant: { name: { contains: run } } } });
   await prisma.$executeRawUnsafe('ALTER TABLE "workout_exercises" ENABLE TRIGGER "workout_exercises_snapshot_immutability_guard"');
