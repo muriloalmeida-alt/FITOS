@@ -1311,3 +1311,5 @@ Murilo pediu explicitamente "Compare as demais telas" / "Revise todas as telas" 
 Gate verde na segunda tentativa, mesmo commit da PR (nenhum retry cego, nenhum "flake" declarado sem investigar).
 
 **PR mesclado**: [PR #183](https://github.com/muriloalmeida-alt/FitOS/pull/183) → `main` (`29f0f40`). CI real (Postgres real) e deploy de preview do Railway (`fitos-web-hml-fitos-pr-183`) verdes. FIT-137 #182 fechada com esse resultado registrado.
+
+**Achado pós-merge**: Murilo confirmou em `hml-fitos.up.railway.app` que `/painel` continuava mostrando a experiência anterior mesmo depois dos merges do FIT-136 (PR #181) e FIT-137 (PR #183). Confirmei via `git show origin/main` que o código das duas correções está de fato em `main` (`HeroDoDia`/`SuaEvolucao`/`SeuPlano` em `IndividualHome.tsx`, tiles reais em `PersonalHero.tsx`, "Ver movimento →" em `exercicios/page.tsx`) — não é regressão de código, é o ambiente de homologação do Railway não estar servindo o commit atual de `main`. Este commit é um push imperceptível (só este parágrafo) para disparar manualmente um novo build/deploy via webhook GitHub→Railway.
