@@ -223,6 +223,51 @@
   text-decoration: underline;
 }
 
+/*
+ * Primeira dobra (FIT-140): no mobile o bloco de acesso sobe e fica
+ * compacto — marca, frase, campos, botão e "Criar conta" cabem na altura
+ * visível real do navegador (barras do Safari/Chrome descontadas), a
+ * partir de 375 × 553 (iPhone SE). O degradê escurece mais cedo, para os
+ * campos continuarem legíveis na parte mais alta da foto.
+ */
+@media (max-width: 839px) {
+  .shade {
+    background: linear-gradient(
+      180deg,
+      rgba(11, 21, 37, 0.45) 0%,
+      rgba(11, 21, 37, 0.2) 18%,
+      rgba(16, 28, 44, 0.72) 34%,
+      rgba(16, 28, 44, 0.93) 48%,
+      rgba(16, 28, 44, 0.98) 100%
+    );
+  }
+
+  .content {
+    justify-content: flex-start;
+    gap: clamp(16px, 7dvh, 72px);
+  }
+
+  .panel {
+    gap: var(--fitos-space-6);
+  }
+
+  .form {
+    gap: var(--fitos-space-4);
+  }
+
+  .feedback {
+    min-height: var(--fitos-space-6);
+  }
+
+  .footer br {
+    display: none;
+  }
+
+  .footer a {
+    padding: var(--fitos-space-2) var(--fitos-space-1);
+  }
+}
+
 /* Alturas pequenas: menos respiro para manter campos e botão visíveis;
    o resto rola naturalmente (sem altura fixa). */
 @media (max-height: 700px) {
