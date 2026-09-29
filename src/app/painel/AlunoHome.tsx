@@ -55,6 +55,7 @@ function ContinuarSessaoCard() {
       eyebrow="Treino em andamento"
       title="Você tem um treino em andamento"
       description="Continue de onde parou."
+      imageSrc="/media/brand/visual-2026/scene-coach.png"
       action={{ label: "Continuar treino em andamento", href: "/painel/treino/sessao" }}
     />
   );
@@ -96,6 +97,7 @@ function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTod
         title={workout.name}
         description="Revise os exercícios abaixo e comece quando estiver pronto."
         meta={`${workout.workoutExercises.length} ${workout.workoutExercises.length === 1 ? "exercício" : "exercícios"}`}
+        imageSrc="/media/brand/visual-2026/scene-coach.png"
         action={{
           label: hasInProgressSession ? "Continuar treino em andamento" : "Começar treino",
           href: "/painel/treino/sessao",
@@ -130,6 +132,12 @@ function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTod
 /// honestos (ver `getTodayScheduleForStudent`) — nenhum treino é simulado.
 /// FIT-120: o hero de "Treino de hoje" (`WorkoutTodayCard`) já é a própria
 /// ação de começar/continuar a sessão — nenhum botão separado abaixo dele.
+/// FIT-134 (pacote visual 2026): `imageSrc` já existia em `WorkoutTodayCard`
+/// desde a FIT-120 mas nunca tinha sido usado aqui — agora aponta para
+/// `scene-coach.png` ("área do aluno e card de convite" na tabela de
+/// assets do pacote), só nos dois estados em que o card já é a ação real
+/// (treino atribuído ou sessão em andamento); os estados sem treino nunca
+/// mostram o card, então nunca mostram a foto.
 export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession }: AlunoHomeProps) {
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${displayName}`} navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>

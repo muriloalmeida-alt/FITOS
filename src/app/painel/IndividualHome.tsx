@@ -36,6 +36,10 @@ const AVAILABILITY_LABELS: Record<WeeklyAvailability, string> = {
 /// "Hoje" do workspace individual (FIT-101/FIT-102/FIT-103). Criar treino
 /// (FIT-102) e executar treino (FIT-103, registrar séries/carga/descanso
 /// de verdade) já são reais.
+/// FIT-134 (pacote visual 2026): `WorkoutTodayCard` ganha `imageSrc`
+/// (`scene-solo.png`, mesma foto já usada em `/entrar`/`/comecar` para o
+/// caminho Livre) — o prop já existia desde a FIT-120, só nunca tinha sido
+/// usado aqui.
 export function IndividualHome({
   name,
   tenantName,
@@ -70,6 +74,7 @@ export function IndividualHome({
           eyebrow="Treino em andamento"
           title={inProgressWorkoutName}
           description="Continue de onde parou."
+          imageSrc="/media/brand/visual-2026/scene-solo.png"
           action={{ label: "Continuar treino", href: "/painel/meus-treinos/sessao" }}
         />
       ) : null}

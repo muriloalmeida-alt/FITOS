@@ -1230,3 +1230,19 @@ Sequência do pacote: PR3 cobre `/painel` (dashboard), `/painel/alunos`, `/paine
 **Testes** (novos/alterados): `FinanceiroHero.test.tsx` (novo, 2 testes); `financeiro/page.test.tsx` (1 asserção ajustada para `getAllByText` — "Recebido" passa a aparecer duas vezes na tela, faixa + tile do resumo, ambos com o mesmo valor real). Suíte de unidade/componente **1186/1186** (+2 desde o PR #173). `tsc --noEmit`/`eslint .`/`next build`/`npm audit --omit=dev` limpos.
 
 **Pendência explícita**: nenhuma captura real para as seis rotas deste PR3 — todas exigem sessão + banco, indisponíveis neste ambiente. Depende de Railway homologação ou de uma sessão com banco local disponível.
+
+**PR3 aprovado por Murilo ("Aprovado") e mesclado**: [PR #175](https://github.com/muriloalmeida-alt/FitOS/pull/175) → `main` (`b728b7b`). CI real (Postgres real) e deploy de preview do Railway (`fitos-web-hml-fitos-pr-175`) verdes. FIT-133 #174 fechada com esse resultado registrado.
+
+### FIT-134 (EPIC-17) — PR4 do pacote visual 2026: Aluno e Livre
+
+PR4 cobre os dashboards "Hoje" do Aluno e do FitOS Livre, execução de treino, progresso e perfil/assinatura.
+
+**Achado que definiu o escopo, antes de qualquer código**: `WorkoutTodayCard` (o hero de "Treino de hoje"/"Treino em andamento") já tinha suporte a `imageSrc`/`imageAlt` desde a FIT-120, com teste dedicado ("com imageSrc: renderiza a imagem com o alt informado") — mas **nenhum dos dois únicos consumidores do componente** (`AlunoHome`, `IndividualHome`) jamais passava essa prop. O pacote (telas 09/10) mostra exatamente esse hero com foto de fundo — a mudança inteira deste PR4 é ligar um recurso que já existia e já era testado, nunca construir nada novo: `scene-coach.png` para o Aluno (tabela de assets do pacote: "área do aluno e card de convite") e `scene-solo.png` para o Livre (mesma foto já usada em `/entrar`/`/comecar` para esse papel).
+
+**Confirmado antes de tocar em código, mesma cautela de FIT-131/132/133**: os prints 09/10 mostram dados fictícios ("Treino A · 6 exercícios", "2/3 dias", "3 treinos nesta semana") — e os prints **desktop** de novo se autodenunciam: onde o mobile mostra números, o desktop mostra literalmente "Título, exercícios e duração vêm do plano atribuído", "Progresso quando disponível" e "Sessões e progresso somente com registro real" no mesmo lugar. `AlunoHome`/`IndividualHome` já eram 100% orientados a dado real desde a FIT-040/042/101-103 — nenhum valor do print entrou no código, só a foto.
+
+**Sem mudança**: `/painel/progresso` (evolução do aluno, FIT-042), `/painel/perfil` e as telas de execução de treino (`SetLogger`/`RestTimer`/`WorkoutExerciseCard`, já usando os tokens do sistema) — nenhuma delas tem foto ou print dedicado no pacote; são "áreas complementares obrigatórias" que devem herdar componentes e regras visuais já existentes (e já herdam, via os mesmos tokens/componentes de sempre), não ganhar uma composição fotográfica nova e especulativa sem nenhuma referência visual para conferir.
+
+**Testes**: nenhum teste novo — `imageSrc` já era exercitado por `WorkoutTodayCard.test.tsx` desde a FIT-120; `AlunoHome.test.tsx`/`IndividualHome.test.tsx` continuam cobrindo o comportamento funcional sem alteração. Suíte de unidade/componente **1186/1186** (sem variação desde o PR #175). `tsc --noEmit`/`eslint .`/`next build`/`npm audit --omit=dev` limpos.
+
+**Pendência explícita**: nenhuma captura real — todas as rotas deste PR4 exigem sessão + banco, indisponíveis neste ambiente. Mesma dependência de Railway homologação ou sessão com banco local já registrada nos PRs anteriores.
