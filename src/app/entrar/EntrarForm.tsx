@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, FormAlert, TextField } from "@/shared/ui";
+import { Button, TextField } from "@/shared/ui";
 import { signIn } from "@/modules/identity/auth-client";
 import styles from "./page.module.css";
 
@@ -59,14 +59,14 @@ export function EntrarForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
+    <form className={styles.form} onSubmit={handleSubmit} aria-busy={isSubmitting} noValidate>
       <TextField
         label="E-mail"
         name="email"
         type="email"
-        autoComplete="email"
+        autoComplete="username"
+        placeholder="seu@email.com"
+        className={styles.field}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         error={fieldErrors.email}
@@ -78,6 +78,7 @@ export function EntrarForm() {
         name="password"
         type="password"
         autoComplete="current-password"
+        className={styles.field}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         error={fieldErrors.password}
@@ -85,7 +86,24 @@ export function EntrarForm() {
         required
       />
 
-      <Button type="submit" variant="filled" disabled={isSubmitting}>
+      {/* Espaço reservado junto aos campos: o aviso de credenciais aparece
+          aqui sem encobrir campos/botão e sem salto grande de layout
+          (AjustesLogin). Texto claro + indicador "!" além da cor. */}
+      <div className={styles.feedback}>
+        {formError ? (
+          <div className={styles.formError} role="alert">
+            <span className={styles.formErrorIcon} aria-hidden>
+              !
+            </span>
+            <p className={styles.formErrorText}>
+              <strong>{formError}</strong>
+              <span className={styles.formErrorHelp}>Confira os dados e tente novamente.</span>
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <Button type="submit" className={styles.submit} variant="filled" disabled={isSubmitting}>
         {isSubmitting ? "Entrando…" : "Entrar"}
       </Button>
     </form>

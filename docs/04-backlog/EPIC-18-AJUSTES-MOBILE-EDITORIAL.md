@@ -89,7 +89,7 @@ O rail desktop continua listando todos os destinos. Nenhum destino real ficou in
 | 32 | `/painel/meus-treinos/sessao` | Nova tela de execução, variante Livre. |
 | 33 | `/painel/minha-evolucao` | "Minha evolução". |
 | 34/35 | `/politica-de-privacidade`, `/termos-de-uso` | Cabeçalho/rodapé públicos; **texto jurídico integral**, sem resumo. |
-| — | `/entrar` | Mantém a referência de login já aprovada (foto + marca), como o pacote determina. |
+| — | `/entrar` | Mantinha a referência de login já aprovada; substituída pelo `AjustesLogin` (FIT-139, ver abaixo). |
 
 ### Treino em execução (AjustesTreinoAluno/AjustesTreinoLivre)
 
@@ -103,6 +103,27 @@ Novo `src/app/painel/WorkoutRunner.tsx` (substitui `SessaoExecucao`/`SessaoExecu
 - Confirmação antes de concluir/encerrar/sair com ajustes não registrados, e antes de abandonar; `beforeunload` com dados não salvos.
 - **Áudio**: "Áudio durante o treino" abre opções para abrir Spotify/Apple Music no app externo. Nenhuma conta é conectada, nada é controlado e não há player próprio (não existe fonte licenciada) — dito na própria tela.
 - Estados: vazio (treino sem exercícios), erro (mensagem da API ou falha de conexão, sem avançar a série), retomada (índice, relógio e descanso restaurados; séries já gravadas vêm do servidor).
+
+### Tela de login (AjustesLogin — FIT-139)
+
+`AjustesLogin.zip` chegou depois do FIT-138 (PR #186): `referencias/proposta-login-mobile.svg` (estados padrão e erro) e `docs/ORIENTACOES-CLAUDE.md`. Implementado em `src/app/entrar/`:
+
+- **Foto em tela cheia** (`scene-solo.png`, `cover`) com degradê CSS da proposta — topo leve preservando a pessoa, base quase sólida sob os campos. Vale em **todas as larguras**: no desktop a foto continua em tela cheia, o degradê escurece a esquerda e o formulário fica nessa região (máx. 400 px). O split 50/50 com cartão e o `AuthHero` saíram desta rota (o componente segue nas demais).
+- **Sem cartão** e **sem o título "Entrar" / descrição** acima dos campos; "Entrar" fica só no botão. Um `h1` "Entrar no FitOS" existe apenas para leitores de tela.
+- **Marca oficial** (`BrandLogo background="photo"`) no topo, `size=56` (antes 20 no `AuthHero`): o wordmark fica com ~25 px de altura de maiúscula, a mesma da proposta; proporção do vetor preservada. Leva a `/conheca`.
+- Frase "Movimento começa / com um plano." mantida sobre a foto.
+- Campos em linha com rótulo persistente (também no desktop), placeholder `seu@email.com`, `autocomplete="username"`/`current-password`, foco com linha laranja de 2 px. Botão primário na largura do formulário, alvo de 52 px.
+- **Erro de credenciais** junto aos campos, sem caixa: indicador "!" salmão + "E-mail ou senha inválidos." em branco + "Confira os dados e tente novamente.", `role="alert"`. O espaço é reservado (40 px), então o botão não se move ao aparecer o erro. O e-mail digitado permanece.
+- `min-height: 100dvh` (fallback `100vh`), `safe-area-inset-*` nas quatro bordas, sem altura fixa: em alturas pequenas a página rola.
+- Os tokens semânticos são redefinidos só dentro da página (`.main`), para `TextField`/`Button` ficarem claros sobre a foto também no desktop — nenhum componente compartilhado mudou.
+
+Decisões:
+
+1. **"Esqueceu a senha?" não aparece**: não existe fluxo de recuperação de senha no projeto (a orientação manda não criar navegação falsa).
+2. **Botão**: laranja oficial `#FF7847` com texto navy, como no tema mobile do FIT-138, em vez do degradê `#ED4B0C → #BF2D00` com texto branco da proposta. O branco sobre `#ED4B0C` dá ~4,3:1 (abaixo do AA de 4,5:1 para texto de 16 px); o navy sobre `#FF7847` dá ~6,6:1.
+3. **Alternância de visibilidade da senha**: não havia no projeto e não foi criada.
+
+Evidências: `docs/06-engenharia/evidencias/FIT-139/`.
 
 ## Lacunas documentadas (sem alteração de contrato nesta rodada)
 
