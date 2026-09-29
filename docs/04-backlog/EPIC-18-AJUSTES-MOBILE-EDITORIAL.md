@@ -125,6 +125,8 @@ Decisões:
 
 Evidências: `docs/06-engenharia/evidencias/FIT-139/`.
 
+**FIT-140 — primeira dobra (29/09/2026)**: a pedido de Murilo ("os campos de login precisam ficar na primeira dobra"), com proposta aprovada antes do desenvolvimento. No mobile (< 840 px) o bloco de acesso deixa de encostar no pé da tela e sobe logo abaixo da marca (`justify-content: flex-start`, respiro `clamp(16px, 7dvh, 72px)`), com espaçamentos menores e "Criar conta" na mesma linha da pergunta. O degradê passa a escurecer a partir de ~34% da altura, para os campos manterem contraste na parte mais alta da foto. Tudo (marca, frase, campos, botão e "Criar conta") cabe em 375 × 553 visíveis (iPhone SE com as barras do Safari). Desktop e tablet sem mudança. Evidências: `docs/06-engenharia/evidencias/FIT-140/`.
+
 ## Lacunas documentadas (sem alteração de contrato nesta rodada)
 
 1. **Histórico por série**: o contrato atual (`WorkoutSessionResult`) guarda um agregado por exercício (séries concluídas, repetições, carga). A tela registra cada série incrementando esse agregado; um histórico linha-a-linha por série exige nova tabela/rota.
