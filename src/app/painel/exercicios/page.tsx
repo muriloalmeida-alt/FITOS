@@ -122,26 +122,30 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
         )
       ) : (
         <ul className={styles.grid} aria-label="Lista de exercícios">
-          {result.items.map((exercise) => (
-            <li key={exercise.id}>
-              <Link href={`/painel/exercicios/${exercise.id}`} className={styles.card}>
-                <ExerciseThumbnail
-                  src={exercise.imageUrl}
-                  alt={exercise.imageAlt ?? exercise.name}
-                  width={96}
-                  height={96}
-                  className={styles.cardThumbnail}
-                />
-                <span className={styles.cardBody}>
-                  <span className={styles.cellName}>{exercise.name}</span>
-                  <span className={styles.cellMuscle}>{exercise.muscle ?? "—"}</span>
-                  <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
-                    {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
+          {result.items.map((exercise) => {
+            const meta = [exercise.muscle, exercise.type].filter(Boolean).join(" • ");
+            return (
+              <li key={exercise.id}>
+                <Link href={`/painel/exercicios/${exercise.id}`} className={styles.card}>
+                  <ExerciseThumbnail
+                    src={exercise.imageUrl}
+                    alt={exercise.imageAlt ?? exercise.name}
+                    width={400}
+                    height={225}
+                    className={styles.cardThumbnail}
+                  />
+                  <span className={styles.cardBody}>
+                    <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
+                      {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
+                    </span>
+                    <span className={styles.cellName}>{exercise.name}</span>
+                    <span className={styles.cellMuscle}>{meta || "—"}</span>
+                    <span className={styles.watchLink}>Ver movimento →</span>
                   </span>
-                </span>
-              </Link>
-            </li>
-          ))}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 

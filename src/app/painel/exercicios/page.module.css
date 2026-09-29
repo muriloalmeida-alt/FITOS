@@ -45,9 +45,8 @@
 
 .card {
   display: flex;
-  align-items: center;
-  gap: var(--fitos-space-3);
-  padding: var(--fitos-space-3) var(--fitos-space-4);
+  flex-direction: column;
+  overflow: hidden;
   border-radius: var(--fitos-shape-card);
   background-color: var(--fitos-color-surface-container);
   border: 1px solid var(--fitos-color-outline-variant);
@@ -60,7 +59,9 @@
 }
 
 .cardThumbnail {
-  border-radius: var(--fitos-shape-small);
+  width: 100%;
+  height: 160px;
+  border-radius: 0;
 }
 
 .cardBody {
@@ -68,6 +69,7 @@
   flex-direction: column;
   gap: var(--fitos-space-1);
   min-width: 0;
+  padding: var(--fitos-space-3) var(--fitos-space-4) var(--fitos-space-4);
 }
 
 .cellName {
@@ -79,6 +81,13 @@
 .cellMuscle {
   font-size: 14px;
   color: var(--fitos-color-on-surface-variant);
+}
+
+.watchLink {
+  margin-top: var(--fitos-space-1);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
 }
 
 .originBadge {
@@ -149,5 +158,11 @@
 
   .grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

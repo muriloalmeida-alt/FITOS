@@ -142,6 +142,33 @@ describe("ExerciciosPage (FIT-023)", () => {
     expect(screen.getByText("Sem imagem")).toBeInTheDocument();
   });
 
+  it("FIT-136: card usa a composição de tela-08 (foto grande, músculo • tipo, \"Ver movimento\")", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listCatalogExercises.mockResolvedValue({
+      items: [
+        {
+          id: "c1",
+          name: "Agachamento livre com barra",
+          muscle: "Pernas",
+          type: "força",
+          origin: "FITOS_CURATED",
+          status: "ATIVO",
+          imageUrl: "/media/exercises/agachamento-livre-com-barra.webp",
+          imageAlt: "Agachamento livre com barra.",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    const { default: ExerciciosPage } = await import("./page");
+    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
+
+    expect(screen.getByText("Pernas • força")).toBeInTheDocument();
+    expect(screen.getByText("Ver movimento →")).toBeInTheDocument();
+  });
+
   it("estado vazio honesto quando não há resultado", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
