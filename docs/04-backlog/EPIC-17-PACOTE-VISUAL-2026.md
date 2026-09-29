@@ -39,4 +39,14 @@ Só conclui com: (1) os 5 PRs revisados e mesclados; (2) validação visual real
 
 ## Sub-issues
 
-- [FIT-131 #170](https://github.com/muriloalmeida-alt/FitOS/issues/170) — PR1: Fundação visual e navegação.
+- [FIT-131 #170](https://github.com/muriloalmeida-alt/FitOS/issues/170) — PR1: Fundação visual e navegação. Mesclado (PR #171).
+- [FIT-132 #172](https://github.com/muriloalmeida-alt/FitOS/issues/172) — PR2: Entrada e onboarding. Mesclado (PR #173).
+- [FIT-133 #174](https://github.com/muriloalmeida-alt/FitOS/issues/174) — PR3: Personal. Mesclado (PR #175).
+- [FIT-134 #176](https://github.com/muriloalmeida-alt/FitOS/issues/176) — PR4: Aluno e Livre. Mesclado (PR #177).
+- FIT-135 — PR5: Consolidação (acessibilidade, 4 larguras, documentação final). Em andamento.
+
+## Status do aceite do épico (ver "Aceite do épico" acima)
+
+- (1) 5 PRs revisados e mesclados: 4 de 5 concluídos; PR5 em andamento.
+- (2) Validação visual real em Railway homologação, nas 4 larguras, com contas reais dos três papéis: **não realizada** — este programa de execução (sandbox sem PostgreSQL/Docker e sem acesso de rede a `railway.app`) não tem meios de autenticar contas reais nem alcançar o ambiente de homologação. Fica pendente, exige o próprio Murilo ou um ambiente com esse acesso.
+- (3) Aceite explícito de Murilo: pendente do item (2) acima — não pode ser antecipado por testes automatizados ou diff de código, conforme a própria regra do épico.

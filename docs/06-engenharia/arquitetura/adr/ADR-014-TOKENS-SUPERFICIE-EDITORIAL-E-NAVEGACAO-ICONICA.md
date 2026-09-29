@@ -28,3 +28,9 @@ O pacote também introduz uma segunda superfície de navegação por papel (rail
 - `src/shared/design-system/tokens.css` e `docs/03-design/M3-DESIGN-TOKENS.md` ganham os cinco tokens acima, documentados com o mesmo par claro/escuro do restante do sistema (ver seção de tema escuro em `tokens.css`).
 - Componentes do pacote (heroes editoriais, `AppShell` mobile/desktop, `CreditCardFields`/cards de plano quando aplicável) devem usar esses tokens, nunca o hex literal do pacote diretamente em CSS.
 - Se uma tela futura fora do escopo deste pacote precisar de uma superfície "quente"/"editorial" parecida, reaproveita estes tokens — não cria um terceiro par equivalente.
+
+## Addendum (FIT-135, PR5 — consolidação/acessibilidade)
+
+Varredura automatizada (`axe-core` 4.x, regras WCAG 2 A/AA) em `/conheca` encontrou `color-contrast` sério em 13 nós: `--fitos-color-on-surface-secondary` (`#637584`, valor exato do pacote) mede 4.19:1 contra `--fitos-color-surface-container` (`#EDF1F4`) e 4.43:1 contra `--fitos-color-surface-editorial` (`#F5F7F8`) — abaixo do mínimo AA de 4.5:1 para texto normal.
+
+O plano de implementação (`03-PLANO-DE-IMPLEMENTACAO-E-ACEITE.md`) lista "contraste WCAG AA" como critério verificável de aceite do PR5, e a precedência de decisão do próprio épico coloca "regras de negócio reais" acima do hex exato do pacote quando os dois entram em conflito — acessibilidade é regra de produto, não preferência estética. Valor ajustado para `#56636F` (mesmo tom, mais escuro): 5.42:1 contra `surface-container`, 5.73:1 contra `surface-editorial`, ambos com margem sobre o mínimo. Tema escuro (`#A9B3BA` sobre `#0E1722`, 8.45:1) já passava e não foi alterado. Nenhum outro token deste ADR muda.
