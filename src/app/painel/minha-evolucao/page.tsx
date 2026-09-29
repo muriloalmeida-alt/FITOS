@@ -73,7 +73,7 @@ export default async function MinhaEvolucaoPage() {
     .reverse();
 
   return (
-    <AppShell title="Progresso" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Evolução" title="Minha evolução" subtitle="Histórico, medidas e metas." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
       <Card title="Frequência">
         <p className={styles.summaryLine}>
           {frequencia.last7Days} treino{frequencia.last7Days === 1 ? "" : "s"} concluído{frequencia.last7Days === 1 ? "" : "s"} nos

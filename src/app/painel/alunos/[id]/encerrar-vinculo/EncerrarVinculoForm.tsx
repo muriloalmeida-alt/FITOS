@@ -47,7 +47,7 @@ export function EncerrarVinculoForm({ studentId }: { studentId: string }) {
         disabled={isSubmitting}
       />
       <div className={styles.actions}>
-        <Button type="submit" variant="filled" disabled={isSubmitting}>
+        <Button type="submit" variant="danger" disabled={isSubmitting}>
           {isSubmitting ? "Encerrando…" : "Confirmar encerramento"}
         </Button>
         <Button href={`/painel/alunos/${studentId}`} variant="outlined">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { appName } from "@/shared/config/env";
 import { checkActivationToken } from "@/modules/identity/activation";
 import { AtivarContaForm } from "./AtivarContaForm";
+import { PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -25,9 +26,11 @@ export default async function AtivarContaPage({ searchParams }: AtivarContaPageP
 
   return (
     <main className={styles.main}>
+      <PublicMobileHeader />
       <div className={styles.card}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Ativar conta</h1>
+          <p className={styles.eyebrow}>Ativar conta</p>
+          <h1 className={styles.title}>Ative seu acesso</h1>
         </header>
 
         {check.valid ? (
@@ -43,6 +46,7 @@ export default async function AtivarContaPage({ searchParams }: AtivarContaPageP
           </p>
         )}
       </div>
+      <PublicMobileFooter />
     </main>
   );
 }

@@ -31,7 +31,7 @@ export default async function TreinosPage() {
   const workouts = await listWorkoutsForTenant({ tenantId: ctx.tenantId });
 
   return (
-    <AppShell title="Treinos" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Modelos de treino" title="Treinos" subtitle="Modelos prontos para montar programas." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <TreinosSubNav active="modelos" />
       <div className={styles.header}>
         <p className={styles.subtitle}>

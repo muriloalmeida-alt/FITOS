@@ -53,7 +53,7 @@ export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalheP
   ]);
 
   return (
-    <AppShell title={workout.name} navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Meu treino" title={workout.name} subtitle="Sua sequência de exercícios." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Link href="/painel/meus-treinos" className={styles.backLink}>
         ← Voltar para meus treinos
       </Link>

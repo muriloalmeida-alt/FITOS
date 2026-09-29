@@ -18,8 +18,15 @@ export function LandingHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.bar}>
-        <Link href="/conheca" className={styles.brand}>
-          <BrandLogo variant="horizontal" background="light" size={20} />
+        {/*
+          AjustesTelas (29/09/2026, print 01): no mobile escuro a marca usa a
+          variante clara/laranja sem retângulo de fundo; no desktop claro,
+          a variante oficial "claro". As duas são decorativas — o link
+          carrega o nome acessível uma única vez.
+        */}
+        <Link href="/conheca" className={styles.brand} aria-label="FitOS">
+          <BrandLogo variant="horizontal" background="light" size={20} decorative className={styles.logoLight} />
+          <BrandLogo variant="horizontal" background="photo" size={44} decorative className={styles.logoPhoto} />
         </Link>
 
         <nav className={styles.desktopNav} aria-label="Navegação principal">
@@ -54,7 +61,7 @@ export function LandingHeader() {
           aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
           onClick={() => setIsMenuOpen((open) => !open)}
         >
-          {isMenuOpen ? "✕" : "☰"}
+          {isMenuOpen ? "Fechar" : "Menu"}
         </button>
       </div>
 

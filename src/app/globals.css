@@ -35,3 +35,45 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Fundo editorial mobile (AjustesPainel/AjustesTelas, 29/09/2026): WebP
+ * leve (~15 KB) como camada visual fixa, com um degradê CSS simples só
+ * para reforçar contraste do texto nas áreas de ondas âmbar. Sem blur,
+ * filtros ou animação. Pseudo-elemento fixo (em vez de
+ * `background-attachment: fixed`, instável no iOS) — nunca intercepta
+ * toques.
+ */
+@media (max-width: 839px) {
+  html {
+    background-color: var(--fitos-color-mobile-base);
+  }
+
+  /* Transparente: o fundo base fica no `html`, para a camada fixa abaixo
+     (z-index -1) não ser coberta pelo fundo do próprio `body`. */
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: transparent;
+    color: var(--fitos-color-on-surface);
+    color-scheme: dark;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(180deg, rgba(7, 9, 13, 0.28) 0%, rgba(7, 9, 13, 0.12) 40%, rgba(7, 9, 13, 0.34) 100%),
+      url("/media/brand/fitos-bg-mobile-suave.webp");
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+  }
+
+  :focus-visible {
+    outline-color: var(--fitos-orange-300);
+  }
+}

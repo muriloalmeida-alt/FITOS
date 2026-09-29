@@ -31,7 +31,7 @@ export default async function MeusTreinosPage() {
   const workouts = await listWorkoutsForTenant({ tenantId: ctx.tenantId });
 
   return (
-    <AppShell title="Meus treinos" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Meus treinos" title="Meus treinos" subtitle="Sua rotina de treinos, do seu jeito." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <div className={styles.header}>
         <p className={styles.subtitle}>{workouts.length} {workouts.length === 1 ? "treino" : "treinos"}</p>
         <Button href="/painel/meus-treinos/novo" variant="filled">

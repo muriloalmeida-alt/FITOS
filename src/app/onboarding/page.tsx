@@ -6,7 +6,7 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
-import { AuthHero } from "@/shared/ui";
+import { AuthHero, PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import { OnboardingForm } from "./OnboardingForm";
 import styles from "./page.module.css";
 
@@ -39,6 +39,7 @@ export default async function OnboardingPage() {
 
   return (
     <main className={styles.main}>
+      <PublicMobileHeader />
       <AuthHero
         headline="Seu treino, seu ritmo."
         subtitle="Configure seu espaço antes do primeiro treino."
@@ -48,6 +49,7 @@ export default async function OnboardingPage() {
       <div className={styles.formColumn}>
         <div className={styles.card}>
           <header className={styles.header}>
+            <p className={styles.eyebrow}>FitOS Livre</p>
             <h1 className={styles.title}>Configure seu espaço</h1>
             <p className={styles.subtitle}>
               Essas respostas ajudam a organizar sua experiência — não geram nenhuma prescrição automática
@@ -74,6 +76,7 @@ export default async function OnboardingPage() {
           />
         </div>
       </div>
+      <PublicMobileFooter />
     </main>
   );
 }

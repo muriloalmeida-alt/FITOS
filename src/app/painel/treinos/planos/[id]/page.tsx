@@ -48,7 +48,7 @@ export default async function PlanoDetalhePage({ params }: PlanoDetalhePageProps
   ]);
 
   return (
-    <AppShell title={plan.name} navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Detalhe do programa" title={plan.name} subtitle="Duração, treinos e atribuições do programa." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Link href="/painel/treinos/planos" className={styles.backLink}>
         ← Voltar para os programas
       </Link>

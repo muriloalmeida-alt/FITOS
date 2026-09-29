@@ -33,3 +33,4 @@ export {
   type CreditCardFieldsValue,
 } from "./CreditCardFields";
 export { WeeklyRhythmBar, WeeklyRhythmDots } from "./WeeklyRhythm";
+export { PublicMobileHeader, PublicMobileFooter } from "./PublicMobileChrome";

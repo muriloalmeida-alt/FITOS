@@ -70,3 +70,48 @@
   background-color: var(--fitos-color-surface-container-high);
   color: var(--fitos-color-on-surface-variant);
 }
+
+/*
+ * Mobile editorial (AjustesTelas, print 07): linha aberta com avatar de
+ * iniciais, nome, status e divisor — sem cartão. A linha inteira continua
+ * sendo o link para o perfil.
+ */
+@media (max-width: 839px) {
+  .card {
+    position: relative;
+    gap: var(--fitos-space-1);
+    padding: var(--fitos-space-4) var(--fitos-space-8) var(--fitos-space-4) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .card::after {
+    content: "›";
+    position: absolute;
+    top: var(--fitos-space-5);
+    right: var(--fitos-space-1);
+    font-size: 26px;
+    line-height: 1;
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  .name {
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .description {
+    font-size: 14px;
+  }
+
+  .openProfile {
+    padding-left: 56px;
+    color: var(--fitos-color-eyebrow);
+  }
+
+  .statusPill {
+    padding: 2px var(--fitos-space-2);
+  }
+}

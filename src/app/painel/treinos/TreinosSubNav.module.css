@@ -25,3 +25,16 @@
   color: var(--fitos-color-on-secondary-container);
   background-color: var(--fitos-color-secondary-container);
 }
+
+/* Mobile editorial: aba ativa com o acento laranja da marca. */
+@media (max-width: 839px) {
+  .link {
+    background-color: transparent;
+    border: 1px solid var(--fitos-color-outline-variant);
+  }
+
+  .linkActive {
+    color: var(--fitos-navy-900);
+    background-color: var(--fitos-orange-300);
+  }
+}

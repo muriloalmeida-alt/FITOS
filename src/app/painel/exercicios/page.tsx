@@ -62,7 +62,7 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
   }
 
   return (
-    <AppShell title="Exercícios" navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Exercícios" title="Exercícios" subtitle="Seu catálogo de movimentos." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
       <div className={styles.header}>
         <p className={styles.subtitle}>
           {result.total} {result.total === 1 ? "exercício" : "exercícios"} no catálogo

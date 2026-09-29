@@ -32,6 +32,24 @@ function greetingForHour(hour: number): string {
   return "Boa noite";
 }
 
+/// Fuso do produto (usuários no Brasil). AjustesPainel (29/09/2026): data e
+/// saudação do cabeçalho seguem o relógio de Brasília, nunca o fuso do
+/// servidor (UTC em homologação), que trocaria "Bom dia" por "Boa tarde"
+/// três horas antes.
+const PRODUCT_TIME_ZONE = "America/Sao_Paulo";
+
+function hourInProductTimeZone(date: Date): number {
+  const hour = new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hourCycle: "h23", timeZone: PRODUCT_TIME_ZONE }).format(date);
+  return Number.parseInt(hour, 10);
+}
+
+/// "Terça, 29 de setembro" — eyebrow de data do Início (AjustesPainel).
+function dateLabelFor(date: Date): string {
+  const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: PRODUCT_TIME_ZONE }).format(date).replace(/-feira$/, "");
+  const dayMonth = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: PRODUCT_TIME_ZONE }).format(date);
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dayMonth}`;
+}
+
 /// Única rota autenticada (FIT-012): o shell exibido (personal ou aluno) é
 /// decidido inteiramente no servidor, a partir do papel derivado da sessão
 /// (`getAuthContext`, FIT-011) — não existem rotas separadas por papel
@@ -82,7 +100,8 @@ export default async function PainelPage() {
         name={session.user.name}
         email={session.user.email}
         tenantName={tenant?.name ?? null}
-        greeting={greetingForHour(now.getHours())}
+        greeting={greetingForHour(hourInProductTimeZone(now))}
+        dateLabel={dateLabelFor(now)}
         activeStudentsCount={activeStudents.total}
         activeWorkoutsCount={activeWorkouts.length}
         atrasadoCents={financialSummary.atrasadoCents}
@@ -126,6 +145,8 @@ export default async function PainelPage() {
     return (
       <IndividualHome
         name={session.user.name}
+        greeting={greetingForHour(hourInProductTimeZone(new Date()))}
+        dateLabel={dateLabelFor(new Date())}
         tenantName={tenant.name}
         objective={profile.objective}
         experienceLevel={profile.experienceLevel}
@@ -172,6 +193,8 @@ export default async function PainelPage() {
       schedule={schedule}
       hasInProgressSession={inProgressSession !== null}
       weeklyRhythm={{ completedDays: weeklyRhythm.completedDays, targetDays: weeklyRhythm.targetDays }}
+      greeting={greetingForHour(hourInProductTimeZone(new Date()))}
+      dateLabel={dateLabelFor(new Date())}
     />
   );
 }

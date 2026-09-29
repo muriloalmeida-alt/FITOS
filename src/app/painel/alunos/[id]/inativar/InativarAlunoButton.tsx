@@ -31,7 +31,7 @@ export function InativarAlunoButton({ studentId }: { studentId: string }) {
   return (
     <>
       {error ? <FormAlert variant="error">{error}</FormAlert> : null}
-      <Button type="button" variant="filled" onClick={handleClick} disabled={isSubmitting}>
+      <Button type="button" variant="danger" onClick={handleClick} disabled={isSubmitting}>
         {isSubmitting ? "Inativando…" : "Confirmar inativação"}
       </Button>
     </>

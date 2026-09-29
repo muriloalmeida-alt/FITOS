@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AuthHero, Button, Card } from "@/shared/ui";
+import { AuthHero, Button, Card, PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import styles from "./page.module.css";
 
@@ -16,10 +16,12 @@ export const metadata: Metadata = {
 export default function TreinoSozinhoPage() {
   return (
     <main className={styles.main}>
+      <PublicMobileHeader />
       <AuthHero eyebrow="FitOS Livre" headline="Seu treino. Sua evolução." />
 
       <div className={styles.content}>
         <header className={styles.header}>
+          <p className={styles.eyebrow}>FitOS Livre</p>
           <h1 className={styles.title}>Treino sozinho, sem personal</h1>
           <p className={styles.subtitle}>
             Um espaço próprio para montar seus treinos a partir do catálogo do {appName}, registrar cada
@@ -47,6 +49,7 @@ export default function TreinoSozinhoPage() {
           Criar meu espaço individual
         </Button>
       </div>
+      <PublicMobileFooter />
     </main>
   );
 }

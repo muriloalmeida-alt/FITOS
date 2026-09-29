@@ -6,7 +6,7 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
-import { AuthHero } from "@/shared/ui";
+import { AuthHero, PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import { PersonalOnboardingWizard } from "./PersonalOnboardingWizard";
 import styles from "./page.module.css";
 
@@ -37,6 +37,7 @@ export default async function OnboardingPersonalPage() {
 
   return (
     <main className={styles.main}>
+      <PublicMobileHeader />
       <AuthHero
         headline="Treinar pessoas é a sua paixão."
         subtitle="Vamos cuidar da rotina junto com você."
@@ -60,6 +61,7 @@ export default async function OnboardingPersonalPage() {
           />
         </div>
       </div>
+      <PublicMobileFooter />
     </main>
   );
 }

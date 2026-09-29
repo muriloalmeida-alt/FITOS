@@ -88,3 +88,37 @@
     min-height: 340px;
   }
 }
+
+/*
+ * Mobile editorial (AjustesTelas, print 02): cada caminho vira uma linha
+ * aberta sobre o fundo — sem foto nem cartão —, preservando o controle
+ * real de cada caminho (botão ou `ConviteCodeForm`).
+ */
+@media (max-width: 839px) {
+  .card {
+    min-height: 0;
+    gap: var(--fitos-space-2);
+    padding: var(--fitos-space-5) 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    --fitos-color-primary: var(--fitos-orange-500);
+    --fitos-color-surface: transparent;
+    --fitos-color-surface-container: transparent;
+    --fitos-color-on-surface-variant: #d5dbe1;
+    --fitos-color-outline: rgba(255, 255, 255, 0.42);
+  }
+
+  .image,
+  .overlay,
+  .arrow {
+    display: none;
+  }
+
+  .meta {
+    color: var(--fitos-orange-300);
+  }
+
+  .title {
+    font-size: 20px;
+  }
+}

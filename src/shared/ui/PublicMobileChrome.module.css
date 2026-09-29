@@ -1,0 +1,86 @@
+.header,
+.footer {
+  display: none;
+}
+
+@media (max-width: 839px) {
+  .header {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fitos-space-4);
+    width: 100%;
+    padding: max(40px, calc(env(safe-area-inset-top) + var(--fitos-space-4))) var(--fitos-space-5) var(--fitos-space-2);
+  }
+
+  .brand {
+    display: inline-flex;
+    margin-left: -6px;
+    border-radius: var(--fitos-shape-small);
+  }
+
+  .brand:focus-visible,
+  .menuButton:focus-visible,
+  .menuLink:focus-visible {
+    outline: 2px solid var(--fitos-orange-300);
+    outline-offset: 2px;
+  }
+
+  .menuButton {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 var(--fitos-space-2);
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    font-family: var(--fitos-font-family);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .menu {
+    position: absolute;
+    top: calc(100% + var(--fitos-space-1));
+    right: var(--fitos-space-5);
+    display: flex;
+    flex-direction: column;
+    min-width: 240px;
+    padding: var(--fitos-space-2);
+    border-radius: var(--fitos-shape-large);
+    background-color: var(--fitos-navy-900);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .menuLink {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 var(--fitos-space-3);
+    border-radius: var(--fitos-shape-medium);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .menuLink:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fitos-space-2);
+    width: 100%;
+    margin-top: var(--fitos-space-8);
+    padding: var(--fitos-space-5) var(--fitos-space-5) calc(var(--fitos-space-6) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--fitos-color-divider);
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--fitos-color-on-surface-variant);
+  }
+}

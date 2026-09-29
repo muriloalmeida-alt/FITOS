@@ -22,7 +22,7 @@ export default async function CriarMeuTreinoPage() {
   }
 
   return (
-    <AppShell title="Criar treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Criar treino" title="Criar meu treino" subtitle="Dê um nome e monte a sua sequência." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Card title="Dados do treino">
         <CriarMeuTreinoForm />
       </Card>

@@ -75,3 +75,30 @@
 .section li {
   margin-bottom: var(--fitos-space-1);
 }
+
+/*
+ * Mobile editorial (AjustesTelas, prints 34/35): mesmo cabeçalho/rodapé
+ * público; texto jurídico integral, sem resumo, com medida de leitura
+ * confortável sobre o fundo escuro.
+ */
+@media (max-width: 839px) {
+  .wrapper {
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .content {
+    padding: var(--fitos-space-4) var(--fitos-space-5) 0;
+  }
+
+  .title {
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 800;
+  }
+
+  .backLink,
+  .inlineLink {
+    color: var(--fitos-orange-300);
+  }
+}

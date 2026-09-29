@@ -4,6 +4,7 @@ import { AppShell, Button, Card, WeeklyRhythmDots, WorkoutTodayCard } from "@/sh
 import { formatCentsBRL } from "@/shared/lib/money";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
+import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "./individualProfileLabels";
 import styles from "./IndividualHome.module.css";
 
 interface SuggestedWorkout {
@@ -38,27 +39,10 @@ interface IndividualHomeProps {
   /// Assinatura real do tenant (FIT-122/127), `null` quando ainda não há
   /// nenhuma contratada — a seção "Seu plano" só aparece com dado real.
   subscription: IndividualSubscription | null;
+  /// Saudação/data do servidor no fuso do produto (AjustesTelas, print 28).
+  greeting?: string;
+  dateLabel?: string;
 }
-
-const OBJECTIVE_LABELS: Record<IndividualObjective, string> = {
-  GANHAR_MASSA: "Ganhar massa muscular",
-  PERDER_PESO: "Perder peso",
-  CONDICIONAMENTO_GERAL: "Condicionamento geral",
-  SAUDE_E_BEM_ESTAR: "Saúde e bem-estar",
-  OUTRO: "Outro",
-};
-
-const EXPERIENCE_LABELS: Record<ExperienceLevel, string> = {
-  INICIANTE: "Iniciante",
-  INTERMEDIARIO: "Intermediário",
-  AVANCADO: "Avançado",
-};
-
-const AVAILABILITY_LABELS: Record<WeeklyAvailability, string> = {
-  UM_A_DOIS_DIAS: "1 a 2 dias por semana",
-  TRES_A_QUATRO_DIAS: "3 a 4 dias por semana",
-  CINCO_OU_MAIS_DIAS: "5 dias ou mais por semana",
-};
 
 /// Hero de "Hoje" (tela-10, pacote visual 2026) — três estados reais, nunca
 /// um placeholder: sessão em andamento (igual desde a FIT-134), treino
@@ -171,9 +155,19 @@ export function IndividualHome({
   suggestedWorkout,
   weeklyRhythm,
   subscription,
+  greeting,
+  dateLabel,
 }: IndividualHomeProps) {
+  const firstName = name.trim().split(/\s+/)[0] ?? name;
   return (
-    <AppShell title="Hoje" subtitle={`Olá, ${name}`} navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
+    <AppShell
+      eyebrow={dateLabel}
+      title={`${greeting ?? "Olá"}, ${firstName}.`}
+      subtitle="Seu treino em movimento."
+      navItems={INDIVIDUAL_NAV_ITEMS}
+      activeKey="hoje"
+      trailing={<LogoutButton />}
+    >
       <HeroDoDia inProgressWorkoutName={inProgressWorkoutName} suggestedWorkout={suggestedWorkout} />
 
       {suggestedWorkout && !inProgressWorkoutName ? <HojeParaVoce suggestedWorkout={suggestedWorkout} /> : null}

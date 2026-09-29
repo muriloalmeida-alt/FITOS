@@ -58,7 +58,7 @@ export default async function AssinaturaPage() {
   const needsCheckout = subscription && subscription.plan.priceCents > 0 && subscription.status !== "CANCELADA";
 
   return (
-    <AppShell title="Assinatura" navItems={navItems} activeKey="assinatura" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Assinatura" title="Assinatura" subtitle="Seu plano FitOS e a cobrança dele." navItems={navItems} activeKey="assinatura" trailing={<LogoutButton />}>
       <div className={styles.subscriptionHighlight}>
         <Card title="Sua assinatura">
           {subscription && subscription.plan ? (

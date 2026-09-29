@@ -55,7 +55,7 @@ describe("CadastrarExercicioPage (FIT-023)", () => {
 
     render(await CadastrarExercicioPage());
 
-    expect(screen.getByRole("heading", { name: "Cadastrar exercício" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Novo exercício" })).toBeInTheDocument();
     expect(screen.getByLabelText("Nome")).toBeInTheDocument();
   });
 });

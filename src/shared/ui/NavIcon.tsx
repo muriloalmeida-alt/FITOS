@@ -19,7 +19,8 @@ export type NavIconName =
   | "exercicios"
   | "financeiro"
   | "assinatura"
-  | "config";
+  | "config"
+  | "novo";
 
 interface NavIconProps {
   name: NavIconName;
@@ -37,23 +38,26 @@ function NavIconGlyph({ name }: { name: NavIconName }) {
         </>
       );
     case "alunos":
+      // AjustesPainel (29/09/2026): "grupo de pessoas" — duas pessoas
+      // lado a lado, legível em 24px mesmo antes do rótulo.
       return (
         <>
-          <circle cx="12" cy="7" r="3" />
-          <circle cx="4" cy="10" r="2" />
-          <circle cx="20" cy="10" r="2" />
-          <path d="M5.5 21c.2-5 2.4-7 6.5-7s6.3 2 6.5 7" />
-          <path d="M1 20c.1-3.3 1.3-5 3.5-5.3M23 20c-.1-3.3-1.3-5-3.5-5.3" />
+          <circle cx="8.5" cy="8" r="3" />
+          <circle cx="16" cy="8" r="3" />
+          <path d="M2.5 20c.4-3.9 2.6-6 6-6s5.6 2.1 6 6" />
+          <path d="M14 14.3c.6-.2 1.3-.3 2-.3 3.4 0 5.6 2.1 6 6" />
         </>
       );
     case "treinos":
+      // AjustesPainel (29/09/2026): halter nivelado (anilhas simétricas e
+      // barra horizontal), o mesmo pictograma das prévias.
       return (
         <>
-          <path d="M7 13 17 11" />
-          <rect x="4" y="8" width="3" height="10" rx="1" />
-          <rect x="1" y="10" width="3" height="6" rx="1" />
-          <rect x="17" y="6" width="3" height="10" rx="1" />
-          <rect x="20" y="8" width="3" height="6" rx="1" />
+          <path d="M7 12h10" />
+          <rect x="4" y="7" width="3" height="10" rx="1" />
+          <rect x="1" y="9" width="3" height="6" rx="1" />
+          <rect x="17" y="7" width="3" height="10" rx="1" />
+          <rect x="20" y="9" width="3" height="6" rx="1" />
         </>
       );
     case "evolucao":
@@ -107,6 +111,13 @@ function NavIconGlyph({ name }: { name: NavIconName }) {
         <>
           <circle cx="12" cy="12" r="3" />
           <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+        </>
+      );
+    case "novo":
+      return (
+        <>
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
         </>
       );
   }

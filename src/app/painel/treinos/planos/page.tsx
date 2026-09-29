@@ -30,7 +30,7 @@ export default async function PlanosPage() {
   const plans = await listTrainingPlansForTenant({ tenantId: ctx.tenantId });
 
   return (
-    <AppShell title="Treinos" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Programas" title="Programas" subtitle="Organize treinos em uma sequência." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <TreinosSubNav active="planos" />
       <div className={styles.header}>
         <p className={styles.subtitle}>

@@ -19,3 +19,28 @@
   font-weight: 450;
   color: var(--fitos-color-on-surface-variant);
 }
+
+/*
+ * Mobile editorial (AjustesTelas, 29/09/2026): seções integradas ao fundo,
+ * sem caixa retangular — só espaço, hierarquia e um divisor fino abaixo.
+ */
+@media (max-width: 839px) {
+  .card {
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    border-radius: 0;
+    padding: 0 0 var(--fitos-space-5) 0;
+  }
+
+  .title {
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 800;
+  }
+
+  .body {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}

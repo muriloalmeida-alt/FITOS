@@ -8,7 +8,7 @@ import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIn
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
-import { SessaoExecucaoIndividual } from "./SessaoExecucaoIndividual";
+import { WorkoutRunner } from "../../WorkoutRunner";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -37,7 +37,7 @@ export default async function SessaoIndividualPage() {
 
   if (!inProgress) {
     return (
-      <AppShell title="Sessão de treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
         <Card title="Nenhuma sessão em andamento">
           <p className={styles.empty}>
             Escolha um treino em <Link href="/painel/meus-treinos">Meus treinos</Link> e toque em &quot;Começar treino&quot;.
@@ -47,36 +47,41 @@ export default async function SessaoIndividualPage() {
     );
   }
 
+  // AjustesTreinoLivre (29/09/2026): execução em modo foco — sem shell/
+  // barra inferior, com cronômetro, descanso, séries, ajuste rápido de
+  // carga e áudio.
   return (
-    <AppShell title="Sessão de treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <Card title={inProgress.workout.name}>
-        <SessaoExecucaoIndividual
-          sessionId={inProgress.id}
-          items={inProgress.workout.workoutExercises.map((item) => {
-            const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
-            return {
-              id: item.id,
-              exerciseName: item.exercise.name,
-              exerciseMuscle: item.exercise.muscle,
-              instructions: item.exercise.instructions,
-              sets: item.sets,
-              reps: item.reps,
-              durationSeconds: item.durationSeconds,
-              load: item.load,
-              restSeconds: item.restSeconds,
-              notes: item.notes,
-              result: result
-                ? {
-                    setsCompleted: result.setsCompleted,
-                    repsCompleted: result.repsCompleted,
-                    durationSecondsCompleted: result.durationSecondsCompleted,
-                    loadUsed: result.loadUsed,
-                  }
-                : null,
-            };
-          })}
-        />
-      </Card>
-    </AppShell>
+    <WorkoutRunner
+      sessionId={inProgress.id}
+      workoutName={inProgress.workout.name}
+      workoutId={inProgress.workoutId}
+      startedAt={inProgress.startedAt.toISOString()}
+      mode="individual"
+      apiBase="/api/minhas-sessoes"
+      exitHref="/painel/meus-treinos"
+      items={inProgress.workout.workoutExercises.map((item) => {
+        const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
+        return {
+          id: item.id,
+          exerciseName: item.exercise.name,
+          exerciseMuscle: item.exercise.muscle,
+          instructions: item.exercise.instructions,
+          sets: item.sets,
+          reps: item.reps,
+          durationSeconds: item.durationSeconds,
+          load: item.load,
+          restSeconds: item.restSeconds,
+          notes: item.notes,
+          result: result
+            ? {
+                setsCompleted: result.setsCompleted,
+                repsCompleted: result.repsCompleted,
+                durationSecondsCompleted: result.durationSecondsCompleted,
+                loadUsed: result.loadUsed,
+              }
+            : null,
+        };
+      })}
+    />
   );
 }

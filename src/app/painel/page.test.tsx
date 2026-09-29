@@ -169,7 +169,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { name: "Início" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Joana\.$/ })).toBeInTheDocument();
     expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
     expect(screen.getByText("Configurações")).toBeInTheDocument();
     expect(screen.queryByText("Sua conta")).not.toBeInTheDocument();
@@ -239,7 +239,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByText("Precisa de atenção")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Seu dia" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Diego Santos/ })).toHaveAttribute("href", "/painel/alunos/s1");
     expect(screen.getByText("Mensalidade vencida · R$ 320,00")).toBeInTheDocument();
   });
@@ -264,7 +264,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { name: "Hoje" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).toBeInTheDocument();
     expect(screen.getByText("Joana")).toBeInTheDocument();
     expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
@@ -288,7 +288,7 @@ describe("PainelPage (FIT-012)", () => {
     render(await PainelPage());
 
     expect(screen.getByText("Sem vínculo ativo")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Hoje" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 
@@ -332,7 +332,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { name: "Hoje" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).toBeInTheDocument();
     expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
     expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
     expect(screen.getByText("1 treino criado")).toBeInTheDocument();
@@ -417,7 +417,7 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByText("Conta inativa")).toBeInTheDocument();
     expect(screen.getByText(/inativada pelo seu personal/)).toBeInTheDocument();
     expect(screen.queryByText("Sem vínculo ativo")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Hoje" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 });

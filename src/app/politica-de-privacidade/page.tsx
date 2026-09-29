@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { appName } from "@/shared/config/env";
+import { PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function PoliticaDePrivacidadePage() {
   return (
     <div className={styles.wrapper}>
+      <PublicMobileHeader />
       <div className={styles.content}>
         <Link href="/" className={styles.backLink}>
           ← Voltar ao início
@@ -99,6 +101,7 @@ export default function PoliticaDePrivacidadePage() {
           .
         </p>
       </div>
+      <PublicMobileFooter />
     </div>
   );
 }

@@ -50,7 +50,7 @@ export default async function ModeloDetalhePage({ params }: ModeloDetalhePagePro
   ]);
 
   return (
-    <AppShell title={workout.name} navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Detalhe do modelo" title={workout.name} subtitle="Prescrição e sequência de exercícios do modelo." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Link href="/painel/treinos" className={styles.backLink}>
         ← Voltar para os modelos
       </Link>

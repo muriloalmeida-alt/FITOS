@@ -67,3 +67,29 @@
     line-height: 42px;
   }
 }
+
+/*
+ * Mobile editorial (AjustesTelas, print 21): o resumo "controle do seu
+ * negócio" fica integrado ao fundo — sem fotografia nem cartão; o valor
+ * real continua em destaque.
+ */
+@media (max-width: 839px) {
+  .hero {
+    height: auto;
+    min-height: 0;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px solid var(--fitos-color-divider);
+  }
+
+  .image,
+  .overlay {
+    display: none;
+  }
+
+  .content {
+    position: static;
+    max-width: none;
+    padding: 0 0 var(--fitos-space-5);
+  }
+}
