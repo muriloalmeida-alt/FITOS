@@ -1,95 +1,220 @@
+/*
+ * Tela de acesso (AjustesLogin, 29/09/2026 — FIT-139). A composição é
+ * sempre escura (foto + degradê), em qualquer largura e tema do sistema:
+ * os tokens semânticos são redefinidos só dentro de `.main`, para que
+ * `TextField`/`Button` herdem as cores claras sobre a foto sem CSS
+ * duplicado nos componentes.
+ */
 .main {
+  --fitos-color-on-surface: #ffffff;
+  --fitos-color-on-surface-variant: #d5dbe1;
+  --fitos-color-outline: rgba(255, 255, 255, 0.42);
+  --fitos-color-surface: transparent;
+  --fitos-color-primary: var(--fitos-orange-500);
+  --fitos-color-on-primary: var(--fitos-navy-900);
+  --fitos-color-error: #ffb4ab;
+
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background-color: var(--fitos-color-chrome);
+  background-color: var(--fitos-navy-900);
+  color: var(--fitos-color-on-surface);
+  color-scheme: dark;
 }
 
-.formColumn {
+.photo {
+  z-index: -2;
+  object-fit: cover;
+  object-position: 62% 12%;
+}
+
+/* Topo leve (preserva a pessoa); a partir do meio, escurece até quase
+   sólido para os campos terem contraste (degradê da proposta). */
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 21, 37, 0.5) 0%,
+    rgba(11, 21, 37, 0.24) 26%,
+    rgba(16, 28, 44, 0.7) 44%,
+    rgba(16, 28, 44, 0.94) 62%,
+    rgba(16, 28, 44, 0.99) 100%
+  );
+}
+
+.content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--fitos-space-6);
-  padding: 0 var(--fitos-space-4) var(--fitos-space-6);
-  margin-top: calc(var(--fitos-shape-large) * -1);
-}
-
-@media (min-width: 840px) {
-  .main {
-    flex-direction: row;
-    background-color: var(--fitos-color-surface);
-  }
-
-  .formColumn {
-    flex: 0 0 50%;
-    align-items: center;
-    justify-content: center;
-    padding: var(--fitos-space-8);
-    margin-top: 0;
-  }
-}
-
-.card {
+  justify-content: space-between;
+  gap: var(--fitos-space-8);
   width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-6);
-  background-color: var(--fitos-color-surface-container);
-  border: 1px solid var(--fitos-color-outline-variant);
-  border-radius: var(--fitos-shape-large);
-  padding: var(--fitos-space-8) var(--fitos-space-6);
+  padding: calc(env(safe-area-inset-top, 0px) + var(--fitos-space-8))
+    calc(env(safe-area-inset-right, 0px) + 28px)
+    calc(env(safe-area-inset-bottom, 0px) + var(--fitos-space-6))
+    calc(env(safe-area-inset-left, 0px) + 28px);
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
+.brand {
+  align-self: flex-start;
+  display: inline-flex;
+  border-radius: var(--fitos-shape-small);
 }
 
-.title {
+.brand:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 4px;
+}
+
+.panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-8);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.headline {
   margin: 0;
   font-size: 28px;
   line-height: 36px;
   font-weight: 700;
-  color: var(--fitos-color-on-surface);
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-shadow: 0 1px 12px rgba(7, 9, 13, 0.35);
 }
 
-.subtitle {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 450;
-  color: var(--fitos-color-on-surface-variant);
+.headlineAccent {
+  color: var(--fitos-orange-500);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--fitos-space-4);
+  gap: var(--fitos-space-5);
 }
 
-/*
- * No compact (pacote visual 2026), o rodapé fica fora do cartão branco,
- * sobre o fundo navy da página (ver print mobile tela-01) — por isso o
- * texto claro aqui. Em desktop, a coluna toda passa a branca (`.main`
- * acima) e o rodapé herda o mesmo tom escuro do resto do formulário.
- */
+/* Campo em linha, sem caixa, em qualquer largura (no desktop o
+   `TextField` padrão ainda é contornado — aqui fica sobre a foto). */
+.field label {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.field input {
+  padding: var(--fitos-space-2) 0;
+  border: none;
+  border-bottom: 1px solid var(--fitos-color-outline);
+  border-radius: 0;
+  background-color: transparent;
+  color: #ffffff;
+}
+
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.field input:focus-visible {
+  outline: none;
+  border-bottom: 2px solid var(--fitos-orange-500);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.field input[aria-invalid="true"] {
+  border-bottom: 2px solid var(--fitos-color-error);
+}
+
+/* Preenchimento automático do navegador não pode virar caixa clara. */
+.field input:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgba(16, 28, 44, 0.99) inset;
+  caret-color: #ffffff;
+}
+
+.feedback {
+  min-height: 40px;
+}
+
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fitos-space-3);
+}
+
+.formErrorIcon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--fitos-color-error);
+  color: var(--fitos-navy-900);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.formErrorText {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
+  line-height: 22px;
+  color: #ffffff;
+}
+
+.formErrorHelp {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.submit {
+  width: 100%;
+  min-height: 52px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.submit:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
 .footer {
   margin: 0;
-  max-width: 420px;
-  width: 100%;
-  margin-inline: auto;
   font-size: 14px;
-  line-height: 20px;
+  line-height: 22px;
   text-align: center;
-  color: var(--fitos-color-on-chrome-variant);
+  color: var(--fitos-color-on-surface-variant);
 }
 
 .footer a {
+  display: inline-block;
+  padding: var(--fitos-space-2) var(--fitos-space-3);
   color: var(--fitos-orange-300);
-  font-weight: 650;
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -98,12 +223,87 @@
   text-decoration: underline;
 }
 
-@media (min-width: 840px) {
+/* Alturas pequenas: menos respiro para manter campos e botão visíveis;
+   o resto rola naturalmente (sem altura fixa). */
+@media (max-height: 700px) {
+  .content {
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--fitos-space-6));
+    gap: var(--fitos-space-6);
+  }
+
+  .panel {
+    gap: var(--fitos-space-6);
+  }
+}
+
+@media (max-width: 359px) {
+  .content {
+    padding-inline: calc(env(safe-area-inset-left, 0px) + 20px) calc(env(safe-area-inset-right, 0px) + 20px);
+  }
+
+  .headline {
+    font-size: 24px;
+    line-height: 32px;
+  }
+}
+
+/* Tablet em pé: o formulário não se estica por toda a largura. */
+@media (min-width: 600px) and (max-width: 839px) {
+  .panel {
+    max-width: 440px;
+  }
+
   .footer {
-    color: var(--fitos-color-on-surface-variant);
+    text-align: left;
   }
 
   .footer a {
-    color: var(--fitos-color-primary);
+    padding-inline: 0;
+  }
+}
+
+/*
+ * Desktop: foto em tela cheia, degradê escurecendo a esquerda e o
+ * formulário composto nessa região, com largura máxima confortável.
+ */
+@media (min-width: 840px) {
+  .photo {
+    object-position: 70% 22%;
+  }
+
+  .shade {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(16, 28, 44, 0.97) 0%,
+        rgba(16, 28, 44, 0.9) 34%,
+        rgba(16, 28, 44, 0.55) 56%,
+        rgba(16, 28, 44, 0.12) 80%,
+        rgba(16, 28, 44, 0.05) 100%
+      ),
+      linear-gradient(180deg, rgba(11, 21, 37, 0.35) 0%, rgba(11, 21, 37, 0) 30%);
+  }
+
+  .content {
+    justify-content: flex-start;
+    padding: var(--fitos-space-10) var(--fitos-space-16);
+  }
+
+  .panel {
+    max-width: 400px;
+    margin-block: auto;
+  }
+
+  .headline {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .footer {
+    text-align: left;
+  }
+
+  .footer a {
+    padding-inline: 0;
   }
 }

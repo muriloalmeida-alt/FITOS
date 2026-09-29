@@ -44,8 +44,41 @@ describe("EntrarForm", () => {
     await user.click(screen.getByRole("button", { name: "Entrar" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("E-mail ou senha inválidos.");
+    expect(alert).toHaveTextContent("E-mail ou senha inválidos.");
+    expect(alert).toHaveTextContent("Confira os dados e tente novamente.");
     expect(push).not.toHaveBeenCalled();
+    // O e-mail digitado permanece; campos e botão continuam utilizáveis.
+    expect(screen.getByLabelText("E-mail")).toHaveValue("alguem@example.com");
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+  });
+
+  it("usa autocomplete de login (username/current-password) nos campos", async () => {
+    const { EntrarForm } = await import("./EntrarForm");
+    render(<EntrarForm />);
+
+    expect(screen.getByLabelText("E-mail")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText("E-mail")).toHaveAttribute("autocomplete", "username");
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("autocomplete", "current-password");
+  });
+
+  it("desabilita o envio durante o carregamento e mostra retorno ao usuário", async () => {
+    let resolveSignIn: (value: { error: null }) => void = () => {};
+    signInEmail.mockReturnValue(new Promise((resolve) => (resolveSignIn = resolve)));
+    const { EntrarForm } = await import("./EntrarForm");
+    const user = userEvent.setup();
+    render(<EntrarForm />);
+
+    await user.type(screen.getByLabelText("E-mail"), "alguem@example.com");
+    await user.type(screen.getByLabelText("Senha"), "senha-correta-123");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    const loading = await screen.findByRole("button", { name: "Entrando…" });
+    expect(loading).toBeDisabled();
+    await user.click(loading);
+    expect(signInEmail).toHaveBeenCalledTimes(1);
+
+    resolveSignIn({ error: null });
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/painel"));
   });
 
   it("redireciona para /painel após login válido", async () => {
