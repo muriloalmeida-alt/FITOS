@@ -43,10 +43,11 @@ Só conclui com: (1) os 5 PRs revisados e mesclados; (2) validação visual real
 - [FIT-132 #172](https://github.com/muriloalmeida-alt/FitOS/issues/172) — PR2: Entrada e onboarding. Mesclado (PR #173).
 - [FIT-133 #174](https://github.com/muriloalmeida-alt/FitOS/issues/174) — PR3: Personal. Mesclado (PR #175).
 - [FIT-134 #176](https://github.com/muriloalmeida-alt/FitOS/issues/176) — PR4: Aluno e Livre. Mesclado (PR #177).
-- FIT-135 — PR5: Consolidação (acessibilidade, 4 larguras, documentação final). Em andamento.
+- [FIT-135 #178](https://github.com/muriloalmeida-alt/FitOS/issues/178) — PR5: Consolidação (acessibilidade, 4 larguras, documentação final). Mesclado (PR #179).
+- FIT-136 — Correção pós-validação real: `/painel/exercicios` não seguia `tela-08`. Em andamento.
 
 ## Status do aceite do épico (ver "Aceite do épico" acima)
 
-- (1) 5 PRs revisados e mesclados: 4 de 5 concluídos; PR5 em andamento.
-- (2) Validação visual real em Railway homologação, nas 4 larguras, com contas reais dos três papéis: **não realizada** — este programa de execução (sandbox sem PostgreSQL/Docker e sem acesso de rede a `railway.app`) não tem meios de autenticar contas reais nem alcançar o ambiente de homologação. Fica pendente, exige o próprio Murilo ou um ambiente com esse acesso.
-- (3) Aceite explícito de Murilo: pendente do item (2) acima — não pode ser antecipado por testes automatizados ou diff de código, conforme a própria regra do épico.
+- (1) 5 PRs do plano revisados e mesclados: **concluído**.
+- (2) Validação visual real em Railway homologação, nas 4 larguras, com contas reais dos três papéis: **em andamento**. Murilo já iniciou com a conta Personal real em `hml-fitos.up.railway.app` e encontrou uma divergência real (`/painel/exercicios` não seguia `tela-08` — ver FIT-136), corrigida. Faltam: reconfirmar Personal após a correção, e validar Aluno e FitOS Livre. Este programa de execução não tem meios de repetir essa validação sozinho (sandbox sem PostgreSQL/Docker e sem acesso de rede a `railway.app`).
+- (3) Aceite explícito de Murilo: pendente do item (2) acima — não pode ser antecipado por testes automatizados ou diff de código, conforme a própria regra do épico. **Lição registrada**: uma avaliação minha de que as capturas "pareciam boas" foi precipitada e corrigida por Murilo — daqui em diante, qualquer captura real recebida é comparada tela a tela contra o print mapeado em `01-CONTRATO-VISUAL-E-ROTAS.md` antes de qualquer conclusão, nunca só "parece certo".
