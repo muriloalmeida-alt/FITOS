@@ -1,0 +1,382 @@
+/*
+ * Tela de abertura (FIT-141). Sempre escura, em qualquer largura/tema,
+ * cobrindo a tela inteira (inclusive áreas seguras). Só CSS/SVG: nenhuma
+ * imagem pesada para carregar antes de a própria abertura aparecer.
+ */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(120% 70% at 50% 42%, #10131a 0%, #07090d 62%, #050608 100%);
+  color: #ffffff;
+  color-scheme: dark;
+}
+
+.splash > * {
+  transition: opacity 240ms ease-in;
+}
+
+/* Saída: some só o conteúdo; o fundo escuro fica até a troca de rota
+   (sumir o fundo mostraria o fundo claro do desktop — um clarão). */
+.leaving > * {
+  opacity: 0;
+}
+
+/* Brilhos difusos: lateral esquerda e canto superior direito. */
+.glowLeft,
+.glowTop {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(40px);
+  animation: breathe 5.5s ease-in-out infinite alternate;
+}
+
+.glowLeft {
+  width: 70vmin;
+  height: 70vmin;
+  left: -38vmin;
+  top: 44%;
+  background: radial-gradient(circle, rgba(224, 80, 26, 0.75) 0%, rgba(204, 54, 0, 0) 70%);
+}
+
+.glowTop {
+  width: 70vmin;
+  height: 70vmin;
+  right: -36vmin;
+  top: -12vmin;
+  background: radial-gradient(circle, rgba(255, 120, 71, 0.45) 0%, rgba(255, 120, 71, 0) 70%);
+  animation-delay: -2.5s;
+}
+
+.waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.drift {
+  transform-origin: 50% 70%;
+  animation: drift 9s ease-in-out infinite alternate;
+}
+
+.band {
+  opacity: 0;
+  animation: fadeIn 1s ease-out 0.25s forwards;
+}
+
+.haze {
+  fill: none;
+  stroke: #e0501a;
+  stroke-width: 34;
+  stroke-linecap: round;
+  filter: url(#splash-haze);
+  opacity: 0;
+  animation: hazeIn 1.2s ease-out 0.2s forwards, hazePulse 4.5s ease-in-out 1.4s infinite alternate;
+}
+
+.hazeTop {
+  stroke-width: 22;
+  animation-delay: 0.1s, 1.3s;
+}
+
+/* Linhas: desenham-se na entrada (dash de 0 a 1 — `pathLength=1`). */
+.line {
+  fill: none;
+  stroke: url(#splash-wave);
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: url(#splash-glow);
+  animation: draw 1.1s cubic-bezier(0.22, 0.8, 0.26, 1) forwards;
+}
+
+.lineMain {
+  stroke-width: 3.2;
+}
+
+.lineSoft {
+  stroke-width: 1.6;
+  opacity: 0.75;
+  animation-delay: 0.1s;
+}
+
+.lineFaint {
+  stroke-width: 0.9;
+  opacity: 0.45;
+  animation-delay: 0.2s;
+}
+
+.lineTop {
+  stroke-width: 1.8;
+  opacity: 0.8;
+  animation-delay: 0.05s;
+}
+
+/* Brilho que corre pelas curvas (segmento curto de dash em loop). */
+.spark {
+  fill: none;
+  stroke: #ffd2bf;
+  stroke-linecap: round;
+  stroke-dasharray: 0.08 0.92;
+  stroke-dashoffset: 1;
+  filter: url(#splash-glow);
+  opacity: 0;
+  animation:
+    fadeIn 0.5s ease-out 0.8s forwards,
+    travel 2.8s linear 0.8s infinite;
+}
+
+.sparkMain {
+  stroke-width: 3;
+}
+
+.sparkSoft {
+  stroke-width: 1.6;
+  animation-duration: 0.6s, 3.6s;
+  animation-delay: 1s, 1s;
+}
+
+.center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-inline: 24px;
+  /* Leve deslocamento para cima, como na referência (marca a ~40%). */
+  margin-top: -6vh;
+}
+
+.logo {
+  max-width: 78vw;
+  height: auto;
+  opacity: 0;
+  transform: scale(0.94);
+  animation: logoIn 0.8s cubic-bezier(0.22, 0.8, 0.26, 1) 0.1s forwards;
+}
+
+.tagline {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  /* Compensa o espaço extra após a última letra para centralizar. */
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  color: #e6e9ee;
+  opacity: 0;
+  animation: taglineIn 1s ease-out 0.45s forwards;
+}
+
+.loader {
+  margin-top: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  opacity: 0;
+  animation: fadeIn 0.6s ease-out 0.7s forwards;
+}
+
+/* Anel: trilho discreto + arco laranja com brilho, girando. */
+.ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+}
+
+.ring::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(255, 120, 71, 0) 0deg, rgba(255, 120, 71, 0) 200deg, #ff7847 300deg, #ffd2bf 356deg, rgba(255, 120, 71, 0) 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  filter: drop-shadow(0 0 6px rgba(255, 120, 71, 0.85));
+  animation: spin 1.1s linear infinite;
+}
+
+.label {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #d5dbe1;
+}
+
+.dots span {
+  display: inline-block;
+  animation: dot 1.2s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.noscript {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+  color: #ffad8f;
+  font-weight: 700;
+}
+
+@media (min-width: 840px) {
+  .logo {
+    max-width: 340px;
+  }
+
+  .tagline {
+    font-size: 13px;
+  }
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes travel {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes logoIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes taglineIn {
+  from {
+    opacity: 0;
+    letter-spacing: 0.7em;
+    margin-right: -0.7em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.42em;
+    margin-right: -0.42em;
+  }
+}
+
+@keyframes hazeIn {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes hazePulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes breathe {
+  from {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-6px, -14px, 0) scale(1.03);
+  }
+}
+
+/*
+ * Movimento reduzido: tudo já visível e parado; o anel continua girando
+ * devagar (é o único indicador de progresso — WCAG 2.3.3 permite
+ * movimento essencial), sem brilhos correndo nem deriva.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .glowLeft,
+  .glowTop,
+  .drift,
+  .haze,
+  .spark,
+  .dots span {
+    animation: none;
+  }
+
+  .spark {
+    display: none;
+  }
+
+  .haze {
+    opacity: 0.6;
+  }
+
+  .band,
+  .logo,
+  .tagline,
+  .loader {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .ring::before {
+    animation-duration: 2.4s;
+  }
+
+  .splash > * {
+    transition: none;
+  }
+}
