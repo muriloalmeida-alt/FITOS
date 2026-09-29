@@ -1302,3 +1302,12 @@ Murilo pediu explicitamente "Compare as demais telas" / "Revise todas as telas" 
 **Testes**: `getWeeklyRhythmForStudent` ganha 3 testes de integração reais (Postgres). `AlunoHome.test.tsx` +2. `IndividualHome.test.tsx` — **arquivo novo** (não existia nenhum teste para este componente até agora) — 6 testes. `StudentCard.test.tsx` +4. `alunos/page.test.tsx` +1. `PersonalHero.test.tsx` reescrito para as novas props. `PersonalHome.test.tsx`/`page.test.tsx` ajustados para os números que agora aparecem duas vezes (hero + card abaixo) e para os três novos mocks necessários (`getWeeklyRhythmForStudent`, `getSubscriptionForTenant`, `listWorkoutExercisesForWorkout`). Suíte completa: **815/815** (23 novos desde o PR #181), zero regressão. `tsc --noEmit`/`eslint .`/`next build`/`npm audit --omit=dev` limpos.
 
 **Pendência explícita**: sem captura real de nenhuma das quatro telas corrigidas — todas autenticadas, mesma limitação de sempre (sem Postgres/Docker neste sandbox). Depende de Murilo confirmar em homologação, tela a tela contra os prints, antes de qualquer declaração de "pronto".
+
+**Achado real do Gate (não fabricado, corrigido antes do merge)**: o primeiro push do PR falhou de verdade em CI, por dois motivos reais, ambos causados pelos novos testes deste PR:
+
+1. `workouts.integration.test.ts`: o `afterAll` de limpeza apagava `Workout` antes das `WorkoutSession` que os novos testes de `getWeeklyRhythmForStudent` criam — violava `workout_sessions_workoutId_tenantId_fkey` (`onDelete: Restrict`). Corrigido apagando as sessões primeiro.
+2. `catalog.integration.test.ts` (arquivo que este PR não tocava diretamente): um teste pré-existente buscava o catálogo sem filtro de busca, contando com o item criado cair nos primeiros 20 resultados (ordenado por nome) de um catálogo real com 200+ exercícios curados — frágil por construção. Os novos exercícios globais dos testes de ritmo semanal (nomes começando com "Global", que ordenam antes de "Push-up") empurraram esse item para fora da página, expondo a fragilidade pela primeira vez. Corrigido escopando a busca ao próprio `run` sintético do teste — mesmo padrão que o teste seguinte, no mesmo arquivo, já usa.
+
+Gate verde na segunda tentativa, mesmo commit da PR (nenhum retry cego, nenhum "flake" declarado sem investigar).
+
+**PR mesclado**: [PR #183](https://github.com/muriloalmeida-alt/FitOS/pull/183) → `main` (`29f0f40`). CI real (Postgres real) e deploy de preview do Railway (`fitos-web-hml-fitos-pr-183`) verdes. FIT-137 #182 fechada com esse resultado registrado.
