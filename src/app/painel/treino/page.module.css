@@ -69,3 +69,20 @@
   color: var(--fitos-color-on-surface-variant);
   font-style: italic;
 }
+
+
+/*
+ * Mobile editorial (AjustesTelas, 29/09/2026): integrado ao fundo — sem
+ * caixa; divisor fino/linha de campo com foco e erro explícitos.
+ */
+@media (max-width: 839px) {
+  .itemRow {
+    padding-left: 0;
+    padding-right: 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}

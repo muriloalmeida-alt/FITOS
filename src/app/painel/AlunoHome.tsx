@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell, Card, WeeklyRhythmBar, WorkoutExerciseCard, WorkoutTodayCard } from "@/shared/ui";
 import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
 import { LogoutButton } from "./LogoutButton";
@@ -14,6 +15,10 @@ interface AlunoHomeProps {
   /// `targetDays` só existe com plano ativo — a seção "Seu ritmo nesta
   /// semana" (tela-09) só aparece quando há uma meta real para comparar.
   weeklyRhythm: { completedDays: number; targetDays: number | null };
+  /// Saudação/data do servidor no fuso do produto (AjustesTelas, print 24).
+  /// Opcionais: sem elas, o cabeçalho cai para "Olá, <nome>.".
+  greeting?: string;
+  dateLabel?: string;
 }
 
 interface PrescriptionSummaryInput {
@@ -147,21 +152,17 @@ function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTod
 /// dias reais com sessão CONCLUIDA nesta semana contra a meta real (dias
 /// distintos configurados no plano atribuído). Só aparece com meta real
 /// (`targetDays !== null`) — sem plano ativo, não há o que comparar.
-export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession, weeklyRhythm }: AlunoHomeProps) {
+export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession, weeklyRhythm, greeting, dateLabel }: AlunoHomeProps) {
+  const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
   return (
-    <AppShell title="Hoje" subtitle={`Olá, ${displayName}`} navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
-      <Card title="Seu vínculo">
-        <p>
-          Personal: <strong>{personalName}</strong>
-        </p>
-        <p>
-          Espaço: <strong>{tenantName}</strong>
-        </p>
-        <p>
-          Estado da conta: <strong>Ativa</strong>
-        </p>
-      </Card>
-
+    <AppShell
+      eyebrow={dateLabel}
+      title={`${greeting ?? "Olá"}, ${firstName}.`}
+      subtitle="Seu treino em movimento."
+      navItems={ALUNO_NAV_ITEMS}
+      activeKey="hoje"
+      trailing={<LogoutButton />}
+    >
       <Card title="Treino de hoje">
         <TreinoDeHoje schedule={schedule} hasInProgressSession={hasInProgressSession} />
       </Card>
@@ -175,6 +176,25 @@ export function AlunoHome({ displayName, tenantName, personalName, schedule, has
           />
         </Card>
       ) : null}
+
+      <Card title="Evolução">
+        <p>Suas avaliações registradas pelo seu personal.</p>
+        <Link href="/painel/progresso" className={styles.rowLink}>
+          Ver evolução <span aria-hidden="true">→</span>
+        </Link>
+      </Card>
+
+      <Card title="Seu vínculo">
+        <p>
+          Personal: <strong>{personalName}</strong>
+        </p>
+        <p>
+          Espaço: <strong>{tenantName}</strong>
+        </p>
+        <p>
+          Estado da conta: <strong>Ativa</strong>
+        </p>
+      </Card>
     </AppShell>
   );
 }

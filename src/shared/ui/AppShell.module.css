@@ -1,62 +1,155 @@
 .shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
+/*
+ * Cabeçalho mobile (AjustesPainel/AjustesTelas, 29/09/2026): marca à
+ * esquerda e avatar à direita, integrados ao fundo — nenhuma faixa ou
+ * caixa. O respiro superior reserva relógio/câmera/ilha
+ * (`safe-area-inset-top`) mais uma margem confortável (~40px no modelo
+ * sem inset); nada é desenhado sob a status bar.
+ */
 .topBar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--fitos-space-4);
-  padding: var(--fitos-space-4) var(--fitos-space-4);
-  border-bottom: 1px solid var(--fitos-color-chrome-container);
-  background-color: var(--fitos-color-chrome);
+  padding: max(40px, calc(env(safe-area-inset-top) + var(--fitos-space-4))) var(--fitos-space-5) var(--fitos-space-2);
   color: var(--fitos-color-on-chrome);
-}
-
-/* Barra superior desktop: 78px fixos (ADR-014, pacote visual 2026, rail de 244px). */
-@media (min-width: 840px) {
-  .topBar {
-    min-height: 78px;
-    align-items: center;
-  }
 }
 
 .brand {
-  margin-bottom: var(--fitos-space-1);
+  display: block;
+  height: 44px;
+  width: auto;
+  margin-left: -6px;
 }
 
-.title {
-  margin: var(--fitos-space-1) 0 0 0;
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 700;
-  color: var(--fitos-color-on-chrome);
+.topBarEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
 }
 
-.subtitle {
-  margin: var(--fitos-space-1) 0 0 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--fitos-color-on-chrome-variant);
-}
-
+/* No mobile, "Sair" vive no menu do avatar (evita dois botões no cabeçalho). */
 .trailing {
+  display: none;
   flex-shrink: 0;
   /*
-   * `trailing` é sempre renderizado sobre o chrome fixo (azul-noturno),
-   * que não alterna com o tema — mas o único conteúdo que ele recebe hoje
-   * (`LogoutButton`, variante outlined) usa os tokens de tema
-   * (--fitos-color-primary/--fitos-color-outline), pensados para superfícies
-   * que seguem o tema claro/escuro. Sem este ajuste, o botão "Sair" no tema
-   * claro cai para 2.54:1 de contraste contra o chrome (abaixo do mínimo
-   * AA de 3:1 para bordas/texto de componente). Redefine as mesmas variáveis
-   * localmente para os equivalentes de chrome, sem alterar `Button` nem
-   * nenhum outro consumidor delas fora deste slot.
+   * `trailing` é renderizado sobre o chrome fixo (azul-noturno) no
+   * desktop — redefine as variáveis de tema localmente para os
+   * equivalentes de chrome (contraste AA do botão "Sair").
    */
   --fitos-color-primary: var(--fitos-color-chrome-accent);
   --fitos-color-outline: var(--fitos-color-on-chrome-variant);
+}
+
+.account {
+  position: relative;
+}
+
+.avatarButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--fitos-shape-full);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: #22324a;
+  color: #ffffff;
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.accountMenu {
+  position: absolute;
+  top: calc(100% + var(--fitos-space-2));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  min-width: 240px;
+  padding: var(--fitos-space-3);
+  border-radius: var(--fitos-shape-large);
+  background-color: var(--fitos-color-chrome);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  --fitos-color-primary: var(--fitos-color-chrome-accent);
+  --fitos-color-outline: var(--fitos-color-on-chrome-variant);
+}
+
+.accountName {
+  margin: 0;
+  padding: var(--fitos-space-1) var(--fitos-space-2) var(--fitos-space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.accountLinks {
+  display: flex;
+  flex-direction: column;
+}
+
+.accountLinks .navItem,
+.accountLinks .navItemDisabled {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--fitos-space-3);
+  font-size: 15px;
+}
+
+.accountTrailing {
+  display: flex;
+  padding-top: var(--fitos-space-1);
+}
+
+.accountTrailing > * {
+  width: 100%;
+}
+
+/* Cabeçalho da página: eyebrow + título + apoio, integrado ao fundo. */
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fitos-color-eyebrow, var(--fitos-color-primary));
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fitos-color-on-surface);
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 450;
+  color: var(--fitos-color-on-surface-variant);
 }
 
 .body {
@@ -67,33 +160,37 @@
 .content {
   flex: 1;
   width: 100%;
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
-  padding: var(--fitos-space-4);
+  padding: var(--fitos-space-5) var(--fitos-space-5);
   display: flex;
   flex-direction: column;
   gap: var(--fitos-space-6);
-  padding-bottom: calc(var(--fitos-space-16) + var(--fitos-space-4));
+  /* Barra inferior (~68px) + área segura: nunca cobre o fim do conteúdo. */
+  padding-bottom: calc(68px + env(safe-area-inset-bottom) + var(--fitos-space-8));
 }
 
 /*
- * Navegação — compact (mobile): barra inferior fixa, até 4 destinos + "Mais".
- * Altura ~68px (ADR-014/pacote visual 2026) + área segura do dispositivo,
- * nunca cortada por notch/home indicator.
+ * Navegação — compact (mobile): barra inferior azul-noturno com separador
+ * superior e quatro posições de largura igual. Ícone de 24px sobre o
+ * rótulo, mesmo eixo; ativo em laranja (ícone e texto), demais em cinza
+ * claro (AjustesPainel item 6).
  */
 .bottomNav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: var(--fitos-space-1);
+  z-index: 10;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  align-items: stretch;
   min-height: 68px;
-  padding: var(--fitos-space-2) var(--fitos-space-2) calc(var(--fitos-space-2) + env(safe-area-inset-bottom));
+  padding: var(--fitos-space-1) var(--fitos-space-1) calc(var(--fitos-space-1) + env(safe-area-inset-bottom));
   background-color: var(--fitos-color-chrome);
-  border-top: 1px solid var(--fitos-color-chrome-container);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .moreMenu {
@@ -110,16 +207,21 @@
 }
 
 .moreButton {
-  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 56px;
   min-width: 48px;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
+  padding: var(--fitos-space-1);
   border-radius: var(--fitos-shape-small);
   border: none;
   background: transparent;
-  color: var(--fitos-color-on-chrome-variant);
+  color: #c9d2dc;
   font-family: var(--fitos-font-family);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -146,17 +248,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 48px;
+  gap: 4px;
+  min-height: 56px;
   min-width: 48px;
-  padding: var(--fitos-space-1) var(--fitos-space-2);
+  padding: var(--fitos-space-1) var(--fitos-space-1);
   border-radius: var(--fitos-shape-medium);
   font-family: var(--fitos-font-family);
   font-size: 12px;
   line-height: 16px;
-  font-weight: 650;
+  font-weight: 600;
+  text-align: center;
   text-decoration: none;
-  color: var(--fitos-color-on-chrome-variant);
+  color: #c9d2dc;
+  transition: color var(--fitos-motion-short) var(--fitos-motion-standard);
 }
 
 .navIcon {
@@ -169,16 +273,16 @@
   white-space: nowrap;
 }
 
-/*
- * Indicador ativo — pílula pálida (ADR-014/pacote visual 2026): fundo
- * `surface-warm` (`#FFF0E8`) com ícone laranja, ~40×34px na navegação
- * inferior mobile. No rail desktop, a regra abaixo troca para a linha
- * selecionada `chrome-active-row` (`#27374A`) — dois tratamentos de
- * "ativo" para duas superfícies de navegação distintas.
- */
 .navItemActive {
   color: var(--fitos-orange-500);
-  background-color: var(--fitos-color-surface-warm);
+  font-weight: 800;
+}
+
+.navItem:focus-visible,
+.moreButton:focus-visible,
+.avatarButton:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
 }
 
 .navItemDisabled {
@@ -193,6 +297,27 @@
 }
 
 @media (min-width: 840px) {
+  .topBar {
+    min-height: 78px;
+    padding: var(--fitos-space-4) var(--fitos-space-8);
+    border-bottom: 1px solid var(--fitos-color-chrome-container);
+    background-color: var(--fitos-color-chrome);
+  }
+
+  .brand {
+    height: 32px;
+    margin-left: 0;
+  }
+
+  .trailing {
+    display: block;
+  }
+
+  /* Desktop: o rail já lista todos os destinos; "Sair" fica na barra. */
+  .account {
+    display: none;
+  }
+
   .bottomNav {
     display: none;
   }
@@ -213,6 +338,8 @@
     gap: var(--fitos-space-3);
     width: 100%;
     min-height: 60px;
+    font-size: 14px;
+    color: var(--fitos-color-on-chrome-variant);
     border-radius: var(--fitos-shape-medium);
   }
 
@@ -228,5 +355,18 @@
   .content {
     padding: var(--fitos-space-8);
     padding-bottom: var(--fitos-space-8);
+  }
+
+  /* Visualmente oculto, ainda anunciado por leitores de tela. */
+  .pageHeaderMobileOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 }

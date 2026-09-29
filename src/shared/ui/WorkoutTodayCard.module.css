@@ -59,3 +59,42 @@
   margin-top: var(--fitos-space-3);
   align-self: flex-start;
 }
+
+/*
+ * Mobile editorial (AjustesTelas, prints 24/28): o treino do dia é uma
+ * seção integrada ao fundo — sem foto nem cartão; a ação real continua
+ * sendo o botão primário laranja, em largura total para uso com uma mão.
+ */
+@media (max-width: 839px) {
+  .card {
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .imageWrapper {
+    display: none;
+  }
+
+  .body {
+    padding: 0;
+  }
+
+  .eyebrow {
+    color: var(--fitos-color-eyebrow);
+  }
+
+  .title {
+    font-size: 22px;
+    color: var(--fitos-color-on-surface);
+  }
+
+  .description,
+  .meta {
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  .action {
+    align-self: stretch;
+  }
+}

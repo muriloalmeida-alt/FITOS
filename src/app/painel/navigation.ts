@@ -28,13 +28,19 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// gestão completa em `/painel/assinatura` (FIT-122, item próprio abaixo).
 /// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
 /// ainda.
+///
+/// AjustesPainel/AjustesTelas (29/09/2026): a barra inferior mobile do
+/// Personal passa a ser **Início, Alunos, Treinos, Perfil** (`compact`),
+/// sem "Mais". Exercícios, Financeiro e Assinatura continuam destinos
+/// reais: no rail desktop (lista completa) e, no mobile, no menu de conta
+/// aberto pelo avatar do cabeçalho — nenhum destino fica inacessível.
 export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "inicio", label: "Início", href: "/painel", icon: "inicio" },
-  { key: "alunos", label: "Alunos", href: "/painel/alunos", icon: "alunos" },
-  { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos" },
+  { key: "inicio", label: "Início", href: "/painel", icon: "inicio", compact: true },
+  { key: "alunos", label: "Alunos", href: "/painel/alunos", icon: "alunos", compact: true },
+  { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos", compact: true },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios", icon: "exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
   { key: "config", label: "Configurações", comingSoon: true, icon: "config" },
 ];
@@ -43,11 +49,14 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
 /// passa a ser real na FIT-033 (visão somente leitura do plano atribuído);
 /// "Progresso" passa a ser real na FIT-042 (própria evolução, somente
 /// leitura). Agenda e Mensagens continuam fora do MVP.
+///
+/// AjustesTelas (29/09/2026, prints 24–27): "Início, Treino, Progresso,
+/// Perfil" — "Hoje" passa a "Início" (mesmo rótulo dos outros papéis).
 export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "hoje", label: "Hoje", href: "/painel", icon: "inicio" },
-  { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos" },
-  { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil" },
+  { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
+  { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos", compact: true },
+  { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
 ];
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
@@ -66,10 +75,18 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
 /// "Configurações" do personal continua `comingSoon`, o pacote não pediu
 /// o mesmo para ele. Efeito colateral: com só 4 destinos reais, a barra
 /// compacta do Livre nunca precisa do overflow "Mais".
+///
+/// AjustesTelas (29/09/2026, prints 28–33): "Início, Treinos, Evolução,
+/// Perfil". "Perfil" do Livre passa a ser real nesta rodada —
+/// `/painel/perfil` agora também atende o papel INDIVIDUAL (dados da
+/// conta, do espaço, perfil de treino do onboarding, resumo da assinatura
+/// e "Sair"), então deixa de ser omitido. "Assinatura" continua real: no
+/// rail desktop e, no mobile, no menu de conta do avatar.
 export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
-  { key: "hoje", label: "Hoje", href: "/painel", icon: "inicio" },
-  { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos" },
-  { key: "progresso", label: "Progresso", href: "/painel/minha-evolucao", icon: "evolucao" },
+  { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
+  { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos", compact: true },
+  { key: "progresso", label: "Evolução", href: "/painel/minha-evolucao", icon: "evolucao", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
   // FIT-122: "Assinatura" (FitOS Livre) já é real.
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];

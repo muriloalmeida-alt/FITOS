@@ -8,14 +8,15 @@ import { getTodayScheduleForStudent } from "@/modules/workouts/workouts";
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
 import { ComecarTreinoButton } from "./ComecarTreinoButton";
-import { SessaoExecucao } from "./SessaoExecucao";
+import { WorkoutRunner } from "../../WorkoutRunner";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Sessão de treino — ${appName}`,
 };
 
-/// Execução de sessão de treino (FIT-041), exclusiva do papel ALUNO —
+/// Execução de sessão de treino (FIT-041; tela de execução revista em
+/// AjustesTreinoAluno, 29/09/2026 — `WorkoutRunner`), exclusiva do papel ALUNO —
 /// `requireStudent()` garante isso no servidor, mesmo padrão da FIT-016/033.
 /// Prioriza retomar uma sessão `EM_ANDAMENTO` já existente (independente
 /// de qual treino ela é — "continuar" é literal); só then verifica se há
@@ -34,37 +35,40 @@ export default async function SessaoPage() {
   const inProgress = await getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
 
   if (inProgress) {
+    // AjustesTreinoAluno (29/09/2026): execução em modo foco — sem shell/
+    // barra inferior, com cronômetro, descanso, séries e áudio.
     return (
-      <AppShell title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
-        <Card title={inProgress.workout.name}>
-          <SessaoExecucao
-            sessionId={inProgress.id}
-            items={inProgress.workout.workoutExercises.map((item) => {
-              const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
-              return {
-                id: item.id,
-                exerciseName: item.exercise.name,
-                exerciseMuscle: item.exercise.muscle,
-                instructions: item.exercise.instructions,
-                sets: item.sets,
-                reps: item.reps,
-                durationSeconds: item.durationSeconds,
-                load: item.load,
-                restSeconds: item.restSeconds,
-                notes: item.notes,
-                result: result
-                  ? {
-                      setsCompleted: result.setsCompleted,
-                      repsCompleted: result.repsCompleted,
-                      durationSecondsCompleted: result.durationSecondsCompleted,
-                      loadUsed: result.loadUsed,
-                    }
-                  : null,
-              };
-            })}
-          />
-        </Card>
-      </AppShell>
+      <WorkoutRunner
+        sessionId={inProgress.id}
+        workoutName={inProgress.workout.name}
+        startedAt={inProgress.startedAt.toISOString()}
+        mode="student"
+        apiBase="/api/workout-sessions"
+        exitHref="/painel"
+        items={inProgress.workout.workoutExercises.map((item) => {
+          const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
+          return {
+            id: item.id,
+            exerciseName: item.exercise.name,
+            exerciseMuscle: item.exercise.muscle,
+            instructions: item.exercise.instructions,
+            sets: item.sets,
+            reps: item.reps,
+            durationSeconds: item.durationSeconds,
+            load: item.load,
+            restSeconds: item.restSeconds,
+            notes: item.notes,
+            result: result
+              ? {
+                  setsCompleted: result.setsCompleted,
+                  repsCompleted: result.repsCompleted,
+                  durationSecondsCompleted: result.durationSecondsCompleted,
+                  loadUsed: result.loadUsed,
+                }
+              : null,
+          };
+        })}
+      />
     );
   }
 
@@ -72,7 +76,7 @@ export default async function SessaoPage() {
 
   if (schedule.state === "TREINO_HOJE") {
     return (
-      <AppShell title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+      <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
         <Card title={schedule.workout.name}>
           <p className={styles.empty}>Pronto para começar o treino de hoje?</p>
           <ComecarTreinoButton workoutId={schedule.workout.id} />
@@ -89,7 +93,7 @@ export default async function SessaoPage() {
         : "Hoje é dia de descanso. Nenhum treino previsto para hoje.";
 
   return (
-    <AppShell title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
       <Card title="Nenhuma sessão para iniciar">
         <p className={styles.empty}>{mensagem}</p>
       </Card>

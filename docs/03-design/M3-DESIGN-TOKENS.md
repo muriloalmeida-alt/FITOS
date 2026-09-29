@@ -188,3 +188,21 @@ Conteúdo principal terá largura máxima de 1440 px; formulários lineares, 720
 - Área interativa mínima de 48 × 48 dp.
 - Estados com cor + ícone + texto quando críticos.
 - Light e dark theme validados separadamente.
+
+## Tema editorial mobile (EPIC-18, 29/09/2026)
+
+Os ajustes mobile aprovados em 29/09/2026 (`AjustesPainel`, `AjustesTelas`, `AjustesTreino*` — ver `docs/04-backlog/EPIC-18-AJUSTES-MOBILE-EDITORIAL.md`) definem uma única aparência escura para toda a experiência compacta, independente de `prefers-color-scheme`. Implementação: `@media (max-width: 839px)` em `src/shared/design-system/tokens.css` (mesma faixa em que o `AppShell` usa a barra inferior; ≥ 840 px continua o tema do pacote visual 2026).
+
+| Token | Valor mobile | Uso |
+| --- | --- | --- |
+| `--fitos-color-primary` / `on-primary` | `#FF7847` / `#101C2C` | Botão primário laranja com texto navy (≈ 6,6:1). |
+| `--fitos-color-surface` | `#07090D` | Base; o fundo visual é `fitos-bg-mobile-suave.webp` (globals.css). |
+| `--fitos-color-surface-container(-high)` | branco 5% / 9% | Superfícies translúcidas pontuais — nunca cartões que envolvem seções. |
+| `--fitos-color-surface-editorial` | `transparent` | Telas públicas integradas ao fundo. |
+| `--fitos-color-on-surface` / `-variant` | `#FFFFFF` / `#D5DBE1` | Texto principal / apoio (AA sobre o fundo escuro). |
+| `--fitos-color-outline` / `-variant` | branco 42% / 20% | Linha de campo / divisores discretos. |
+| `--fitos-color-eyebrow` (novo) | `--fitos-orange-300` (`#FFAD8F`) | Eyebrow em caixa alta, data do Início, CTAs de linha. |
+| `--fitos-color-divider` (novo) | branco 22% | Divisor fino entre linhas de lista/seções. |
+| `--fitos-color-error` | `#FFB4AB` | Erro/ação destrutiva sobre fundo escuro. |
+
+Regras: seções integradas ao fundo (espaço, hierarquia e divisor, sem caixas); campos com rótulo persistente e linha (foco = linha laranja 2 px); ação destrutiva usa `Button variant="danger"`, nunca o laranja positivo; barra inferior azul-noturno (`--fitos-color-chrome`) com ativo em `--fitos-orange-500`.

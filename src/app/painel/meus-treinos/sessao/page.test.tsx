@@ -64,6 +64,8 @@ describe("SessaoIndividualPage (FIT-103)", () => {
     ensureStudentForIndividual.mockResolvedValue({ id: "student-auto-referencia" });
     getInProgressSessionForStudent.mockResolvedValue({
       id: "sess1",
+      workoutId: "w1",
+      startedAt: new Date("2026-09-29T12:00:00Z"),
       workout: {
         name: "Treino A",
         workoutExercises: [
@@ -85,8 +87,11 @@ describe("SessaoIndividualPage (FIT-103)", () => {
     const { default: SessaoIndividualPage } = await import("./page");
     render(await SessaoIndividualPage());
 
-    expect(screen.getByRole("heading", { name: "Treino A" })).toBeInTheDocument();
-    expect(screen.getByText("Supino")).toBeInTheDocument();
+    // AjustesTreinoLivre: execução em modo foco (`WorkoutRunner`).
+    expect(screen.getByText("Treino A")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Supino" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aumentar carga" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Editar sequência do treino" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
     expect(screen.getByRole("button", { name: "Concluir treino" })).toBeInTheDocument();
     expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "student-auto-referencia" });
   });

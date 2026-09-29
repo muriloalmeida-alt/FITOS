@@ -46,7 +46,7 @@ export default async function EncerrarVinculoPage({ params }: EncerrarVinculoPag
   }
 
   return (
-    <AppShell title="Encerrar vínculo" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Encerrar vínculo" title="Encerrar vínculo" subtitle="Confirme os dados e as consequências para o acesso." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Card title={`Encerrar vínculo com ${student.displayName}?`}>
         <p>
           Esta ação é definitiva — ao contrário de inativar, um vínculo encerrado nunca pode ser reaberto. {student.displayName}{" "}

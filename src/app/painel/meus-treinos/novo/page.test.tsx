@@ -49,7 +49,7 @@ describe("CriarMeuTreinoPage (FIT-102)", () => {
 
     render(await CriarMeuTreinoPage());
 
-    expect(screen.getByRole("heading", { name: "Criar treino" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Criar meu treino" })).toBeInTheDocument();
     expect(screen.getByLabelText("Nome")).toBeInTheDocument();
   });
 });

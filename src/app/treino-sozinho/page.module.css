@@ -51,3 +51,40 @@
 .cta {
   align-self: flex-start;
 }
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fitos-color-primary);
+}
+
+/* Mobile editorial (AjustesTelas, print 03). */
+@media (max-width: 839px) {
+  .main {
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+
+  .content {
+    padding: var(--fitos-space-6) var(--fitos-space-5) 0;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--fitos-color-eyebrow);
+  }
+
+  .title {
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 800;
+  }
+
+  .cta {
+    align-self: stretch;
+  }
+}

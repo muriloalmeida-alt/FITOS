@@ -46,7 +46,7 @@ export default async function ExercicioDetalhePage({ params }: ExercicioDetalheP
   const isOwn = exercise.origin === "PERSONAL";
 
   return (
-    <AppShell title={exercise.name} navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Detalhe do exercício" title={exercise.name} subtitle="Execução, grupo muscular e mídia." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
       <Link href="/painel/exercicios" className={styles.backLink}>
         ← Voltar para o catálogo
       </Link>

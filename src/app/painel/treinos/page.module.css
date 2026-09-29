@@ -107,3 +107,48 @@
     justify-content: space-between;
   }
 }
+
+
+/*
+ * Mobile editorial (AjustesTelas, 29/09/2026): linhas abertas com divisor
+ * discreto no lugar de cartões, sem perder a área de toque inteira da
+ * linha (chevron indica que abre um detalhe).
+ */
+@media (max-width: 839px) {
+  .list {
+    gap: 0;
+    border-top: 1px solid var(--fitos-color-divider);
+  }
+
+  .row {
+    position: relative;
+    padding: var(--fitos-space-4) var(--fitos-space-8) var(--fitos-space-4) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  .row:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .row::after {
+    content: "›";
+    position: absolute;
+    top: 50%;
+    right: var(--fitos-space-1);
+    transform: translateY(-50%);
+    font-size: 26px;
+    line-height: 1;
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  .nextStepCard {
+    padding: var(--fitos-space-4) var(--fitos-space-8) var(--fitos-space-4) 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    background-color: transparent;
+  }
+}

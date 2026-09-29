@@ -68,7 +68,7 @@ export default async function TreinoAlunoPage() {
         : "Você ainda não tem um programa de treino atribuído. Fale com seu personal.";
 
     return (
-      <AppShell title="Treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+      <AppShell eyebrow="Seu treino" title="Seu programa" subtitle="Veja o plano preparado para você." navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
         <Card title="Seu programa">
           <p className={styles.empty}>{mensagem}</p>
         </Card>
@@ -79,7 +79,7 @@ export default async function TreinoAlunoPage() {
   const { trainingPlan } = active;
 
   return (
-    <AppShell title="Treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Seu treino" title="Seu programa" subtitle="Veja o plano preparado para você." navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
       <Card title={trainingPlan.name}>
         {trainingPlan.durationWeeks ? (
           <p className={styles.planMeta}>Vigência sugerida: {trainingPlan.durationWeeks} semanas</p>

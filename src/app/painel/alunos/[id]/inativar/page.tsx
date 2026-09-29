@@ -37,7 +37,7 @@ export default async function InativarAlunoPage({ params }: InativarAlunoPagePro
   }
 
   return (
-    <AppShell title="Inativar aluno" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Inativar aluno" title="Inativar aluno" subtitle="Revise o impacto antes de confirmar." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Card title={`Inativar ${student.displayName}?`}>
         <p>
           O aluno deixa de acessar o FitOS normalmente e some da lista padrão de alunos ativos, mas o histórico é

@@ -69,7 +69,7 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
   ]);
 
   return (
-    <AppShell title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Perfil do aluno" title={student.displayName} subtitle="Treino, evolução e vínculo em um lugar." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Link href="/painel/alunos" className={styles.backLink}>
         ← Voltar para a lista
       </Link>

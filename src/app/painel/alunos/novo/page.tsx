@@ -22,7 +22,7 @@ export default async function CadastrarAlunoPage() {
   }
 
   return (
-    <AppShell title="Cadastrar aluno" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Cadastrar aluno" title="Novo aluno" subtitle="Dados para iniciar o acompanhamento." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <Card title="Dados do aluno">
         <CadastrarAlunoForm />
       </Card>

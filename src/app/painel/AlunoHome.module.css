@@ -29,3 +29,14 @@
 .notes {
   font-style: italic;
 }
+
+.rowLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fitos-space-1);
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--fitos-color-eyebrow, var(--fitos-color-primary));
+}

@@ -43,7 +43,7 @@ export default async function ProgressoPage() {
 
   if (assessments.length === 0) {
     return (
-      <AppShell title="Progresso" navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+      <AppShell eyebrow="Progresso" title="Sua evolução" subtitle="Acompanhe as avaliações registradas." navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
         <Card title="Sua evolução">
           <p className={styles.empty}>Nenhuma avaliação registrada ainda. Fale com seu personal.</p>
         </Card>
@@ -60,7 +60,7 @@ export default async function ProgressoPage() {
     .reverse();
 
   return (
-    <AppShell title="Progresso" navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Progresso" title="Sua evolução" subtitle="Acompanhe as avaliações registradas." navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
       <Card title="Sua evolução">
         {weightPoints.length >= 2 ? (
           <div className={styles.chartWrapper}>

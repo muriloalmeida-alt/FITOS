@@ -47,6 +47,10 @@ Só conclui com: (1) os 5 PRs revisados e mesclados; (2) validação visual real
 - [FIT-136 #180](https://github.com/muriloalmeida-alt/FitOS/issues/180) — Correção pós-validação real: `/painel/exercicios` não seguia `tela-08`. Mesclado (PR #181).
 - [FIT-137 #182](https://github.com/muriloalmeida-alt/FitOS/issues/182) — Correção grande pós-validação real: telas 06 (Dashboard Personal), 07 (Alunos), 09 (Aluno) e 10 (FitOS Livre) não seguiam o pacote — encontradas numa comparação sistemática de todas as 11 telas, pedida explicitamente por Murilo ("revise todas as telas"). Mesclado (PR #183).
 
+## Continuação
+
+Em 29/09/2026 Murilo enviou os ajustes mobile (`AjustesPainel`, `AjustesTelas`, `AjustesTreinoAluno`, `AjustesTreinoLivre`) — executados no [EPIC-18](EPIC-18-AJUSTES-MOBILE-EDITORIAL.md) (FIT-138). Para < 840 px eles têm precedência sobre os prints mobile v5 deste épico; o desktop continua seguindo este pacote.
+
 ## Status do aceite do épico (ver "Aceite do épico" acima)
 
 - (1) 5 PRs do plano revisados e mesclados: **concluído**. Duas correções pós-validação adicionais, ambas mescladas: FIT-136 (PR #181) e FIT-137 (PR #183) — nenhuma delas conta como o épico "pronto" enquanto a validação visual abaixo não estiver completa.

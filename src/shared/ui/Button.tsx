@@ -2,7 +2,10 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import Link from "next/link";
 import styles from "./Button.module.css";
 
-type ButtonVariant = "filled" | "outlined";
+/// `danger` (AjustesTelas, 29/09/2026 — telas 10/11): confirmação de ação
+/// destrutiva (inativar aluno, encerrar vínculo) nunca usa o mesmo laranja
+/// positivo da ação principal.
+type ButtonVariant = "filled" | "outlined" | "danger";
 
 interface ButtonAsButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -22,7 +25,7 @@ type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 /// para uma única ação (achado da varredura de acessibilidade da FIT-070) —
 /// `variant="filled"`/`"outlined"` continuam a mesma aparência em ambos.
 export function Button({ variant = "filled", className, href, ...props }: ButtonProps) {
-  const variantClass = variant === "filled" ? styles.filled : styles.outlined;
+  const variantClass = variant === "filled" ? styles.filled : variant === "danger" ? styles.danger : styles.outlined;
   const classes = [styles.button, variantClass, className].filter(Boolean).join(" ");
 
   if (href !== undefined) {

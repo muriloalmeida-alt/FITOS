@@ -76,7 +76,7 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
   const students = studentsResult.items.map((s) => ({ id: s.id, displayName: s.displayName }));
 
   return (
-    <AppShell title="Financeiro" navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Financeiro" title="Financeiro" subtitle="Acompanhe cobranças e recebimentos dos seus alunos." navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
       <FinanceiroHero recebidoCents={summary.recebidoCents} />
 
       <Card title="Visão geral">

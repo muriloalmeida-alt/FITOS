@@ -67,6 +67,7 @@ describe("SessaoPage (FIT-041)", () => {
     requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
     getInProgressSessionForStudent.mockResolvedValue({
       id: "sess1",
+      startedAt: new Date("2026-09-29T12:00:00Z"),
       workout: {
         name: "Treino A",
         workoutExercises: [
@@ -88,8 +89,11 @@ describe("SessaoPage (FIT-041)", () => {
     const { default: SessaoPage } = await import("./page");
     render(await SessaoPage());
 
-    expect(screen.getByRole("heading", { name: "Treino A" })).toBeInTheDocument();
-    expect(screen.getByText("Supino")).toBeInTheDocument();
+    // AjustesTreinoAluno: execução em modo foco (`WorkoutRunner`).
+    expect(screen.getByText("Treino A")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Supino" })).toBeInTheDocument();
+    expect(screen.getByText(/Prescrito pelo seu Personal/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Concluir série" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Concluir treino" })).toBeInTheDocument();
     expect(getTodayScheduleForStudent).not.toHaveBeenCalled();
   });

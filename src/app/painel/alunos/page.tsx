@@ -126,7 +126,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
   ];
 
   return (
-    <AppShell title="Alunos" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Alunos" title="Alunos" subtitle="Acompanhe cada pessoa em movimento." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <div className={styles.header}>
         <p className={styles.subtitle}>
           {result.total} {result.total === 1 ? "aluno" : "alunos"} na sua carteira

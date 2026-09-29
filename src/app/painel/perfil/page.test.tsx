@@ -6,6 +6,7 @@ const getAuthContext = vi.fn();
 const findUniqueTenant = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const getSubscriptionForTenant = vi.fn();
+const getIndividualOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -31,6 +32,13 @@ vi.mock("@/modules/personal-onboarding/onboarding", async () => {
     "@/modules/personal-onboarding/onboarding"
   );
   return { ...actual, getPersonalOnboardingProfile: (...args: unknown[]) => getPersonalOnboardingProfile(...args) };
+});
+
+vi.mock("@/modules/individual-onboarding/onboarding", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/individual-onboarding/onboarding")>(
+    "@/modules/individual-onboarding/onboarding"
+  );
+  return { ...actual, getIndividualOnboardingProfile: (...args: unknown[]) => getIndividualOnboardingProfile(...args) };
 });
 
 vi.mock("@/modules/billing/subscriptions", async () => {
@@ -98,7 +106,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("individual autenticado é redirecionado para /painel (Perfil ainda não é real para o FitOS Livre)", async () => {
+  it("individual (FitOS Livre) vê o próprio perfil real: conta, espaço, perfil de treino e assinatura (AjustesTelas)", async () => {
     getServerSession.mockResolvedValue({
       user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" },
     });
@@ -109,10 +117,40 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
       tenantId: "t5",
       studentId: null,
     });
+    getIndividualOnboardingProfile.mockResolvedValue({
+      objective: "GANHAR_MASSA",
+      experienceLevel: "INICIANTE",
+      weeklyAvailability: "TRES_A_QUATRO_DIAS",
+    });
+    findUniqueTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
+    getSubscriptionForTenant.mockResolvedValue({ plan: { name: "FitOS Livre" } });
+    const { default: PerfilPage } = await import("./page");
+    render(await PerfilPage());
+
+    expect(screen.getByRole("heading", { level: 1, name: "Seu perfil" })).toBeInTheDocument();
+    expect(screen.getByText("praticante@example.test")).toBeInTheDocument();
+    expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
+    expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
+    expect(screen.getAllByText("FitOS Livre").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Gerenciar assinatura" })).toHaveAttribute("href", "/painel/assinatura");
+  });
+
+  it("individual sem onboarding concluído é redirecionado para /onboarding", async () => {
+    getServerSession.mockResolvedValue({
+      user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" },
+    });
+    getAuthContext.mockResolvedValue({
+      authenticated: true,
+      userId: "u5",
+      role: "INDIVIDUAL",
+      tenantId: "t5",
+      studentId: null,
+    });
+    getIndividualOnboardingProfile.mockResolvedValue(null);
     const { default: PerfilPage } = await import("./page");
 
     await expect(PerfilPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/painel");
+    expect(redirect).toHaveBeenCalledWith("/onboarding");
   });
 
   it("personal sem onboarding profissional concluído é redirecionado para /onboarding-personal", async () => {
@@ -158,7 +196,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
 
     render(await PerfilPage());
 
-    expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Seu perfil" })).toBeInTheDocument();
     expect(screen.getByText("Joana")).toBeInTheDocument();
     expect(screen.getByText("joana@example.test")).toBeInTheDocument();
     expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();

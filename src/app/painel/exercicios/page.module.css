@@ -166,3 +166,81 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+
+/*
+ * Mobile editorial (AjustesTelas, 29/09/2026): linhas abertas com divisor
+ * discreto no lugar de cartões, sem perder a área de toque inteira da
+ * linha (chevron indica que abre um detalhe).
+ */
+@media (max-width: 839px) {
+  .searchInput {
+    padding: var(--fitos-space-2) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-outline);
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .searchInput:focus-visible {
+    outline: none;
+    border-bottom: 2px solid var(--fitos-orange-500);
+  }
+
+  .filterSelect {
+    padding: var(--fitos-space-2) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-outline);
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .filterSelect:focus-visible {
+    outline: none;
+    border-bottom: 2px solid var(--fitos-orange-500);
+  }
+
+  .grid {
+    gap: 0;
+    border-top: 1px solid var(--fitos-color-divider);
+  }
+
+  .card {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--fitos-space-3);
+    padding: var(--fitos-space-3) var(--fitos-space-8) var(--fitos-space-3) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-divider);
+    border-radius: 0;
+    background-color: transparent;
+    overflow: visible;
+  }
+
+  .card:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .card::after {
+    content: "›";
+    position: absolute;
+    top: 50%;
+    right: var(--fitos-space-1);
+    transform: translateY(-50%);
+    font-size: 26px;
+    line-height: 1;
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  /* Linha aberta (print 18): miniatura real do catálogo em 64px. */
+  .cardThumbnail {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: var(--fitos-shape-medium);
+  }
+
+  .cardBody {
+    padding: 0;
+  }
+}

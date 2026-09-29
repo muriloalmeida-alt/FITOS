@@ -22,7 +22,7 @@ export default async function CriarPlanoPage() {
   }
 
   return (
-    <AppShell title="Criar programa" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Criar programa" title="Criar programa" subtitle="Defina nome e duração do programa." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Card title="Dados do programa">
         <CriarPlanoForm />
       </Card>

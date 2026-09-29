@@ -22,7 +22,7 @@ export default async function CriarModeloPage() {
   }
 
   return (
-    <AppShell title="Criar modelo de treino" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Criar modelo" title="Criar modelo de treino" subtitle="Dê um nome e monte a sequência de exercícios." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <Card title="Dados do modelo">
         <CriarModeloForm />
       </Card>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell, type AppShellNavItem } from "./AppShell";
+import { AccountNameProvider } from "./AccountContext";
 
 const items: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel" },
@@ -121,5 +122,63 @@ describe("AppShell", () => {
       </AppShell>
     );
     expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
+  });
+
+  it("AjustesPainel: com itens `compact`, a barra inferior mostra exatamente os 4 marcados, sem 'Mais'", () => {
+    const personal: AppShellNavItem[] = [
+      { key: "inicio", label: "Início", href: "/painel", compact: true },
+      { key: "alunos", label: "Alunos", href: "/painel/alunos", compact: true },
+      { key: "treinos", label: "Treinos", href: "/painel/treinos", compact: true },
+      { key: "exercicios", label: "Exercícios", href: "/painel/exercicios" },
+      { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
+      { key: "perfil", label: "Perfil", href: "/painel/perfil", compact: true },
+    ];
+    render(
+      <AppShell title="Início" navItems={personal} activeKey="alunos">
+        <p>Conteúdo</p>
+      </AppShell>
+    );
+    const bottomNav = screen.getAllByRole("navigation", { name: "Navegação principal" })[1] as HTMLElement;
+
+    expect(within(bottomNav).getAllByRole("link").map((link) => link.textContent)).toEqual(["Início", "Alunos", "Treinos", "Perfil"]);
+    expect(within(bottomNav).getByRole("link", { name: "Alunos" })).toHaveAttribute("aria-current", "page");
+    expect(within(bottomNav).queryByRole("button", { name: "Mais" })).not.toBeInTheDocument();
+  });
+
+  it("menu de conta do avatar (iniciais reais da sessão) dá acesso aos destinos fora da barra e ao 'Sair'", async () => {
+    const user = userEvent.setup();
+    const personal: AppShellNavItem[] = [
+      { key: "inicio", label: "Início", href: "/painel", compact: true },
+      { key: "financeiro", label: "Financeiro", href: "/painel/financeiro" },
+      { key: "perfil", label: "Perfil", href: "/painel/perfil", compact: true },
+    ];
+    render(
+      <AccountNameProvider name="Murilo Almeida">
+        <AppShell title="Início" navItems={personal} activeKey="inicio" trailing={<button type="button">Sair</button>}>
+          <p>Conteúdo</p>
+        </AppShell>
+      </AccountNameProvider>
+    );
+
+    const avatar = screen.getByRole("button", { name: "Conta de Murilo Almeida" });
+    expect(avatar).toHaveTextContent("MA");
+    expect(avatar).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(avatar);
+
+    const more = screen.getByRole("navigation", { name: "Mais destinos" });
+    expect(within(more).getByRole("link", { name: "Financeiro" })).toHaveAttribute("href", "/painel/financeiro");
+    expect(within(more).queryByRole("link", { name: "Perfil" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Sair" }).length).toBe(2);
+  });
+
+  it("eyebrow e subtítulo acompanham o título da página", () => {
+    render(
+      <AppShell eyebrow="Alunos" title="Alunos" subtitle="Acompanhe cada pessoa em movimento." navItems={items} activeKey="inicio">
+        <p>Conteúdo</p>
+      </AppShell>
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Alunos" })).toBeInTheDocument();
+    expect(screen.getByText("Acompanhe cada pessoa em movimento.")).toBeInTheDocument();
   });
 });

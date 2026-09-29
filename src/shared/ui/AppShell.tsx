@@ -1,31 +1,48 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { initialsFromName } from "@/shared/lib/initials";
+import { useAccountName } from "./AccountContext";
 import { BrandLogo } from "./BrandLogo";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import styles from "./AppShell.module.css";
 
 /// Item de navegação do shell autenticado (FIT-012). `href` só existe para
 /// destinos reais e implementados — qualquer destino ainda não construído
-/// (Alunos, Treinos, Financeiro, Configurações, Treino, Progresso, Perfil
-/// de aluno) usa `comingSoon: true` e nunca recebe `href`, para nunca
-/// simular uma funcionalidade que ainda não existe (aparece com o rótulo
-/// "Em breve", desabilitado, e não navega para nenhum lugar). `icon`
-/// (FIT-131, pacote visual 2026) é opcional — item sem ele continua
-/// renderizando só o rótulo, mesmo comportamento de antes desta rodada
-/// (cobre fixtures de teste que não precisam de ícone).
+/// usa `comingSoon: true` e nunca recebe `href`, para nunca simular uma
+/// funcionalidade que ainda não existe (aparece com o rótulo "Em breve",
+/// desabilitado, e não navega para nenhum lugar). `icon` (FIT-131, pacote
+/// visual 2026) é opcional — item sem ele renderiza só o rótulo.
+///
+/// `compact` (AjustesPainel/AjustesTelas, 29/09/2026): marca os destinos
+/// que ocupam a barra inferior mobile de quatro posições (Personal:
+/// Início/Alunos/Treinos/Perfil; Aluno: Início/Treino/Progresso/Perfil;
+/// Livre: Início/Treinos/Evolução/Perfil). Os demais destinos reais nunca
+/// somem: continuam no rail desktop e, no mobile, no menu de conta aberto
+/// pelo avatar do cabeçalho. Quando nenhum item é marcado, vale o critério
+/// anterior (3 primeiros + "Mais").
 export interface AppShellNavItem {
   key: string;
   label: string;
   href?: string;
   comingSoon?: boolean;
   icon?: NavIconName;
+  compact?: boolean;
 }
 
 interface AppShellProps {
   title: string;
   subtitle?: string;
+  /// Rótulo curto em caixa alta acima do título (ex.: "ALUNOS",
+  /// "PERFIL DO ALUNO", data do dia no Início) — hierarquia das prévias
+  /// AjustesTelas. Opcional; sem ele, só título/subtítulo.
+  eyebrow?: string;
+  /// "mobile": o cabeçalho da página só aparece visualmente no mobile — no
+  /// desktop fica apenas para leitores de tela (a própria página já mostra
+  /// o mesmo texto em destaque, ex.: saudação no hero do Início do
+  /// Personal). Default "always".
+  headerMode?: "always" | "mobile";
   navItems: AppShellNavItem[];
   activeKey: string;
   trailing?: ReactNode;
@@ -33,17 +50,10 @@ interface AppShellProps {
 }
 
 /// Máximo de destinos visíveis na barra de navegação compacta (mobile),
-/// contando o botão "Mais" quando ele existe — mesmo critério descrito em
-/// `docs/03-design/UX-ARCHITECTURE.md` ("Compact: Navigation bar + Mais").
-/// Sem overflow (ex.: Aluno/Livre, 4 destinos reais): os 4 aparecem,
-/// nenhum "Mais". Com overflow (ex.: Personal, mais de 4 destinos): os 3
-/// primeiros aparecem + "Mais" ocupa o 4º slot, nunca 4 reais + um 5º
-/// botão — item corrigido nesta rodada (o cálculo anterior sempre mostrava
-/// os 4 primeiros e adicionava "Mais" como destino extra, resultando em 5
-/// pílulas na barra do Personal em vez de 4).
+/// contando o botão "Mais" quando ele existe (fallback sem `compact`).
 const MAX_COMPACT_ITEMS = 4;
 
-function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean }) {
+function NavLink({ item, isActive, onNavigate }: { item: AppShellNavItem; isActive: boolean; onNavigate?: () => void }) {
   if (item.comingSoon || !item.href) {
     return (
       <span className={styles.navItemDisabled} aria-disabled="true">
@@ -59,6 +69,7 @@ function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean 
       href={item.href}
       className={isActive ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem}
       aria-current={isActive ? "page" : undefined}
+      onClick={onNavigate}
     >
       {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
       <span className={styles.navLabel}>{item.label}</span>
@@ -66,21 +77,104 @@ function NavLink({ item, isActive }: { item: AppShellNavItem; isActive: boolean 
   );
 }
 
-export function AppShell({ title, subtitle, navItems, activeKey, trailing, children }: AppShellProps) {
-  const [showMore, setShowMore] = useState(false);
+function splitCompact(navItems: AppShellNavItem[]) {
+  if (navItems.some((item) => item.compact)) {
+    return {
+      visible: navItems.filter((item) => item.compact),
+      collapsed: navItems.filter((item) => !item.compact),
+      usesAccountMenu: true,
+    };
+  }
   const hasOverflow = navItems.length > MAX_COMPACT_ITEMS;
-  const visibleInCompact = hasOverflow ? navItems.slice(0, MAX_COMPACT_ITEMS - 1) : navItems;
-  const collapsedInCompact = hasOverflow ? navItems.slice(MAX_COMPACT_ITEMS - 1) : [];
+  return {
+    visible: hasOverflow ? navItems.slice(0, MAX_COMPACT_ITEMS - 1) : navItems,
+    collapsed: hasOverflow ? navItems.slice(MAX_COMPACT_ITEMS - 1) : [],
+    usesAccountMenu: false,
+  };
+}
+
+/// Menu de conta do avatar (cabeçalho). No mobile é o acesso aos destinos
+/// reais que não cabem na barra de quatro posições (ex.: Exercícios,
+/// Financeiro e Assinatura do Personal; Assinatura do Livre) e ao "Sair".
+/// No desktop, o rail já lista todos os destinos — o menu repete só a
+/// conta e o "Sair", nunca um destino fictício.
+function AccountMenu({
+  name,
+  items,
+  activeKey,
+  trailing,
+}: {
+  name: string | null;
+  items: AppShellNavItem[];
+  activeKey: string;
+  trailing?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const initials = name ? initialsFromName(name) : "";
+
+  return (
+    <div className={styles.account} ref={containerRef}>
+      <button
+        type="button"
+        className={styles.avatarButton}
+        aria-expanded={open}
+        aria-controls={menuId}
+        aria-label={name ? `Conta de ${name}` : "Conta"}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {initials ? <span aria-hidden="true">{initials}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+      </button>
+      {open ? (
+        <div id={menuId} className={styles.accountMenu}>
+          {name ? <p className={styles.accountName}>{name}</p> : null}
+          {items.length > 0 ? (
+            <nav aria-label="Mais destinos" className={styles.accountLinks}>
+              {items.map((item) => (
+                <NavLink key={item.key} item={item} isActive={item.key === activeKey} onNavigate={() => setOpen(false)} />
+              ))}
+            </nav>
+          ) : null}
+          {trailing ? <div className={styles.accountTrailing}>{trailing}</div> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, children }: AppShellProps) {
+  const [showMore, setShowMore] = useState(false);
+  const accountName = useAccountName();
+  const { visible, collapsed, usesAccountMenu } = splitCompact(navItems);
 
   return (
     <div className={styles.shell}>
       <header className={styles.topBar}>
-        <div>
-          <BrandLogo background="dark" size={20} className={styles.brand} />
-          <h1 className={styles.title}>{title}</h1>
-          {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+        <BrandLogo background="photo" size={44} className={styles.brand} />
+        <div className={styles.topBarEnd}>
+          {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
+          <AccountMenu name={accountName} items={usesAccountMenu ? collapsed : []} activeKey={activeKey} trailing={trailing} />
         </div>
-        {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
       </header>
 
       <div className={styles.body}>
@@ -90,26 +184,34 @@ export function AppShell({ title, subtitle, navItems, activeKey, trailing, child
           ))}
         </nav>
 
-        <main className={styles.content}>{children}</main>
+        <main className={styles.content}>
+          <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader}>
+            {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
+            <h1 className={styles.title}>{title}</h1>
+            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+          </div>
+          {children}
+        </main>
       </div>
 
       <nav className={styles.bottomNav} aria-label="Navegação principal">
-        {visibleInCompact.map((item) => (
+        {visible.map((item) => (
           <NavLink key={item.key} item={item} isActive={item.key === activeKey} />
         ))}
-        {collapsedInCompact.length > 0 ? (
+        {!usesAccountMenu && collapsed.length > 0 ? (
           <button
             type="button"
             className={styles.moreButton}
             aria-expanded={showMore}
             onClick={() => setShowMore((current) => !current)}
           >
-            Mais
+            <NavIcon name="mais" className={styles.navIcon} />
+            <span className={styles.navLabel}>Mais</span>
           </button>
         ) : null}
-        {showMore && collapsedInCompact.length > 0 ? (
+        {!usesAccountMenu && showMore && collapsed.length > 0 ? (
           <div className={styles.moreMenu} role="menu">
-            {collapsedInCompact.map((item) => (
+            {collapsed.map((item) => (
               <NavLink key={item.key} item={item} isActive={item.key === activeKey} />
             ))}
           </div>

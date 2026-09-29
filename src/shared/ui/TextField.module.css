@@ -40,3 +40,32 @@
   font-weight: 450;
   color: var(--fitos-color-error);
 }
+
+/*
+ * Mobile editorial (AjustesTelas, 29/09/2026): rótulo persistente acima e
+ * campo em linha com contraste sobre o fundo — sem caixa. Foco e erro
+ * continuam explícitos (linha laranja/erro + outline de foco).
+ */
+@media (max-width: 839px) {
+  .label {
+    font-weight: 700;
+  }
+
+  .input {
+    padding: var(--fitos-space-2) 0;
+    border: none;
+    border-bottom: 1px solid var(--fitos-color-outline);
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .input:focus-visible {
+    outline: none;
+    border-bottom: 2px solid var(--fitos-orange-500);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .input[aria-invalid="true"] {
+    border-bottom: 2px solid var(--fitos-color-error);
+  }
+}

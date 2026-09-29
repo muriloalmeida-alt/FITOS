@@ -22,7 +22,7 @@ export default async function CadastrarExercicioPage() {
   }
 
   return (
-    <AppShell title="Cadastrar exercício" navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Cadastrar exercício" title="Novo exercício" subtitle="Dados e orientação de execução." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
       <Card title="Dados do exercício">
         <CadastrarExercicioForm />
       </Card>

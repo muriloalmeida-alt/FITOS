@@ -305,3 +305,92 @@
     flex: 0 0 480px;
   }
 }
+
+/*
+ * Mobile editorial (AjustesTelas, print 01): hero sem fotografia, texto
+ * direto sobre o fundo; benefícios como linhas numeradas com divisor;
+ * seções sem cartões. Links e conteúdo reais preservados.
+ */
+@media (max-width: 839px) {
+  .main {
+    background-color: transparent;
+  }
+
+  .hero {
+    min-height: 0;
+    background: transparent;
+  }
+
+  .heroImage,
+  .heroOverlay {
+    display: none;
+  }
+
+  .heroContent {
+    padding: var(--fitos-space-6) var(--fitos-space-5) var(--fitos-space-4);
+    gap: var(--fitos-space-3);
+  }
+
+  .eyebrow {
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .heroTitle {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  .heroDescription {
+    font-size: 16px;
+    line-height: 22px;
+    color: var(--fitos-color-on-surface-variant);
+  }
+
+  .benefitsGrid {
+    counter-reset: fitos-benefit;
+    gap: 0 !important;
+  }
+
+  .benefitsGrid > section {
+    position: relative;
+    counter-increment: fitos-benefit;
+    padding: var(--fitos-space-4) 0 var(--fitos-space-4) 52px;
+  }
+
+  .benefitsGrid > section::before {
+    content: counter(fitos-benefit);
+    position: absolute;
+    top: var(--fitos-space-4);
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background-color: #22324a;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .benefitsGrid > section:first-child::before {
+    background-color: var(--fitos-orange-500);
+    color: var(--fitos-navy-900);
+  }
+
+  .sectionTitle {
+    text-align: left;
+  }
+
+  .relationshipImage,
+  .libraryImage {
+    border-radius: var(--fitos-shape-medium);
+  }
+
+  .finalCta,
+  .footer {
+    background: transparent;
+  }
+}

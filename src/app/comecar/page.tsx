@@ -3,6 +3,7 @@ import Link from "next/link";
 import { appName } from "@/shared/config/env";
 import { CriarContaForm } from "./CriarContaForm";
 import { OnboardingEntry } from "./OnboardingEntry";
+import { PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
   if (step === 1) {
     return (
       <main className={styles.main}>
+        <PublicMobileHeader />
         <div className={`${styles.card} ${styles.cardWide}`}>
           <header className={styles.header}>
             <p className={styles.stepIndicator}>Passo 1 de 2</p>
@@ -42,6 +44,7 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
             Já tem conta? <Link href="/entrar">Entrar</Link>
           </p>
         </div>
+        <PublicMobileFooter />
       </main>
     );
   }
@@ -50,6 +53,7 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
 
   return (
     <main className={styles.main}>
+      <PublicMobileHeader />
       <div className={styles.card}>
         <header className={styles.header}>
           <p className={styles.stepIndicator}>Passo 2 de 2</p>
@@ -75,6 +79,7 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
           Já tem conta? <Link href="/entrar">Entrar</Link>
         </p>
       </div>
+      <PublicMobileFooter />
     </main>
   );
 }
