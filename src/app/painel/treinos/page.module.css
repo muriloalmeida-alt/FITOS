@@ -10,6 +10,48 @@
   color: var(--fitos-color-on-surface-variant);
 }
 
+/*
+ * Card "Próximo passo" (pacote visual 2026, tela 08) — só aparece com
+ * modelos já existentes; sem nenhum, `EmptyStateAction` já é o único CTA
+ * da tela, nunca os dois competindo pela mesma ação.
+ */
+.nextStepCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  padding: var(--fitos-space-5);
+  border-radius: var(--fitos-shape-card);
+  background-color: var(--fitos-navy-900);
+  text-decoration: none;
+}
+
+.nextStepEyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
+}
+
+.nextStepTitle {
+  margin: 0;
+  max-width: 80%;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.nextStepArrow {
+  position: absolute;
+  top: var(--fitos-space-4);
+  right: var(--fitos-space-4);
+  font-size: 18px;
+  color: var(--fitos-orange-300);
+}
+
 .empty {
   margin: var(--fitos-space-6) 0;
   color: var(--fitos-color-on-surface-variant);

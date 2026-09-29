@@ -59,24 +59,27 @@ export default async function AssinaturaPage() {
 
   return (
     <AppShell title="Assinatura" navItems={navItems} activeKey="assinatura" trailing={<LogoutButton />}>
-      <Card title="Sua assinatura">
-        {subscription && subscription.plan ? (
-          <div className={styles.currentPlan}>
-            <p className={styles.planName}>{subscription.plan.name}</p>
-            <p className={styles.planPrice}>
-              {formatCentsBRL(subscription.plan.priceCents)} / {BILLING_CYCLE_LABEL[subscription.plan.billingCycle] ?? "mês"}
-            </p>
-            <p className={styles.planStatus}>
-              Status: <strong>{SUBSCRIPTION_STATUS_LABEL[subscription.status] ?? subscription.status}</strong>
-            </p>
-            {subscription.status === "CANCELADA" && subscription.canceledReason ? (
-              <p className={styles.canceledReason}>Motivo do cancelamento: {subscription.canceledReason}</p>
-            ) : null}
-          </div>
-        ) : (
-          <p>Nenhuma assinatura contratada ainda.</p>
-        )}
-      </Card>
+      <div className={styles.subscriptionHighlight}>
+        <Card title="Sua assinatura">
+          {subscription && subscription.plan ? (
+            <div className={styles.currentPlan}>
+              <p className={styles.eyebrow}>Sua assinatura</p>
+              <p className={styles.planName}>{subscription.plan.name}</p>
+              <p className={styles.planPrice}>
+                {formatCentsBRL(subscription.plan.priceCents)} / {BILLING_CYCLE_LABEL[subscription.plan.billingCycle] ?? "mês"}
+              </p>
+              <p className={styles.planStatus}>
+                Status: <strong>{SUBSCRIPTION_STATUS_LABEL[subscription.status] ?? subscription.status}</strong>
+              </p>
+              {subscription.status === "CANCELADA" && subscription.canceledReason ? (
+                <p className={styles.canceledReason}>Motivo do cancelamento: {subscription.canceledReason}</p>
+              ) : null}
+            </div>
+          ) : (
+            <p>Nenhuma assinatura contratada ainda.</p>
+          )}
+        </Card>
+      </div>
 
       {needsCheckout ? (
         <Card title="Cartão de cobrança">

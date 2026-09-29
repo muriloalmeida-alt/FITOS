@@ -8,6 +8,7 @@ import { listStudents } from "@/modules/students/students";
 import { getFinancialSummary, listActiveRecurrencesForTenant, listChargesForTenant } from "@/modules/student-finance/charges";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
+import { FinanceiroHero } from "./FinanceiroHero";
 import { FinanceiroSection } from "./FinanceiroSection";
 import { RecorrenciasSection } from "./RecorrenciasSection";
 import styles from "./page.module.css";
@@ -76,6 +77,8 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
 
   return (
     <AppShell title="Financeiro" navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
+      <FinanceiroHero recebidoCents={summary.recebidoCents} />
+
       <Card title="Visão geral">
         <form method="GET" className={styles.filterForm} aria-label="Filtrar competência">
           <label className={styles.filterLabel} htmlFor="mes">

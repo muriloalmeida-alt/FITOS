@@ -152,7 +152,8 @@ describe("FinanceiroPage (FIT-050/053)", () => {
     render(await FinanceiroPage({ searchParams: Promise.resolve({ mes: "2026-10" }) }));
 
     expect(screen.getByText("R$ 180,00")).toBeInTheDocument();
-    expect(screen.getByText("R$ 100,00")).toBeInTheDocument();
+    // "Recebido" aparece duas vezes (destaque fotográfico do pacote visual 2026 + tile do resumo).
+    expect(screen.getAllByText("R$ 100,00").length).toBeGreaterThan(0);
     expect(screen.getByText("R$ 50,00")).toBeInTheDocument();
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
     expect(getFinancialSummary).toHaveBeenCalledWith({ tenantId: "t1", referenceMonth: new Date(Date.UTC(2026, 9, 1)) });

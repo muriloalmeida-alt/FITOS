@@ -1,7 +1,32 @@
+/*
+ * Cartão navy elevado (pacote visual 2026, tela 11 — "SUA ASSINATURA"):
+ * redefine localmente os tokens que `Card` lê (mesmo padrão de
+ * `AppShell.module.css` `.trailing`), nunca um segundo componente
+ * duplicando `Card`. Só o resumo da assinatura atual ganha o destaque —
+ * "Cartão de cobrança" e "Planos disponíveis" continuam em superfície
+ * clara normal, para não competir visualmente com a ação de trocar de
+ * plano.
+ */
+.subscriptionHighlight {
+  --fitos-color-surface-container: var(--fitos-navy-900);
+  --fitos-color-outline: var(--fitos-navy-900);
+  --fitos-color-on-surface: #ffffff;
+  --fitos-color-on-surface-variant: var(--fitos-navy-100);
+}
+
 .currentPlan {
   display: flex;
   flex-direction: column;
   gap: var(--fitos-space-1);
+}
+
+.eyebrow {
+  margin: 0 0 var(--fitos-space-1) 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
 }
 
 .planName {

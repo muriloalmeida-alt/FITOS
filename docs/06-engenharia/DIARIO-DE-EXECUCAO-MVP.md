@@ -1206,3 +1206,27 @@ Sequência do próprio pacote (`especificacoes/03-PLANO-DE-IMPLEMENTACAO-E-ACEIT
 **Testes** (novos/alterados): `AuthHero.test.tsx` (reescrito — `BrandLogo` no lugar de `PulseLine`, `headlineAccent`); `PathPhotoCard.test.tsx` (novo); `PlanOptionCard.test.tsx` (+1, rótulo "Selecionado"); `comecar/page.test.tsx` (ajuste de capitalização "Sou personal", igual ao print); `conheca`/`comecar` sem teste novo dedicado — cobertos pela suíte já existente (sem alteração de comportamento funcional, só de cor/estrutura visual). Suíte de unidade/componente **1184/1184** (+3 desde o PR #171 — `AuthHero.test.tsx` reescrito com um teste extra, `PathPhotoCard.test.tsx` novo, `PlanOptionCard.test.tsx` +1). `tsc --noEmit`/`eslint .`/`next build`/`npm audit --omit=dev` limpos.
 
 **Evidência real**: `docs/06-engenharia/evidencias/FIT-132/` — 15 capturas Playwright (`/entrar`, `/conheca`, `/comecar` × 360/390/768/1024/1440px), comparadas visualmente com `prints-mobile/tela-0{1,2,3}.png` e `prints-desktop/tela-0{1,2,3}.png` do pacote. Sem simulação: as três rotas são públicas, renderizadas de verdade por este ambiente.
+
+**PR2 aprovado por Murilo ("Aprovado") e mesclado**: [PR #173](https://github.com/muriloalmeida-alt/FitOS/pull/173) → `main` (`6c24758`). CI real (Postgres real) e deploy de preview do Railway (`fitos-web-hml-fitos-pr-173`) verdes. FIT-132 #172 fechada com esse resultado registrado.
+
+### FIT-133 (EPIC-17) — PR3 do pacote visual 2026: Personal
+
+Sequência do pacote: PR3 cobre `/painel` (dashboard), `/painel/alunos`, `/painel/treinos`, `/painel/exercicios`, `/painel/financeiro`, `/painel/assinatura` — todas exclusivas do papel Personal, todas autenticadas.
+
+**Confirmado antes de tocar em código**: os prints de referência (mobile *e* desktop) exibem números claramente fictícios ("42 alunos ativos", "76% treinos concluídos", "R$ 4.280 registrados") — mas o próprio print **desktop** da tela 06 já denuncia isso sozinho: onde o mobile mostra "76%", o desktop mostra literalmente o texto "Valor vindo da base" / "Apenas quando mensurável" no mesmo lugar — uma nota do próprio pacote, não um placeholder a ser preenchido com um número inventado. Confirma a leitura mais cautelosa: os números do mobile são só ilustração de composição, nunca uma constante de produto (regra explícita do contrato). `PersonalHome`/`FinanceiroPage` já eram 100% orientados a dado real desde as Histórias originais (FIT-060/FIT-050/FIT-053) — este PR3 aplica só o tratamento visual do pacote por cima desses valores reais, nunca substitui nenhum por um número do print.
+
+**Descoberta que também define o escopo**: diferente das rotas de PR2, as seis rotas deste PR3 são **todas** autenticadas (`requirePersonal()`) e batem no banco real — nenhuma pode ser renderizada neste ambiente sem Postgres/Docker (mesma limitação de FIT-131/FIT-132). Escopo deliberadamente conservador: só mudanças de alta confiança e baixo risco, evitando qualquer reestruturação especulativa de layout que não haveria como conferir visualmente aqui (ex.: o layout de duas colunas hero+resumo do dashboard desktop, ou os cartões "Acontecendo agora" — deixados de fora desta rodada, não silenciados).
+
+**`PersonalHero`** (faixa do dashboard): foto trocada de `fitos-dashboard-personal.png` para `scene-program.png` — exatamente o uso que a tabela de assets do pacote define ("Dashboard Personal... Personal preparando programa no tablet"). Estrutura/gradiente já existentes preservados (já seguiam o mesmo padrão do pacote).
+
+**`FinanceiroHero`** (novo, `/painel/financeiro`): faixa editorial acima do resumo, foto `scene-group.png` ("conteúdo editorial de comunidade/financeiro" na tabela de assets — nunca atribuída a um aluno específico) com o valor **real** já recebido na competência filtrada (`getFinancialSummary`), nunca "R$ 4.280" do print.
+
+**`/painel/assinatura`**: o cartão "Sua assinatura" ganha o mesmo destaque navy elevado da tela 11 — tokens de `Card` redefinidos localmente (mesmo padrão de `AppShell.module.css` `.trailing`/`PathPhotoCard`), sempre sobre a assinatura real contratada (nome do plano, preço, status). "Cartão de cobrança" e "Planos disponíveis" continuam em superfície clara normal, para não competir visualmente com a ação de trocar de plano.
+
+**`/painel/treinos`**: novo cartão "Próximo passo" (CTA fixo para `/painel/treinos/novo`) quando já existem modelos — nunca aparece junto do `EmptyStateAction` do estado vazio (seriam dois CTAs competindo pela mesma ação).
+
+**Sem mudança**: `/painel/alunos` (`StudentCard` já usa `Avatar` por iniciais, nunca foto — já era exatamente a regra "sem retrato de aluno" do pacote) e `/painel/exercicios` (já usa imagens reais do catálogo via `ExerciseThumbnail`, FIT-111). Nenhum dos dois precisou de mudança para já estar alinhado ao pacote.
+
+**Testes** (novos/alterados): `FinanceiroHero.test.tsx` (novo, 2 testes); `financeiro/page.test.tsx` (1 asserção ajustada para `getAllByText` — "Recebido" passa a aparecer duas vezes na tela, faixa + tile do resumo, ambos com o mesmo valor real). Suíte de unidade/componente **1186/1186** (+2 desde o PR #173). `tsc --noEmit`/`eslint .`/`next build`/`npm audit --omit=dev` limpos.
+
+**Pendência explícita**: nenhuma captura real para as seis rotas deste PR3 — todas exigem sessão + banco, indisponíveis neste ambiente. Depende de Railway homologação ou de uma sessão com banco local disponível.
