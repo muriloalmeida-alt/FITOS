@@ -12,18 +12,12 @@ vi.mock("@/modules/identity/auth-client", () => ({
 
 const BASE_PROPS = {
   name: "Marina",
-  tenantName: "Espaço de Marina",
-  objective: "GANHAR_MASSA" as const,
-  experienceLevel: "INTERMEDIARIO" as const,
-  weeklyAvailability: "TRES_A_QUATRO_DIAS" as const,
-  workoutsCount: 2,
   inProgressWorkoutName: null,
   suggestedWorkout: null,
   weeklyRhythm: { completedDays: 0, dayFlags: [false, false, false, false, false, false, false] },
-  subscription: null,
 };
 
-describe("IndividualHome (FIT-137 — tela-10 do pacote visual 2026)", () => {
+describe("IndividualHome (FIT-137/FIT-142 — tela-10 do pacote visual 2026)", () => {
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -31,12 +25,12 @@ describe("IndividualHome (FIT-137 — tela-10 do pacote visual 2026)", () => {
   it("sem treino em andamento e sem nenhum treino criado: hero convida a criar o primeiro, nunca finge que há algo para começar", () => {
     render(<IndividualHome {...BASE_PROPS} />);
 
-    expect(screen.getByText("Treine no seu próprio ritmo.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum treino criado ainda")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Criar meu primeiro treino" })).toHaveAttribute("href", "/painel/meus-treinos/novo");
     expect(screen.queryByText("Hoje para você")).not.toBeInTheDocument();
   });
 
-  it("com treino real sugerido (sem sessão em andamento): hero leva ao treino real, 'Hoje para você' mostra o preview real", () => {
+  it("com treino real sugerido (sem sessão em andamento): hero mostra o nome/contagem reais do treino, 'Hoje para você' mostra o mesmo preview real", () => {
     render(
       <IndividualHome
         {...BASE_PROPS}
@@ -46,9 +40,19 @@ describe("IndividualHome (FIT-137 — tela-10 do pacote visual 2026)", () => {
 
     expect(screen.getByRole("link", { name: "Iniciar treino" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
     expect(screen.getByText("Hoje para você")).toBeInTheDocument();
-    expect(screen.getByText("Força essencial")).toBeInTheDocument();
-    expect(screen.getByText("5 exercícios")).toBeInTheDocument();
+    expect(screen.getAllByText("Força essencial")).toHaveLength(2);
+    expect(screen.getAllByText("5 exercícios")).toHaveLength(2);
     expect(screen.getByRole("link", { name: "Ver treino ↗" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
+  });
+
+  it("FIT-142: nunca mostra o texto motivacional genérico antigo", () => {
+    const { rerender } = render(<IndividualHome {...BASE_PROPS} />);
+    expect(screen.queryByText(/Treine no seu próprio ritmo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no seu tempo, do seu jeito/)).not.toBeInTheDocument();
+
+    rerender(<IndividualHome {...BASE_PROPS} suggestedWorkout={{ id: "w1", name: "Força essencial", exercisesCount: 5 }} />);
+    expect(screen.queryByText(/Treine no seu próprio ritmo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no seu tempo, do seu jeito/)).not.toBeInTheDocument();
   });
 
   it("com sessão em andamento: hero mostra 'Continuar treino', 'Hoje para você' não aparece (evita duplicar o mesmo treino)", () => {
@@ -71,34 +75,18 @@ describe("IndividualHome (FIT-137 — tela-10 do pacote visual 2026)", () => {
     expect(screen.getByText("treinos nesta semana")).toBeInTheDocument();
   });
 
-  it("'Seu plano' só aparece com assinatura real — período grátis ativo mostra a data real de fim do trial", () => {
-    const { rerender } = render(<IndividualHome {...BASE_PROPS} />);
+  it("FIT-142: nunca mostra os cards removidos 'Seu plano', 'Seu espaço' ou 'Meus treinos' (agora em /painel/perfil)", () => {
+    render(<IndividualHome {...BASE_PROPS} />);
+
     expect(screen.queryByText("Seu plano")).not.toBeInTheDocument();
-
-    const trialEndsAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-    rerender(
-      <IndividualHome
-        {...BASE_PROPS}
-        subscription={{ planName: "FitOS Livre", priceCents: 1990, trialEndsAt }}
-      />
-    );
-
-    expect(screen.getByText("Seu plano")).toBeInTheDocument();
-    expect(screen.getByText("FitOS Livre")).toBeInTheDocument();
-    expect(screen.getByText(/Período grátis até/)).toBeInTheDocument();
-    expect(screen.getByText(/R\$ 19,90\/mês/)).toBeInTheDocument();
+    expect(screen.queryByText("Seu espaço")).not.toBeInTheDocument();
+    expect(screen.queryByText("Meus treinos")).not.toBeInTheDocument();
   });
 
-  it("'Seu plano' com trial já encerrado mostra só o preço mensal, sem menção a período grátis", () => {
-    const trialEndsAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    render(
-      <IndividualHome
-        {...BASE_PROPS}
-        subscription={{ planName: "FitOS Livre", priceCents: 1990, trialEndsAt }}
-      />
-    );
+  it("saudação e data reais aparecem no cabeçalho quando informadas pelo servidor", () => {
+    render(<IndividualHome {...BASE_PROPS} greeting="Bom dia" dateLabel="Terça, 29 de setembro" />);
 
-    expect(screen.getByText("R$ 19,90/mês")).toBeInTheDocument();
-    expect(screen.queryByText(/Período grátis/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bom dia, Marina." })).toBeInTheDocument();
+    expect(screen.getByText("Terça, 29 de setembro")).toBeInTheDocument();
   });
 });

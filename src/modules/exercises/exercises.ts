@@ -2,10 +2,12 @@ import "server-only";
 import { Prisma, type Exercise, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 
-/// Gestão de exercícios próprios do personal (FIT-022). `tenantId` nunca é
-/// um parâmetro opcional/inferido — todo chamador já deve tê-lo derivado
-/// do contexto de autorização da sessão (`requirePersonal`, FIT-011) antes
-/// de chamar qualquer função deste módulo, mesmo padrão de `students.ts`.
+/// Gestão de exercícios próprios do tenant (FIT-022; FIT-142 estende a
+/// criação também ao workspace individual do FitOS Livre). `tenantId`
+/// nunca é um parâmetro opcional/inferido — todo chamador já deve tê-lo
+/// derivado do contexto de autorização da sessão (`requirePersonal` ou
+/// `requireSubscriber`, FIT-011) antes de chamar qualquer função deste
+/// módulo, mesmo padrão de `students.ts`.
 ///
 /// Exercício próprio nunca muda de tenant nem se torna global por aqui:
 /// nenhuma função deste módulo aceita `tenantId`/`origin` como campo

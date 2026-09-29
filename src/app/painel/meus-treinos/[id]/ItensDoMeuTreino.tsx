@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, ExerciseAutocomplete, FormAlert, TextField } from "@/shared/ui";
 import styles from "./ItensDoMeuTreino.module.css";
@@ -227,6 +228,12 @@ export function ItensDoMeuTreino({ workoutId, items, catalog }: ItensDoMeuTreino
           placeholder="Buscar exercício por nome"
           disabled={isSubmitting}
         />
+        <Link
+          href={`/painel/exercicios/novo?returnTo=${encodeURIComponent(`/painel/meus-treinos/${workoutId}`)}`}
+          className={styles.cadastrarExercicioLink}
+        >
+          + Cadastrar exercício
+        </Link>
 
         <div className={styles.paramsGrid}>
           <TextField

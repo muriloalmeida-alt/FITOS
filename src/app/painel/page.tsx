@@ -9,7 +9,6 @@ import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { listStudents } from "@/modules/students/students";
 import { getFinancialSummary, listChargesForTenant } from "@/modules/student-finance/charges";
 import { getLastAssessmentDatesForTenant } from "@/modules/evolution/assessments";
-import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { getPersonalAttentionItems } from "./getPersonalAttentionItems";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
@@ -115,14 +114,12 @@ export default async function PainelPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [tenant, workouts, selfStudent, subscription] = await Promise.all([
-      prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } }),
+    const [workouts, selfStudent] = await Promise.all([
       listWorkoutsForTenant({ tenantId: ctx.tenantId }),
       // Nunca cria o Student de auto-referência aqui (FIT-103): só
       // existe depois que o praticante começou algum treino — se ainda
       // não existe, é impossível haver uma sessão em andamento.
       prisma.student.findUnique({ where: { userId: ctx.userId } }),
-      getSubscriptionForTenant(ctx.tenantId),
     ]);
     const [inProgressSession, weeklyRhythm] = await Promise.all([
       selfStudent ? getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: selfStudent.id }) : null,
@@ -147,23 +144,9 @@ export default async function PainelPage() {
         name={session.user.name}
         greeting={greetingForHour(hourInProductTimeZone(new Date()))}
         dateLabel={dateLabelFor(new Date())}
-        tenantName={tenant.name}
-        objective={profile.objective}
-        experienceLevel={profile.experienceLevel}
-        weeklyAvailability={profile.weeklyAvailability}
-        workoutsCount={workouts.length}
         inProgressWorkoutName={inProgressSession?.workout.name ?? null}
         suggestedWorkout={suggestedWorkout}
         weeklyRhythm={{ completedDays: weeklyRhythm.completedDays, dayFlags: weeklyRhythm.dayFlags }}
-        subscription={
-          subscription
-            ? {
-                planName: subscription.plan.name,
-                priceCents: subscription.plan.priceCents,
-                trialEndsAt: subscription.trialEndsAt ? subscription.trialEndsAt.toISOString() : null,
-              }
-            : null
-        }
       />
     );
   }

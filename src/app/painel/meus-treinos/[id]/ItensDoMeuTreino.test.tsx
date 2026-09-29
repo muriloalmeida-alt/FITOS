@@ -79,6 +79,15 @@ describe("ItensDoMeuTreino (busca por autocomplete em vez de select nativo)", ()
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("FIT-142: link 'Cadastrar exercício' leva ao formulário e volta para este treino depois", () => {
+    render(<ItensDoMeuTreino workoutId="w1" items={[]} catalog={CATALOG} />);
+
+    expect(screen.getByRole("link", { name: "+ Cadastrar exercício" })).toHaveAttribute(
+      "href",
+      "/painel/exercicios/novo?returnTo=%2Fpainel%2Fmeus-treinos%2Fw1"
+    );
+  });
+
   it("remove um item via DELETE", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);

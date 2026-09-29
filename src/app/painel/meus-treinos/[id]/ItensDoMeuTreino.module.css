@@ -99,6 +99,14 @@
   gap: var(--fitos-space-3);
 }
 
+.cadastrarExercicioLink {
+  align-self: flex-start;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  text-decoration: none;
+}
+
 @media (min-width: 600px) {
   .row {
     flex-direction: row;

@@ -1,16 +1,33 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, FormAlert, TextField } from "@/shared/ui";
 import styles from "./page.module.css";
+
+const DEFAULT_REDIRECT = "/painel/exercicios";
 
 interface FieldErrors {
   name?: string;
 }
 
+/// Alvo do redirecionamento pós-cadastro (FIT-142): por padrão volta ao
+/// catálogo (`/painel/exercicios`, fluxo original do personal desde a
+/// FIT-022); quando chega aqui a partir do builder de treino do Livre
+/// (`ItensDoMeuTreino`), `?returnTo=` leva de volta ao treino em edição.
+/// Só aceita um caminho interno começando com uma única barra — nunca uma
+/// URL absoluta nem `//`, que navegaria para fora do app.
+function safeReturnTo(value: string | null): string {
+  if (value && value.startsWith("/") && !value.startsWith("//")) {
+    return value;
+  }
+  return DEFAULT_REDIRECT;
+}
+
 export function CadastrarExercicioForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get("returnTo"));
   const instructionsId = useId();
   const [name, setName] = useState("");
   const [type, setType] = useState("");
@@ -54,7 +71,7 @@ export function CadastrarExercicioForm() {
       return;
     }
 
-    router.push("/painel/exercicios");
+    router.push(returnTo);
     router.refresh();
   }
 
