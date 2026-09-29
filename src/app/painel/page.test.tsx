@@ -16,7 +16,6 @@ const listStudents = vi.fn();
 const getFinancialSummary = vi.fn();
 const listChargesForTenant = vi.fn();
 const getLastAssessmentDatesForTenant = vi.fn();
-const getSubscriptionForTenant = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
@@ -74,11 +73,6 @@ vi.mock("@/modules/execution/sessions", async () => {
   return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
 });
 
-vi.mock("@/modules/billing/subscriptions", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
-  return { ...actual, getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) };
-});
-
 vi.mock("@/modules/students/students", async () => {
   const actual = await vi.importActual<typeof import("@/modules/students/students")>("@/modules/students/students");
   return { ...actual, listStudents: (...args: unknown[]) => listStudents(...args) };
@@ -116,7 +110,6 @@ describe("PainelPage (FIT-012)", () => {
       targetDays: null,
       dayFlags: [false, false, false, false, false, false, false],
     });
-    getSubscriptionForTenant.mockResolvedValue(null);
     listWorkoutExercisesForWorkout.mockResolvedValue([]);
   });
 
@@ -325,19 +318,15 @@ describe("PainelPage (FIT-012)", () => {
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
     });
-    findUniqueOrThrowTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
-    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }]);
+    listWorkoutsForTenant.mockResolvedValue([{ id: "w1", name: "Força essencial" }]);
     findUniqueStudent.mockResolvedValue(null);
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
     expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).toBeInTheDocument();
-    expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
-    expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
-    expect(screen.getByText("1 treino criado")).toBeInTheDocument();
     expect(screen.queryByText("Treino em andamento")).not.toBeInTheDocument();
-    expect(findUniqueOrThrowTenant).toHaveBeenCalledWith({ where: { id: "t5" } });
+    expect(findUniqueOrThrowTenant).not.toHaveBeenCalled();
     expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t5" });
     expect(findUniqueStudent).toHaveBeenCalledWith({ where: { userId: "u5" } });
     expect(getInProgressSessionForStudent).not.toHaveBeenCalled();
@@ -359,7 +348,6 @@ describe("PainelPage (FIT-012)", () => {
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
     });
-    findUniqueOrThrowTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
     listWorkoutsForTenant.mockResolvedValue([]);
     findUniqueStudent.mockResolvedValue({ id: "student-auto-referencia" });
     getInProgressSessionForStudent.mockResolvedValue(null);
@@ -387,7 +375,6 @@ describe("PainelPage (FIT-012)", () => {
       experienceLevel: "INICIANTE",
       weeklyAvailability: "TRES_A_QUATRO_DIAS",
     });
-    findUniqueOrThrowTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
     listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }]);
     findUniqueStudent.mockResolvedValue({ id: "student-auto-referencia" });
     getInProgressSessionForStudent.mockResolvedValue({ id: "sess1", workout: { name: "Treino de Peito" } });

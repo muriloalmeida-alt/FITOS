@@ -46,16 +46,3 @@
   font-size: 32px;
   color: var(--fitos-color-primary);
 }
-
-.planName {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--fitos-color-on-surface);
-}
-
-.planDetail {
-  margin: 0;
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
-}
