@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const getServerSession = vi.fn();
@@ -8,12 +8,15 @@ const findUniqueOrThrowTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
 const getTodayScheduleForStudent = vi.fn();
+const getWeeklyRhythmForStudent = vi.fn();
 const listWorkoutsForTenant = vi.fn();
+const listWorkoutExercisesForWorkout = vi.fn();
 const getInProgressSessionForStudent = vi.fn();
 const listStudents = vi.fn();
 const getFinancialSummary = vi.fn();
 const listChargesForTenant = vi.fn();
 const getLastAssessmentDatesForTenant = vi.fn();
+const getSubscriptionForTenant = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
@@ -60,13 +63,20 @@ vi.mock("@/modules/workouts/workouts", async () => {
   return {
     ...actual,
     getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args),
+    getWeeklyRhythmForStudent: (...args: unknown[]) => getWeeklyRhythmForStudent(...args),
     listWorkoutsForTenant: (...args: unknown[]) => listWorkoutsForTenant(...args),
+    listWorkoutExercisesForWorkout: (...args: unknown[]) => listWorkoutExercisesForWorkout(...args),
   };
 });
 
 vi.mock("@/modules/execution/sessions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
   return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
+});
+
+vi.mock("@/modules/billing/subscriptions", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
+  return { ...actual, getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) };
 });
 
 vi.mock("@/modules/students/students", async () => {
@@ -100,6 +110,16 @@ vi.mock("@/modules/identity/auth-client", () => ({
 }));
 
 describe("PainelPage (FIT-012)", () => {
+  beforeEach(() => {
+    getWeeklyRhythmForStudent.mockResolvedValue({
+      completedDays: 0,
+      targetDays: null,
+      dayFlags: [false, false, false, false, false, false, false],
+    });
+    getSubscriptionForTenant.mockResolvedValue(null);
+    listWorkoutExercisesForWorkout.mockResolvedValue([]);
+  });
+
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -181,8 +201,8 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getAllByText("5")).toHaveLength(2);
+    expect(screen.getAllByText("3")).toHaveLength(2);
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
     expect(listStudents).toHaveBeenCalledWith({ tenantId: "t1", status: "ATIVO", pageSize: 100 });
     expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t1" });

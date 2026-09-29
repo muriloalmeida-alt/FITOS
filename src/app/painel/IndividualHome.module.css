@@ -1,0 +1,61 @@
+.suggestedWorkout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+}
+
+.suggestedWorkoutText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  min-width: 0;
+}
+
+.suggestedWorkoutName {
+  font-size: 16px;
+  color: var(--fitos-color-on-surface);
+}
+
+.suggestedWorkoutMeta {
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.suggestedWorkoutLink {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-primary);
+  text-decoration: none;
+}
+
+.evolution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.evolutionCount {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.evolutionNumber {
+  font-size: 32px;
+  color: var(--fitos-color-primary);
+}
+
+.planName {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.planDetail {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-color-on-surface-variant);
+}

@@ -10,6 +10,10 @@ interface PersonalHomeProps {
   name: string;
   email: string;
   tenantName: string | null;
+  /// Saudação real conforme a hora do request no servidor (FIT-137) —
+  /// "Bom dia"/"Boa tarde"/"Boa noite", nunca calculada no cliente (evitaria
+  /// divergir do fuso do servidor na primeira renderização).
+  greeting: string;
   activeStudentsCount: number;
   activeWorkoutsCount: number;
   atrasadoCents: number;
@@ -26,6 +30,7 @@ export function PersonalHome({
   name,
   email,
   tenantName,
+  greeting,
   activeStudentsCount,
   activeWorkoutsCount,
   atrasadoCents,
@@ -39,7 +44,11 @@ export function PersonalHome({
       activeKey="inicio"
       trailing={<LogoutButton />}
     >
-      <PersonalHero />
+      <PersonalHero
+        greeting={`${greeting}, ${name}.`}
+        activeStudentsCount={activeStudentsCount}
+        activeWorkoutsCount={activeWorkoutsCount}
+      />
 
       {attentionItems.length > 0 ? (
         <Card title="Precisa de atenção">

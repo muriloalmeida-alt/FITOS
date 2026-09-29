@@ -17,6 +17,7 @@ import {
   getActivePlanAssignmentForStudent,
   getTodayScheduleForStudent,
   getTrainingPlanForTenant,
+  getWeeklyRhythmForStudent,
   getWorkoutExerciseForTenant,
   getWorkoutForTenant,
   listEndedPlanAssignmentsForStudent,
@@ -1054,5 +1055,72 @@ describe("getTodayScheduleForStudent (FIT-040)", () => {
     const schedule = await getTodayScheduleForStudent({ tenantId: tenantB.id, studentId: studentA.id }, prisma);
 
     expect(schedule).toEqual({ state: "SEM_PLANO" });
+  });
+});
+
+describe("getWeeklyRhythmForStudent (FIT-137, pacote visual 2026)", () => {
+  it("conta dias distintos com sessão CONCLUIDA nesta semana — ignora sessões não concluídas e de outra semana, nunca conta duas sessões do mesmo dia como dois dias", async () => {
+    const { tenant } = await createTenant("ritmo-semana");
+    const student = await createStudent(tenant.id, "ritmo-semana");
+    const { workoutA } = await createPlanWithWorkoutsAndItems(tenant.id, "ritmo-semana");
+
+    const now = new Date();
+    const lastWeek = new Date(now);
+    lastWeek.setDate(now.getDate() - 8);
+
+    await prisma.workoutSession.create({
+      data: { tenantId: tenant.id, studentId: student.id, workoutId: workoutA.id, status: "CONCLUIDA", startedAt: now, endedAt: now },
+    });
+    await prisma.workoutSession.create({
+      data: { tenantId: tenant.id, studentId: student.id, workoutId: workoutA.id, status: "CONCLUIDA", startedAt: now, endedAt: now },
+    });
+    await prisma.workoutSession.create({
+      data: { tenantId: tenant.id, studentId: student.id, workoutId: workoutA.id, status: "EM_ANDAMENTO", startedAt: now },
+    });
+    await prisma.workoutSession.create({
+      data: { tenantId: tenant.id, studentId: student.id, workoutId: workoutA.id, status: "CONCLUIDA", startedAt: lastWeek, endedAt: lastWeek },
+    });
+
+    const rhythm = await getWeeklyRhythmForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+
+    expect(rhythm.completedDays).toBe(1);
+    expect(rhythm.dayFlags.filter(Boolean)).toHaveLength(1);
+  });
+
+  it("targetDays vem da união dos dias distintos configurados no plano ativo — null quando não há plano ativo ou nenhum modelo tem dia configurado", async () => {
+    const { tenant, owner } = await createTenant("ritmo-alvo");
+    const student = await createStudent(tenant.id, "ritmo-alvo");
+
+    const semPlano = await getWeeklyRhythmForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+    expect(semPlano.targetDays).toBeNull();
+
+    const { plan, workoutA, workoutB } = await createPlanWithWorkoutsAndItems(tenant.id, "ritmo-alvo");
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutA.id, suggestedDays: ["SEGUNDA", "QUARTA"] }, prisma);
+    await updateWorkout({ tenantId: tenant.id, workoutId: workoutB.id, suggestedDays: ["QUARTA", "SEXTA"] }, prisma);
+    await assignTrainingPlanToStudent(
+      { tenantId: tenant.id, actorUserId: owner.id, studentId: student.id, trainingPlanId: plan.id },
+      prisma
+    );
+
+    const comPlano = await getWeeklyRhythmForStudent({ tenantId: tenant.id, studentId: student.id }, prisma);
+    expect(comPlano.targetDays).toBe(3);
+  });
+
+  it("isolamento: nunca deriva o ritmo a partir de aluno ou sessão de outro tenant", async () => {
+    const { tenant: tenantA, owner } = await createTenant("ritmo-isolamento-a");
+    const { tenant: tenantB } = await createTenant("ritmo-isolamento-b");
+    const studentA = await createStudent(tenantA.id, "ritmo-isolamento");
+    const { plan, workoutA } = await createPlanWithWorkoutsAndItems(tenantA.id, "ritmo-isolamento");
+    await assignTrainingPlanToStudent(
+      { tenantId: tenantA.id, actorUserId: owner.id, studentId: studentA.id, trainingPlanId: plan.id },
+      prisma
+    );
+    await prisma.workoutSession.create({
+      data: { tenantId: tenantA.id, studentId: studentA.id, workoutId: workoutA.id, status: "CONCLUIDA", startedAt: new Date(), endedAt: new Date() },
+    });
+
+    const rhythm = await getWeeklyRhythmForStudent({ tenantId: tenantB.id, studentId: studentA.id }, prisma);
+
+    expect(rhythm).toEqual({ completedDays: 0, targetDays: null, dayFlags: [false, false, false, false, false, false, false] });
   });
 });

@@ -1,4 +1,4 @@
-import { AppShell, Card, WorkoutExerciseCard, WorkoutTodayCard } from "@/shared/ui";
+import { AppShell, Card, WeeklyRhythmBar, WorkoutExerciseCard, WorkoutTodayCard } from "@/shared/ui";
 import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
 import { LogoutButton } from "./LogoutButton";
 import { ALUNO_NAV_ITEMS } from "./navigation";
@@ -10,6 +10,10 @@ interface AlunoHomeProps {
   personalName: string;
   schedule: StudentTodaySchedule;
   hasInProgressSession: boolean;
+  /// Ritmo real da semana atual (FIT-137, `getWeeklyRhythmForStudent`).
+  /// `targetDays` só existe com plano ativo — a seção "Seu ritmo nesta
+  /// semana" (tela-09) só aparece quando há uma meta real para comparar.
+  weeklyRhythm: { completedDays: number; targetDays: number | null };
 }
 
 interface PrescriptionSummaryInput {
@@ -138,7 +142,12 @@ function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTod
 /// assets do pacote), só nos dois estados em que o card já é a ação real
 /// (treino atribuído ou sessão em andamento); os estados sem treino nunca
 /// mostram o card, então nunca mostram a foto.
-export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession }: AlunoHomeProps) {
+/// FIT-137 (PR de correção pós-validação real, pacote visual 2026):
+/// "Seu ritmo nesta semana" (tela-09) — `getWeeklyRhythmForStudent`,
+/// dias reais com sessão CONCLUIDA nesta semana contra a meta real (dias
+/// distintos configurados no plano atribuído). Só aparece com meta real
+/// (`targetDays !== null`) — sem plano ativo, não há o que comparar.
+export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession, weeklyRhythm }: AlunoHomeProps) {
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${displayName}`} navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       <Card title="Seu vínculo">
@@ -156,6 +165,16 @@ export function AlunoHome({ displayName, tenantName, personalName, schedule, has
       <Card title="Treino de hoje">
         <TreinoDeHoje schedule={schedule} hasInProgressSession={hasInProgressSession} />
       </Card>
+
+      {weeklyRhythm.targetDays !== null ? (
+        <Card title="Seu ritmo nesta semana">
+          <WeeklyRhythmBar
+            completedDays={weeklyRhythm.completedDays}
+            targetDays={weeklyRhythm.targetDays}
+            label={`${weeklyRhythm.completedDays} de ${weeklyRhythm.targetDays} dias treinados nesta semana`}
+          />
+        </Card>
+      ) : null}
     </AppShell>
   );
 }

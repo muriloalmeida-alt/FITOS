@@ -6,6 +6,7 @@ import { AppShell, Button, StudentCard, type StudentCardStatusTone } from "@/sha
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listStudents } from "@/modules/students/students";
+import { getWeeklyRhythmForStudent } from "@/modules/workouts/workouts";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
 import styles from "./page.module.css";
@@ -78,6 +79,21 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
   ]);
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
+  // Ritmo semanal real por aluno (FIT-137, tela-07) — só para a página
+  // atual (no máximo `PAGE_SIZE` alunos), nunca a carteira inteira.
+  // `targetDays` vem `null` para quem não tem plano ativo (inativo,
+  // vínculo encerrado, ainda sem atribuição) — nesse caso `StudentCard`
+  // simplesmente não recebe `weeklyRhythm`, sem barra fabricada.
+  const weeklyRhythmByStudentId = new Map<string, { completedDays: number; targetDays: number }>();
+  await Promise.all(
+    result.items.map(async (student) => {
+      const rhythm = await getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id });
+      if (rhythm.targetDays !== null) {
+        weeklyRhythmByStudentId.set(student.id, { completedDays: rhythm.completedDays, targetDays: rhythm.targetDays });
+      }
+    })
+  );
+
   const hasFilter = Boolean(search) || status === "INATIVO" || showingAll;
 
   // Distingue "não há nenhum aluno" de "há alunos, mas todos inativos e a
@@ -119,6 +135,11 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
           + Cadastrar aluno
         </Button>
       </div>
+
+      <Link href="/painel/alunos/novo" className={styles.inviteCard}>
+        <p className={styles.inviteTitle}>+ Convidar ou cadastrar aluno</p>
+        <p className={styles.inviteDescription}>Comece uma nova jornada</p>
+      </Link>
 
       <form method="GET" className={styles.filters} aria-label="Buscar alunos">
         <input
@@ -169,6 +190,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps) {
                 statusLabel={presentation.label}
                 statusTone={presentation.tone}
                 href={`/painel/alunos/${student.id}`}
+                weeklyRhythm={weeklyRhythmByStudentId.get(student.id)}
               />
             );
           })}

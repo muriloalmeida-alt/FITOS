@@ -10,6 +10,30 @@
   color: var(--fitos-color-on-surface-variant);
 }
 
+.inviteCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-1);
+  padding: var(--fitos-space-5);
+  border-radius: var(--fitos-shape-card);
+  background-color: var(--fitos-navy-900);
+  text-decoration: none;
+}
+
+.inviteTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.inviteDescription {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fitos-navy-300);
+}
+
 .filters {
   display: flex;
   flex-direction: column;

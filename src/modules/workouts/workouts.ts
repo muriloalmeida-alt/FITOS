@@ -997,3 +997,72 @@ export async function getTodayScheduleForStudent(
   }
   return { state: "TREINO_HOJE", workout: workoutToday };
 }
+
+export interface WeeklyRhythm {
+  /// Dias distintos (segunda a domingo) com ao menos uma sessão CONCLUIDA
+  /// nesta semana — nunca uma contagem de sessões (dois treinos no mesmo
+  /// dia contam como 1 dia).
+  completedDays: number;
+  /// Dias distintos configurados nos modelos ATIVOS do plano atualmente
+  /// atribuído (união de `suggestedDays`) — `null` quando não há plano
+  /// ativo (sempre o caso para o workspace individual, que não tem o
+  /// conceito de `PlanAssignment`) ou quando o plano ativo não configura
+  /// nenhum dia. Nunca um número fixo de produto.
+  targetDays: number | null;
+  /// 7 posições, segunda (índice 0) a domingo (índice 6) — `true` quando
+  /// aquele dia desta semana teve ao menos uma sessão CONCLUIDA.
+  dayFlags: boolean[];
+}
+
+/// Segunda-feira (fuso do servidor, mesma simplificação de
+/// `todayWeekdayLabel`) como índice 0 — `Date.getDay()` usa domingo como 0.
+function mondayFirstIndex(date: Date): number {
+  const day = date.getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
+function currentWeekBounds(referenceDate: Date = new Date()): { start: Date; end: Date } {
+  const start = new Date(referenceDate);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - mondayFirstIndex(start));
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return { start, end };
+}
+
+/// Ritmo real da semana atual (FIT-137, pacote visual 2026 — telas 09/10):
+/// dias distintos com sessão CONCLUIDA, nunca um número ilustrativo do
+/// print. Reaproveitado por Aluno (com `targetDays` real do plano
+/// atribuído) e FitOS Livre (`targetDays` sempre `null`, sem conceito de
+/// plano atribuído — a tela só mostra a contagem, sem fração).
+export async function getWeeklyRhythmForStudent(
+  input: { tenantId: string; studentId: string },
+  client: PrismaClient = prisma
+): Promise<WeeklyRhythm> {
+  const { start, end } = currentWeekBounds();
+  const [sessions, active] = await Promise.all([
+    client.workoutSession.findMany({
+      where: { tenantId: input.tenantId, studentId: input.studentId, status: "CONCLUIDA", startedAt: { gte: start, lt: end } },
+      select: { startedAt: true },
+    }),
+    getActivePlanAssignmentForStudent(input, client),
+  ]);
+
+  const dayFlags = [false, false, false, false, false, false, false];
+  for (const session of sessions) {
+    dayFlags[mondayFirstIndex(session.startedAt)] = true;
+  }
+
+  let targetDays: number | null = null;
+  if (active) {
+    const distinctDays = new Set<string>();
+    for (const workout of active.trainingPlan.workouts) {
+      for (const day of workout.suggestedDays) {
+        distinctDays.add(day);
+      }
+    }
+    targetDays = distinctDays.size > 0 ? distinctDays.size : null;
+  }
+
+  return { completedDays: dayFlags.filter(Boolean).length, targetDays, dayFlags };
+}
