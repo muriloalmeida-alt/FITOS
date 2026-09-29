@@ -93,7 +93,7 @@ Tema claro:
 {
   "surfaceEditorial":"#F5F7F8",
   "surfaceWarm":"#FFF0E8",
-  "onSurfaceSecondary":"#637584",
+  "onSurfaceSecondary":"#56636F",
   "outlineSoft":"#DBE4E8",
   "chromeActiveRow":"#27374A"
 }

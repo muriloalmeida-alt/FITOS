@@ -151,7 +151,12 @@
    */
   --fitos-color-surface-editorial: #f5f7f8;
   --fitos-color-surface-warm: #fff0e8;
-  --fitos-color-on-surface-secondary: #637584;
+  /*
+   * FIT-135 (PR5, consolidação): #637584 media 4.19–4.43:1 contra
+   * `surface-editorial`/`surface-container` — abaixo do mínimo AA
+   * (4.5:1) para texto normal. `#56636f` mesma tonalidade, 5.42–5.73:1.
+   */
+  --fitos-color-on-surface-secondary: #56636f;
   --fitos-color-outline-soft: #dbe4e8;
 }
 
