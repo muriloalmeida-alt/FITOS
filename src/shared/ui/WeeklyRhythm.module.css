@@ -1,0 +1,59 @@
+.barTrack {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  border-radius: var(--fitos-shape-full);
+  background-color: var(--fitos-color-surface-container-high);
+  overflow: hidden;
+}
+
+.barFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background-color: var(--fitos-color-primary);
+  border-radius: var(--fitos-shape-full);
+  transition: width 0.3s ease;
+}
+
+.barText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--fitos-space-3);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fitos-color-on-surface);
+}
+
+.dotsRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--fitos-space-1);
+}
+
+.dotColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fitos-space-1);
+}
+
+.dotLabel {
+  font-size: 12px;
+  color: var(--fitos-color-on-surface-variant);
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--fitos-color-outline-variant);
+  background-color: transparent;
+}
+
+.dotFilled {
+  border-color: var(--fitos-color-primary);
+  background-color: var(--fitos-color-primary);
+}

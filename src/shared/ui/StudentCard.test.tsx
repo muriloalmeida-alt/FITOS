@@ -24,4 +24,31 @@ describe("StudentCard", () => {
     render(<StudentCard name="Bruno Lima" statusLabel="Ativo" statusTone="positive" />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
+
+  it("FIT-137: com href, mostra o rótulo visível 'Abrir perfil →' (antes não havia nenhuma affordance de texto)", () => {
+    render(<StudentCard name="Bruno Lima" statusLabel="Ativo" statusTone="positive" href="/painel/alunos/123" />);
+    expect(screen.getByText("Abrir perfil →")).toBeInTheDocument();
+  });
+
+  it("sem href: nunca mostra 'Abrir perfil →' (não há perfil para abrir)", () => {
+    render(<StudentCard name="Bruno Lima" statusLabel="Ativo" statusTone="positive" />);
+    expect(screen.queryByText("Abrir perfil →")).not.toBeInTheDocument();
+  });
+
+  it("FIT-137: com weeklyRhythm, mostra a barra real de dias treinados nesta semana", () => {
+    render(
+      <StudentCard
+        name="Camila Souza"
+        statusLabel="Ativa"
+        statusTone="positive"
+        weeklyRhythm={{ completedDays: 2, targetDays: 3 }}
+      />
+    );
+    expect(screen.getByRole("progressbar", { name: "Camila Souza: 2 de 3 dias treinados nesta semana" })).toBeInTheDocument();
+  });
+
+  it("sem weeklyRhythm: não mostra nenhuma barra de progresso (sem meta real para comparar)", () => {
+    render(<StudentCard name="Camila Souza" statusLabel="Ativa" statusTone="positive" />);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
 });

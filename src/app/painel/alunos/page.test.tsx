@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const requirePersonal = vi.fn();
 const listStudents = vi.fn();
+const getWeeklyRhythmForStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -25,6 +26,14 @@ vi.mock("@/modules/students/students", async () => {
   };
 });
 
+vi.mock("@/modules/workouts/workouts", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
+  return {
+    ...actual,
+    getWeeklyRhythmForStudent: (...args: unknown[]) => getWeeklyRhythmForStudent(...args),
+  };
+});
+
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -39,6 +48,14 @@ function makeSearchParams(params: Record<string, string> = {}) {
 }
 
 describe("AlunosPage (FIT-013)", () => {
+  beforeEach(() => {
+    getWeeklyRhythmForStudent.mockResolvedValue({
+      completedDays: 0,
+      targetDays: null,
+      dayFlags: [false, false, false, false, false, false, false],
+    });
+  });
+
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -152,5 +169,27 @@ describe("AlunosPage (FIT-013)", () => {
 
     expect(screen.getByText("Encerrado Antigo")).toBeInTheDocument();
     expect(screen.getByText("Vínculo encerrado")).toBeInTheDocument();
+  });
+
+  it("FIT-137: mostra o cartão 'Convidar ou cadastrar aluno' e o ritmo semanal real de cada aluno listado", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    listStudents.mockResolvedValue({
+      items: [{ id: "s1", displayName: "Fulano", email: "fulano@example.test", status: "ATIVO" }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+    getWeeklyRhythmForStudent.mockResolvedValue({
+      completedDays: 2,
+      targetDays: 3,
+      dayFlags: [true, true, false, false, false, false, false],
+    });
+    const { default: AlunosPage } = await import("./page");
+
+    render(await AlunosPage({ searchParams: makeSearchParams() }));
+
+    expect(screen.getByRole("link", { name: /Convidar ou cadastrar aluno/ })).toHaveAttribute("href", "/painel/alunos/novo");
+    expect(getWeeklyRhythmForStudent).toHaveBeenCalledWith({ tenantId: "tenant-real", studentId: "s1" });
+    expect(screen.getByRole("progressbar", { name: "Fulano: 2 de 3 dias treinados nesta semana" })).toBeInTheDocument();
   });
 });

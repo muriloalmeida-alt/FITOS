@@ -1,7 +1,22 @@
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { AppShell, Button, Card, WorkoutTodayCard } from "@/shared/ui";
+import Link from "next/link";
+import { AppShell, Button, Card, WeeklyRhythmDots, WorkoutTodayCard } from "@/shared/ui";
+import { formatCentsBRL } from "@/shared/lib/money";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
+import styles from "./IndividualHome.module.css";
+
+interface SuggestedWorkout {
+  id: string;
+  name: string;
+  exercisesCount: number;
+}
+
+interface IndividualSubscription {
+  planName: string;
+  priceCents: number;
+  trialEndsAt: string | null;
+}
 
 interface IndividualHomeProps {
   name: string;
@@ -11,6 +26,18 @@ interface IndividualHomeProps {
   weeklyAvailability: WeeklyAvailability;
   workoutsCount: number;
   inProgressWorkoutName: string | null;
+  /// Sugestão real do "Hoje para você" (tela-10) — sempre o primeiro treino
+  /// real do próprio praticante (`/painel/page.tsx`), nunca inventado.
+  /// `null` quando ainda não existe nenhum treino.
+  suggestedWorkout: SuggestedWorkout | null;
+  /// Ritmo real da semana atual (FIT-137, `getWeeklyRhythmForStudent`) —
+  /// sem `targetDays` aqui: o workspace individual não tem o conceito de
+  /// plano atribuído, então "Sua evolução" mostra só a contagem real, sem
+  /// fração/meta (diferente da barra do Aluno).
+  weeklyRhythm: { completedDays: number; dayFlags: boolean[] };
+  /// Assinatura real do tenant (FIT-122/127), `null` quando ainda não há
+  /// nenhuma contratada — a seção "Seu plano" só aparece com dado real.
+  subscription: IndividualSubscription | null;
 }
 
 const OBJECTIVE_LABELS: Record<IndividualObjective, string> = {
@@ -33,13 +60,106 @@ const AVAILABILITY_LABELS: Record<WeeklyAvailability, string> = {
   CINCO_OU_MAIS_DIAS: "5 dias ou mais por semana",
 };
 
+/// Hero de "Hoje" (tela-10, pacote visual 2026) — três estados reais, nunca
+/// um placeholder: sessão em andamento (igual desde a FIT-134), treino
+/// sugerido real existente (primeiro da lista, CTA leva direto para o
+/// treino, onde o botão real de começar já existe) ou nenhum treino ainda
+/// (CTA leva para criar o primeiro, nunca finge que dá para "iniciar" algo
+/// que não existe).
+function HeroDoDia({ inProgressWorkoutName, suggestedWorkout }: { inProgressWorkoutName: string | null; suggestedWorkout: SuggestedWorkout | null }) {
+  if (inProgressWorkoutName) {
+    return (
+      <WorkoutTodayCard
+        eyebrow="Treino em andamento"
+        title={inProgressWorkoutName}
+        description="Continue de onde parou."
+        imageSrc="/media/brand/visual-2026/scene-solo.png"
+        action={{ label: "Continuar treino", href: "/painel/meus-treinos/sessao" }}
+      />
+    );
+  }
+  if (suggestedWorkout) {
+    return (
+      <WorkoutTodayCard
+        eyebrow="Seu movimento"
+        title="Treine no seu próprio ritmo."
+        description="Comece quando estiver pronto — no seu tempo, do seu jeito."
+        imageSrc="/media/brand/visual-2026/scene-solo.png"
+        action={{ label: "Iniciar treino", href: `/painel/meus-treinos/${suggestedWorkout.id}` }}
+      />
+    );
+  }
+  return (
+    <WorkoutTodayCard
+      eyebrow="Seu movimento"
+      title="Treine no seu próprio ritmo."
+      description="Crie seu primeiro treino para começar."
+      imageSrc="/media/brand/visual-2026/scene-solo.png"
+      action={{ label: "Criar meu primeiro treino", href: "/painel/meus-treinos/novo" }}
+    />
+  );
+}
+
+/// "Hoje para você" (tela-10): preview do treino sugerido, distinto do
+/// hero acima (que é sempre motivacional/genérico) — aqui é o conteúdo
+/// real e específico (nome, quantidade real de exercícios, link direto).
+function HojeParaVoce({ suggestedWorkout }: { suggestedWorkout: SuggestedWorkout }) {
+  return (
+    <Card title="Hoje para você">
+      <div className={styles.suggestedWorkout}>
+        <div className={styles.suggestedWorkoutText}>
+          <strong className={styles.suggestedWorkoutName}>{suggestedWorkout.name}</strong>
+          <span className={styles.suggestedWorkoutMeta}>
+            {suggestedWorkout.exercisesCount} {suggestedWorkout.exercisesCount === 1 ? "exercício" : "exercícios"}
+          </span>
+        </div>
+        <Link href={`/painel/meus-treinos/${suggestedWorkout.id}`} className={styles.suggestedWorkoutLink}>
+          Ver treino ↗
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+function SuaEvolucao({ weeklyRhythm }: { weeklyRhythm: { completedDays: number; dayFlags: boolean[] } }) {
+  return (
+    <Card title="Sua evolução">
+      <div className={styles.evolution}>
+        <p className={styles.evolutionCount}>
+          <strong className={styles.evolutionNumber}>{weeklyRhythm.completedDays}</strong>{" "}
+          {weeklyRhythm.completedDays === 1 ? "treino nesta semana" : "treinos nesta semana"}
+        </p>
+        <WeeklyRhythmDots dayFlags={weeklyRhythm.dayFlags} />
+      </div>
+    </Card>
+  );
+}
+
+function SeuPlano({ subscription }: { subscription: IndividualSubscription }) {
+  const trialActive = subscription.trialEndsAt !== null && new Date(subscription.trialEndsAt) > new Date();
+  return (
+    <Card title="Seu plano">
+      <p className={styles.planName}>{subscription.planName}</p>
+      <p className={styles.planDetail}>
+        {trialActive
+          ? `Período grátis até ${new Date(subscription.trialEndsAt!).toLocaleDateString("pt-BR")}, depois ${formatCentsBRL(subscription.priceCents)}/mês`
+          : `${formatCentsBRL(subscription.priceCents)}/mês`}
+      </p>
+    </Card>
+  );
+}
+
 /// "Hoje" do workspace individual (FIT-101/FIT-102/FIT-103). Criar treino
 /// (FIT-102) e executar treino (FIT-103, registrar séries/carga/descanso
 /// de verdade) já são reais.
-/// FIT-134 (pacote visual 2026): `WorkoutTodayCard` ganha `imageSrc`
-/// (`scene-solo.png`, mesma foto já usada em `/entrar`/`/comecar` para o
-/// caminho Livre) — o prop já existia desde a FIT-120, só nunca tinha sido
-/// usado aqui.
+/// FIT-137 (correção pós-validação real, pacote visual 2026 — tela-10):
+/// o PR anterior (FIT-134) só tratava o estado "sessão em andamento" —
+/// o estado padrão (sem sessão, o mais comum) não tinha hero, CTA,
+/// evolução nem plano, nada do que a tela-10 mostra. Corrigido com dados
+/// 100% reais: `suggestedWorkout` (primeiro treino real do praticante),
+/// `weeklyRhythm` (`getWeeklyRhythmForStudent`) e `subscription`
+/// (`getSubscriptionForTenant`) — nenhum "45 min" ou nome de treino do
+/// print, cada seção só aparece quando há dado real para mostrar.
 export function IndividualHome({
   name,
   tenantName,
@@ -48,9 +168,20 @@ export function IndividualHome({
   weeklyAvailability,
   workoutsCount,
   inProgressWorkoutName,
+  suggestedWorkout,
+  weeklyRhythm,
+  subscription,
 }: IndividualHomeProps) {
   return (
     <AppShell title="Hoje" subtitle={`Olá, ${name}`} navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
+      <HeroDoDia inProgressWorkoutName={inProgressWorkoutName} suggestedWorkout={suggestedWorkout} />
+
+      {suggestedWorkout && !inProgressWorkoutName ? <HojeParaVoce suggestedWorkout={suggestedWorkout} /> : null}
+
+      <SuaEvolucao weeklyRhythm={weeklyRhythm} />
+
+      {subscription ? <SeuPlano subscription={subscription} /> : null}
+
       <Card title="Seu espaço">
         <p>
           Workspace: <strong>{tenantName}</strong>
@@ -68,16 +199,6 @@ export function IndividualHome({
           Editar respostas
         </Button>
       </Card>
-
-      {inProgressWorkoutName ? (
-        <WorkoutTodayCard
-          eyebrow="Treino em andamento"
-          title={inProgressWorkoutName}
-          description="Continue de onde parou."
-          imageSrc="/media/brand/visual-2026/scene-solo.png"
-          action={{ label: "Continuar treino", href: "/painel/meus-treinos/sessao" }}
-        />
-      ) : null}
 
       <Card title="Meus treinos">
         <p>

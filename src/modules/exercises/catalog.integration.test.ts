@@ -42,7 +42,12 @@ describe("listCatalogExercises (FIT-023)", () => {
     const global = await createGlobalExercise(`Push-up global ${run}`);
     const own = await createOwnExercise({ tenantId: tenant.id, actorUserId: owner.id, name: `Rosca própria ${run}` }, prisma);
 
-    const result = await listCatalogExercises({ tenantId: tenant.id }, prisma);
+    // FIT-137: busca escopada ao próprio nome sintético do teste — sem
+    // isso, a paginação padrão (20 itens, ordenada por nome) some com
+    // qualquer item que não caia nos primeiros 20 nomes alfabéticos do
+    // catálogo real (200+ exercícios curados, IMP-EX-002), tornando este
+    // teste frágil por construção. O teste seguinte já usa este padrão.
+    const result = await listCatalogExercises({ tenantId: tenant.id, search: run }, prisma);
     const ids = result.items.map((item) => item.id);
 
     expect(ids).toContain(global.id);

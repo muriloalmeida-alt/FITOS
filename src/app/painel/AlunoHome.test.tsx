@@ -11,7 +11,11 @@ vi.mock("@/modules/identity/auth-client", () => ({
   signOut: vi.fn(),
 }));
 
-function renderHome(schedule: StudentTodaySchedule, hasInProgressSession = false) {
+function renderHome(
+  schedule: StudentTodaySchedule,
+  hasInProgressSession = false,
+  weeklyRhythm: { completedDays: number; targetDays: number | null } = { completedDays: 0, targetDays: null }
+) {
   render(
     <AlunoHome
       displayName="Pedro"
@@ -19,6 +23,7 @@ function renderHome(schedule: StudentTodaySchedule, hasInProgressSession = false
       personalName="Joana"
       schedule={schedule}
       hasInProgressSession={hasInProgressSession}
+      weeklyRhythm={weeklyRhythm}
     />
   );
 }
@@ -103,5 +108,18 @@ describe("AlunoHome (FIT-040 — treino de hoje)", () => {
 
     expect(screen.queryByRole("link", { name: "Começar treino" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Continuar treino em andamento" })).not.toBeInTheDocument();
+  });
+
+  it("FIT-137: mostra 'Seu ritmo nesta semana' quando há meta real (plano ativo com dias configurados)", () => {
+    renderHome({ state: "DESCANSO" }, false, { completedDays: 2, targetDays: 3 });
+
+    expect(screen.getByText("Seu ritmo nesta semana")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "2 de 3 dias treinados nesta semana" })).toBeInTheDocument();
+  });
+
+  it("FIT-137: não mostra 'Seu ritmo nesta semana' sem meta real (sem plano ativo)", () => {
+    renderHome({ state: "SEM_PLANO" }, false, { completedDays: 0, targetDays: null });
+
+    expect(screen.queryByText("Seu ritmo nesta semana")).not.toBeInTheDocument();
   });
 });

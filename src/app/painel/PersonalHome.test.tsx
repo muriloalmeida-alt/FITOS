@@ -17,6 +17,7 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
         name="Joana"
         email="joana@example.test"
         tenantName="Espaço de Joana"
+        greeting="Bom dia"
         activeStudentsCount={5}
         activeWorkoutsCount={3}
         atrasadoCents={3000}
@@ -24,8 +25,9 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
       />
     );
 
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("Bom dia, Joana.")).toBeInTheDocument();
+    expect(screen.getAllByText("5")).toHaveLength(2);
+    expect(screen.getAllByText("3")).toHaveLength(2);
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
 
     const novoAluno = screen.getByRole("link", { name: "+ Novo aluno" });
@@ -44,6 +46,7 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
         name="Joana"
         email="joana@example.test"
         tenantName={null}
+        greeting="Boa tarde"
         activeStudentsCount={0}
         activeWorkoutsCount={0}
         atrasadoCents={0}
@@ -52,7 +55,7 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
     );
 
     expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(2);
+    expect(screen.getAllByText("0")).toHaveLength(4);
     expect(screen.queryByText("Seu espaço")).not.toBeInTheDocument();
     expect(screen.getByText(/Comece cadastrando seu primeiro aluno/)).toBeInTheDocument();
   });
@@ -63,6 +66,7 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
         name="Joana"
         email="joana@example.test"
         tenantName={null}
+        greeting="Boa noite"
         activeStudentsCount={2}
         activeWorkoutsCount={1}
         atrasadoCents={0}
@@ -79,6 +83,7 @@ describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
         name="Joana"
         email="joana@example.test"
         tenantName={null}
+        greeting="Bom dia"
         activeStudentsCount={2}
         activeWorkoutsCount={1}
         atrasadoCents={32000}
