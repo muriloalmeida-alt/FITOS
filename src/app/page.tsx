@@ -1,19 +1,21 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getServerSession } from "@/modules/identity/session";
+import { appName } from "@/shared/config/env";
+import { SplashScreen } from "./SplashScreen";
 
-/// `/` (FIT-125/EPIC-16) deixou de ser a landing comercial (agora em
-/// `/conheca`) e passa a só resolver sessão: visitante não autenticado vai
-/// para `/entrar`; autenticado vai para `/painel`, que já decide sozinho o
-/// dashboard certo por papel real (`PersonalHome`/`AlunoHome`/`IndividualHome`
-/// — nenhuma lógica de papel duplicada aqui). `redirect()` roda no servidor
-/// antes de qualquer HTML ser enviado — nunca há flash de landing/login
-/// durante a verificação. Nunca renderiza nada visível: sempre redireciona.
+export const metadata: Metadata = {
+  title: appName,
+};
+
+/// `/` (FIT-125/EPIC-16) é a entrada do app (e o `start_url` do PWA): só
+/// resolve sessão. FIT-141: em vez de redirecionar direto, mostra a tela
+/// de abertura, que segue para o destino decidido aqui, no servidor, pela
+/// sessão real — visitante não autenticado vai para `/entrar`; autenticado
+/// vai para `/painel`, que já decide sozinho o dashboard certo por papel
+/// (`PersonalHome`/`AlunoHome`/`IndividualHome` — nenhuma lógica de papel
+/// duplicada aqui). Links diretos para `/entrar` ou `/painel` não passam
+/// pela abertura, para não atrasar quem já sabe para onde vai.
 export default async function RootPage() {
   const session = await getServerSession();
-
-  if (!session) {
-    redirect("/entrar");
-  }
-
-  redirect("/painel");
+  return <SplashScreen destination={session ? "/painel" : "/entrar"} />;
 }
