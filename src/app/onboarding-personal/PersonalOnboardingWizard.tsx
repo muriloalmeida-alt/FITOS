@@ -1,415 +1,212 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
-import {
-  Button,
-  CreditCardFields,
-  EMPTY_CREDIT_CARD_FIELDS,
-  FormAlert,
-  PlanOptionCard,
-  SelectField,
-  TextField,
-  WizardProgress,
-  useUnsavedChangesGuard,
-  validateCreditCardFields,
-  type CreditCardFieldsValue,
-  type PlanOptionCardPlan,
-} from "@/shared/ui";
+import { Button, ChipGroup, CreditCardFields, EMPTY_CREDIT_CARD_FIELDS, FormAlert, ProgressBar, Tag, TextField, validateCreditCardFields, type CreditCardFieldErrors, type CreditCardFieldsValue } from "@/shared/ui";
 import { formatBrazilianPhone, isValidBrazilianPhone } from "@/shared/lib/brazilianPhone";
 import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
-import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
 import { formatCentsBRL } from "@/shared/lib/money";
-import styles from "./page.module.css";
+import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
+import styles from "../_entrada/Entrada.module.css";
 
-interface PersonalOnboardingWizardProps {
+export interface OnboardingPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  billingCycle: "MENSAL" | "ANUAL";
+  studentLimit: number | null;
+  trialDays: number | null;
+}
+
+interface Props {
   initialBusinessName: string;
-  /// Catálogo real de planos do Personal (FIT-127), nunca uma lista fixa
-  /// na interface — vem do servidor (`listActivePlansForAudience`).
-  plans: PlanOptionCardPlan[];
-  /// Plano já contratado, se este onboarding está sendo reaberto (reabrir
-  /// nunca concede um novo trial — `subscribeTenantToPlan` já garante isso
-  /// no servidor; aqui é só o valor pré-selecionado no passo 3).
+  plans: OnboardingPlan[];
   initialPlanId: string | null;
 }
 
 type Step = 1 | 2 | 3 | 4;
+const STEP_TITLES: Record<Step, string> = { 1: "Seu perfil", 2: "Seu plano", 3: "Pagamento", 4: "Revisão" };
+const RANGE_MAX: Record<PersonalStudentRangeEstimate, number | null> = { COMECANDO_AGORA: 20, ATE_20: 20, DE_21_A_50: 50, MAIS_DE_50: null };
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
 
-interface FieldErrors {
-  phone?: string;
-  cref?: string;
-  cpfCnpj?: string;
-  studentRangeEstimate?: string;
-  businessName?: string;
-  termsAccepted?: string;
-  planId?: string;
+/// Plano sugerido pela faixa de alunos: o menor que comporta a faixa.
+export function suggestPlan(plans: OnboardingPlan[], range: PersonalStudentRangeEstimate | null): OnboardingPlan | null {
+  if (plans.length === 0) return null;
+  const max = range ? RANGE_MAX[range] : 20;
+  const fits = plans.filter((plan) => plan.studentLimit === null || (max !== null && plan.studentLimit >= max));
+  const sorted = [...(fits.length > 0 ? fits : plans)].sort((a, b) => (a.studentLimit ?? Infinity) - (b.studentLimit ?? Infinity) || a.priceCents - b.priceCents);
+  return sorted[0] ?? null;
 }
 
-type CardFieldErrors = Partial<Record<keyof CreditCardFieldsValue, string>>;
-
-/// Onboarding profissional do Personal (FIT-113/FIT-126, seção 7 do
-/// pacote). Quatro sub-etapas dentro de uma única rota real
-/// (`/onboarding-personal`) — diferente da decisão de caminho da FIT-112
-/// (que precisava de URLs próprias, por ser bookmarkable/compartilhável
-/// entre três produtos diferentes), aqui é um único fluxo linear de uma
-/// sessão, mesmo padrão de qualquer formulário de múltiplos passos: estado
-/// de cliente é suficiente, a rota em si já é a "URL navegável" que a
-/// seção 6 do pacote pede.
-///
-/// **Passo 1, CPF/CNPJ (FIT-128, Issue #153)**: obrigatório desde que o
-/// Asaas exige `cpfCnpj` para criar um cliente real (`POST /v3/customers`)
-/// — nenhum onboarding do FitOS coletava esse dado antes. Decisão de
-/// Murilo: cabe em `PersonalProfile`, nunca em `IndividualProfile`, porque
-/// quem paga a assinatura SaaS é sempre o personal.
-///
-/// "Nome do espaço/negócio" nunca é um campo novo — grava direto em
-/// `Tenant.name` (já existe desde a FIT-010), nunca uma coluna duplicada.
-/// "Data de nascimento" (mencionada na seção 7 do pacote) foi
-/// deliberadamente omitida: nenhuma funcionalidade atual do FitOS usa essa
-/// informação para o Personal, e o próprio pacote só pede o campo "se
-/// houver justificativa funcional no modelo atual" — não há.
-///
-/// **Passo 3, seleção de plano (FIT-126)**: catálogo real (`plans`, vindo
-/// do servidor — nunca fixo aqui), com trial de 30 dias já embutido no
-/// disclosure de cada cartão. A submissão final chama `subscribeTenantToPlan`
-/// (mesma função de `/painel/assinatura`, FIT-122) através de
-/// `/api/onboarding-personal` — nunca duas fontes de verdade para
-/// "contratar um plano".
-///
-/// **Passo 4, checkout embutido de cartão (FIT-128)**: decisão de Murilo —
-/// "toda a transação deve ocorrer no FitOS, o Asaas deve ser o gateway; o
-/// cliente deve completar 100% do processo de checkout" — nunca um
-/// redirecionamento para uma página do Asaas. Só aparece quando o plano
-/// escolhido tem preço real (`priceCents > 0`); um plano gratuito nunca
-/// pede cartão. O cartão só é *tokenizado* agora (nunca cobrado de
-/// imediato) — a cobrança real só ocorre quando o trial de 30 dias
-/// termina, mesmo mecanismo de `nextDueDate` já existente. Enviado a
-/// `/api/tenancy/minha-assinatura/cartao` só depois que o onboarding em
-/// si (perfil + seleção de plano) já foi salvo com sucesso.
-const TOTAL_STEPS = 4;
-
-export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPlanId }: PersonalOnboardingWizardProps) {
+/// Onboarding do Personal em 4 passos (FIT-166, E5 do protótipo): perfil
+/// (nome do espaço, faixa em cartões, celular, CREF opcional), plano
+/// sugerido pela faixa, pagamento com a data da primeira cobrança e
+/// revisão com "Começar meus 30 dias grátis". Voltar mantém os dados. Os
+/// termos já foram aceitos ao criar a conta (FIT-164).
+export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPlanId }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
+  const [businessName, setBusinessName] = useState(initialBusinessName);
+  const [range, setRange] = useState<PersonalStudentRangeEstimate | null>(null);
   const [phone, setPhone] = useState("");
   const [cref, setCref] = useState("");
+  const [planId, setPlanId] = useState<string | null>(initialPlanId);
   const [cpfCnpj, setCpfCnpj] = useState("");
-  const [studentRangeEstimate, setStudentRangeEstimate] = useState<PersonalStudentRangeEstimate | "">("");
-  const [businessName, setBusinessName] = useState(initialBusinessName);
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [planId, setPlanId] = useState(initialPlanId ?? "");
   const [card, setCard] = useState<CreditCardFieldsValue>(EMPTY_CREDIT_CARD_FIELDS);
-  const [cardErrors, setCardErrors] = useState<CardFieldErrors>({});
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [cardErrors, setCardErrors] = useState<CreditCardFieldErrors>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [startedAt] = useState(() => Date.now());
 
-  const hasData =
-    phone.trim() !== "" ||
-    cref.trim() !== "" ||
-    cpfCnpj.trim() !== "" ||
-    studentRangeEstimate !== "" ||
-    businessName.trim() !== initialBusinessName.trim() ||
-    planId !== (initialPlanId ?? "") ||
-    Object.values(card).some((value) => value.trim() !== "");
+  const suggested = suggestPlan(plans, range);
+  const plan = plans.find((entry) => entry.id === planId) ?? suggested;
+  const paid = (plan?.priceCents ?? 0) > 0;
+  const trialDays = plan?.trialDays ?? 30;
+  const firstCharge = new Date(startedAt + trialDays * 86_400_000);
 
-  useUnsavedChangesGuard(hasData, isSubmitting);
-
-  const selectedPlan = plans.find((plan) => plan.id === planId);
-
-  function goToStep2(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const errors: FieldErrors = {};
-    if (!isValidBrazilianPhone(phone)) {
-      errors.phone = "Informe um celular válido, com DDD.";
+  function next() {
+    const found: Record<string, string> = {};
+    if (step === 1) {
+      if (businessName.trim().length === 0) found.businessName = "Informe o nome do seu espaço.";
+      if (!range) found.range = "Escolha quantos alunos você atende.";
+      if (!isValidBrazilianPhone(phone)) found.phone = "Informe um celular válido, com DDD.";
     }
-    if (!isValidCpfCnpj(cpfCnpj)) {
-      errors.cpfCnpj = "Informe um CPF ou CNPJ válido.";
-    }
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
-    setStep(2);
-  }
-
-  function goToStep3(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const errors: FieldErrors = {};
-    if (!studentRangeEstimate) {
-      errors.studentRangeEstimate = "Escolha uma faixa de alunos.";
-    }
-    if (businessName.trim().length === 0) {
-      errors.businessName = "Informe o nome do seu espaço/negócio.";
-    }
-    if (!termsAccepted) {
-      errors.termsAccepted = "É necessário aceitar os termos para continuar.";
-    }
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
-    setStep(3);
-  }
-
-  function goToStep4(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const errors: FieldErrors = {};
-    if (!planId) {
-      errors.planId = "Escolha um plano para continuar.";
-    }
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
-    setStep(4);
-  }
-
-  function selectPlan(id: string) {
-    setPlanId(id);
-    setFieldErrors((current) => ({ ...current, planId: undefined }));
-  }
-
-  async function handleSubmit() {
-    if (isSubmitting) {
-      return;
-    }
-
-    const requiresCard = (selectedPlan?.priceCents ?? 0) > 0;
-    if (requiresCard) {
-      const errors = validateCreditCardFields(card);
-      setCardErrors(errors);
-      if (Object.keys(errors).length > 0) {
-        return;
+    if (step === 3) {
+      if (!isValidCpfCnpj(cpfCnpj)) found.cpfCnpj = "Informe um CPF ou CNPJ válido.";
+      if (paid) {
+        const cardFound = validateCreditCardFields({ ...card, phone });
+        setCardErrors(cardFound);
+        if (Object.keys(cardFound).length > 0) found.card = "Confira os dados do cartão.";
       }
     }
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+    if (step === 1 && !planId && suggested) setPlanId(suggested.id);
+    setStep((step + 1) as Step);
+  }
 
-    setIsSubmitting(true);
+  async function finish() {
+    if (!plan || busy) return;
+    setBusy(true);
     setFormError(null);
-
     const response = await fetch("/api/onboarding-personal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone,
-        cref: cref.trim() || undefined,
-        cpfCnpj,
-        studentRangeEstimate,
-        businessName,
-        termsAccepted,
-        planId,
-      }),
+      body: JSON.stringify({ phone, cref: cref.trim() || undefined, cpfCnpj, studentRangeEstimate: range, businessName, termsAccepted: true, planId: plan.id }),
     });
-
     if (!response.ok) {
-      setIsSubmitting(false);
-      setFormError("Não foi possível salvar seu perfil. Verifique os dados e tente novamente.");
+      const body = await response.json().catch(() => null);
+      setFormError(body?.message ?? "Não foi possível salvar. Confira os dados e tente de novo.");
+      setBusy(false);
       return;
     }
-
-    const body = await response.json();
-
-    if (requiresCard) {
-      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(card),
-      });
+    if (paid) {
+      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...card, phone }) });
       if (!cardResponse.ok) {
-        setIsSubmitting(false);
-        const cardBody = await cardResponse.json().catch(() => null);
-        setFormError(cardBody?.message ?? "Não foi possível processar o cartão. Verifique os dados e tente novamente.");
+        const body = await cardResponse.json().catch(() => null);
+        setFormError(`${body?.message ?? "Não foi possível salvar o cartão."} Seu espaço já está pronto; você pode cadastrar o cartão depois em Assinatura.`);
+        setBusy(false);
         return;
       }
     }
-
-    router.push(body.redirectTo ?? "/painel");
+    router.push("/painel");
+    router.refresh();
   }
 
   return (
     <>
-      <WizardProgress step={step} totalSteps={TOTAL_STEPS} />
+      <div>
+        <p className={styles.eyebrow}>
+          Passo {step} de 4 · {STEP_TITLES[step]}
+        </p>
+        <ProgressBar value={(100 * step) / 4} label="Progresso do cadastro" valueText={`Passo ${step} de 4`} />
+      </div>
+      {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
       {step === 1 ? (
-        <form className={styles.form} onSubmit={goToStep2} noValidate>
-          <h1 className={styles.title}>Dados complementares</h1>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
-          <TextField
-            label="Celular"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="(11) 91234-5678"
-            value={phone}
-            onChange={(event) => setPhone(formatBrazilianPhone(event.target.value))}
-            error={fieldErrors.phone}
-            required
-          />
-          <TextField
-            label="CREF (opcional)"
-            name="cref"
-            type="text"
-            autoComplete="off"
-            placeholder="012345-G/SP"
-            value={cref}
-            onChange={(event) => setCref(event.target.value)}
-            error={fieldErrors.cref}
-          />
-          <TextField
-            label="CPF ou CNPJ"
-            name="cpfCnpj"
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="000.000.000-00"
-            value={cpfCnpj}
-            onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))}
-            error={fieldErrors.cpfCnpj}
-            required
-          />
-
-          <Button type="submit" variant="filled">
-            Continuar
-          </Button>
-        </form>
+        <div className={styles.form}>
+          <h1 className={styles.title}>Seu espaço</h1>
+          <TextField label="Nome do espaço" name="businessName" value={businessName} maxLength={80} onChange={(event) => setBusinessName(event.target.value)} error={errors.businessName} />
+          <ChipGroup label="Quantos alunos você atende?" showLabel variant="card" tone="accent" columns={2} value={range} onChange={setRange} options={STUDENT_RANGE_OPTIONS} />
+          {errors.range ? <p role="alert" className={styles.muted}>{errors.range}</p> : null}
+          <TextField label="Celular" name="phone" type="tel" autoComplete="tel" placeholder="(11) 91234-5678" value={phone} onChange={(event) => setPhone(formatBrazilianPhone(event.target.value))} error={errors.phone} />
+          <TextField label="CREF (opcional)" name="cref" value={cref} maxLength={20} onChange={(event) => setCref(event.target.value)} />
+        </div>
       ) : null}
 
       {step === 2 ? (
-        <form className={styles.form} onSubmit={goToStep3} noValidate>
-          <h1 className={styles.title}>Perfil profissional</h1>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
-          <SelectField
-            label="Quantos alunos você tem hoje, aproximadamente?"
-            name="studentRangeEstimate"
-            placeholder="Selecione uma faixa"
-            options={STUDENT_RANGE_OPTIONS}
-            value={studentRangeEstimate}
-            onChange={(event) => setStudentRangeEstimate(event.target.value as PersonalStudentRangeEstimate)}
-            error={fieldErrors.studentRangeEstimate}
-            required
-          />
-          <TextField
-            label="Nome do seu espaço/negócio"
-            name="businessName"
-            type="text"
-            autoComplete="off"
-            value={businessName}
-            onChange={(event) => setBusinessName(event.target.value)}
-            error={fieldErrors.businessName}
-            required
-          />
-
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={termsAccepted}
-              onChange={(event) => setTermsAccepted(event.target.checked)}
-            />
-            Li e aceito os <Link href="/termos-de-uso">Termos de Uso</Link> e a{" "}
-            <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
-          </label>
-          {fieldErrors.termsAccepted ? (
-            <p className={styles.checkboxError} role="alert">
-              {fieldErrors.termsAccepted}
-            </p>
-          ) : null}
-
-          <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(1)}>
-              ← Voltar
-            </button>
-            <Button type="submit" variant="filled">
-              Continuar
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 3 ? (
-        <form className={styles.form} onSubmit={goToStep4} noValidate>
-          <h1 className={styles.title}>Escolha seu plano</h1>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-          <p className={styles.checkboxLabel}>Todos os planos têm 30 dias grátis antes da primeira cobrança.</p>
-
-          <div className={styles.planList}>
-            {plans.map((plan) => (
-              <PlanOptionCard key={plan.id} plan={plan} groupName="planId" selected={planId === plan.id} onSelect={() => selectPlan(plan.id)} />
-            ))}
-          </div>
-          {fieldErrors.planId ? (
-            <p className={styles.checkboxError} role="alert">
-              {fieldErrors.planId}
-            </p>
-          ) : null}
-
-          <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(2)}>
-              ← Voltar
-            </button>
-            <Button type="submit" variant="filled">
-              Continuar
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 4 ? (
         <div className={styles.form}>
-          <h1 className={styles.title}>Revisão</h1>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
-          <dl className={styles.reviewList}>
-            <dt>Perfil</dt>
-            <dd>Personal</dd>
-            <dt>Celular</dt>
-            <dd>{phone}</dd>
-            <dt>CPF/CNPJ</dt>
-            <dd>{cpfCnpj}</dd>
-            {cref.trim() ? (
-              <>
-                <dt>CREF</dt>
-                <dd>{cref}</dd>
-              </>
-            ) : null}
-            <dt>Faixa de alunos</dt>
-            <dd>{studentRangeLabel(studentRangeEstimate)}</dd>
-            <dt>Nome do espaço/negócio</dt>
-            <dd>{businessName}</dd>
-            <dt>Plano</dt>
-            <dd>
-              {selectedPlan
-                ? `${selectedPlan.name} — ${formatCentsBRL(selectedPlan.priceCents)}/mês${
-                    selectedPlan.trialDays !== null ? ` (${selectedPlan.trialDays} dias grátis)` : ""
-                  }`
-                : "—"}
-            </dd>
-          </dl>
-
-          {selectedPlan && selectedPlan.priceCents > 0 ? (
-            <>
-              <h2 className={styles.title}>Dados de pagamento</h2>
-              <p className={styles.checkboxLabel}>
-                Seu cartão só é cadastrado agora — a primeira cobrança acontece só depois dos{" "}
-                {selectedPlan.trialDays ?? 30} dias grátis.
-              </p>
-              <CreditCardFields value={card} onChange={setCard} errors={cardErrors} />
-            </>
-          ) : null}
-
-          <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(3)} disabled={isSubmitting}>
-              ← Voltar
-            </button>
-            <Button type="button" variant="filled" onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? "Concluindo…" : "Concluir"}
-            </Button>
+          <h1 className={styles.title}>Seu plano</h1>
+          <p className={styles.lead}>Sugerimos pelo que você contou. Dá para trocar depois.</p>
+          <div className={styles.cards} role="radiogroup" aria-label="Planos">
+            {plans.map((entry) => (
+              <button key={entry.id} type="button" role="radio" aria-checked={plan?.id === entry.id} className={plan?.id === entry.id ? `${styles.card} ${styles.cardOn}` : styles.card} onClick={() => setPlanId(entry.id)}>
+                <span className={styles.cardText}>
+                  <span className={styles.cardTitle}>
+                    {entry.name} {suggested?.id === entry.id ? <Tag tone="accent">Sugerido</Tag> : null}
+                  </span>
+                  <span className={styles.muted}>
+                    {formatCentsBRL(entry.priceCents)} / {entry.billingCycle === "ANUAL" ? "ano" : "mês"} · {entry.studentLimit === null ? "alunos sem limite" : `até ${entry.studentLimit} alunos`}
+                  </span>
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       ) : null}
+
+      {step === 3 ? (
+        <div className={styles.form}>
+          <h1 className={styles.title}>Pagamento</h1>
+          <p className={styles.lead}>{paid ? `Nada é cobrado agora. A primeira cobrança de ${formatCentsBRL(plan!.priceCents)} é em ${dateFmt.format(firstCharge)}, depois dos ${trialDays} dias grátis.` : "Este plano não tem cobrança."}</p>
+          <TextField label="CPF ou CNPJ" name="cpfCnpj" inputMode="numeric" value={cpfCnpj} onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))} error={errors.cpfCnpj} />
+          {paid ? <CreditCardFields value={{ ...card, phone }} onChange={(value) => setCard(value)} errors={cardErrors} hidePhone /> : null}
+        </div>
+      ) : null}
+
+      {step === 4 && plan ? (
+        <div className={styles.form}>
+          <h1 className={styles.title}>Tudo certo?</h1>
+          <dl className={styles.cards}>
+            <div className={styles.card}>
+              <span className={styles.cardText}>
+                <dt className={styles.muted}>Espaço</dt>
+                <dd className={styles.cardTitle}>{businessName}</dd>
+                <dd className={styles.muted}>
+                  {range ? studentRangeLabel(range) : ""} · {phone}
+                  {cref ? ` · CREF ${cref}` : ""}
+                </dd>
+              </span>
+            </div>
+            <div className={styles.card}>
+              <span className={styles.cardText}>
+                <dt className={styles.muted}>Plano</dt>
+                <dd className={styles.cardTitle}>{plan.name}</dd>
+                <dd className={styles.muted}>{paid ? `${trialDays} dias grátis · primeira cobrança em ${dateFmt.format(firstCharge)}` : "Sem cobrança"}</dd>
+              </span>
+            </div>
+          </dl>
+          <Button type="button" size="xl" block disabled={busy} onClick={() => void finish()}>
+            {busy ? "Preparando…" : paid ? `Começar meus ${trialDays} dias grátis` : "Começar"}
+          </Button>
+        </div>
+      ) : null}
+
+      <div className={styles.alt}>
+        {step < 4 ? (
+          <Button type="button" size="lg" block onClick={next}>
+            Continuar
+          </Button>
+        ) : null}
+        {step > 1 ? (
+          <Button type="button" variant="quiet" block onClick={() => setStep((step - 1) as Step)}>
+            Voltar
+          </Button>
+        ) : null}
+      </div>
     </>
   );
 }

@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     });
 
     const students = await listStudents({ tenantId: ctx.tenantId, pageSize: 1 });
-    const redirectTo = students.total === 0 ? "/painel/alunos/novo" : "/painel";
+    const redirectTo = students.total === 0 ? "/painel/alunos?novo=1" : "/painel";
     return Response.json({ redirectTo }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);

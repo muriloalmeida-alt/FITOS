@@ -73,7 +73,8 @@ describe("OnboardingPersonalPage (FIT-113)", () => {
     const { default: OnboardingPersonalPage } = await import("./page");
     render(await OnboardingPersonalPage());
 
-    expect(screen.getByText("Passo 1 de 4")).toBeInTheDocument();
+    expect(screen.getByText(/Passo 1 de 4/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome do espaço")).toBeInTheDocument();
     expect(listActivePlansForAudience).toHaveBeenCalledWith("PERSONAL");
     expect(redirect).not.toHaveBeenCalled();
   });
