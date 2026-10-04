@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { ToastProvider } from "@/shared/ui";
 
 const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
@@ -7,6 +8,9 @@ const findUniqueTenant = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const getSubscriptionForTenant = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
+const getFinancialSummary = vi.fn();
+const countCharges = vi.fn();
+const countExercises = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -24,6 +28,8 @@ vi.mock("@/shared/db/prisma", () => ({
     tenant: {
       findUnique: (...args: unknown[]) => findUniqueTenant(...args),
     },
+    studentCharge: { count: (...args: unknown[]) => countCharges(...args) },
+    exercise: { count: (...args: unknown[]) => countExercises(...args) },
   },
 }));
 
@@ -45,6 +51,10 @@ vi.mock("@/modules/billing/subscriptions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
   return { ...actual, getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) };
 });
+
+vi.mock("@/modules/student-finance/charges", () => ({
+  getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args),
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
@@ -171,94 +181,47 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/onboarding-personal");
   });
 
-  it("personal com onboarding concluído vê dados reais: conta, espaço, perfil profissional e assinatura", async () => {
-    getServerSession.mockResolvedValue({
-      user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" },
-    });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
-    getPersonalOnboardingProfile.mockResolvedValue({
-      id: "pp1",
-      tenantId: "t1",
-      phone: "(11) 99999-9999",
-      cref: "012345-G/SP",
-      studentRangeEstimate: "DE_21_A_50",
-      termsAcceptedAt: new Date(),
-    });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
-    getSubscriptionForTenant.mockResolvedValue({ plan: { name: "Profissional" } });
+  function asPersonal(profile: Record<string, unknown> = {}) {
+    getServerSession.mockResolvedValue({ user: { name: "Joana Lima", email: "joana@example.test", role: "PERSONAL" } });
+    getAuthContext.mockResolvedValue({ authenticated: true, userId: "u1", role: "PERSONAL", tenantId: "t1", studentId: null });
+    getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1", phone: "11987654321", cref: "123456-G/SP", studentRangeEstimate: "DE_21_A_50", ...profile });
+    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Studio Joana" });
+    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 360000, pendenteCents: 0, atrasadoCents: 0 });
+    countCharges.mockResolvedValue(1);
+    countExercises.mockResolvedValue(4);
+  }
+
+  async function renderPage() {
     const { default: PerfilPage } = await import("./page");
+    render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
+  }
 
-    render(await PerfilPage());
+  it("personal vê 'Seu negócio' com resumos reais e os dados editáveis (FIT-149)", async () => {
+    asPersonal();
+    getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: null, plan: { name: "Pro" } });
+    await renderPage();
 
-    expect(screen.getByRole("heading", { level: 1, name: "Seu perfil" })).toBeInTheDocument();
-    expect(screen.getByText("Joana")).toBeInTheDocument();
-    expect(screen.getByText("joana@example.test")).toBeInTheDocument();
-    expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
-    expect(screen.getByText("(11) 99999-9999")).toBeInTheDocument();
-    expect(screen.getByText("012345-G/SP")).toBeInTheDocument();
-    expect(screen.getByText("De 21 a 50 alunos")).toBeInTheDocument();
-    expect(screen.getByText("Profissional")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Gerenciar assinatura" })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByRole("link", { name: /^Financeiro.*recebido/ })).toHaveAttribute("href", "/painel/financeiro");
+    expect(screen.getByText(/R\$\s3\.600,00 recebido em .+ · 1 atrasada/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Assinatura.*Pro · ativa/ })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByRole("link", { name: /^Exercícios.*Biblioteca do FitOS \+ 4 seus/ })).toHaveAttribute("href", "/painel/exercicios");
+    expect(screen.getByText("(11) 98765-4321 · CREF 123456-G/SP · De 21 a 50 alunos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
+    expect(screen.getByRole("link", { name: "Política de privacidade" })).toHaveAttribute("href", "/politica-de-privacidade");
+    expect(countExercises).toHaveBeenCalledWith({ where: { tenantId: "t1", status: "ATIVO" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar perfil profissional" }));
+    const dialog = screen.getByRole("dialog", { name: "Perfil profissional" });
+    expect(within(dialog).getByLabelText("Celular")).toHaveValue("(11) 98765-4321");
+    expect(within(dialog).getByRole("radio", { name: "De 21 a 50 alunos" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("personal sem assinatura contratada vê aviso honesto, nunca um plano fabricado", async () => {
-    getServerSession.mockResolvedValue({
-      user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" },
-    });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
-    getPersonalOnboardingProfile.mockResolvedValue({
-      id: "pp1",
-      tenantId: "t1",
-      phone: "(11) 99999-9999",
-      cref: "012345-G/SP",
-      studentRangeEstimate: "DE_21_A_50",
-      termsAcceptedAt: new Date(),
-    });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
+  it("personal sem assinatura e sem CREF vê textos honestos, nunca valores fabricados", async () => {
+    asPersonal({ cref: null });
     getSubscriptionForTenant.mockResolvedValue(null);
-    const { default: PerfilPage } = await import("./page");
+    await renderPage();
 
-    render(await PerfilPage());
-
-    expect(screen.getByText("Nenhuma assinatura contratada ainda.")).toBeInTheDocument();
-  });
-
-  it("personal sem CREF informado mostra 'Não informado', nunca um valor vazio ou fabricado", async () => {
-    getServerSession.mockResolvedValue({
-      user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" },
-    });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
-    getPersonalOnboardingProfile.mockResolvedValue({
-      id: "pp1",
-      tenantId: "t1",
-      phone: "(11) 99999-9999",
-      cref: null,
-      studentRangeEstimate: "COMECANDO_AGORA",
-      termsAcceptedAt: new Date(),
-    });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
-    const { default: PerfilPage } = await import("./page");
-
-    render(await PerfilPage());
-
-    expect(screen.getByText("Não informado")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum plano contratado")).toBeInTheDocument();
+    expect(screen.getByText(/· sem CREF ·/)).toBeInTheDocument();
   });
 });

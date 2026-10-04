@@ -29,6 +29,10 @@ export interface AppShellNavItem {
   comingSoon?: boolean;
   icon?: NavIconName;
   compact?: boolean;
+  /// FIT-149: o avatar do cabeçalho vira um link para este destino (o
+  /// Perfil), no lugar do menu de conta. Os destinos fora da barra ficam
+  /// no próprio Perfil ("Seu negócio").
+  accountLink?: boolean;
 }
 
 interface AppShellProps {
@@ -166,6 +170,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
   const [showMore, setShowMore] = useState(false);
   const accountName = useAccountName();
   const { visible, collapsed, usesAccountMenu } = splitCompact(navItems);
+  const accountLinkItem = navItems.find((item) => item.accountLink) ?? null;
 
   return (
     <div className={styles.shell}>
@@ -173,7 +178,15 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         <BrandLogo background="photo" size={44} className={styles.brand} />
         <div className={styles.topBarEnd}>
           {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
-          <AccountMenu name={accountName} items={usesAccountMenu ? collapsed : []} activeKey={activeKey} trailing={trailing} />
+          {accountLinkItem?.href ? (
+            <div className={styles.account}>
+              <Link href={accountLinkItem.href} className={styles.avatarButton} aria-label={accountName ? `Perfil de ${accountName}` : "Perfil"} aria-current={accountLinkItem.key === activeKey ? "page" : undefined}>
+                {accountName ? <span aria-hidden="true">{initialsFromName(accountName)}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+              </Link>
+            </div>
+          ) : (
+            <AccountMenu name={accountName} items={usesAccountMenu ? collapsed : []} activeKey={activeKey} trailing={trailing} />
+          )}
         </div>
       </header>
 

@@ -7,7 +7,11 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
-import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
+import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
+import { getFinancialSummary } from "@/modules/student-finance/charges";
+import { formatCentsBRL } from "@/shared/lib/money";
+import { currentReferenceMonth, referenceMonthLabel } from "@/shared/lib/referenceMonth";
+import { PersonalProfileView } from "./PersonalProfileView";
 import { LogoutButton } from "../LogoutButton";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
@@ -16,6 +20,17 @@ import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../ind
 export const metadata: Metadata = {
   title: `Perfil — ${appName}`,
 };
+
+function subscriptionSummary(subscription: SaasSubscriptionWithPlan | null, now: Date): string {
+  if (!subscription) return "Nenhum plano contratado";
+  if (subscription.status === "CANCELADA") return `${subscription.plan.name} · cancelada`;
+  if (subscription.status === "INADIMPLENTE") return `${subscription.plan.name} · pagamento pendente`;
+  if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
+    const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
+    return `${subscription.plan.name} · teste grátis, ${days === 1 ? "último dia" : `${days} dias`}`;
+  }
+  return `${subscription.plan.name} · ativa`;
+}
 
 /// Página de conta/perfil (FIT-016 para o aluno; FIT-120/redesign para o
 /// personal; AjustesTelas 29/09/2026 para o FitOS Livre — dados da conta,
@@ -35,54 +50,31 @@ export default async function PerfilPage() {
     if (!profile) {
       redirect("/onboarding-personal");
     }
-    const [tenant, subscription] = await Promise.all([
+    const now = new Date();
+    const referenceMonth = currentReferenceMonth(now);
+    const [tenant, subscription, finance, overdueCount, ownExercises] = await Promise.all([
       prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
       getSubscriptionForTenant(ctx.tenantId),
+      getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth }),
+      prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } }),
+      prisma.exercise.count({ where: { tenantId: ctx.tenantId, status: "ATIVO" } }),
     ]);
+    const month = referenceMonthLabel(referenceMonth).split(" ")[0]!.toLowerCase();
+    const financeSummary = `${formatCentsBRL(finance.recebidoCents)} recebido em ${month}${overdueCount > 0 ? ` · ${overdueCount} ${overdueCount === 1 ? "atrasada" : "atrasadas"}` : ""}`;
 
     return (
-      <AppShell eyebrow="Perfil" title="Seu perfil" subtitle="Dados da conta e do seu espaço." navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
-        <Card title="Seus dados">
-          <p>
-            Nome: <strong>{session.user.name}</strong>
-          </p>
-          <p>
-            E-mail: <strong>{session.user.email}</strong>
-          </p>
-        </Card>
-
-        {tenant ? (
-          <Card title="Seu espaço">
-            <p>
-              Nome: <strong>{tenant.name}</strong>
-            </p>
-          </Card>
-        ) : null}
-
-        <Card title="Perfil profissional">
-          <p>
-            Celular: <strong>{profile.phone}</strong>
-          </p>
-          <p>
-            CREF: <strong>{profile.cref ?? "Não informado"}</strong>
-          </p>
-          <p>
-            Faixa de alunos: <strong>{studentRangeLabel(profile.studentRangeEstimate)}</strong>
-          </p>
-        </Card>
-
-        <Card title="Assinatura">
-          {subscription && subscription.plan ? (
-            <p>
-              Plano atual: <strong>{subscription.plan.name}</strong>
-            </p>
-          ) : (
-            <p>Nenhuma assinatura contratada ainda.</p>
-          )}
-          <Button href="/painel/assinatura" variant="outlined">
-            Gerenciar assinatura
-          </Button>
-        </Card>
+      <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
+        <PersonalProfileView
+          name={session.user.name}
+          email={session.user.email}
+          businessName={tenant?.name ?? ""}
+          phone={profile.phone}
+          cref={profile.cref}
+          studentRange={profile.studentRangeEstimate}
+          financeSummary={financeSummary}
+          subscriptionSummary={subscriptionSummary(subscription, now)}
+          exercisesSummary={ownExercises === 0 ? "Biblioteca do FitOS" : `Biblioteca do FitOS + ${ownExercises} ${ownExercises === 1 ? "seu" : "seus"}`}
+        />
       </AppShell>
     );
   }
