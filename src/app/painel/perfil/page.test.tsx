@@ -11,6 +11,7 @@ const getIndividualOnboardingProfile = vi.fn();
 const getFinancialSummary = vi.fn();
 const countCharges = vi.fn();
 const countExercises = vi.fn();
+const findStudentOrThrow = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -30,6 +31,7 @@ vi.mock("@/shared/db/prisma", () => ({
     },
     studentCharge: { count: (...args: unknown[]) => countCharges(...args) },
     exercise: { count: (...args: unknown[]) => countExercises(...args) },
+    student: { findUniqueOrThrow: (...args: unknown[]) => findStudentOrThrow(...args) },
   },
 }));
 
@@ -79,24 +81,23 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
-  it("aluno com vínculo ativo vê nome e e-mail da própria conta", async () => {
-    getServerSession.mockResolvedValue({
-      user: { name: "Pedro", email: "pedro@example.test", role: "ALUNO" },
-    });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u2",
-      role: "ALUNO",
-      tenantId: "t1",
-      studentId: "s1",
-    });
+  it("aluno vê o personal vinculado, edita nome e e-mail em sheet e tem Termos, Privacidade e Sair (FIT-155)", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Pedro Lima", email: "pedro@example.test", role: "ALUNO" } });
+    getAuthContext.mockResolvedValue({ authenticated: true, userId: "u2", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+    findStudentOrThrow.mockResolvedValue({ id: "s1", tenant: { name: "Studio Joana", owner: { name: "Joana Lima" }, personalProfile: { cref: "123456-G/SP" } } });
     const { default: PerfilPage } = await import("./page");
 
-    render(await PerfilPage());
+    render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
 
-    expect(screen.getByRole("heading", { name: "Sua conta" })).toBeInTheDocument();
-    expect(screen.getByText("Pedro")).toBeInTheDocument();
-    expect(screen.getByText("pedro@example.test")).toBeInTheDocument();
+    expect(screen.getByText("Joana Lima")).toBeInTheDocument();
+    expect(screen.getByText("Studio Joana · CREF 123456-G/SP")).toBeInTheDocument();
+    expect(screen.getByText(/Mensalidade e programa são combinados direto com Joana/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
+    expect(screen.getAllByRole("button", { name: "Sair" }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Editar e-mail" }));
+    const dialog = screen.getByRole("dialog", { name: "E-mail de acesso" });
+    expect(within(dialog).getByLabelText("Senha atual")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("aluno autenticado sem vínculo ativo (studentId nulo) é redirecionado para /painel", async () => {

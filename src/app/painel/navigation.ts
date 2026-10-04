@@ -56,7 +56,7 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos", compact: true },
   { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
 ];
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
