@@ -1,396 +1,180 @@
-/*
- * Landing comercial (FIT-110). Pacote visual 2026 (FIT-131) substitui o
- * fundo "chrome" escuro constante por superfícies editoriais claras
- * (`surface-editorial`, ADR-014) — o navy/laranja de marca continua
- * presente na hero fotográfica full-bleed e nos CTAs, nunca como fundo
- * de página inteiro. Único fundo permanentemente escuro que resta é a
- * própria fotografia da hero, com o gradiente de marca por cima dela
- * (nunca uma tarja retangular).
- */
 .main {
-  background-color: var(--fitos-color-surface-editorial);
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(12px + env(safe-area-inset-top)) var(--fitos-space-5) calc(24px + env(safe-area-inset-bottom));
+  background-color: var(--fitos-color-surface);
   color: var(--fitos-color-on-surface);
 }
 
-.hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 460px;
+.header {
   display: flex;
   align-items: center;
-  background: linear-gradient(160deg, var(--fitos-navy-900) 0%, var(--fitos-navy-700) 100%);
+  justify-content: space-between;
+  min-height: 60px;
 }
 
-.heroImage {
-  object-fit: cover;
+.login {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+  text-decoration: none;
 }
 
-/*
- * Gradiente na camada de sobreposição da foto (nunca um retângulo atrás
- * do texto) — mais escuro à esquerda, onde o texto fica, suavizando até
- * quase transparente à direita, onde a foto (`object-position` à direita)
- * fica visível. Mesmo padrão de `02-IMAGENS-LOGO-ICONES-E-MOVIMENTO.md`.
- */
-.heroOverlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, rgba(16, 28, 44, 0.9) 0%, rgba(16, 28, 44, 0.78) 45%, rgba(16, 28, 44, 0.25) 78%, rgba(16, 28, 44, 0.05) 100%);
-}
-
-.heroContent {
-  position: relative;
-  z-index: 1;
-  max-width: 1120px;
-  width: 100%;
-  margin: 0 auto;
-  padding: var(--fitos-space-16) var(--fitos-space-4) var(--fitos-space-10);
+.hero {
   display: flex;
   flex-direction: column;
-  gap: var(--fitos-space-4);
+  gap: 14px;
+  padding: 28px 0 8px;
 }
 
 .eyebrow {
   margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--fitos-orange-300);
-}
-
-.heroTitle {
-  margin: 0;
-  max-width: 16ch;
-  font-size: 32px;
-  line-height: 38px;
+  font-size: 12px;
   font-weight: 800;
-  color: #ffffff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.heroDescription {
+.title {
   margin: 0;
-  max-width: 34ch;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.lead,
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
   font-size: 16px;
-  line-height: 24px;
-  color: var(--fitos-navy-100);
 }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--fitos-space-3);
+.muted {
+  display: block;
+  font-size: 14px;
 }
 
-.heroSecondaryCta {
-  --fitos-color-primary: #ffffff;
-  --fitos-color-outline: var(--fitos-navy-100);
+.section {
+  margin-top: 40px;
 }
 
 .sectionTitle {
-  margin: 0 0 var(--fitos-space-6) 0;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 750;
-  color: var(--fitos-color-on-surface);
-  text-align: center;
+  margin: 0 0 14px;
+  font-size: 24px;
+  font-weight: 800;
 }
 
-.benefits,
-.paths {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: var(--fitos-space-10) var(--fitos-space-4);
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.benefitsGrid,
-.pathsGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--fitos-space-4);
+.benefits li {
+  display: flex;
+  gap: 14px;
 }
 
-.pathHint {
-  font-size: 13px;
-  color: var(--fitos-color-on-surface-secondary);
-}
-
-.pathCta {
-  margin-top: var(--fitos-space-3);
+.number {
+  flex-shrink: 0;
+  color: var(--fitos-orange-500);
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .library {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: var(--fitos-space-10) var(--fitos-space-4);
-  text-align: center;
-}
-
-.libraryIntro {
-  max-width: 640px;
-  margin: 0 auto var(--fitos-space-6) auto;
-  font-size: 16px;
-  line-height: 24px;
-  color: var(--fitos-color-on-surface-secondary);
-}
-
-.libraryGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--fitos-space-4);
-  max-width: 640px;
-  margin: 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.libraryItem {
-  margin: 0;
+.library li {
   display: flex;
   flex-direction: column;
-  gap: var(--fitos-space-2);
-  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .libraryImage {
   width: 100%;
   height: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: var(--fitos-shape-medium);
-  display: block;
-  background-color: #ffffff;
-  border: 1px solid var(--fitos-color-outline-soft);
+  border-radius: 16px;
+  background-color: #e9ecef;
 }
 
-.libraryCaption {
-  font-size: 13px;
-  font-weight: 650;
+.split {
+  display: grid;
+  gap: 10px;
+}
+
+.panel,
+.path {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
   color: var(--fitos-color-on-surface);
-}
-
-.libraryExample {
-  max-width: 560px;
-  margin: var(--fitos-space-6) auto 0 auto;
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-secondary);
-}
-
-.relationship {
-  max-width: 1120px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--fitos-space-8);
-  padding: var(--fitos-space-10) var(--fitos-space-4);
-}
-
-.relationshipList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-3);
-  margin: 0;
-  padding-left: var(--fitos-space-5);
-  color: var(--fitos-color-on-surface-secondary);
-  font-size: 16px;
-  line-height: 24px;
-}
-
-.relationshipImageWrapper {
-  width: 100%;
-  max-width: 480px;
-}
-
-.relationshipImage {
-  width: 100%;
-  height: auto;
-  border-radius: var(--fitos-shape-large);
-  display: block;
-}
-
-.finalCta {
-  max-width: 720px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--fitos-space-6);
-  padding: var(--fitos-space-10) var(--fitos-space-4) var(--fitos-space-16);
-  text-align: center;
-}
-
-.finalCtaTitle {
-  margin: 0;
-  font-size: 28px;
-  line-height: 34px;
-  font-weight: 750;
-  color: var(--fitos-color-on-surface);
-}
-
-.footer {
-  border-top: 1px solid var(--fitos-color-outline-soft);
-  padding: var(--fitos-space-8) var(--fitos-space-4);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--fitos-space-3);
-  text-align: center;
-}
-
-.footerBrand {
-  margin: 0;
-  font-weight: 800;
-  color: var(--fitos-color-on-surface);
-}
-
-.footerLinks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--fitos-space-4);
-}
-
-.footerLinks a {
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-secondary);
   text-decoration: none;
 }
 
-.footerLinks a:hover,
-.footerLinks a:focus-visible {
-  color: var(--fitos-color-on-surface);
-}
-
-.footerLegal {
+.paths {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
-  max-width: 480px;
-  font-size: 12px;
-  color: var(--fitos-color-on-surface-secondary);
+  padding: 0;
+  list-style: none;
 }
 
-@media (min-width: 900px) {
-  .hero {
-    min-height: 620px;
-  }
-
-  .heroContent {
-    padding-top: var(--fitos-space-20);
-    padding-bottom: var(--fitos-space-16);
-  }
-
-  .heroTitle {
-    font-size: 42px;
-    line-height: 48px;
-  }
-
-  .benefitsGrid,
-  .pathsGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .libraryGrid {
-    grid-template-columns: repeat(4, 1fr);
-    max-width: 100%;
-  }
-
-  .relationship {
-    flex-direction: row;
-    align-items: center;
-    text-align: left;
-  }
-
-  .relationshipText {
-    flex: 1;
-  }
-
-  .relationshipImageWrapper {
-    flex: 0 0 480px;
-  }
+.path strong {
+  font-size: 18px;
 }
 
-/*
- * Mobile editorial (AjustesTelas, print 01): hero sem fotografia, texto
- * direto sobre o fundo; benefícios como linhas numeradas com divisor;
- * seções sem cartões. Links e conteúdo reais preservados.
- */
-@media (max-width: 839px) {
-  .main {
-    background-color: transparent;
+.final {
+  padding: 24px;
+  border: 1px solid rgba(255, 120, 71, 0.35);
+  border-radius: 24px;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 32px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.footer a {
+  color: var(--fitos-color-text-muted);
+  font-weight: 700;
+}
+
+@media (min-width: 840px) {
+  .title {
+    font-size: 56px;
   }
 
-  .hero {
-    min-height: 0;
-    background: transparent;
+  .library {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .heroImage,
-  .heroOverlay {
-    display: none;
-  }
-
-  .heroContent {
-    padding: var(--fitos-space-6) var(--fitos-space-5) var(--fitos-space-4);
-    gap: var(--fitos-space-3);
-  }
-
-  .eyebrow {
-    font-weight: 800;
-    letter-spacing: 0.02em;
-  }
-
-  .heroTitle {
-    font-size: 30px;
-    line-height: 36px;
-  }
-
-  .heroDescription {
-    font-size: 16px;
-    line-height: 22px;
-    color: var(--fitos-color-on-surface-variant);
-  }
-
-  .benefitsGrid {
-    counter-reset: fitos-benefit;
-    gap: 0 !important;
-  }
-
-  .benefitsGrid > section {
-    position: relative;
-    counter-increment: fitos-benefit;
-    padding: var(--fitos-space-4) 0 var(--fitos-space-4) 52px;
-  }
-
-  .benefitsGrid > section::before {
-    content: counter(fitos-benefit);
-    position: absolute;
-    top: var(--fitos-space-4);
-    left: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 999px;
-    background-color: #22324a;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  .benefitsGrid > section:first-child::before {
-    background-color: var(--fitos-orange-500);
-    color: var(--fitos-navy-900);
-  }
-
-  .sectionTitle {
-    text-align: left;
-  }
-
-  .relationshipImage,
-  .libraryImage {
-    border-radius: var(--fitos-shape-medium);
-  }
-
-  .finalCta,
-  .footer {
-    background: transparent;
+  .split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -22,7 +22,7 @@ interface PathPhotoCardProps {
  * Fotografia editorial de fundo (nunca avatar de pessoa real) com
  * gradiente inferior (nunca faixa chapada) para o rótulo/título/descrição
  * ficarem legíveis; `children` recebe o controle real de cada caminho
- * (botão de navegação ou `ConviteCodeForm`), sempre sobre os tokens de
+ * (botão de navegação ou formulário), sempre sobre os tokens de
  * chrome localmente redefinidos (mesmo padrão já usado em
  * `AppShell.module.css` `.trailing`) para continuar legível/acessível
  * sobre a foto escura.
