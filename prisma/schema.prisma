@@ -702,6 +702,9 @@ model WorkoutSession {
   status    WorkoutSessionStatus @default(EM_ANDAMENTO)
   startedAt DateTime             @default(now())
   endedAt   DateTime?
+  /// BK-13 (EPIC-19/20): esforço percebido de 1 (leve) a 5 (no limite),
+  /// informado ao concluir. CHECK no banco garante a faixa.
+  perceivedEffort Int?
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)

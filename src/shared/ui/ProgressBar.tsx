@@ -13,8 +13,8 @@ interface ProgressBarProps {
 export function ProgressBar({ value, label, valueText }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className={styles.track} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={clamped} aria-valuetext={valueText}>
+    <span className={styles.track} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={clamped} aria-valuetext={valueText}>
       <span className={styles.fill} style={{ width: `${clamped}%` }} />
-    </div>
+    </span>
   );
 }
