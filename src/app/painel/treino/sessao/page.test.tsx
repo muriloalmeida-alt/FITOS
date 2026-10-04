@@ -1,136 +1,100 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { ToastProvider } from "@/shared/ui";
 
 const requireStudent = vi.fn();
 const getInProgressSessionForStudent = vi.fn();
+const getLastPerformanceForExercises = vi.fn();
+const getActivePlanAssignmentForStudent = vi.fn();
 const getTodayScheduleForStudent = vi.fn();
+const findStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
 
 vi.mock("@/modules/tenancy/authContext", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-    "@/modules/tenancy/authContext"
-  );
+  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requireStudent: (...args: unknown[]) => requireStudent(...args) };
 });
-
-vi.mock("@/modules/execution/sessions", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
-  return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
-});
-
-vi.mock("@/modules/workouts/workouts", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
-  return { ...actual, getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args) };
-});
-
-vi.mock("next/navigation", () => ({
-  redirect: (url: string) => redirect(url),
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+vi.mock("@/modules/execution/sessions", () => ({ getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) }));
+vi.mock("@/modules/execution/sets", () => ({ getLastPerformanceForExercises: (...args: unknown[]) => getLastPerformanceForExercises(...args) }));
+vi.mock("@/modules/workouts/workouts", () => ({
+  getActivePlanAssignmentForStudent: (...args: unknown[]) => getActivePlanAssignmentForStudent(...args),
+  getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args),
 }));
+vi.mock("@/shared/db/prisma", () => ({ prisma: { student: { findUniqueOrThrow: (...args: unknown[]) => findStudent(...args) } } }));
+vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+const exercise = (name: string) => ({ name, muscle: null, instructions: "Pés firmes. Desça controlando.", imageUrl: null, imageAlt: null });
+const items = [
+  { id: "we1", exerciseId: "e1", sets: 3, reps: 10, durationSeconds: null, load: "40 kg", restSeconds: 90, notes: "Desça até 90°", exercise: exercise("Agachamento livre") },
+  { id: "we2", exerciseId: "e2", sets: 2, reps: null, durationSeconds: 30, load: null, restSeconds: 30, notes: null, exercise: exercise("Prancha") },
+];
 
-describe("SessaoPage (FIT-041)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+function asStudent() {
+  requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+  findStudent.mockResolvedValue({ id: "s1", tenant: { owner: { name: "Joana Lima" } } });
+  getLastPerformanceForExercises.mockResolvedValue(new Map([["e1", { last: { loadKg: 37.5, reps: 10, durationSeconds: null }, bestLoadKg: 40 }]]));
+}
 
-  it("redireciona para /entrar quando não há sessão", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requireStudent.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
+async function renderPage(searchParams: Record<string, string> = {}) {
+  const { default: SessaoPage } = await import("./page");
+  render(<ToastProvider>{await SessaoPage({ searchParams: Promise.resolve(searchParams) })}</ToastProvider>);
+}
 
+describe("SessaoPage (FIT-153)", () => {
+  afterEach(() => vi.resetAllMocks());
+
+  it("sem vínculo volta ao Início", async () => {
+    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
+    requireStudent.mockRejectedValue(new AuthError("FORBIDDEN", "x"));
     const { default: SessaoPage } = await import("./page");
-
-    await expect(SessaoPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/entrar");
-  });
-
-  it("redireciona para /painel quando o usuário não é aluno com vínculo ativo", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requireStudent.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito a aluno com vínculo ativo."));
-
-    const { default: SessaoPage } = await import("./page");
-
     await expect(SessaoPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("mostra a execução quando há sessão em andamento (continuar)", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+  it("retoma a sessão em andamento com as séries já feitas e a última vez", async () => {
+    asStudent();
     getInProgressSessionForStudent.mockResolvedValue({
       id: "sess1",
-      startedAt: new Date("2026-09-29T12:00:00Z"),
-      workout: {
-        name: "Treino A",
-        workoutExercises: [
-          {
-            id: "i1",
-            sets: 3,
-            reps: 10,
-            durationSeconds: null,
-            load: null,
-            restSeconds: null,
-            notes: null,
-            exercise: { name: "Supino", muscle: "Peito", instructions: null },
-          },
-        ],
-      },
-      results: [],
+      workoutId: "w1",
+      startedAt: new Date(Date.now() - 10 * 60_000),
+      workout: { name: "Treino A", workoutExercises: items },
+      setResults: [{ workoutExerciseId: "we1", setNumber: 1, reps: 10, durationSeconds: null, loadGrams: 40000 }],
     });
+    await renderPage();
 
-    const { default: SessaoPage } = await import("./page");
-    render(await SessaoPage());
+    expect(screen.getByRole("heading", { level: 1, name: "Agachamento livre" })).toBeInTheDocument();
+    expect(screen.getByLabelText("1 de 3 séries feitas")).toBeInTheDocument();
+    expect(screen.getByText("Joana: Desça até 90°")).toBeInTheDocument();
+    expect(screen.getByText("Última vez: 37,5 kg × 10")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Série feita/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Música/ })).toBeInTheDocument();
+    expect(getLastPerformanceForExercises).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1", exerciseIds: ["e1", "e2"], excludeSessionId: "sess1" });
+  });
 
-    // AjustesTreinoAluno: execução em modo foco (`WorkoutRunner`).
-    expect(screen.getByText("Treino A")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Supino" })).toBeInTheDocument();
-    expect(screen.getByText(/Prescrito pelo seu Personal/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Concluir série" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Concluir treino" })).toBeInTheDocument();
+  it("treino escolhido no programa abre a preparação", async () => {
+    asStudent();
+    getInProgressSessionForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue({ trainingPlan: { workouts: [{ id: "w2", name: "Treino B", status: "ATIVO", workoutExercises: items }] } });
+    await renderPage({ treino: "w2" });
+
+    expect(screen.getByRole("heading", { level: 1, name: "Treino B" })).toBeInTheDocument();
+    expect(screen.getByText("2 exercícios · 5 séries · cerca de 10 min")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /Voz e bipes/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: /Tela sempre ligada/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Começar treino" })).toBeInTheDocument();
     expect(getTodayScheduleForStudent).not.toHaveBeenCalled();
   });
 
-  it("mostra 'Começar treino' quando não há sessão em andamento mas há treino previsto para hoje", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+  it("dia de descanso sem treino escolhido leva ao programa", async () => {
+    asStudent();
     getInProgressSessionForStudent.mockResolvedValue(null);
-    getTodayScheduleForStudent.mockResolvedValue({ state: "TREINO_HOJE", workout: { id: "w1", name: "Treino A" } });
-
-    const { default: SessaoPage } = await import("./page");
-    render(await SessaoPage());
-
-    expect(screen.getByRole("heading", { name: "Treino A" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Começar treino" })).toBeInTheDocument();
-  });
-
-  it("mostra o estado honesto quando não há nada para iniciar (sem plano)", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
-    getInProgressSessionForStudent.mockResolvedValue(null);
-    getTodayScheduleForStudent.mockResolvedValue({ state: "SEM_PLANO" });
-
-    const { default: SessaoPage } = await import("./page");
-    render(await SessaoPage());
-
-    expect(
-      screen.getByText("Você ainda não tem um programa de treino atribuído. Fale com seu personal.")
-    ).toBeInTheDocument();
-  });
-
-  it("mostra o estado honesto de descanso", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
-    getInProgressSessionForStudent.mockResolvedValue(null);
+    getActivePlanAssignmentForStudent.mockResolvedValue({ trainingPlan: { workouts: [] } });
     getTodayScheduleForStudent.mockResolvedValue({ state: "DESCANSO" });
-
-    const { default: SessaoPage } = await import("./page");
-    render(await SessaoPage());
-
-    expect(screen.getByText("Hoje é dia de descanso. Nenhum treino previsto para hoje.")).toBeInTheDocument();
+    await renderPage();
+    expect(screen.getByText(/Hoje é descanso/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver meu programa" })).toHaveAttribute("href", "/painel/treino");
   });
 });

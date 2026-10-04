@@ -1,26 +1,66 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { AppShell, Button } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { prisma } from "@/shared/db/prisma";
 import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
+import { getLastPerformanceForExercises } from "@/modules/execution/sets";
 import { getActivePlanAssignmentForStudent, getTodayScheduleForStudent } from "@/modules/workouts/workouts";
+import { parseLoadKg } from "@/shared/lib/load";
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
-import { ComecarTreinoButton } from "./ComecarTreinoButton";
-import { WorkoutRunner } from "../../WorkoutRunner";
+import { LiveWorkout, type LiveItem } from "../../_live/LiveWorkout";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: `Sessão de treino — ${appName}`,
+  title: `Treino ao vivo — ${appName}`,
 };
 
-/// Execução de sessão de treino (FIT-041; tela de execução revista em
-/// AjustesTreinoAluno, 29/09/2026 — `WorkoutRunner`), exclusiva do papel ALUNO —
-/// `requireStudent()` garante isso no servidor, mesmo padrão da FIT-016/033.
-/// Prioriza retomar uma sessão `EM_ANDAMENTO` já existente (independente
-/// de qual treino ela é — "continuar" é literal); só then verifica se há
-/// um treino previsto para hoje a começar.
+interface PlanItem {
+  id: string;
+  exerciseId: string;
+  sets: number | null;
+  reps: number | null;
+  durationSeconds: number | null;
+  load: string | null;
+  restSeconds: number | null;
+  notes: string | null;
+  exercise: { name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
+}
+
+function toLiveItems(
+  items: PlanItem[],
+  sets: { workoutExerciseId: string; setNumber: number; reps: number | null; durationSeconds: number | null; loadGrams: number | null }[],
+  last: Map<string, { last: { loadKg: number | null; reps: number | null; durationSeconds: number | null } | null }>
+): LiveItem[] {
+  return items.map((item) => {
+    const loadKg = parseLoadKg(item.load);
+    return {
+      id: item.id,
+      name: item.exercise.name,
+      imageUrl: item.exercise.imageUrl,
+      imageAlt: item.exercise.imageAlt,
+      instructions: item.exercise.instructions,
+      sets: item.sets,
+      reps: item.reps,
+      durationSeconds: item.durationSeconds,
+      loadKg: loadKg && loadKg > 0 ? loadKg : null,
+      load: item.load,
+      restSeconds: item.restSeconds,
+      notes: item.notes,
+      doneSets: sets
+        .filter((set) => set.workoutExerciseId === item.id)
+        .sort((a, b) => a.setNumber - b.setNumber)
+        .map((set) => ({ setNumber: set.setNumber, reps: set.reps, durationSeconds: set.durationSeconds, loadKg: set.loadGrams !== null ? set.loadGrams / 1000 : null })),
+      last: last.get(item.exerciseId)?.last ?? null,
+    };
+  });
+}
+
+/// Treino ao vivo do aluno (FIT-153), sem barra inferior. Retoma a sessão
+/// em andamento (mesmo depois de fechar o app); senão mostra a preparação
+/// do treino escolhido em "Seu programa" (`?treino=`) ou do treino de hoje.
 export default async function SessaoPage({ searchParams }: { searchParams?: Promise<{ treino?: string }> } = {}) {
   let ctx;
   try {
@@ -32,77 +72,55 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
     throw error;
   }
 
-  const inProgress = await getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
+  const scope = { tenantId: ctx.tenantId, studentId: ctx.studentId };
+  const [inProgress, student] = await Promise.all([
+    getInProgressSessionForStudent(scope),
+    prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
+  ]);
+  const coachName = student.tenant.owner.name;
+  const common = { coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso" };
 
   if (inProgress) {
-    // AjustesTreinoAluno (29/09/2026): execução em modo foco — sem shell/
-    // barra inferior, com cronômetro, descanso, séries e áudio.
+    const items = inProgress.workout.workoutExercises;
+    const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: items.map((item) => item.exerciseId), excludeSessionId: inProgress.id });
     return (
-      <WorkoutRunner
+      <LiveWorkout
+        {...common}
         sessionId={inProgress.id}
+        workoutId={inProgress.workoutId}
         workoutName={inProgress.workout.name}
         startedAt={inProgress.startedAt.toISOString()}
-        mode="student"
-        apiBase="/api/workout-sessions"
-        exitHref="/painel"
-        items={inProgress.workout.workoutExercises.map((item) => {
-          const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
-          return {
-            id: item.id,
-            exerciseName: item.exercise.name,
-            exerciseMuscle: item.exercise.muscle,
-            instructions: item.exercise.instructions,
-            sets: item.sets,
-            reps: item.reps,
-            durationSeconds: item.durationSeconds,
-            load: item.load,
-            restSeconds: item.restSeconds,
-            notes: item.notes,
-            result: result
-              ? {
-                  setsCompleted: result.setsCompleted,
-                  repsCompleted: result.repsCompleted,
-                  durationSecondsCompleted: result.durationSecondsCompleted,
-                  loadUsed: result.loadUsed,
-                }
-              : null,
-          };
-        })}
+        items={toLiveItems(items, inProgress.setResults, last)}
       />
     );
   }
 
-  // FIT-152: "Começar este treino" escolhe qualquer treino do programa
-  // ativo (só do plano-snapshot do próprio aluno; outro id cai no de hoje).
   const sp = (await searchParams) ?? {};
-  const chosen = sp.treino
-    ? ((await getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }))?.trainingPlan.workouts.find((workout) => workout.id === sp.treino && workout.status === "ATIVO") ?? null)
-    : null;
-  const schedule = chosen ? ({ state: "TREINO_HOJE", workout: chosen } as const) : await getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
+  const active = await getActivePlanAssignmentForStudent(scope);
+  const chosen = sp.treino ? (active?.trainingPlan.workouts.find((workout) => workout.id === sp.treino && workout.status === "ATIVO") ?? null) : null;
+  const schedule = chosen ? null : await getTodayScheduleForStudent(scope);
+  const workout = chosen ?? (schedule?.state === "TREINO_HOJE" ? schedule.workout : null);
 
-  if (schedule.state === "TREINO_HOJE") {
-    return (
-      <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
-        <Card title={schedule.workout.name}>
-          <p className={styles.empty}>{chosen ? "Pronto para começar?" : "Pronto para começar o treino de hoje?"}</p>
-          <ComecarTreinoButton workoutId={schedule.workout.id} />
-        </Card>
-      </AppShell>
-    );
+  if (workout && workout.workoutExercises.length > 0) {
+    const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: workout.workoutExercises.map((item) => item.exerciseId) });
+    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} />;
   }
 
-  const mensagem =
-    schedule.state === "SEM_PLANO"
-      ? "Você ainda não tem um programa de treino atribuído. Fale com seu personal."
-      : schedule.state === "PLANO_ENCERRADO"
-        ? `Seu programa "${schedule.planName}" foi encerrado. Fale com seu personal para receber um novo.`
-        : "Hoje é dia de descanso. Nenhum treino previsto para hoje.";
+  const message =
+    schedule?.state === "SEM_PLANO"
+      ? `${coachName} ainda vai montar seu programa.`
+      : schedule?.state === "PLANO_ENCERRADO"
+        ? `Seu programa "${schedule.planName}" terminou. ${coachName} já foi avisado.`
+        : "Hoje é descanso. Quer treinar mesmo assim? Escolha um treino no seu programa.";
 
   return (
-    <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
-      <Card title="Nenhuma sessão para iniciar">
-        <p className={styles.empty}>{mensagem}</p>
-      </Card>
+    <AppShell eyebrow="Treino" title="Nada para hoje" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+      <p className={styles.empty}>{message}</p>
+      {active ? (
+        <Button href="/painel/treino" variant="secondary">
+          Ver meu programa
+        </Button>
+      ) : null}
     </AppShell>
   );
 }
