@@ -96,6 +96,24 @@ describe("AssinaturaPage (FIT-150)", () => {
     expect(screen.getByRole("dialog", { name: "Assinar Pro" })).toHaveTextContent("O teste grátis não se repete");
   });
 
+  it("FitOS Livre: um plano, sem uso de alunos, celular pedido no cartão e assinar de novo (FIT-161)", async () => {
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "t1", tenantType: "INDIVIDUAL" });
+    const livre = { id: "l1", name: "FitOS Livre", description: null, priceCents: 1990, billingCycle: "MENSAL", studentLimit: null, trialDays: 30 };
+    listActivePlansForAudience.mockResolvedValue([livre]);
+    getSubscriptionForTenant.mockResolvedValue({ ...base, planId: "l1", plan: livre, creditCardLast4: null, creditCardBrand: null });
+    await renderPage();
+
+    expect(screen.getByText(/R\$\s19,90 \/ mês/)).toBeInTheDocument();
+    expect(screen.queryByText(/alunos ativos/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Trocar de plano")).not.toBeInTheDocument();
+    expect(countStudents).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar" }));
+    expect(within(screen.getByRole("dialog", { name: "Cadastrar cartão" })).getByLabelText("Celular")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Agora não" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar assinatura" }));
+    expect(screen.getByRole("dialog", { name: "Cancelar assinatura?" })).toHaveTextContent("Seus treinos e seu histórico continuam guardados");
+  });
+
   it("sem sessão vai para /entrar", async () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
     requireSubscriber.mockRejectedValue(new AuthError("UNAUTHENTICATED", "x"));

@@ -85,6 +85,9 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
   const [otherReason, setOtherReason] = useState("");
 
   const cancelled = subscription?.state === "cancelada";
+  const keeps = usage ? "Seus alunos, treinos e histórico" : "Seus treinos e seu histórico";
+  // FitOS Livre (FIT-161): com um plano só, que já é o atual, não há o que trocar.
+  const onlyCurrent = subscription !== null && !cancelled && plans.length === 1 && plans[0]!.id === subscription.planId;
   const usagePercent = usage && usage.limit ? Math.min(100, (100 * usage.active) / usage.limit) : null;
 
   function close() {
@@ -152,7 +155,7 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
             </div>
           ) : null}
           {subscription.nextChargeLabel ? <p className={styles.line}>Próxima cobrança: {subscription.nextChargeLabel}</p> : null}
-          {subscription.canceledLabel ? <p className={styles.line}>Cancelada em {subscription.canceledLabel}. Seus alunos, treinos e histórico continuam aqui.</p> : null}
+          {subscription.canceledLabel ? <p className={styles.line}>Cancelada em {subscription.canceledLabel}. {keeps} continuam aqui.</p> : null}
           {usage ? (
             <div className={styles.meter}>
               {usagePercent !== null ? <ProgressBar value={usagePercent} label="Alunos ativos" valueText={`${usage.active} de ${usage.limit}`} /> : null}
@@ -194,10 +197,10 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
         </>
       ) : null}
 
-      <h2 className={styles.cap}>{subscription && !cancelled ? "Trocar de plano" : "Planos"}</h2>
+      {onlyCurrent ? null : <h2 className={styles.cap}>{subscription && !cancelled ? "Trocar de plano" : "Planos"}</h2>}
       {plans.length === 0 ? <p className={styles.muted}>Nenhum plano disponível no momento.</p> : null}
       <ul className={styles.list}>
-        {plans.map((plan) => {
+        {(onlyCurrent ? [] : plans).map((plan) => {
           const current = subscription && !cancelled && subscription.planId === plan.id;
           const limit = plan.studentLimit === null ? "Alunos sem limite" : `Até ${plan.studentLimit} alunos`;
           return (
@@ -304,7 +307,7 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
         open={sheet === "cancel"}
         onClose={close}
         title="Cancelar assinatura?"
-        description="A cobrança do FitOS para. Seus alunos, treinos e histórico continuam guardados, e você pode assinar de novo quando quiser (sem novo teste grátis)."
+        description={`A cobrança do FitOS para. ${keeps} continuam guardados, e você pode assinar de novo quando quiser (sem novo teste grátis).`}
         footer={
           <>
             <Button type="button" variant="danger" block disabled={busy || !reason || (reason === "Outro" && otherReason.trim().length === 0)} onClick={() => void run(async () => {
