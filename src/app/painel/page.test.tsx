@@ -7,7 +7,7 @@ const findUniqueTenant = vi.fn();
 const findUniqueOrThrowTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
-const getTodayScheduleForStudent = vi.fn();
+const getStudentHome = vi.fn();
 const getWeeklyRhythmForStudent = vi.fn();
 const listWorkoutsForTenant = vi.fn();
 const listWorkoutExercisesForWorkout = vi.fn();
@@ -65,12 +65,15 @@ vi.mock("@/modules/workouts/workouts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
   return {
     ...actual,
-    getTodayScheduleForStudent: (...args: unknown[]) => getTodayScheduleForStudent(...args),
     getWeeklyRhythmForStudent: (...args: unknown[]) => getWeeklyRhythmForStudent(...args),
     listWorkoutsForTenant: (...args: unknown[]) => listWorkoutsForTenant(...args),
     listWorkoutExercisesForWorkout: (...args: unknown[]) => listWorkoutExercisesForWorkout(...args),
   };
 });
+
+vi.mock("@/modules/students/studentHome", () => ({
+  getStudentHome: (...args: unknown[]) => getStudentHome(...args),
+}));
 
 vi.mock("@/modules/execution/sessions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
@@ -222,19 +225,22 @@ describe("PainelPage (FIT-012)", () => {
       displayName: "Pedro",
       tenant: { name: "Espaço de Joana", owner: { name: "Joana" } },
     });
-    getTodayScheduleForStudent.mockResolvedValue({ state: "SEM_PLANO" });
-    getInProgressSessionForStudent.mockResolvedValue(null);
+    getStudentHome.mockResolvedValue({
+      hero: { kind: "noPlan", endedPlanName: null },
+      program: null,
+      week: { planned: [], done: [false, false, false, false, false, false, false], doneCount: 0, target: null },
+      upcoming: [],
+      lastAssessment: null,
+    });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).toBeInTheDocument();
-    expect(screen.getByText("Joana")).toBeInTheDocument();
-    expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Pedro\.$/ })).toBeInTheDocument();
+    expect(screen.getByText(/Joana já foi avisado/)).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
     expect(findUniqueStudent).not.toHaveBeenCalled();
-    expect(getTodayScheduleForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1" });
-    expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1" });
+    expect(getStudentHome).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", studentId: "s1" }));
   });
 
   it("aluno autenticado sem vínculo (nunca teve Student) vê a tela de sem permissão, sem shell", async () => {
@@ -251,8 +257,9 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByText("Sem vínculo ativo")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Oi, Sem." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Treinar por conta própria" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Navegação principal" })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 
@@ -367,14 +374,14 @@ describe("PainelPage (FIT-012)", () => {
       tenantId: null,
       studentId: null,
     });
-    findUniqueStudent.mockResolvedValue({ id: "s4", status: "INATIVO" });
+    findUniqueStudent.mockResolvedValue({ id: "s4", status: "INATIVO", tenant: { owner: { name: "Joana" } } });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
-    expect(screen.getByText("Conta inativa")).toBeInTheDocument();
-    expect(screen.getByText(/inativada pelo seu personal/)).toBeInTheDocument();
-    expect(screen.queryByText("Sem vínculo ativo")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Inativo, seu acesso está pausado." })).toBeInTheDocument();
+    expect(screen.getByText(/Joana pausou seu acesso/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Treinar por conta própria" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });

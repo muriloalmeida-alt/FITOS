@@ -4,7 +4,8 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
-import { getTodayScheduleForStudent, getWeeklyRhythmForStudent, listWorkoutExercisesForWorkout, listWorkoutsForTenant } from "@/modules/workouts/workouts";
+import { getWeeklyRhythmForStudent, listWorkoutExercisesForWorkout, listWorkoutsForTenant } from "@/modules/workouts/workouts";
+import { getStudentHome } from "@/modules/students/studentHome";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
@@ -158,29 +159,27 @@ export default async function PainelPage() {
     // FIT-016: "sem vínculo" (Student nunca existiu) e "inativo" (Student
     // existe, mas foi pausado pelo personal — FIT-014) são estados reais
     // distintos — cada um com sua própria mensagem, nunca confundidos.
-    const student = await prisma.student.findUnique({ where: { userId: ctx.userId } });
-    return student?.status === "INATIVO" ? <AlunoInativo /> : <AlunoSemVinculo />;
+    const student = await prisma.student.findUnique({ where: { userId: ctx.userId }, include: { tenant: { include: { owner: true } } } });
+    return student?.status === "INATIVO" ? (
+      <AlunoInativo name={session.user.name} personalName={student.tenant.owner.name} />
+    ) : (
+      <AlunoSemVinculo name={session.user.name} ended={student?.status === "VINCULO_ENCERRADO"} />
+    );
   }
 
-  const [student, schedule, inProgressSession, weeklyRhythm] = await Promise.all([
-    prisma.student.findUniqueOrThrow({
-      where: { id: ctx.studentId },
-      include: { tenant: { include: { owner: true } } },
-    }),
-    getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
-    getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
-    getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
+  const now = new Date();
+  const [student, home] = await Promise.all([
+    prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
+    getStudentHome({ tenantId: ctx.tenantId, studentId: ctx.studentId, now }),
   ]);
   return (
     <AlunoHome
       displayName={student.displayName}
-      tenantName={student.tenant.name}
       personalName={student.tenant.owner.name}
-      schedule={schedule}
-      hasInProgressSession={inProgressSession !== null}
-      weeklyRhythm={{ completedDays: weeklyRhythm.completedDays, targetDays: weeklyRhythm.targetDays }}
-      greeting={greetingForHour(hourInProductTimeZone(new Date()))}
-      dateLabel={dateLabelFor(new Date())}
+      greeting={greetingForHour(hourInProductTimeZone(now))}
+      dateLabel={dateLabelFor(now)}
+      home={home}
+      todayIso={now.toISOString()}
     />
   );
 }
