@@ -1,7 +1,7 @@
 import "server-only";
 import { listCatalogExercisesForPicker } from "@/modules/exercises/exercises";
 import { getWorkoutForTenant, listTrainingPlanSummariesForTenant, listWorkoutExercisesForWorkout } from "@/modules/workouts/workouts";
-import type { EditorWorkout, LibraryExercise, ProgramOption } from "../_workout-builder/types";
+import type { EditorWorkout, LibraryExercise, ProgramOption } from "./types";
 
 /// Dados do editor de treino (FIT-146): biblioteca visível ao tenant e,
 /// para o Personal, os programas ativos para "Colocar em um programa".

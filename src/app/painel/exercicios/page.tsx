@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { AppShell, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { difficultyLabel } from "@/shared/lib/difficulty";
-import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
+import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { listCatalogExercises, listCatalogFacets } from "@/modules/exercises/exercises";
 import { FilterLinks } from "../_workout-builder/FilterLinks";
 import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { LogoutButton } from "../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../navigation";
+import { INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
 import { LibraryControls } from "./LibraryControls";
 import styles from "./page.module.css";
 
@@ -37,7 +37,7 @@ function hrefWith(base: Record<string, string | undefined>, changes: Record<stri
 export default async function ExerciciosPage({ searchParams }: ExerciciosPageProps = {}) {
   let ctx;
   try {
-    ctx = await requirePersonal();
+    ctx = await requireSubscriber();
   } catch (error) {
     if (error instanceof AuthError) {
       redirect(error.kind === "UNAUTHENTICATED" ? "/entrar" : "/painel");
@@ -56,8 +56,8 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
   const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
-    <AppShell eyebrow="Exercícios" title="Seu catálogo de movimentos" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"} com foto, execução e cuidados.`} navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
-      <TrainingTabs active="exercicios" />
+    <AppShell eyebrow="Exercícios" title="Seu catálogo de movimentos" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"} com foto, execução e cuidados.`} navItems={ctx.role === "PERSONAL" ? PERSONAL_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS} activeKey={ctx.role === "PERSONAL" ? "exercicios" : "treinos"} trailing={<LogoutButton />}>
+      <TrainingTabs active="exercicios" area={ctx.role === "PERSONAL" ? "personal" : "livre"} />
       <FilterLinks
         label="Origem"
         items={(["todos", "biblioteca", "meus"] as const).map((key) => ({

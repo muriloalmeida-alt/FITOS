@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Button, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { difficultyLabel } from "@/shared/lib/difficulty";
-import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
+import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { getCatalogExerciseForTenant, listCatalogFacets } from "@/modules/exercises/exercises";
 import { ExerciseDetailActions } from "./ExerciseDetailActions";
 import styles from "./page.module.css";
@@ -29,7 +29,7 @@ function toSteps(text: string | null): string[] {
 export default async function ExercicioPage({ params }: { params: Promise<{ id: string }> }) {
   let ctx;
   try {
-    ctx = await requirePersonal();
+    ctx = await requireSubscriber();
   } catch (error) {
     if (error instanceof AuthError) {
       redirect(error.kind === "UNAUTHENTICATED" ? "/entrar" : "/painel");
@@ -104,7 +104,7 @@ export default async function ExercicioPage({ params }: { params: Promise<{ id: 
       />
 
       <div className={styles.bar}>
-        <Button href="/painel/treinos/novo" block size="lg">
+        <Button href={ctx.role === "PERSONAL" ? "/painel/treinos/novo" : "/painel/meus-treinos/novo"} block size="lg">
           Usar em um treino
         </Button>
       </div>

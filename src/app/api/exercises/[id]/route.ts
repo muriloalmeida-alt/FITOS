@@ -1,4 +1,4 @@
-import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { authErrorResponse, requireSubscriber } from "@/modules/tenancy/authContext";
 import { ExerciseError, updateOwnExercise } from "@/modules/exercises/exercises";
 
 /// Edita um exercício próprio do tenant do personal autenticado. Ignora
@@ -9,7 +9,7 @@ import { ExerciseError, updateOwnExercise } from "@/modules/exercises/exercises"
 /// exercício global nunca é encontrado (nem revelado).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const ctx = await requirePersonal();
+    const ctx = await requireSubscriber();
     const { id } = await params;
     const body = await request.json().catch(() => null);
 

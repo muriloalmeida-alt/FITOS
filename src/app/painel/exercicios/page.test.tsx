@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/shared/ui";
 
-const requirePersonal = vi.fn();
+const requireSubscriber = vi.fn();
 const listCatalogExercises = vi.fn();
 const listCatalogFacets = vi.fn();
 const getCatalogExerciseForTenant = vi.fn();
@@ -17,7 +17,7 @@ const push = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-  return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
+  return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
 vi.mock("@/modules/exercises/exercises", async () => {
   const actual = await vi.importActual<typeof import("@/modules/exercises/exercises")>("@/modules/exercises/exercises");
@@ -45,7 +45,7 @@ describe("Biblioteca de exercícios (FIT-147)", () => {
   afterEach(() => vi.resetAllMocks());
 
   it("lista com origem, filtros e etiqueta de cada exercício", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     listCatalogFacets.mockResolvedValue(facets);
     listCatalogExercises.mockResolvedValue({ items: [global, own], total: 2, page: 1, pageSize: 30 });
     const { default: Page } = await import("./page");
@@ -64,7 +64,7 @@ describe("Biblioteca de exercícios (FIT-147)", () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "novo" }), { status: 201 }));
     vi.stubGlobal("fetch", fetchMock);
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     listCatalogFacets.mockResolvedValue(facets);
     listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 30 });
     const { default: Page } = await import("./page");
@@ -82,7 +82,7 @@ describe("Biblioteca de exercícios (FIT-147)", () => {
   });
 
   it("detalhe do global mostra passos, segurança e 'Criar uma versão minha'", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     getCatalogExerciseForTenant.mockResolvedValue(global);
     const { default: Detail } = await import("./[id]/page");
     render(<ToastProvider>{await Detail({ params: Promise.resolve({ id: "g1" }) })}</ToastProvider>);
@@ -96,7 +96,7 @@ describe("Biblioteca de exercícios (FIT-147)", () => {
   });
 
   it("detalhe do próprio arquivado oferece Editar e Reativar; outro tenant é 404", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     listCatalogFacets.mockResolvedValue(facets);
     getCatalogExerciseForTenant.mockResolvedValueOnce(own);
     const { default: Detail } = await import("./[id]/page");

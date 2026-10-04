@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const requirePersonal = vi.fn();
+const requireSubscriber = vi.fn();
 const updateOwnExercise = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
     "@/modules/tenancy/authContext"
   );
-  return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
+  return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
 
 vi.mock("@/modules/exercises/exercises", async () => {
@@ -28,7 +28,7 @@ describe("PATCH /api/exercises/[id]", () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
       "@/modules/tenancy/authContext"
     );
-    requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
+    requireSubscriber.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
 
     const { PATCH } = await import("./route");
     const response = await PATCH(new Request("http://localhost/api/exercises/e1", { method: "PATCH", body: "{}" }), {
@@ -39,7 +39,7 @@ describe("PATCH /api/exercises/[id]", () => {
   });
 
   it("edita usando o tenantId da sessão, ignora qualquer tenantId/origin enviado no corpo", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     updateOwnExercise.mockResolvedValue({ id: "e1", muscle: "costas" });
 
     const { PATCH } = await import("./route");
@@ -68,7 +68,7 @@ describe("PATCH /api/exercises/[id]", () => {
     const { ExerciseError } = await vi.importActual<typeof import("@/modules/exercises/exercises")>(
       "@/modules/exercises/exercises"
     );
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     updateOwnExercise.mockRejectedValue(new ExerciseError("NAO_ENCONTRADO", "Exercício não encontrado."));
 
     const { PATCH } = await import("./route");

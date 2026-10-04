@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { loadEditorWorkout, loadLibrary, loadPrograms } from "../editorData";
+import { loadEditorWorkout, loadLibrary, loadPrograms } from "../../_workout-builder/editorData";
 import { PersonalWorkoutEditor } from "../PersonalWorkoutEditor";
 
 export const metadata: Metadata = {
