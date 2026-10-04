@@ -4,9 +4,8 @@ import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
-import { getWeeklyRhythmForStudent, listWorkoutExercisesForWorkout, listWorkoutsForTenant } from "@/modules/workouts/workouts";
 import { getStudentHome } from "@/modules/students/studentHome";
-import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
+import { getIndividualHome } from "@/modules/workouts/individualHome";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
 import { getPersonalFeed } from "@/modules/students/personalFeed";
@@ -118,41 +117,9 @@ export default async function PainelPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [workouts, selfStudent] = await Promise.all([
-      listWorkoutsForTenant({ tenantId: ctx.tenantId }),
-      // Nunca cria o Student de auto-referência aqui (FIT-103): só
-      // existe depois que o praticante começou algum treino — se ainda
-      // não existe, é impossível haver uma sessão em andamento.
-      prisma.student.findUnique({ where: { userId: ctx.userId } }),
-    ]);
-    const [inProgressSession, weeklyRhythm] = await Promise.all([
-      selfStudent ? getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: selfStudent.id }) : null,
-      selfStudent
-        ? getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: selfStudent.id })
-        : Promise.resolve({ completedDays: 0, targetDays: null, dayFlags: [false, false, false, false, false, false, false] }),
-    ]);
-    // "Hoje para você" (tela-10, pacote visual 2026): sugere sempre o
-    // primeiro treino real do próprio praticante (nunca um treino
-    // inventado) — `listWorkoutsForTenant` já ordena por nome, então a
-    // escolha é estável entre renders, não aleatória.
-    const firstWorkout = workouts[0] ?? null;
-    const suggestedWorkout = firstWorkout
-      ? {
-          id: firstWorkout.id,
-          name: firstWorkout.name,
-          exercisesCount: (await listWorkoutExercisesForWorkout({ tenantId: ctx.tenantId, workoutId: firstWorkout.id })).length,
-        }
-      : null;
-    return (
-      <IndividualHome
-        name={session.user.name}
-        greeting={greetingForHour(hourInProductTimeZone(new Date()))}
-        dateLabel={dateLabelFor(new Date())}
-        inProgressWorkoutName={inProgressSession?.workout.name ?? null}
-        suggestedWorkout={suggestedWorkout}
-        weeklyRhythm={{ completedDays: weeklyRhythm.completedDays, dayFlags: weeklyRhythm.dayFlags }}
-      />
-    );
+    const now = new Date();
+    const home = await getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now });
+    return <IndividualHome name={session.user.name} greeting={greetingForHour(hourInProductTimeZone(now))} dateLabel={dateLabelFor(now)} home={home} todayIso={now.toISOString()} />;
   }
 
   if (!ctx.studentId) {
