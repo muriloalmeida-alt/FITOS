@@ -24,7 +24,7 @@ export function IndividualHome({ name, greeting, dateLabel, home, todayIso }: In
   const planned = [...new Set(home.workouts.flatMap((workout) => workout.days))];
 
   return (
-    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="inicio" trailing={<LogoutButton />}>
+    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       {home.inProgress ? (
         <section className={`${styles.hero} ${styles.heroLive}`} aria-label="Treino em andamento">
           <p className={styles.eyebrow}>Em andamento</p>

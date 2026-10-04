@@ -86,7 +86,7 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos", compact: true },
   { key: "progresso", label: "Evolução", href: "/painel/minha-evolucao", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   // FIT-122: "Assinatura" (FitOS Livre) já é real.
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];
