@@ -91,7 +91,7 @@ Funcionalidades novas **só de frontend**, sem backend:
 
 ### Decisão técnica proposta (para validar no PR da FIT-153)
 
-1. **Registro por série (BK-11):** nova tabela `workout_set_results` (sessão, item do treino, número da série, carga, repetições ou segundos, horário). O agregado `WorkoutSessionResult` continua sendo atualizado, para não quebrar histórico, recordes e telas antigas. Vira ADR-011.
+1. **Registro por série (BK-11):** nova tabela `workout_set_results` (sessão, item do treino, número da série, carga, repetições ou segundos, horário). O agregado `WorkoutSessionResult` continua sendo atualizado, para não quebrar histórico, recordes e telas antigas. Vira ADR-015 (ADR-011 já era o armazenamento de mídia).
 
 ---
 
@@ -365,7 +365,7 @@ Critérios de aceite:
 - Retomar sessão em andamento depois de fechar o app (já existe `startOrResume…`).
 - Funciona com uma mão: nenhuma ação principal fica fora do alcance do polegar.
 
-Backend novo: **BK-11, BK-12, BK-13, BK-14.** ADR-011.
+Backend novo: **BK-11, BK-12, BK-13, BK-14.** ADR-015.
 
 ### FIT-154 — A4 · Progresso do Aluno (`P1`)
 

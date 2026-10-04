@@ -12,6 +12,7 @@ import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { currentReferenceMonth, referenceMonthLabel } from "@/shared/lib/referenceMonth";
 import { PersonalProfileView } from "./PersonalProfileView";
+import { StudentProfileView } from "./StudentProfileView";
 import { LogoutButton } from "../LogoutButton";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
@@ -147,16 +148,18 @@ export default async function PerfilPage() {
     redirect("/painel");
   }
 
+  const student = await prisma.student.findUniqueOrThrow({
+    where: { id: ctx.studentId },
+    include: { tenant: { include: { owner: true, personalProfile: { select: { cref: true } } } } },
+  });
+
   return (
-    <AppShell eyebrow="Perfil" title="Sua conta" subtitle="Seus dados de acesso ao FitOS." navItems={ALUNO_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
-      <Card title="Dados da conta">
-        <p>
-          Nome: <strong>{session.user.name}</strong>
-        </p>
-        <p>
-          E-mail: <strong>{session.user.email}</strong>
-        </p>
-      </Card>
+    <AppShell eyebrow="Perfil" title="Sua conta" headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
+      <StudentProfileView
+        name={session.user.name}
+        email={session.user.email}
+        coach={{ name: student.tenant.owner.name, businessName: student.tenant.name, cref: student.tenant.personalProfile?.cref ?? null }}
+      />
     </AppShell>
   );
 }

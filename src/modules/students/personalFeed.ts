@@ -83,7 +83,7 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
         where: { status: "CONCLUIDA", startedAt: { gte: new Date(now.getTime() - RECENT_SESSION_MS) } },
         orderBy: { startedAt: "desc" },
         take: 1,
-        select: { startedAt: true, endedAt: true, perceivedEffort: true, workout: { select: { name: true } } },
+        select: { startedAt: true, endedAt: true, activeSeconds: true, perceivedEffort: true, workout: { select: { name: true } } },
       },
       assessments: { where: { deletedAt: null }, orderBy: { recordedAt: "desc" }, take: 1, select: { recordedAt: true } },
     },
@@ -156,7 +156,8 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
 
     const session = student.workoutSessions[0] ?? null;
     if (session) {
-      const minutes = session.endedAt ? Math.max(1, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000)) : null;
+      // BK-14: tempo ativo (sem pausas) quando o aparelho informou.
+      const minutes = session.activeSeconds ? Math.max(1, Math.round(session.activeSeconds / 60)) : session.endedAt ? Math.max(1, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000)) : null;
       const parts = [`Concluiu ${session.workout.name}`];
       if (minutes) parts.push(`${minutes} min`);
       if (session.perceivedEffort) parts.push(`esforço ${effortLabel(session.perceivedEffort)}`);

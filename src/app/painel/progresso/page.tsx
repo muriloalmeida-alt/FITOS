@@ -1,33 +1,31 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { ActionRow, AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { prisma } from "@/shared/db/prisma";
 import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
 import { listAssessmentsForStudent } from "@/modules/evolution/assessments";
+import { buildEvolution } from "@/modules/evolution/evolutionSeries";
+import { listPersonalRecordsForStudent } from "@/modules/execution/history";
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../navigation";
-import { EvolucaoChart } from "./EvolucaoChart";
+import { EvolutionView } from "../_evolution/EvolutionView";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Progresso — ${appName}`,
 };
 
-const MEASUREMENT_LABEL: Record<string, string> = {
-  CINTURA: "Cintura",
-  QUADRIL: "Quadril",
-  PEITO: "Peito",
-  BRACO: "Braço",
-  COXA: "Coxa",
-  PANTURRILHA: "Panturrilha",
-};
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" });
 
-/// Própria evolução do aluno (FIT-042), exclusiva do papel ALUNO —
-/// `requireStudent()` garante isso no servidor, mesmo padrão da
-/// FIT-016/033/040. Sempre lê a evolução do próprio aluno da sessão
-/// (nunca um `studentId` vindo do cliente) — nunca a de outro aluno.
-/// Somente leitura: registrar/excluir avaliação é exclusivo do personal
-/// (ficha do aluno, `/painel/alunos/[id]`).
+function fmt(value: number) {
+  return (Math.round(value * 10) / 10).toLocaleString("pt-BR");
+}
+
+/// Progresso do Aluno (FIT-154, A4 do protótipo), só da própria sessão:
+/// métrica em chips com gráfico, medidas da primeira para a última
+/// avaliação, histórico de avaliações e o bloco Treinos (treinos no mês e
+/// melhores cargas, BK-12). Somente leitura: avaliar é do personal.
 export default async function ProgressoPage() {
   let ctx;
   try {
@@ -39,67 +37,68 @@ export default async function ProgressoPage() {
     throw error;
   }
 
-  const assessments = await listAssessmentsForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
-
-  if (assessments.length === 0) {
-    return (
-      <AppShell eyebrow="Progresso" title="Sua evolução" subtitle="Acompanhe as avaliações registradas." navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
-        <Card title="Sua evolução">
-          <p className={styles.empty}>Nenhuma avaliação registrada ainda. Fale com seu personal.</p>
-        </Card>
-      </AppShell>
-    );
-  }
-
-  // Mais antiga primeiro para o gráfico (evolução no tempo); a tabela
-  // abaixo mantém a ordem mais recente primeiro, já vinda de
-  // `listAssessmentsForStudent`.
-  const weightPoints = assessments
-    .filter((a) => a.weightGrams !== null)
-    .map((a) => ({ recordedAt: a.recordedAt.toISOString(), weightKg: a.weightGrams! / 1000 }))
-    .reverse();
+  const scope = { tenantId: ctx.tenantId, studentId: ctx.studentId };
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [assessments, records, monthSessions, student] = await Promise.all([
+    listAssessmentsForStudent(scope),
+    listPersonalRecordsForStudent(scope),
+    prisma.workoutSession.count({ where: { ...scope, status: "CONCLUIDA", startedAt: { gte: monthStart } } }),
+    prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
+  ]);
+  const { series, measures } = buildEvolution(assessments);
+  const best = [...records].sort((a, b) => b.achievedAt.getTime() - a.achievedAt.getTime()).slice(0, 5);
+  const month = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(now);
 
   return (
-    <AppShell eyebrow="Progresso" title="Sua evolução" subtitle="Acompanhe as avaliações registradas." navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
-      <Card title="Sua evolução">
-        {weightPoints.length >= 2 ? (
-          <div className={styles.chartWrapper}>
-            <EvolucaoChart points={weightPoints} />
-          </div>
-        ) : null}
+    <AppShell eyebrow="Progresso" title="Sua evolução" navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+      {series.length > 0 ? (
+        <EvolutionView series={series} measures={measures} />
+      ) : (
+        <p className={styles.empty}>Nenhuma avaliação ainda. {student.tenant.owner.name} registra a sua na próxima avaliação e ela aparece aqui.</p>
+      )}
 
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>Histórico de avaliações, mais recente primeiro</caption>
-            <thead>
-              <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Peso</th>
-                <th scope="col">Gordura</th>
-                <th scope="col">Medidas</th>
-                <th scope="col">Observação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assessments.map((assessment) => (
-                <tr key={assessment.id}>
-                  <td>{new Date(assessment.recordedAt).toLocaleDateString("pt-BR")}</td>
-                  <td>{assessment.weightGrams !== null ? `${assessment.weightGrams / 1000}kg` : "—"}</td>
-                  <td>{assessment.bodyFatTenthPercent !== null ? `${assessment.bodyFatTenthPercent / 10}%` : "—"}</td>
-                  <td>
-                    {assessment.measurements.length > 0
-                      ? assessment.measurements
-                          .map((m) => `${MEASUREMENT_LABEL[m.type] ?? m.type}: ${m.valueMillimeters / 10}cm`)
-                          .join(", ")
-                      : "—"}
-                  </td>
-                  <td className={styles.notes}>{assessment.notes ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className={styles.section} aria-labelledby="treinos">
+        <h2 id="treinos" className={styles.title}>
+          Treinos
+        </h2>
+        <div className={styles.stat}>
+          <span className={styles.statValue}>{monthSessions}</span>
+          <span className={styles.muted}>{monthSessions === 1 ? `treino em ${month}` : `treinos em ${month}`}</span>
         </div>
-      </Card>
+        {best.length > 0 ? (
+          <>
+            <h3 className={styles.subtitle}>Melhores cargas</h3>
+            <ul className={styles.list}>
+              {best.map((record) => (
+                <li key={record.exerciseName}>
+                  <ActionRow title={record.exerciseName} description={dateFmt.format(record.achievedAt)} trailing={<strong>{`${fmt(record.loadValue)} kg${record.repsCompleted ? ` × ${record.repsCompleted}` : ""}`}</strong>} />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className={styles.empty}>Suas melhores cargas aparecem aqui depois dos primeiros treinos.</p>
+        )}
+      </section>
+
+      {assessments.length > 0 ? (
+        <section className={styles.section} aria-labelledby="historico">
+          <h2 id="historico" className={styles.title}>
+            Avaliações
+          </h2>
+          <ul className={styles.list}>
+            {assessments.map((assessment) => {
+              const parts = [assessment.weightGrams !== null ? `${fmt(assessment.weightGrams / 1000)} kg` : null, assessment.bodyFatTenthPercent !== null ? `${fmt(assessment.bodyFatTenthPercent / 10)}% gordura` : null].filter(Boolean);
+              return (
+                <li key={assessment.id}>
+                  <ActionRow title={dateFmt.format(assessment.recordedAt)} description={[parts.join(" · ") || "Sem peso e gordura", assessment.notes].filter(Boolean).join(" · ")} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
     </AppShell>
   );
 }

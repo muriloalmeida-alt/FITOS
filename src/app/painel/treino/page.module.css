@@ -1,88 +1,132 @@
-.empty {
+.muted {
   margin: 0;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-text-muted);
   font-size: 14px;
-}
-
-.planMeta {
-  margin: 0 0 var(--fitos-space-4) 0;
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-.workoutList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-4);
-}
-
-.workoutName {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--fitos-color-on-surface);
-}
-
-.days {
-  margin: 0 0 var(--fitos-space-2) 0;
-  font-size: 13px;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-.itemList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
-}
-
-.itemRow {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--fitos-space-3);
-  border-radius: var(--fitos-shape-medium);
-  background-color: var(--fitos-color-surface-container);
-  border: 1px solid var(--fitos-color-outline-variant);
-}
-
-.exerciseName {
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--fitos-color-on-surface);
-}
-
-.exerciseMuscle {
-  font-size: 13px;
-  color: var(--fitos-color-on-surface-variant);
 }
 
 .summary {
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
-.notes {
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--fitos-color-text-muted);
   font-size: 13px;
-  color: var(--fitos-color-on-surface-variant);
-  font-style: italic;
+  font-weight: 700;
 }
 
+.workouts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-/*
- * Mobile editorial (AjustesTelas, 29/09/2026): integrado ao fundo — sem
- * caixa; divisor fino/linha de campo com foco e erro explícitos.
- */
-@media (max-width: 839px) {
-  .itemRow {
-    padding-left: 0;
-    padding-right: 0;
-    border: none;
-    border-bottom: 1px solid var(--fitos-color-divider);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
+.workout {
+  border-radius: 20px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.workoutOpen {
+  border: 1px solid rgba(255, 120, 71, 0.35);
+}
+
+.workoutHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workoutHead:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  border-radius: 20px;
+}
+
+.workoutText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workoutName {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.workoutMeta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--fitos-color-surface-raised);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.workoutBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 18px 18px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  gap: 12px;
+}
+
+.thumb {
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemName {
+  font-weight: 800;
+}
+
+.note {
+  color: #ffd9a0;
+  font-size: 13px;
 }
