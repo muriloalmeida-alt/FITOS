@@ -489,6 +489,47 @@ describe("subscribeTenantToPlan — ligação de melhor esforço ao Asaas (FIT-1
   });
 });
 
+describe("assinar de novo depois de cancelar (BK-18, FIT-150)", () => {
+  it("cria uma nova assinatura no Asaas (nunca reaproveita a cancelada), limpa o cartão e não repete o teste grátis", async () => {
+    const { tenant, owner } = await createTenant("bk18");
+    const plano = await createPlan("bk18", { priceCents: 4990, trialDays: 30 });
+    await createPersonalProfile(tenant.id, "111.444.777-35");
+    let created = 0;
+    const fetchImpl = createAsaasFetchMock({
+      createSubscription: () => {
+        created += 1;
+        return jsonResponse(200, { id: `sub_${created}`, customer: "cus_1", status: "ACTIVE" });
+      },
+    });
+    const deps = { apiKey: FAKE_KEY, fetchImpl };
+
+    const first = await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, deps);
+    await prisma.saasSubscription.update({ where: { tenantId: tenant.id }, data: { creditCardLast4: "4242", creditCardBrand: "VISA" } });
+    await cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Preço" }, prisma, deps);
+
+    const again = await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, deps);
+
+    expect(first.externalSubscriptionId).toBe("sub_1");
+    expect(again).toMatchObject({ status: "ATIVA", externalCustomerId: "cus_1", externalSubscriptionId: "sub_2", creditCardLast4: null, creditCardBrand: null, canceledAt: null });
+    expect(again.trialEndsAt?.getTime()).toBe(first.trialEndsAt?.getTime());
+    expect(again.trialUsedAt?.getTime()).toBe(first.trialUsedAt?.getTime());
+    expect(fetchImpl).not.toHaveBeenCalledWith(expect.stringContaining("/subscriptions/sub_1"), expect.objectContaining({ method: "PUT" }));
+    const audit = await prisma.auditEvent.findFirst({ where: { tenantId: tenant.id, action: "ASSINATURA_REATIVADA" } });
+    expect(audit?.action).toBe("ASSINATURA_REATIVADA");
+  });
+
+  it("sem ligação ao Asaas, não carrega o id da assinatura cancelada", async () => {
+    const { tenant, owner } = await createTenant("bk18-sem");
+    const plano = await createPlan("bk18-sem", { priceCents: 4990 });
+    await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma);
+    await prisma.saasSubscription.update({ where: { tenantId: tenant.id }, data: { externalSubscriptionId: "sub_velha" } });
+    await cancelSubscription({ tenantId: tenant.id, actorUserId: owner.id, reason: "Preço" }, prisma, { apiKey: "" });
+
+    const again = await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, { apiKey: "" });
+    expect(again.externalSubscriptionId).toBeNull();
+  });
+});
+
 describe("cancelSubscription (FIT-122)", () => {
   it("cancela, registra motivo e AuditEvent", async () => {
     const { tenant, owner } = await createTenant("cancelar");
