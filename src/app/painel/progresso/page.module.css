@@ -1,46 +1,49 @@
 .empty {
   margin: 0;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-color-text-muted);
   font-size: 14px;
 }
 
-.chartWrapper {
-  color: var(--fitos-color-tertiary);
-  margin-bottom: var(--fitos-space-4);
+.section {
+  margin-top: 28px;
 }
 
-.tableWrapper {
-  overflow-x: auto;
+.title {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 800;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
+.subtitle {
+  margin: 18px 0 4px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.muted {
+  color: var(--fitos-color-text-muted);
   font-size: 14px;
 }
 
-.table th,
-.table td {
-  text-align: left;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  border-bottom: 1px solid var(--fitos-color-outline-variant);
-}
-
-.table th {
-  color: var(--fitos-color-on-surface-variant);
-  font-weight: 650;
-}
-
-.notes {
-  font-style: italic;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }

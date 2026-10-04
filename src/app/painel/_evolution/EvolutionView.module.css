@@ -1,0 +1,90 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--fitos-orange-500);
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.value {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.value small {
+  color: var(--fitos-color-text-muted);
+  font-size: 16px;
+}
+
+.delta,
+.muted {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.section {
+  margin-top: 10px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.measures {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.measures li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+}
+
+.down {
+  color: var(--fitos-teal-300);
+  font-size: 14px;
+}
+
+.up {
+  color: #ffd9a0;
+  font-size: 14px;
+}
