@@ -2,7 +2,7 @@
   position: fixed;
   left: var(--fitos-space-5);
   right: var(--fitos-space-5);
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  top: calc(12px + env(safe-area-inset-top));
   z-index: 60;
   display: flex;
   justify-content: center;
@@ -23,6 +23,6 @@
 
 @media (min-width: 840px) {
   .region {
-    bottom: var(--fitos-space-8);
+    top: var(--fitos-space-6);
   }
 }

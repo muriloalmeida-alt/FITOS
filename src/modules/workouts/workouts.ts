@@ -277,11 +277,11 @@ export async function addWorkoutExercise(
 export async function listWorkoutExercisesForWorkout(
   input: { tenantId: string; workoutId: string },
   client: PrismaClient = prisma
-): Promise<(WorkoutExercise & { exercise: { name: string; muscle: string | null } })[]> {
+): Promise<(WorkoutExercise & { exercise: { name: string; muscle: string | null; imageUrl: string | null; imageAlt: string | null } })[]> {
   return client.workoutExercise.findMany({
     where: { workoutId: input.workoutId, tenantId: input.tenantId },
     orderBy: { position: "asc" },
-    include: { exercise: { select: { name: true, muscle: true } } },
+    include: { exercise: { select: { name: true, muscle: true, imageUrl: true, imageAlt: true } } },
   });
 }
 
@@ -730,8 +730,10 @@ export async function reorderWorkoutsInPlan(
   input: { tenantId: string; trainingPlanId: string; orderedWorkoutIds: string[] },
   client: PrismaClient = prisma
 ): Promise<void> {
+  // FIT-146: a tela só mostra (e reordena) os treinos ativos do programa;
+  // arquivados não participam da ordem.
   const current = await client.workout.findMany({
-    where: { trainingPlanId: input.trainingPlanId, tenantId: input.tenantId },
+    where: { trainingPlanId: input.trainingPlanId, tenantId: input.tenantId, status: "ATIVO" },
     select: { id: true },
   });
   const currentIds = new Set(current.map((item) => item.id));
@@ -1065,4 +1067,248 @@ export async function getWeeklyRhythmForStudent(
   }
 
   return { completedDays: dayFlags.filter(Boolean).length, targetDays, dayFlags };
+}
+
+// ---------------------------------------------------------------------------
+// FIT-146 (EPIC-19, Momento 1) — construção de treino sem formulário.
+// ---------------------------------------------------------------------------
+
+/// Prescrição padrão de um exercício adicionado pela biblioteca (decisão de
+/// Murilo, 04/10/2026): 3 séries × 12 repetições, 60 s de descanso, carga
+/// livre. O personal ajusta depois com +/−.
+export const DEFAULT_PRESCRIPTION = { sets: 3, reps: 12, restSeconds: 60 } as const;
+
+const MAX_BATCH_EXERCISES = 30;
+
+/// BK-01: adiciona vários exercícios de uma vez ao fim do treino, todos com
+/// a prescrição padrão, numa única transação (ou entram todos, ou nenhum).
+/// Cada exercício precisa estar no catálogo visível ao tenant — mesma regra
+/// de `addWorkoutExercise`. Repetir um exercício na lista é permitido (o
+/// mesmo movimento pode aparecer duas vezes num treino).
+export async function addWorkoutExercisesBatch(
+  input: { tenantId: string; workoutId: string; exerciseIds: string[] },
+  client: PrismaClient = prisma
+): Promise<WorkoutExercise[]> {
+  if (input.exerciseIds.length === 0) {
+    throw new WorkoutError("VALIDACAO", "Escolha ao menos um exercício.");
+  }
+  if (input.exerciseIds.length > MAX_BATCH_EXERCISES) {
+    throw new WorkoutError("VALIDACAO", `Adicione no máximo ${MAX_BATCH_EXERCISES} exercícios por vez.`);
+  }
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+  for (const exerciseId of new Set(input.exerciseIds)) {
+    const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId }, client);
+    if (!exercise) {
+      throw new WorkoutError("EXERCICIO_INVALIDO", "Exercício não encontrado no catálogo visível à sua conta.");
+    }
+  }
+
+  return client.$transaction(async (tx) => {
+    const maxPosition = await tx.workoutExercise.aggregate({
+      where: { workoutId: input.workoutId, tenantId: input.tenantId },
+      _max: { position: true },
+    });
+    let position = (maxPosition._max.position ?? -1) + 1;
+    const created: WorkoutExercise[] = [];
+    for (const exerciseId of input.exerciseIds) {
+      created.push(
+        await tx.workoutExercise.create({
+          data: {
+            tenantId: input.tenantId,
+            workoutId: input.workoutId,
+            exerciseId,
+            position,
+            sets: DEFAULT_PRESCRIPTION.sets,
+            reps: DEFAULT_PRESCRIPTION.reps,
+            restSeconds: DEFAULT_PRESCRIPTION.restSeconds,
+          },
+        })
+      );
+      position += 1;
+    }
+    return created;
+  });
+}
+
+export interface WorkoutSummary {
+  id: string;
+  name: string;
+  status: Workout["status"];
+  suggestedDays: string[];
+  exerciseCount: number;
+  trainingPlanId: string;
+  /// `null` quando o treino está em "Meus modelos" (plano rascunho).
+  trainingPlanName: string | null;
+  thumbnails: { imageUrl: string; imageAlt: string | null }[];
+}
+
+/// Resumo dos treinos do tenant para a lista "Seus treinos" (FIT-146):
+/// contagem de exercícios, dias sugeridos, programa em que está e as fotos
+/// dos três primeiros exercícios. Nunca inclui cópias atribuídas
+/// (snapshots). `status` filtra ativos (padrão) ou arquivados.
+export async function listWorkoutSummariesForTenant(
+  input: { tenantId: string; status?: Workout["status"] },
+  client: PrismaClient = prisma
+): Promise<WorkoutSummary[]> {
+  const workouts = await client.workout.findMany({
+    where: { tenantId: input.tenantId, status: input.status ?? "ATIVO", trainingPlan: { isSnapshot: false } },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    include: {
+      trainingPlan: { select: { name: true, isDraftBucket: true } },
+      _count: { select: { workoutExercises: true } },
+      workoutExercises: {
+        orderBy: { position: "asc" },
+        take: 3,
+        select: { exercise: { select: { imageUrl: true, imageAlt: true } } },
+      },
+    },
+  });
+  return workouts.map((workout) => ({
+    id: workout.id,
+    name: workout.name,
+    status: workout.status,
+    suggestedDays: workout.suggestedDays,
+    exerciseCount: workout._count.workoutExercises,
+    trainingPlanId: workout.trainingPlanId,
+    trainingPlanName: workout.trainingPlan.isDraftBucket ? null : workout.trainingPlan.name,
+    thumbnails: workout.workoutExercises
+      .filter((item) => item.exercise.imageUrl)
+      .map((item) => ({ imageUrl: item.exercise.imageUrl!, imageAlt: item.exercise.imageAlt })),
+  }));
+}
+
+export interface TrainingPlanSummary {
+  id: string;
+  name: string;
+  status: TrainingPlan["status"];
+  durationWeeks: number | null;
+  workoutCount: number;
+  /// União dos dias sugeridos dos treinos do programa (faixa da semana).
+  days: string[];
+}
+
+/// Resumo dos programas do tenant (FIT-146). Nunca inclui o plano rascunho
+/// nem snapshots de atribuição.
+export async function listTrainingPlanSummariesForTenant(
+  input: { tenantId: string; status?: TrainingPlan["status"] },
+  client: PrismaClient = prisma
+): Promise<TrainingPlanSummary[]> {
+  const plans = await client.trainingPlan.findMany({
+    where: { tenantId: input.tenantId, status: input.status ?? "ATIVO", isSnapshot: false, isDraftBucket: false },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    include: { workouts: { where: { status: "ATIVO" }, select: { suggestedDays: true } } },
+  });
+  return plans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    status: plan.status,
+    durationWeeks: plan.durationWeeks,
+    workoutCount: plan.workouts.length,
+    days: [...new Set(plan.workouts.flatMap((workout) => workout.suggestedDays))],
+  }));
+}
+
+/// Coloca um treino num programa (FIT-146). Treino de "Meus modelos" é
+/// **movido** (comportamento atual); treino que já está em outro programa
+/// é **copiado**, para nunca sumir do programa de origem sem aviso. Retorna
+/// o treino que ficou no programa e se foi cópia.
+export async function addWorkoutToPlan(
+  input: { tenantId: string; workoutId: string; targetTrainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<{ workout: Workout; copied: boolean }> {
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+  const target = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.targetTrainingPlanId }, client);
+  if (!target || target.isDraftBucket) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano de destino não encontrado.");
+  }
+  if (workout.trainingPlanId === target.id) {
+    return { workout, copied: false };
+  }
+  const source = await client.trainingPlan.findFirstOrThrow({ where: { id: workout.trainingPlanId, tenantId: input.tenantId } });
+  if (source.isDraftBucket) {
+    const moved = await moveWorkoutToPlan(input, client);
+    return { workout: moved, copied: false };
+  }
+  const copy = await cloneWorkoutWithItems(
+    { tenantId: input.tenantId, sourceWorkoutId: workout.id, targetTrainingPlanId: target.id },
+    client
+  );
+  return { workout: copy, copied: true };
+}
+
+export interface AssignableStudent {
+  id: string;
+  displayName: string;
+  /// Programa ativo atual (será substituído ao atribuir outro).
+  activePlanName: string | null;
+}
+
+/// Alunos ativos que podem receber um programa (FIT-146, sheet "Para
+/// quem?"), com o programa ativo atual de cada um.
+export async function listAssignableStudents(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<AssignableStudent[]> {
+  const students = await client.student.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVO" },
+    orderBy: [{ displayName: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      displayName: true,
+      planAssignments: { where: { active: true }, take: 1, select: { trainingPlan: { select: { name: true } } } },
+    },
+  });
+  return students.map((student) => ({
+    id: student.id,
+    displayName: student.displayName,
+    activePlanName: student.planAssignments[0]?.trainingPlan.name ?? null,
+  }));
+}
+
+const MAX_BATCH_ASSIGNMENTS = 50;
+
+/// BK-03: atribui o mesmo programa a vários alunos. Valida todos antes de
+/// atribuir qualquer um (aluno inexistente, de outro tenant ou inativo
+/// recusa o lote inteiro); depois cada atribuição segue a regra de
+/// `assignTrainingPlanToStudent` (cópia imutável por aluno, ADR-005;
+/// programa ativo anterior encerrado).
+export async function assignTrainingPlanToStudents(
+  input: { tenantId: string; actorUserId: string; trainingPlanId: string; studentIds: string[] },
+  client: PrismaClient = prisma
+): Promise<PlanAssignment[]> {
+  const studentIds = [...new Set(input.studentIds)];
+  if (studentIds.length === 0) {
+    throw new WorkoutError("VALIDACAO", "Escolha ao menos um aluno.");
+  }
+  if (studentIds.length > MAX_BATCH_ASSIGNMENTS) {
+    throw new WorkoutError("VALIDACAO", `Atribua a no máximo ${MAX_BATCH_ASSIGNMENTS} alunos por vez.`);
+  }
+  const plan = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.trainingPlanId }, client);
+  if (!plan || plan.isDraftBucket) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+  const students = await client.student.findMany({ where: { tenantId: input.tenantId, id: { in: studentIds } } });
+  if (students.length !== studentIds.length) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (students.some((student) => student.status !== "ATIVO")) {
+    throw new WorkoutError("ESTADO_INVALIDO", "Não é possível atribuir um plano a um aluno inativo ou com vínculo encerrado.");
+  }
+
+  const assignments: PlanAssignment[] = [];
+  for (const studentId of studentIds) {
+    assignments.push(
+      await assignTrainingPlanToStudent(
+        { tenantId: input.tenantId, actorUserId: input.actorUserId, studentId, trainingPlanId: plan.id },
+        client
+      )
+    );
+  }
+  return assignments;
 }

@@ -1,0 +1,27 @@
+.filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 20px 0 4px;
+}
+
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #d5dbe1;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.active {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  color: var(--fitos-navy-900);
+}

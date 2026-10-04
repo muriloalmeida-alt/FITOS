@@ -1,0 +1,220 @@
+.editor {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--fitos-space-5) calc(110px + env(safe-area-inset-bottom));
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  padding-top: env(safe-area-inset-top);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-left: -6px;
+  color: var(--fitos-color-on-surface);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.saved {
+  color: var(--fitos-color-success);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.title {
+  width: 100%;
+  padding: 6px 0 10px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 28px;
+  font-weight: 800;
+  outline: none;
+}
+
+.title:focus {
+  border-bottom-color: var(--fitos-orange-500);
+}
+
+.archived {
+  margin: 8px 0 0;
+  color: #ffd9a0;
+  font-size: 13px;
+}
+
+.weeks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 10px 12px 10px 16px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+}
+
+.weeksValue {
+  font-weight: 800;
+}
+
+.weeksStepper {
+  width: 140px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 24px 0 10px;
+}
+
+.h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.meta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.thumb {
+  flex: none;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rowName {
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.rowActions {
+  display: flex;
+}
+
+.icon {
+  width: 40px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-text-muted);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.icon:disabled {
+  opacity: 0.3;
+}
+
+.addRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 14px 0 8px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionOn {
+  border-color: var(--fitos-orange-500);
+}
+
+.hint {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: rgba(130, 213, 201, 0.1);
+  color: #bfeee7;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 12px var(--fitos-space-5) calc(18px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--fitos-color-surface);
+}
+
+@media (min-width: 840px) {
+  .bar {
+    position: sticky;
+    margin: 24px calc(-1 * var(--fitos-space-5)) 0;
+  }
+
+  .editor {
+    padding-bottom: var(--fitos-space-6);
+  }
+}

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const requirePersonal = vi.fn();
-const listWorkoutsForTenant = vi.fn();
+const listWorkoutSummariesForTenant = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -11,66 +11,55 @@ vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
 });
-
 vi.mock("@/modules/workouts/workouts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
-  return { ...actual, listWorkoutsForTenant: (...args: unknown[]) => listWorkoutsForTenant(...args) };
+  return { ...actual, listWorkoutSummariesForTenant: (...args: unknown[]) => listWorkoutSummariesForTenant(...args) };
 });
-
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/painel/treinos",
 }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+const summary = (id: string, name: string, status = "ATIVO") => ({ id, name, status, suggestedDays: ["SEGUNDA", "QUINTA"], exerciseCount: 5, trainingPlanId: "draft", trainingPlanName: null, thumbnails: [] });
 
-describe("TreinosPage (FIT-030)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+describe("TreinosPage (FIT-146)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-  it("redireciona para /entrar quando não há sessão", async () => {
+  it("redireciona sem sessão e quando não é personal", async () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
     const { default: TreinosPage } = await import("./page");
-
+    requirePersonal.mockRejectedValueOnce(new AuthError("UNAUTHENTICATED", "x"));
     await expect(TreinosPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/entrar");
-  });
-
-  it("redireciona para /painel quando o usuário autenticado não é personal", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requirePersonal.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito a personal."));
-    const { default: TreinosPage } = await import("./page");
-
+    requirePersonal.mockRejectedValueOnce(new AuthError("FORBIDDEN", "x"));
     await expect(TreinosPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("lista os modelos de treino do tenant", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listWorkoutsForTenant.mockResolvedValue([
-      { id: "w1", name: "Treino A", suggestedDays: ["SEGUNDA"] },
-      { id: "w2", name: "Treino B", suggestedDays: [] },
-    ]);
-
+  it("mostra o próximo passo, as abas e os treinos ativos com ações", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listWorkoutSummariesForTenant.mockImplementation(async ({ status }: { status?: string }) => (status === "ARQUIVADO" ? [summary("w9", "Velho", "ARQUIVADO")] : [summary("w1", "Treino A")]));
     const { default: TreinosPage } = await import("./page");
     render(await TreinosPage());
 
-    expect(screen.getByText("Treino A")).toBeInTheDocument();
-    expect(screen.getByText("Treino B")).toBeInTheDocument();
-    expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "tenant-real" });
+    expect(screen.getByRole("link", { name: /Montar um treino/ })).toHaveAttribute("href", "/painel/treinos/novo");
+    expect(screen.getByRole("link", { name: "Programas" })).toHaveAttribute("href", "/painel/treinos/planos");
+    expect(screen.getByRole("link", { name: "Ativos · 1" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Treino A" })).toHaveAttribute("href", "/painel/treinos/w1");
+    expect(screen.getByText("5 exercícios · Seg, Qui")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Usar como base" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Arquivar" })).toBeInTheDocument();
+    expect(listWorkoutSummariesForTenant).toHaveBeenCalledWith({ tenantId: "t1" });
   });
 
-  it("estado vazio quando não há nenhum modelo", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listWorkoutsForTenant.mockResolvedValue([]);
-
+  it("filtro de arquivados mostra Reativar", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listWorkoutSummariesForTenant.mockImplementation(async ({ status }: { status?: string }) => (status === "ARQUIVADO" ? [summary("w9", "Velho", "ARQUIVADO")] : []));
     const { default: TreinosPage } = await import("./page");
-    render(await TreinosPage());
-
-    expect(screen.getByText(/Nenhum modelo de treino ainda/)).toBeInTheDocument();
+    render(await TreinosPage({ searchParams: Promise.resolve({ arquivados: "1" }) }));
+    expect(screen.getByRole("link", { name: "Arquivados · 1" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Reativar" })).toBeInTheDocument();
   });
 });

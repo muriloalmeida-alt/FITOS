@@ -358,6 +358,9 @@ export interface CatalogExercisePickerItem {
   id: string;
   name: string;
   muscle: string | null;
+  /// FIT-146: foto do movimento na biblioteca do editor de treino.
+  imageUrl: string | null;
+  imageAlt: string | null;
 }
 
 export async function listCatalogExercisesForPicker(
@@ -373,7 +376,7 @@ export async function listCatalogExercisesForPicker(
     where,
     orderBy: [{ name: "asc" }, { id: "asc" }],
     take: PICKER_HARD_LIMIT,
-    select: { id: true, name: true, muscle: true },
+    select: { id: true, name: true, muscle: true, imageUrl: true, imageAlt: true },
   });
 }
 
