@@ -1,34 +1,40 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button, EmptyStateAction, ExerciseThumbnail } from "@/shared/ui";
+import { AppShell, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { difficultyLabel } from "@/shared/lib/difficulty";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { listCatalogExercises } from "@/modules/exercises/exercises";
+import { listCatalogExercises, listCatalogFacets } from "@/modules/exercises/exercises";
+import { FilterLinks } from "../_workout-builder/FilterLinks";
+import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
+import { LibraryControls } from "./LibraryControls";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Exercícios — ${appName}`,
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
+type Origin = "todos" | "biblioteca" | "meus";
 
 interface ExerciciosPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<{ q?: string; origem?: string; musculo?: string; tipo?: string; dificuldade?: string; pagina?: string; novo?: string }>;
 }
 
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+function hrefWith(base: Record<string, string | undefined>, changes: Record<string, string | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries({ ...base, ...changes })) if (value) params.set(key, value);
+  const qs = params.toString();
+  return qs ? `/painel/exercicios?${qs}` : "/painel/exercicios";
 }
 
-/// Catálogo unificado (FIT-023): consulta exclusivamente o banco local
-/// (`listCatalogExercises`) — nunca a API Ninjas na consulta usual, por
-/// isso continua funcionando mesmo com o fornecedor externo indisponível.
-/// Protegida por `requirePersonal()`, a mesma camada de autorização de
-/// toda rota de personal desta aplicação.
-export default async function ExerciciosPage({ searchParams }: ExerciciosPageProps) {
+/// Biblioteca de exercícios do Personal (FIT-147, P5 do protótipo): origem
+/// (Todos/Biblioteca/Meus), busca, músculo em chips, tipo e dificuldade em
+/// sheet, e cada exercício com foto e etiqueta de origem.
+export default async function ExerciciosPage({ searchParams }: ExerciciosPageProps = {}) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -39,108 +45,52 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
     throw error;
   }
 
-  const params = await searchParams;
-  const search = firstValue(params.q)?.trim() || undefined;
-  const muscle = firstValue(params.muscle)?.trim() || undefined;
-  const type = firstValue(params.type)?.trim() || undefined;
-  const difficulty = firstValue(params.difficulty)?.trim() || undefined;
-  const pageParam = Number.parseInt(firstValue(params.page) ?? "1", 10);
-  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
-
-  const result = await listCatalogExercises({ tenantId: ctx.tenantId, search, muscle, type, difficulty, page, pageSize: PAGE_SIZE });
-  const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
-  const hasFilter = Boolean(search || muscle || type || difficulty);
-
-  function pageHref(targetPage: number): string {
-    const next = new URLSearchParams();
-    if (search) next.set("q", search);
-    if (muscle) next.set("muscle", muscle);
-    if (type) next.set("type", type);
-    if (difficulty) next.set("difficulty", difficulty);
-    next.set("page", String(targetPage));
-    return `/painel/exercicios?${next.toString()}`;
-  }
+  const sp = (await searchParams) ?? {};
+  const origin: Origin = sp.origem === "biblioteca" || sp.origem === "meus" ? sp.origem : "todos";
+  const page = Math.max(1, Number(sp.pagina) || 1);
+  const [result, facets] = await Promise.all([
+    listCatalogExercises({ tenantId: ctx.tenantId, origin, search: sp.q, muscle: sp.musculo, type: sp.tipo, difficulty: sp.dificuldade, page, pageSize: PAGE_SIZE }),
+    listCatalogFacets({ tenantId: ctx.tenantId }),
+  ]);
+  const base = { q: sp.q, origem: origin === "todos" ? undefined : origin, musculo: sp.musculo, tipo: sp.tipo, dificuldade: sp.dificuldade };
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
-    <AppShell eyebrow="Exercícios" title="Exercícios" subtitle="Seu catálogo de movimentos." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
-      <div className={styles.header}>
-        <p className={styles.subtitle}>
-          {result.total} {result.total === 1 ? "exercício" : "exercícios"} no catálogo
-        </p>
-        <Button href="/painel/exercicios/novo" variant="filled">
-          + Cadastrar exercício
-        </Button>
-      </div>
-
-      <form method="GET" className={styles.filters} aria-label="Buscar e filtrar exercícios">
-        <input
-          type="search"
-          name="q"
-          defaultValue={search ?? ""}
-          placeholder="Buscar por nome"
-          aria-label="Buscar por nome"
-          className={styles.searchInput}
-        />
-        <input
-          type="text"
-          name="muscle"
-          defaultValue={muscle ?? ""}
-          placeholder="Músculo"
-          aria-label="Filtrar por músculo"
-          className={styles.filterSelect}
-        />
-        <input
-          type="text"
-          name="type"
-          defaultValue={type ?? ""}
-          placeholder="Tipo"
-          aria-label="Filtrar por tipo"
-          className={styles.filterSelect}
-        />
-        <input
-          type="text"
-          name="difficulty"
-          defaultValue={difficulty ?? ""}
-          placeholder="Dificuldade"
-          aria-label="Filtrar por dificuldade"
-          className={styles.filterSelect}
-        />
-        <Button type="submit" variant="outlined">
-          Buscar
-        </Button>
-      </form>
+    <AppShell eyebrow="Exercícios" title="Seu catálogo de movimentos" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"} com foto, execução e cuidados.`} navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
+      <TrainingTabs active="exercicios" />
+      <FilterLinks
+        label="Origem"
+        items={(["todos", "biblioteca", "meus"] as const).map((key) => ({
+          label: key === "todos" ? "Todos" : key === "biblioteca" ? "Biblioteca FitOS" : "Meus",
+          href: hrefWith(base, { origem: key === "todos" ? undefined : key }),
+          active: origin === key,
+        }))}
+      />
+      <LibraryControls muscles={facets.muscles} types={facets.types} difficulties={facets.difficulties} openCreate={sp.novo === "1"} />
 
       {result.items.length === 0 ? (
-        hasFilter ? (
-          <p className={styles.empty}>Nenhum resultado para essa busca.</p>
-        ) : (
-          <EmptyStateAction
-            title="Nenhum exercício no catálogo ainda"
-            description="Cadastre um exercício próprio para começar."
-            action={{ label: "+ Cadastrar exercício", href: "/painel/exercicios/novo" }}
-          />
-        )
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>Nenhum resultado</p>
+          <p className={styles.meta}>{origin === "meus" ? "Você ainda não cadastrou exercícios próprios." : "Tente outro nome ou limpe os filtros."}</p>
+          <Link href="/painel/exercicios" className={styles.link}>
+            Limpar filtros
+          </Link>
+        </div>
       ) : (
-        <ul className={styles.grid} aria-label="Lista de exercícios">
+        <ul className={styles.list} aria-label="Lista de exercícios">
           {result.items.map((exercise) => {
-            const meta = [exercise.muscle, exercise.type].filter(Boolean).join(" • ");
+            const own = exercise.origin === "PERSONAL";
+            const meta = [exercise.muscle, exercise.equipments, difficultyLabel(exercise.difficulty)].filter(Boolean).join(" · ");
             return (
               <li key={exercise.id}>
-                <Link href={`/painel/exercicios/${exercise.id}`} className={styles.card}>
-                  <ExerciseThumbnail
-                    src={exercise.imageUrl}
-                    alt={exercise.imageAlt ?? exercise.name}
-                    width={400}
-                    height={225}
-                    className={styles.cardThumbnail}
-                  />
-                  <span className={styles.cardBody}>
-                    <span className={exercise.origin !== "PERSONAL" ? `${styles.originBadge} ${styles.originGlobal}` : `${styles.originBadge} ${styles.originPersonal}`}>
-                      {exercise.origin !== "PERSONAL" ? "Global" : "Meu exercício"}
+                <Link href={`/painel/exercicios/${exercise.id}`} className={styles.row}>
+                  <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? ""} width={84} height={84} className={styles.thumb} />
+                  <span className={styles.text}>
+                    <span className={styles.name}>{exercise.name}</span>
+                    {meta ? <span className={styles.meta}>{meta}</span> : null}
+                    <span className={styles.tag}>
+                      <Tag tone={own ? (exercise.status === "ATIVO" ? "accent" : "muted") : "muted"}>{own ? (exercise.status === "ATIVO" ? "Seu exercício" : "Arquivado") : "Biblioteca FitOS"}</Tag>
                     </span>
-                    <span className={styles.cellName}>{exercise.name}</span>
-                    <span className={styles.cellMuscle}>{meta || "—"}</span>
-                    <span className={styles.watchLink}>Ver movimento →</span>
                   </span>
                 </Link>
               </li>
@@ -152,21 +102,21 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
       {totalPages > 1 ? (
         <nav className={styles.pagination} aria-label="Paginação">
           {page > 1 ? (
-            <Link href={pageHref(page - 1)} className={styles.pageLink}>
-              Anterior
+            <Link href={hrefWith(base, { pagina: String(page - 1) })} className={styles.link}>
+              ← Anteriores
             </Link>
           ) : (
-            <span className={styles.pageLinkDisabled}>Anterior</span>
+            <span />
           )}
-          <span className={styles.pageIndicator}>
+          <span className={styles.meta}>
             Página {page} de {totalPages}
           </span>
           {page < totalPages ? (
-            <Link href={pageHref(page + 1)} className={styles.pageLink}>
-              Próxima
+            <Link href={hrefWith(base, { pagina: String(page + 1) })} className={styles.link}>
+              Próximos →
             </Link>
           ) : (
-            <span className={styles.pageLinkDisabled}>Próxima</span>
+            <span />
           )}
         </nav>
       ) : null}

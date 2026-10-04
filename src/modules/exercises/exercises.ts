@@ -274,6 +274,9 @@ export type CatalogExerciseSortOrder = "nome_asc";
 
 export interface ListCatalogExercisesInput {
   tenantId: string;
+  /// FIT-147: "biblioteca" = catálogo global; "meus" = próprios do tenant,
+  /// **incluindo arquivados** (para poder reativá-los); padrão = ambos, só ativos.
+  origin?: "todos" | "biblioteca" | "meus";
   search?: string;
   muscle?: string;
   type?: string;
@@ -319,9 +322,14 @@ export async function listCatalogExercises(
   const pageSize = Math.min(MAX_CATALOG_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_CATALOG_PAGE_SIZE));
   const search = input.search?.trim();
 
+  const originCondition: Prisma.ExerciseWhereInput =
+    input.origin === "biblioteca"
+      ? { status: "ATIVO", origin: { not: "PERSONAL" }, tenantId: null }
+      : input.origin === "meus"
+        ? { origin: "PERSONAL", tenantId: input.tenantId }
+        : { status: "ATIVO", ...visibleCatalogOriginCondition(input.tenantId) };
   const where: Prisma.ExerciseWhereInput = {
-    status: "ATIVO",
-    ...visibleCatalogOriginCondition(input.tenantId),
+    ...originCondition,
     ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
     ...(input.muscle?.trim() ? { muscle: { contains: input.muscle.trim(), mode: "insensitive" as const } } : {}),
     ...(input.type?.trim() ? { type: { contains: input.type.trim(), mode: "insensitive" as const } } : {}),
@@ -393,4 +401,67 @@ export async function getCatalogExerciseForTenant(
   return client.exercise.findFirst({
     where: { id: input.exerciseId, ...visibleCatalogOriginCondition(input.tenantId) },
   });
+}
+
+
+export interface CatalogFacets {
+  muscles: string[];
+  types: string[];
+  difficulties: string[];
+}
+
+/// Opções dos filtros da biblioteca (FIT-147): valores distintos de
+/// músculo, tipo e dificuldade no catálogo visível ao tenant, do mais
+/// frequente ao menos frequente.
+export async function listCatalogFacets(input: { tenantId: string }, client: PrismaClient = prisma): Promise<CatalogFacets> {
+  const where: Prisma.ExerciseWhereInput = { status: "ATIVO", ...visibleCatalogOriginCondition(input.tenantId) };
+  async function distinct(field: "muscle" | "type" | "difficulty"): Promise<string[]> {
+    const rows = await client.exercise.findMany({ where: { ...where, [field]: { not: null } }, select: { [field]: true } });
+    const counts = new Map<string, number>();
+    for (const row of rows as unknown as Record<string, string | null>[]) {
+      const value = row[field];
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([value]) => value);
+  }
+  const [muscles, types, difficulties] = await Promise.all([distinct("muscle"), distinct("type"), distinct("difficulty")]);
+  return { muscles, types, difficulties };
+}
+
+/// BK-08 (FIT-147): "Criar uma versão minha" de um exercício da biblioteca
+/// global. Cria um exercício próprio com os mesmos dados (inclusive a foto
+/// pública, quando houver) e nome "<nome> (minha versão)", numerado se já
+/// existir. Nunca altera o exercício global.
+export async function copyCatalogExerciseAsOwn(
+  input: { tenantId: string; actorUserId: string; exerciseId: string },
+  client: PrismaClient = prisma
+): Promise<Exercise> {
+  const source = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.exerciseId }, client);
+  if (!source || source.origin === "PERSONAL") {
+    throw new ExerciseError("NAO_ENCONTRADO", "Exercício não encontrado.");
+  }
+  const base = `${source.name} (minha versão)`.slice(0, 120);
+  for (let attempt = 1; attempt <= 20; attempt++) {
+    const name = attempt === 1 ? base : `${base.slice(0, 114)} ${attempt}`;
+    try {
+      return await client.exercise.create({
+        data: {
+          tenantId: input.tenantId,
+          origin: "PERSONAL",
+          name,
+          type: source.type,
+          muscle: source.muscle,
+          equipments: source.equipments,
+          difficulty: source.difficulty,
+          instructions: source.instructions,
+          safetyInfo: source.safetyInfo,
+          imageUrl: source.imageUrl,
+          imageAlt: source.imageAlt,
+        },
+      });
+    } catch (error) {
+      if (!isUniqueConstraintViolation(error)) throw error;
+    }
+  }
+  throw new ExerciseError("NOME_DUPLICADO_NO_TENANT", "Já existem muitas versões deste exercício na sua conta.");
 }
