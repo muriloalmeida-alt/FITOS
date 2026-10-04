@@ -1,0 +1,50 @@
+.panel {
+  padding: var(--fitos-space-6) 0;
+}
+
+.fullscreen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fitos-space-6) var(--fitos-space-5);
+}
+
+.inner {
+  width: 100%;
+  max-width: 480px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
+}
+
+.danger {
+  color: #ffb4ab;
+}
+
+.title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.description {
+  margin: var(--fitos-space-2) 0 0;
+  color: #b4bfcb;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  margin-top: var(--fitos-space-6);
+}

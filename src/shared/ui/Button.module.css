@@ -1,69 +1,91 @@
+/*
+ * Botão do tema escuro liso (FIT-171). Raio de 14 px e alvo mínimo de
+ * 48 px; `lg` (60 px) e `xl` (76 px) para a execução de treino.
+ */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--fitos-space-2);
   text-align: center;
   text-decoration: none;
   font-family: var(--fitos-font-family);
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 800;
   line-height: 20px;
-  border-radius: var(--fitos-shape-full);
-  padding: var(--fitos-space-3) var(--fitos-space-6);
+  border-radius: 14px;
+  padding: var(--fitos-space-3) var(--fitos-space-5);
   min-height: 48px;
   cursor: pointer;
-  transition: background-color var(--fitos-motion-state) var(--fitos-motion-standard);
+  border: none;
+  transition: background-color var(--fitos-motion-state) var(--fitos-motion-standard), opacity var(--fitos-motion-state);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .filled {
   background-color: var(--fitos-color-primary);
   color: var(--fitos-color-on-primary);
-  border: none;
 }
 
-.filled:hover {
-  opacity: 0.92;
+.filled:hover:not(:disabled) {
+  background-color: #ff8c62;
+}
+
+.secondary {
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: #232c39;
 }
 
 .outlined {
   background-color: transparent;
-  color: var(--fitos-color-primary);
-  border: 1px solid var(--fitos-color-outline);
+  color: var(--fitos-color-on-surface);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .danger {
-  background-color: var(--fitos-color-error);
-  color: var(--fitos-color-on-error);
-  border: none;
+  background-color: var(--fitos-color-danger-container);
+  color: var(--fitos-color-on-danger-container);
 }
 
-.danger:hover {
-  opacity: 0.92;
+.danger:hover:not(:disabled) {
+  background-color: #4a1d19;
+}
+
+.quiet {
+  background-color: transparent;
+  color: var(--fitos-orange-300);
+  padding-left: 0;
+  padding-right: 0;
+  min-height: 44px;
+}
+
+.lg {
+  min-height: 60px;
+  font-size: 17px;
+  border-radius: 18px;
+}
+
+.xl {
+  min-height: 76px;
+  font-size: 20px;
+  border-radius: 20px;
+}
+
+.block {
+  display: flex;
+  width: 100%;
 }
 
 .button:focus-visible {
-  outline: 2px solid var(--fitos-color-primary);
-  outline-offset: 1px;
-}
-
-/*
- * Mobile editorial: primário laranja oficial com texto navy (tokens do
- * tema mobile); secundário em contorno claro discreto. Ações destrutivas
- * continuam diferenciadas por texto/aviso de cada tela.
- */
-@media (max-width: 839px) {
-  .button {
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  .outlined {
-    color: var(--fitos-orange-300);
-    border-color: rgba(255, 255, 255, 0.32);
-  }
-
-  .button:focus-visible {
-    outline-color: var(--fitos-orange-300);
-    outline-offset: 2px;
-  }
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
 }
