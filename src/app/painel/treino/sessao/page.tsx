@@ -4,7 +4,7 @@ import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
-import { getTodayScheduleForStudent } from "@/modules/workouts/workouts";
+import { getActivePlanAssignmentForStudent, getTodayScheduleForStudent } from "@/modules/workouts/workouts";
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
 import { ComecarTreinoButton } from "./ComecarTreinoButton";
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 /// Prioriza retomar uma sessão `EM_ANDAMENTO` já existente (independente
 /// de qual treino ela é — "continuar" é literal); só then verifica se há
 /// um treino previsto para hoje a começar.
-export default async function SessaoPage() {
+export default async function SessaoPage({ searchParams }: { searchParams?: Promise<{ treino?: string }> } = {}) {
   let ctx;
   try {
     ctx = await requireStudent();
@@ -72,13 +72,19 @@ export default async function SessaoPage() {
     );
   }
 
-  const schedule = await getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
+  // FIT-152: "Começar este treino" escolhe qualquer treino do programa
+  // ativo (só do plano-snapshot do próprio aluno; outro id cai no de hoje).
+  const sp = (await searchParams) ?? {};
+  const chosen = sp.treino
+    ? ((await getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }))?.trainingPlan.workouts.find((workout) => workout.id === sp.treino && workout.status === "ATIVO") ?? null)
+    : null;
+  const schedule = chosen ? ({ state: "TREINO_HOJE", workout: chosen } as const) : await getTodayScheduleForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
 
   if (schedule.state === "TREINO_HOJE") {
     return (
       <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
         <Card title={schedule.workout.name}>
-          <p className={styles.empty}>Pronto para começar o treino de hoje?</p>
+          <p className={styles.empty}>{chosen ? "Pronto para começar?" : "Pronto para começar o treino de hoje?"}</p>
           <ComecarTreinoButton workoutId={schedule.workout.id} />
         </Card>
       </AppShell>

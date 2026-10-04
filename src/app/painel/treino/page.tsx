@@ -1,52 +1,24 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { AppShell, ProgressBar, WeekStrip } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { prisma } from "@/shared/db/prisma";
 import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
-import { getActivePlanAssignmentForStudent, listEndedPlanAssignmentsForStudent } from "@/modules/workouts/workouts";
+import { getActivePlanAssignmentForStudent, getWeeklyRhythmForStudent, listEndedPlanAssignmentsForStudent } from "@/modules/workouts/workouts";
+import { WEEKDAYS, mondayFirstIndex, weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../navigation";
+import { ProgramWorkouts } from "./ProgramWorkouts";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: `Treino — ${appName}`,
+  title: `Seu programa — ${appName}`,
 };
 
-interface WorkoutItemView {
-  sets: number | null;
-  reps: number | null;
-  durationSeconds: number | null;
-  load: string | null;
-  restSeconds: number | null;
-  notes: string | null;
-}
-
-function prescriptionSummary(item: WorkoutItemView): string {
-  const parts: string[] = [];
-  if (item.sets) {
-    parts.push(`${item.sets} série${item.sets > 1 ? "s" : ""}`);
-  }
-  if (item.reps) {
-    parts.push(`${item.reps} repetiç${item.reps > 1 ? "ões" : "ão"}`);
-  }
-  if (item.durationSeconds) {
-    parts.push(`${item.durationSeconds}s de duração`);
-  }
-  if (item.load) {
-    parts.push(`carga: ${item.load}`);
-  }
-  if (item.restSeconds) {
-    parts.push(`descanso: ${item.restSeconds}s`);
-  }
-  return parts.length > 0 ? parts.join(" · ") : "Sem parâmetros de prescrição";
-}
-
-/// Visão somente leitura do plano atribuído (FIT-033), exclusiva do papel
-/// ALUNO — `requireStudent()` garante isso no servidor, mesmo padrão da
-/// página de perfil (FIT-016). Sempre lê a atribuição ATIVA do próprio
-/// aluno da sessão (nunca um `studentId` vindo do cliente) e sempre o
-/// plano-snapshot (imutável desde a atribuição) — nunca o plano editável
-/// do personal.
+/// Seu programa (FIT-152, A2 do protótipo), só do aluno da sessão: nome,
+/// quem prescreveu, semana X de Y e faixa da semana; treinos que abrem e
+/// fecham, com "Hoje", exercícios com foto, prescrição e observação, e
+/// "Começar este treino". Sempre o plano-snapshot da atribuição ativa.
 export default async function TreinoAlunoPage() {
   let ctx;
   try {
@@ -58,63 +30,69 @@ export default async function TreinoAlunoPage() {
     throw error;
   }
 
-  const active = await getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
+  const [active, student, rhythm] = await Promise.all([
+    getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
+    prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
+    getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId }),
+  ]);
+  const personalName = student.tenant.owner.name;
 
   if (!active) {
     const ended = await listEndedPlanAssignmentsForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId });
-    const mensagem =
-      ended.length > 0
-        ? `Seu programa "${ended[0]!.trainingPlan.name}" foi encerrado. Fale com seu personal para receber um novo.`
-        : "Você ainda não tem um programa de treino atribuído. Fale com seu personal.";
-
     return (
-      <AppShell eyebrow="Seu treino" title="Seu programa" subtitle="Veja o plano preparado para você." navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
-        <Card title="Seu programa">
-          <p className={styles.empty}>{mensagem}</p>
-        </Card>
+      <AppShell eyebrow="Seu programa" title={ended[0] ? `${ended[0].trainingPlan.name} terminou` : "Programa a caminho"} navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+        <p className={styles.muted}>{personalName} já foi avisado e vai montar o próximo. Ele aparece aqui assim que estiver pronto.</p>
       </AppShell>
     );
   }
 
-  const { trainingPlan } = active;
+  const now = new Date();
+  const todayKey = WEEKDAYS[mondayFirstIndex(now)]!.key;
+  const plan = active.trainingPlan;
+  const weeks = plan.durationWeeks;
+  const week = weeks ? Math.min(weeks, Math.floor((now.getTime() - active.assignedAt.getTime()) / (7 * 86_400_000)) + 1) : null;
+  const workouts = plan.workouts.filter((workout) => workout.status === "ATIVO");
+  const planned = [...new Set(workouts.flatMap((workout) => workout.suggestedDays))];
 
   return (
-    <AppShell eyebrow="Seu treino" title="Seu programa" subtitle="Veja o plano preparado para você." navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
-      <Card title={trainingPlan.name}>
-        {trainingPlan.durationWeeks ? (
-          <p className={styles.planMeta}>Vigência sugerida: {trainingPlan.durationWeeks} semanas</p>
-        ) : null}
-
-        {trainingPlan.workouts.length === 0 ? (
-          <p className={styles.empty}>Este programa ainda não tem modelos de treino.</p>
-        ) : (
-          <div className={styles.workoutList}>
-            {trainingPlan.workouts.map((workout) => (
-              <div key={workout.id}>
-                <p className={styles.workoutName}>{workout.name}</p>
-                {workout.suggestedDays.length > 0 ? (
-                  <p className={styles.days}>{workout.suggestedDays.join(", ")}</p>
-                ) : null}
-
-                {workout.workoutExercises.length === 0 ? (
-                  <p className={styles.empty}>Nenhum exercício neste modelo ainda.</p>
-                ) : (
-                  <ul className={styles.itemList} aria-label={`Exercícios de ${workout.name}, em ordem`}>
-                    {workout.workoutExercises.map((item) => (
-                      <li key={item.id} className={styles.itemRow}>
-                        <span className={styles.exerciseName}>{item.exercise.name}</span>
-                        {item.exercise.muscle ? <span className={styles.exerciseMuscle}>{item.exercise.muscle}</span> : null}
-                        <span className={styles.summary}>{prescriptionSummary(item)}</span>
-                        {item.notes ? <span className={styles.notes}>{item.notes}</span> : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
+    <AppShell eyebrow="Seu programa" title={plan.name} subtitle={`Prescrito por ${personalName}`} navItems={ALUNO_NAV_ITEMS} activeKey="treino" trailing={<LogoutButton />}>
+      <section className={styles.summary} aria-label="Andamento do programa">
+        {week && weeks ? (
+          <div className={styles.progress}>
+            <ProgressBar value={(100 * week) / weeks} label="Semanas do programa" valueText={`Semana ${week} de ${weeks}`} />
+            <span>
+              Semana {week} de {weeks}
+            </span>
           </div>
-        )}
-      </Card>
+        ) : null}
+        <WeekStrip days={weekStripFromDays(planned, { done: rhythm.dayFlags, today: now })} label="Esta semana" />
+      </section>
+
+      {workouts.length === 0 ? (
+        <p className={styles.muted}>Este programa ainda não tem treinos.</p>
+      ) : (
+        <ProgramWorkouts
+          workouts={workouts.map((workout) => ({
+            id: workout.id,
+            name: workout.name,
+            days: workout.suggestedDays,
+            today: workout.suggestedDays.includes(todayKey),
+            items: workout.workoutExercises.map((item) => ({
+              id: item.id,
+              name: item.exercise.name,
+              muscle: item.exercise.muscle,
+              imageUrl: item.exercise.imageUrl,
+              imageAlt: item.exercise.imageAlt,
+              sets: item.sets,
+              reps: item.reps,
+              durationSeconds: item.durationSeconds,
+              load: item.load,
+              restSeconds: item.restSeconds,
+              notes: item.notes,
+            })),
+          }))}
+        />
+      )}
     </AppShell>
   );
 }
