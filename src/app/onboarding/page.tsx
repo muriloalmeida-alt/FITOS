@@ -6,9 +6,8 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
-import { AuthHero, PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
+import { EntradaShell } from "../_entrada/EntradaShell";
 import { OnboardingForm } from "./OnboardingForm";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Configurar seu espaço — ${appName}`,
@@ -38,45 +37,23 @@ export default async function OnboardingPage() {
   ]);
 
   return (
-    <main className={styles.main}>
-      <PublicMobileHeader />
-      <AuthHero
-        headline="Seu treino, seu ritmo."
-        subtitle="Configure seu espaço antes do primeiro treino."
-        image={{ src: "/media/brand/visual-2026/scene-solo.png", objectPosition: "58% 30%" }}
+    <EntradaShell>
+      <OnboardingForm
+        initialObjective={existingProfile?.objective ?? null}
+        initialExperienceLevel={existingProfile?.experienceLevel ?? null}
+        initialWeeklyAvailability={existingProfile?.weeklyAvailability ?? null}
+        initialCpfCnpj={existingProfile?.cpfCnpj ?? null}
+        plans={plans.map((plan) => ({
+          id: plan.id,
+          name: plan.name,
+          description: plan.description,
+          priceCents: plan.priceCents,
+          billingCycle: plan.billingCycle,
+          studentLimit: plan.studentLimit,
+          trialDays: plan.trialDays,
+        }))}
+        initialPlanId={subscription?.planId ?? null}
       />
-
-      <div className={styles.formColumn}>
-        <div className={styles.card}>
-          <header className={styles.header}>
-            <p className={styles.eyebrow}>FitOS Livre</p>
-            <h1 className={styles.title}>Configure seu espaço</h1>
-            <p className={styles.subtitle}>
-              Essas respostas ajudam a organizar sua experiência — não geram nenhuma prescrição automática
-              de treino.
-            </p>
-          </header>
-
-          <OnboardingForm
-            initialObjective={existingProfile?.objective ?? null}
-            initialExperienceLevel={existingProfile?.experienceLevel ?? null}
-            initialWeeklyAvailability={existingProfile?.weeklyAvailability ?? null}
-            initialCpfCnpj={existingProfile?.cpfCnpj ?? null}
-            alreadyAcceptedTerms={existingProfile?.termsAcceptedAt !== null && existingProfile?.termsAcceptedAt !== undefined}
-            plans={plans.map((plan) => ({
-              id: plan.id,
-              name: plan.name,
-              description: plan.description,
-              priceCents: plan.priceCents,
-              billingCycle: plan.billingCycle,
-              studentLimit: plan.studentLimit,
-              trialDays: plan.trialDays,
-            }))}
-            initialPlanId={subscription?.planId ?? null}
-          />
-        </div>
-      </div>
-      <PublicMobileFooter />
-    </main>
+    </EntradaShell>
   );
 }

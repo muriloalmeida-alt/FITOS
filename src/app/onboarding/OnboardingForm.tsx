@@ -1,321 +1,174 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import {
-  Button,
-  CreditCardFields,
-  EMPTY_CREDIT_CARD_FIELDS,
-  FormAlert,
-  PlanOptionCard,
-  SelectField,
-  TextField,
-  WizardProgress,
-  useUnsavedChangesGuard,
-  validateCreditCardFields,
-  type CreditCardFieldsValue,
-  type PlanOptionCardPlan,
-} from "@/shared/ui";
+import { Button, ChipGroup, CreditCardFields, EMPTY_CREDIT_CARD_FIELDS, FormAlert, ProgressBar, TextField, validateCreditCardFields, type CreditCardFieldErrors, type CreditCardFieldsValue } from "@/shared/ui";
 import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
-import styles from "./OnboardingForm.module.css";
+import { formatCentsBRL } from "@/shared/lib/money";
+import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../painel/individualProfileLabels";
+import type { OnboardingPlan } from "../onboarding-personal/PersonalOnboardingWizard";
+import styles from "../_entrada/Entrada.module.css";
 
-interface OnboardingFormProps {
+interface Props {
   initialObjective: IndividualObjective | null;
   initialExperienceLevel: ExperienceLevel | null;
   initialWeeklyAvailability: WeeklyAvailability | null;
-  /// CPF/CNPJ já informado numa conclusão anterior (FIT-128, Issue #153)
-  /// — `null` para perfis concluídos antes deste campo existir.
   initialCpfCnpj: string | null;
-  /// Já aceitou os termos numa conclusão anterior (FIT-119) — reabrir o
-  /// onboarding para ajustar objetivo/experiência/disponibilidade nunca
-  /// exige um novo aceite; o checkbox aparece pré-marcado e desabilitado
-  /// nesse caso, nunca escondido (o aceite continua visível/honesto).
-  alreadyAcceptedTerms: boolean;
-  /// Catálogo real do FitOS Livre (FIT-126/FIT-127), nunca uma lista fixa
-  /// na interface — vem do servidor (`listActivePlansForAudience`). Hoje
-  /// tende a ter só um plano (`individual-livre-v2`), mas a tela nunca
-  /// assume isso: se o backend um dia oferecer mais de um produto para o
-  /// FitOS Livre, o mesmo passo já lista todos.
-  plans: PlanOptionCardPlan[];
-  /// Plano já contratado, se este onboarding está sendo reaberto.
+  plans: OnboardingPlan[];
   initialPlanId: string | null;
 }
 
-const OBJECTIVE_OPTIONS: { value: IndividualObjective; label: string }[] = [
-  { value: "GANHAR_MASSA", label: "Ganhar massa muscular" },
-  { value: "PERDER_PESO", label: "Perder peso" },
-  { value: "CONDICIONAMENTO_GERAL", label: "Condicionamento geral" },
-  { value: "SAUDE_E_BEM_ESTAR", label: "Saúde e bem-estar" },
-  { value: "OUTRO", label: "Outro" },
-];
+type Step = 1 | 2 | 3 | 4;
+const STEP_TITLES: Record<Step, string> = { 1: "Objetivo", 2: "Sua rotina", 3: "Plano e pagamento", 4: "Revisão" };
+const options = <T extends string>(labels: Record<T, string>) => (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
 
-const EXPERIENCE_OPTIONS: { value: ExperienceLevel; label: string }[] = [
-  { value: "INICIANTE", label: "Iniciante" },
-  { value: "INTERMEDIARIO", label: "Intermediário" },
-  { value: "AVANCADO", label: "Avançado" },
-];
-
-const AVAILABILITY_OPTIONS: { value: WeeklyAvailability; label: string }[] = [
-  { value: "UM_A_DOIS_DIAS", label: "1 a 2 dias por semana" },
-  { value: "TRES_A_QUATRO_DIAS", label: "3 a 4 dias por semana" },
-  { value: "CINCO_OU_MAIS_DIAS", label: "5 dias ou mais por semana" },
-];
-
-interface FieldErrors {
-  objective?: string;
-  experienceLevel?: string;
-  weeklyAvailability?: string;
-  cpfCnpj?: string;
-  planId?: string;
-  termsAccepted?: string;
-}
-
-type CardFieldErrors = Partial<Record<keyof CreditCardFieldsValue, string>>;
-
-const TOTAL_STEPS = 2;
-
-/// Onboarding do FitOS Livre (FIT-101/FIT-126) — duas sub-etapas dentro de
-/// uma única rota real (`/onboarding`), mesmo padrão de
-/// `PersonalOnboardingWizard`: "Preferências" (objetivo, experiência,
-/// disponibilidade) e "Plano e conclusão" (seleção do plano real do
-/// catálogo + aceite dos termos). Antes desta História era um único
-/// formulário sem nenhuma etapa de plano — a contratação do FitOS Livre
-/// nunca existia dentro do próprio onboarding, era só uma configuração de
-/// preferências (FIT-101).
-///
-/// **CPF/CNPJ na Etapa 1 (FIT-128, Issue #153)**: obrigatório desde que o
-/// Asaas exige `cpfCnpj` para criar um cliente real (`POST /v3/customers`)
-/// — decisão de Murilo de estender o mesmo tratamento de
-/// `PersonalOnboardingWizard` ao FitOS Livre, já que `individual-livre-v2`
-/// também é um plano pago real.
-export function OnboardingForm({
-  initialObjective,
-  initialExperienceLevel,
-  initialWeeklyAvailability,
-  initialCpfCnpj,
-  alreadyAcceptedTerms,
-  plans,
-  initialPlanId,
-}: OnboardingFormProps) {
+/// Onboarding do FitOS Livre em 4 passos (FIT-167, E6 do protótipo):
+/// objetivo; experiência e dias por semana (em cartões); plano e
+/// pagamento; revisão levando direto a "Montar meu primeiro treino". As
+/// respostas não geram prescrição automática. Termos aceitos ao criar a
+/// conta (FIT-164).
+export function OnboardingForm(props: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [objective, setObjective] = useState<IndividualObjective | "">(initialObjective ?? "");
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | "">(initialExperienceLevel ?? "");
-  const [weeklyAvailability, setWeeklyAvailability] = useState<WeeklyAvailability | "">(initialWeeklyAvailability ?? "");
-  const [cpfCnpj, setCpfCnpj] = useState(initialCpfCnpj ?? "");
-  const [planId, setPlanId] = useState(initialPlanId ?? "");
-  const [termsAccepted, setTermsAccepted] = useState(alreadyAcceptedTerms);
+  const [step, setStep] = useState<Step>(1);
+  const [objective, setObjective] = useState<IndividualObjective | null>(props.initialObjective);
+  const [experience, setExperience] = useState<ExperienceLevel | null>(props.initialExperienceLevel);
+  const [availability, setAvailability] = useState<WeeklyAvailability | null>(props.initialWeeklyAvailability);
+  const [cpfCnpj, setCpfCnpj] = useState(props.initialCpfCnpj ? formatCpfCnpj(props.initialCpfCnpj) : "");
   const [card, setCard] = useState<CreditCardFieldsValue>(EMPTY_CREDIT_CARD_FIELDS);
-  const [cardErrors, setCardErrors] = useState<CardFieldErrors>({});
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [cardErrors, setCardErrors] = useState<CreditCardFieldErrors>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [startedAt] = useState(() => Date.now());
 
-  const selectedPlan = plans.find((plan) => plan.id === planId);
+  const plan = props.plans.find((entry) => entry.id === props.initialPlanId) ?? props.plans[0] ?? null;
+  const paid = (plan?.priceCents ?? 0) > 0;
+  const trialDays = plan?.trialDays ?? 30;
+  const firstCharge = new Date(startedAt + trialDays * 86_400_000);
 
-  const hasData =
-    objective !== (initialObjective ?? "") ||
-    experienceLevel !== (initialExperienceLevel ?? "") ||
-    weeklyAvailability !== (initialWeeklyAvailability ?? "") ||
-    cpfCnpj !== (initialCpfCnpj ?? "") ||
-    planId !== (initialPlanId ?? "") ||
-    Object.values(card).some((value) => value.trim() !== "");
-
-  useUnsavedChangesGuard(hasData, isSubmitting);
-
-  function goToStep2(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const errors: FieldErrors = {};
-    if (!objective) errors.objective = "Escolha um objetivo.";
-    if (!experienceLevel) errors.experienceLevel = "Escolha seu nível de experiência.";
-    if (!weeklyAvailability) errors.weeklyAvailability = "Escolha sua disponibilidade.";
-    if (!isValidCpfCnpj(cpfCnpj)) errors.cpfCnpj = "Informe um CPF ou CNPJ válido.";
-    setFieldErrors(errors);
-    setFormError(null);
-    if (Object.keys(errors).length > 0) {
-      return;
+  function next() {
+    const found: Record<string, string> = {};
+    if (step === 1 && !objective) found.objective = "Escolha um objetivo.";
+    if (step === 2) {
+      if (!experience) found.experience = "Escolha sua experiência.";
+      if (!availability) found.availability = "Escolha quantos dias por semana.";
     }
-    setStep(2);
-  }
-
-  function selectPlan(id: string) {
-    setPlanId(id);
-    setFieldErrors((current) => ({ ...current, planId: undefined }));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) {
-      return;
-    }
-
-    const errors: FieldErrors = {};
-    if (!planId) errors.planId = "Escolha um plano para continuar.";
-    if (!alreadyAcceptedTerms && !termsAccepted) errors.termsAccepted = "É necessário aceitar os termos para continuar.";
-    setFieldErrors(errors);
-    setFormError(null);
-
-    const requiresCard = (selectedPlan?.priceCents ?? 0) > 0;
-    if (requiresCard) {
-      const cardValidationErrors = validateCreditCardFields(card);
-      setCardErrors(cardValidationErrors);
-      if (Object.keys(errors).length > 0 || Object.keys(cardValidationErrors).length > 0) {
-        return;
+    if (step === 3) {
+      if (!isValidCpfCnpj(cpfCnpj)) found.cpfCnpj = "Informe um CPF ou CNPJ válido.";
+      if (paid) {
+        const cardFound = validateCreditCardFields(card);
+        setCardErrors(cardFound);
+        if (Object.keys(cardFound).length > 0) found.card = "Confira os dados do cartão.";
       }
-    } else if (Object.keys(errors).length > 0) {
-      return;
     }
+    setErrors(found);
+    if (Object.keys(found).length === 0) setStep((step + 1) as Step);
+  }
 
-    setIsSubmitting(true);
+  async function finish() {
+    if (!plan || busy) return;
+    setBusy(true);
+    setFormError(null);
     const response = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, experienceLevel, weeklyAvailability, cpfCnpj, termsAccepted, planId }),
+      body: JSON.stringify({ objective, experienceLevel: experience, weeklyAvailability: availability, cpfCnpj, termsAccepted: true, planId: plan.id }),
     });
-
     if (!response.ok) {
-      setIsSubmitting(false);
-      setFormError("Não foi possível salvar suas respostas. Verifique e tente novamente.");
+      const body = await response.json().catch(() => null);
+      setFormError(body?.message ?? "Não foi possível salvar. Confira os dados e tente de novo.");
+      setBusy(false);
       return;
     }
-
-    if (requiresCard) {
-      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(card),
-      });
+    if (paid) {
+      const cardResponse = await fetch("/api/tenancy/minha-assinatura/cartao", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(card) });
       if (!cardResponse.ok) {
-        setIsSubmitting(false);
-        const cardBody = await cardResponse.json().catch(() => null);
-        setFormError(cardBody?.message ?? "Não foi possível processar o cartão. Verifique os dados e tente novamente.");
+        const body = await cardResponse.json().catch(() => null);
+        setFormError(`${body?.message ?? "Não foi possível salvar o cartão."} Seu espaço já está pronto; você pode cadastrar o cartão depois em Assinatura.`);
+        setBusy(false);
         return;
       }
     }
-
-    setIsSubmitting(false);
-    router.push("/painel");
+    router.push("/painel/meus-treinos/novo");
+    router.refresh();
   }
 
   return (
     <>
-      <WizardProgress step={step} totalSteps={TOTAL_STEPS} />
+      <div>
+        <p className={styles.eyebrow}>
+          Passo {step} de 4 · {STEP_TITLES[step]}
+        </p>
+        <ProgressBar value={(100 * step) / 4} label="Progresso do cadastro" valueText={`Passo ${step} de 4`} />
+      </div>
+      {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
 
       {step === 1 ? (
-        <form className={styles.form} onSubmit={goToStep2} noValidate>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
-          <SelectField
-            label="Qual seu objetivo principal?"
-            name="objective"
-            placeholder="Selecione um objetivo"
-            options={OBJECTIVE_OPTIONS}
-            value={objective}
-            onChange={(event) => setObjective(event.target.value as IndividualObjective)}
-            error={fieldErrors.objective}
-            required
-          />
-          <SelectField
-            label="Qual sua experiência com treino?"
-            name="experienceLevel"
-            placeholder="Selecione um nível"
-            options={EXPERIENCE_OPTIONS}
-            value={experienceLevel}
-            onChange={(event) => setExperienceLevel(event.target.value as ExperienceLevel)}
-            error={fieldErrors.experienceLevel}
-            required
-          />
-          <SelectField
-            label="Quantos dias por semana você pode treinar?"
-            name="weeklyAvailability"
-            placeholder="Selecione uma disponibilidade"
-            options={AVAILABILITY_OPTIONS}
-            value={weeklyAvailability}
-            onChange={(event) => setWeeklyAvailability(event.target.value as WeeklyAvailability)}
-            error={fieldErrors.weeklyAvailability}
-            required
-          />
-          <TextField
-            label="CPF ou CNPJ"
-            name="cpfCnpj"
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="000.000.000-00"
-            value={cpfCnpj}
-            onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))}
-            error={fieldErrors.cpfCnpj}
-            required
-          />
-
-          <Button type="submit" variant="filled">
-            Continuar
-          </Button>
-        </form>
+        <div className={styles.form}>
+          <h1 className={styles.title}>O que você quer alcançar?</h1>
+          <ChipGroup label="Objetivo" variant="card" tone="accent" value={objective} onChange={setObjective} options={options(OBJECTIVE_LABELS)} />
+          {errors.objective ? <p role="alert" className={styles.muted}>{errors.objective}</p> : null}
+        </div>
       ) : null}
 
       {step === 2 ? (
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-          <p className={styles.checkboxLabel}>Todos os planos têm 30 dias grátis antes da primeira cobrança.</p>
-
-          <div className={styles.planList}>
-            {plans.map((plan) => (
-              <PlanOptionCard
-                key={plan.id}
-                plan={plan}
-                groupName="planId"
-                selected={planId === plan.id}
-                onSelect={() => selectPlan(plan.id)}
-                showStudentLimit={false}
-                disabled={isSubmitting}
-              />
-            ))}
-          </div>
-          {fieldErrors.planId ? (
-            <p className={styles.checkboxError} role="alert">
-              {fieldErrors.planId}
-            </p>
-          ) : null}
-
-          {selectedPlan && selectedPlan.priceCents > 0 ? (
-            <>
-              <p className={styles.checkboxLabel}>
-                Seu cartão só é cadastrado agora — a primeira cobrança acontece só depois dos{" "}
-                {selectedPlan.trialDays ?? 30} dias grátis.
-              </p>
-              <CreditCardFields value={card} onChange={setCard} errors={cardErrors} />
-            </>
-          ) : null}
-
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={termsAccepted}
-              onChange={(event) => setTermsAccepted(event.target.checked)}
-              disabled={isSubmitting || alreadyAcceptedTerms}
-            />
-            Li e aceito os <Link href="/termos-de-uso">Termos de Uso</Link> e a{" "}
-            <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
-          </label>
-          {fieldErrors.termsAccepted ? (
-            <p className={styles.checkboxError} role="alert">
-              {fieldErrors.termsAccepted}
-            </p>
-          ) : null}
-
-          <div className={styles.actions}>
-            <button type="button" className={styles.backButton} onClick={() => setStep(1)} disabled={isSubmitting}>
-              ← Voltar
-            </button>
-            <Button type="submit" variant="filled" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando…" : "Concluir"}
-            </Button>
-          </div>
-        </form>
+        <div className={styles.form}>
+          <h1 className={styles.title}>Sua rotina</h1>
+          <ChipGroup label="Experiência com treino" showLabel variant="card" tone="accent" columns={3} value={experience} onChange={setExperience} options={options(EXPERIENCE_LABELS)} />
+          {errors.experience ? <p role="alert" className={styles.muted}>{errors.experience}</p> : null}
+          <ChipGroup label="Dias por semana" showLabel variant="card" tone="accent" value={availability} onChange={setAvailability} options={options(AVAILABILITY_LABELS)} />
+          {errors.availability ? <p role="alert" className={styles.muted}>{errors.availability}</p> : null}
+        </div>
       ) : null}
+
+      {step === 3 && plan ? (
+        <div className={styles.form}>
+          <h1 className={styles.title}>{plan.name}</h1>
+          <p className={styles.lead}>
+            {paid ? `${formatCentsBRL(plan.priceCents)} por mês. Nada é cobrado agora: a primeira cobrança é em ${dateFmt.format(firstCharge)}, depois dos ${trialDays} dias grátis.` : "Sem cobrança."}
+          </p>
+          <TextField label="CPF ou CNPJ" name="cpfCnpj" inputMode="numeric" value={cpfCnpj} onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))} error={errors.cpfCnpj} />
+          {paid ? <CreditCardFields value={card} onChange={setCard} errors={cardErrors} /> : null}
+        </div>
+      ) : null}
+
+      {step === 4 && plan ? (
+        <div className={styles.form}>
+          <h1 className={styles.title}>Tudo certo?</h1>
+          <div className={styles.card}>
+            <span className={styles.cardText}>
+              <span className={styles.cardTitle}>{objective ? OBJECTIVE_LABELS[objective] : ""}</span>
+              <span className={styles.muted}>
+                {experience ? EXPERIENCE_LABELS[experience] : ""} · {availability ? AVAILABILITY_LABELS[availability] : ""}
+              </span>
+            </span>
+          </div>
+          <div className={styles.card}>
+            <span className={styles.cardText}>
+              <span className={styles.cardTitle}>{plan.name}</span>
+              <span className={styles.muted}>{paid ? `${trialDays} dias grátis · primeira cobrança em ${dateFmt.format(firstCharge)}` : "Sem cobrança"}</span>
+            </span>
+          </div>
+          <Button type="button" size="xl" block disabled={busy} onClick={() => void finish()}>
+            {busy ? "Preparando…" : "Montar meu primeiro treino"}
+          </Button>
+        </div>
+      ) : null}
+
+      <div className={styles.alt}>
+        {step < 4 ? (
+          <Button type="button" size="lg" block onClick={next}>
+            Continuar
+          </Button>
+        ) : null}
+        {step > 1 ? (
+          <Button type="button" variant="quiet" block onClick={() => setStep((step - 1) as Step)}>
+            Voltar
+          </Button>
+        ) : null}
+      </div>
     </>
   );
 }
