@@ -12,10 +12,11 @@ const getWeeklyRhythmForStudent = vi.fn();
 const listWorkoutsForTenant = vi.fn();
 const listWorkoutExercisesForWorkout = vi.fn();
 const getInProgressSessionForStudent = vi.fn();
-const listStudents = vi.fn();
 const getFinancialSummary = vi.fn();
-const listChargesForTenant = vi.fn();
-const getLastAssessmentDatesForTenant = vi.fn();
+const listStudentRoster = vi.fn();
+const getPersonalFeed = vi.fn();
+const getSubscriptionForTenant = vi.fn();
+const countCharges = vi.fn();
 const getIndividualOnboardingProfile = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const redirect = vi.fn((_url: string) => {
@@ -39,6 +40,9 @@ vi.mock("@/shared/db/prisma", () => ({
     student: {
       findUnique: (...args: unknown[]) => findUniqueStudent(...args),
       findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrowStudent(...args),
+    },
+    studentCharge: {
+      count: (...args: unknown[]) => countCharges(...args),
     },
   },
 }));
@@ -73,26 +77,25 @@ vi.mock("@/modules/execution/sessions", async () => {
   return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
 });
 
-vi.mock("@/modules/students/students", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/students/students")>("@/modules/students/students");
-  return { ...actual, listStudents: (...args: unknown[]) => listStudents(...args) };
-});
-
 vi.mock("@/modules/student-finance/charges", async () => {
   const actual = await vi.importActual<typeof import("@/modules/student-finance/charges")>(
     "@/modules/student-finance/charges"
   );
-  return {
-    ...actual,
-    getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args),
-    listChargesForTenant: (...args: unknown[]) => listChargesForTenant(...args),
-  };
+  return { ...actual, getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args) };
 });
 
-vi.mock("@/modules/evolution/assessments", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/evolution/assessments")>("@/modules/evolution/assessments");
-  return { ...actual, getLastAssessmentDatesForTenant: (...args: unknown[]) => getLastAssessmentDatesForTenant(...args) };
+vi.mock("@/modules/students/roster", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/students/roster")>("@/modules/students/roster");
+  return { ...actual, listStudentRoster: (...args: unknown[]) => listStudentRoster(...args) };
 });
+
+vi.mock("@/modules/students/personalFeed", () => ({
+  getPersonalFeed: (...args: unknown[]) => getPersonalFeed(...args),
+}));
+
+vi.mock("@/modules/billing/subscriptions", () => ({
+  getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args),
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
@@ -142,99 +145,67 @@ describe("PainelPage (FIT-012)", () => {
     expect(redirect).toHaveBeenCalledWith("/onboarding-personal");
   });
 
-  it("personal autenticado vê o shell de personal, com o tenant real", async () => {
+  function asPersonal() {
     getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
+    getAuthContext.mockResolvedValue({ authenticated: true, userId: "u1", role: "PERSONAL", tenantId: "t1", studentId: null });
     getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1" });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
-    listStudents.mockResolvedValue({ items: [], total: 3, page: 1, pageSize: 100 });
-    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }]);
-    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 0 });
-    listChargesForTenant.mockResolvedValue([]);
-    getLastAssessmentDatesForTenant.mockResolvedValue(new Map());
+    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 120000, pendenteCents: 0, atrasadoCents: 0 });
+    countCharges.mockResolvedValue(2);
+  }
+
+  const counts = (ativos: number, todos = ativos) => ({ ativos, atencao: 0, convites: 0, inativos: todos - ativos, todos });
+  const row = (weekDone: number, weekTarget: number | null) => ({ status: "ATIVO", weekDone, weekTarget });
+
+  it("personal vê o Início com indicadores reais, a faixa da assinatura e o feed (FIT-143)", async () => {
+    asPersonal();
+    listStudentRoster.mockResolvedValue({ rows: [row(1, 2), row(2, 2)], total: 2, counts: counts(2) });
+    getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: new Date(Date.now() + 5 * 86_400_000), plan: { name: "Pro", studentLimit: 15 } });
+    getPersonalFeed.mockResolvedValue({
+      items: [
+        {
+          kind: "cobranca_atrasada",
+          studentId: "s1",
+          studentName: "Diego Santos",
+          description: "Cobrança atrasada · R$ 320,00",
+          actionLabel: "Registrar pagamento",
+          href: "/painel/alunos/s1?acao=receber",
+          tone: "error",
+          at: null,
+        },
+      ],
+      total: 1,
+    });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
     expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Joana\.$/ })).toBeInTheDocument();
-    expect(screen.getByText("Espaço de Joana")).toBeInTheDocument();
-    expect(screen.getByText("Configurações")).toBeInTheDocument();
-    expect(screen.queryByText("Sua conta")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Teste grátis · 5 dias restantes/ })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByText("de 15 do plano")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.200,00")).toBeInTheDocument();
+    expect(screen.getByText("2 atrasadas")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Registrar pagamento →" })).toHaveAttribute("href", "/painel/alunos/s1?acao=receber");
+    expect(listStudentRoster).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", filter: "ativos" }));
+    expect(getPersonalFeed).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1" }));
+    expect(countCharges).toHaveBeenCalledWith({ where: { tenantId: "t1", status: "ATRASADO" } });
+    expect(getFinancialSummary.mock.calls[0]![0].referenceMonth.getUTCDate()).toBe(1);
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 
-  it("personal vê alunos ativos, treinos ativos e o atrasado do mês atual, nunca dados fictícios", async () => {
-    getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
-    getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1" });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
-    listStudents.mockResolvedValue({
-      items: [{ id: "s1", displayName: "Camila Souza" }],
-      total: 5,
-      page: 1,
-      pageSize: 100,
-    });
-    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }, { id: "w2" }, { id: "w3" }]);
-    getFinancialSummary.mockResolvedValue({ previstoCents: 0, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 3000 });
-    listChargesForTenant.mockResolvedValue([]);
-    getLastAssessmentDatesForTenant.mockResolvedValue(new Map());
+  it("espaço novo vê o primeiro passo no lugar do feed, e assinatura cancelada pede para assinar de novo", async () => {
+    asPersonal();
+    listStudentRoster.mockResolvedValue({ rows: [], total: 0, counts: counts(0) });
+    getSubscriptionForTenant.mockResolvedValue({ status: "CANCELADA", trialEndsAt: null, plan: { name: "Pro", studentLimit: 15 } });
+    getPersonalFeed.mockResolvedValue({ items: [], total: 0 });
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
-    expect(screen.getAllByText("5")).toHaveLength(2);
-    expect(screen.getAllByText("3")).toHaveLength(2);
-    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-    expect(listStudents).toHaveBeenCalledWith({ tenantId: "t1", status: "ATIVO", pageSize: 100 });
-    expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t1" });
-    const call = getFinancialSummary.mock.calls[0]![0];
-    expect(call.tenantId).toBe("t1");
-    expect(call.referenceMonth.getUTCDate()).toBe(1);
-    const chargesCall = listChargesForTenant.mock.calls[0]![0];
-    expect(chargesCall.tenantId).toBe("t1");
-    expect(chargesCall.referenceMonth.getUTCDate()).toBe(1);
-  });
-
-  it("personal com aluno em atraso vê 'Precisa de atenção' composto a partir de dados reais, nunca fabricado", async () => {
-    getServerSession.mockResolvedValue({ user: { name: "Joana", email: "joana@example.test", role: "PERSONAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u1",
-      role: "PERSONAL",
-      tenantId: "t1",
-      studentId: null,
-    });
-    getPersonalOnboardingProfile.mockResolvedValue({ id: "pp1", tenantId: "t1" });
-    findUniqueTenant.mockResolvedValue({ id: "t1", name: "Espaço de Joana" });
-    listStudents.mockResolvedValue({
-      items: [{ id: "s1", displayName: "Diego Santos" }],
-      total: 1,
-      page: 1,
-      pageSize: 100,
-    });
-    listWorkoutsForTenant.mockResolvedValue([]);
-    getFinancialSummary.mockResolvedValue({ previstoCents: 32000, recebidoCents: 0, pendenteCents: 0, atrasadoCents: 32000 });
-    listChargesForTenant.mockResolvedValue([{ id: "c1", status: "ATRASADO", amountCents: 32000, student: { id: "s1" } }]);
-    getLastAssessmentDatesForTenant.mockResolvedValue(new Map());
-    const { default: PainelPage } = await import("./page");
-
-    render(await PainelPage());
-
-    expect(screen.getByRole("heading", { name: "Seu dia" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Diego Santos/ })).toHaveAttribute("href", "/painel/alunos/s1");
-    expect(screen.getByText("Mensalidade vencida · R$ 320,00")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Convide seu primeiro aluno/ })).toHaveAttribute("href", "/painel/alunos?novo=1");
+    expect(screen.queryByRole("heading", { name: "Acontecendo agora" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Assinar de novo/ })).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   it("aluno autenticado e vinculado vê o shell de aluno, com o vínculo real", async () => {

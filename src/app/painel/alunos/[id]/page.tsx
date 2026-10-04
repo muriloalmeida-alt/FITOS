@@ -29,7 +29,7 @@ function relative(date: Date, now: Date): string {
   return `em ${dateFmt.format(date)}`;
 }
 
-type SheetParam = "assign" | "inactivate" | "end" | null;
+type SheetParam = "assign" | "inactivate" | "end" | "assessment" | "pay" | "invite" | null;
 
 interface AlunoPerfilPageProps {
   params: Promise<{ id: string }>;
@@ -75,7 +75,9 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     .filter((charge) => charge.status === "ATRASADO" || charge.status === "PENDENTE")
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0];
   const recurrence = recurrences.find((item) => item.studentId === student.id) ?? null;
-  const initialSheet: SheetParam = sp.atribuir === "1" ? "assign" : sp.acao === "inativar" ? "inactivate" : sp.acao === "encerrar" ? "end" : null;
+  // Ações que chegam do feed do Início (FIT-143) abrem direto a sheet certa.
+  const ACTION_SHEETS: Record<string, SheetParam> = { inativar: "inactivate", encerrar: "end", avaliar: "assessment", receber: open ? "pay" : null, convite: "invite" };
+  const initialSheet: SheetParam = sp.atribuir === "1" ? "assign" : sp.acao && Object.hasOwn(ACTION_SHEETS, sp.acao) ? (ACTION_SHEETS[sp.acao] ?? null) : null;
 
   return (
     <AppShell eyebrow="Perfil do aluno" title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
