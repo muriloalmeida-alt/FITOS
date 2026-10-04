@@ -1,0 +1,184 @@
+.profile {
+  padding-bottom: var(--fitos-space-6);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+
+.name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.warn {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 185, 69, 0.12);
+  color: #ffe2b3;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.card,
+.focus {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 20px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.focus {
+  background-color: #141b26;
+  border: 1px solid rgba(255, 120, 71, 0.35);
+}
+
+.eyebrow,
+.eyebrowOk {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
+}
+
+.eyebrowOk {
+  color: var(--fitos-color-success);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.strip {
+  margin-top: 12px;
+  max-width: 340px;
+}
+
+.actions {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cap {
+  margin: 28px 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+}
+
+.subcap {
+  margin: 16px 0 8px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.link {
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.danger {
+  color: #ffb4ab;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionOn {
+  border-color: var(--fitos-orange-500);
+}
+
+.optionTitle {
+  font-weight: 800;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.spaced {
+  margin-top: 16px;
+}
+
+.linkBox {
+  width: 100%;
+  min-height: 50px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: var(--fitos-color-surface-raised);
+  color: #c9d2dc;
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+}
+
+.bullets {
+  margin: 0;
+  padding-left: 18px;
+  color: #c9d2dc;
+  line-height: 1.6;
+}

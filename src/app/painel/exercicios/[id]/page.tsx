@@ -1,32 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Card, ExerciseThumbnail } from "@/shared/ui";
+import { Button, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { difficultyLabel } from "@/shared/lib/difficulty";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
-import { LogoutButton } from "../../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../../navigation";
-import { EditarExercicioForm } from "./EditarExercicioForm";
-import { ArquivarExercicioButton } from "./ArquivarExercicioButton";
-import { ReativarExercicioButton } from "./ReativarExercicioButton";
+import { getCatalogExerciseForTenant, listCatalogFacets } from "@/modules/exercises/exercises";
+import { ExerciseDetailActions } from "./ExerciseDetailActions";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Exercício — ${appName}`,
 };
 
-interface ExercicioDetalhePageProps {
-  params: Promise<{ id: string }>;
+/// Divide as instruções em passos curtos (uma frase por passo).
+function toSteps(text: string | null): string[] {
+  if (!text) return [];
+  return text
+    .split(/\n+|(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/)
+    .map((step) => step.trim())
+    .filter(Boolean);
 }
 
-/// Detalhe do exercício (FIT-023). Busca sempre pelo catálogo visível ao
-/// tenant da sessão (`getCatalogExerciseForTenant`) — um exercício próprio
-/// de outro tenant nunca é encontrado, e a resposta (404) não revela se
-/// aquele `id` existe em outro tenant. Edição/arquivamento/reativação só
-/// aparecem para exercício próprio (`origin === "PERSONAL"`) — nunca para
-/// o catálogo global.
-export default async function ExercicioDetalhePage({ params }: ExercicioDetalhePageProps) {
+/// Detalhe do exercício (FIT-147): foto, etiquetas, "Como executar" em
+/// passos, segurança e as ações do contexto — editar/arquivar/reativar o
+/// próprio, "Criar uma versão minha" do global e "Usar em um treino".
+/// Sempre pelo tenant da sessão: próprio de outro tenant é 404.
+export default async function ExercicioPage({ params }: { params: Promise<{ id: string }> }) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -42,78 +42,72 @@ export default async function ExercicioDetalhePage({ params }: ExercicioDetalheP
   if (!exercise) {
     notFound();
   }
-
-  const isOwn = exercise.origin === "PERSONAL";
+  const own = exercise.origin === "PERSONAL";
+  const facets = own ? await listCatalogFacets({ tenantId: ctx.tenantId }) : { muscles: [], types: [], difficulties: [] };
+  const steps = toSteps(exercise.instructions);
+  const tags = [exercise.muscle, exercise.equipments, exercise.type, difficultyLabel(exercise.difficulty)].filter((value): value is string => Boolean(value));
 
   return (
-    <AppShell eyebrow="Detalhe do exercício" title={exercise.name} subtitle="Execução, grupo muscular e mídia." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
-      <Link href="/painel/exercicios" className={styles.backLink}>
-        ← Voltar para o catálogo
-      </Link>
+    <div className={styles.page}>
+      <div className={styles.top}>
+        <Link href="/painel/exercicios" className={styles.back}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+          Exercícios
+        </Link>
+        <Tag tone={own ? (exercise.status === "ATIVO" ? "accent" : "muted") : "muted"}>{own ? (exercise.status === "ATIVO" ? "Seu exercício" : "Arquivado") : "Biblioteca FitOS"}</Tag>
+      </div>
+      {exercise.imageUrl ? (
+        <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? exercise.name} width={680} height={420} priority className={styles.hero} />
+      ) : null}
+      <h1 className={styles.title}>{exercise.name}</h1>
+      {tags.length > 0 ? (
+        <ul className={styles.tags} aria-label="Características">
+          {tags.map((tag) => (
+            <li key={tag}>
+              <Tag>{tag}</Tag>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
-      <ExerciseThumbnail
-        src={exercise.imageUrl}
-        alt={exercise.imageAlt ?? exercise.name}
-        width={320}
-        height={320}
-        priority
-        className={styles.heroImage}
+      <h2 className={styles.cap}>Como executar</h2>
+      {steps.length === 0 ? (
+        <p className={styles.muted}>Sem instruções cadastradas.</p>
+      ) : (
+        <ol className={styles.steps}>
+          {steps.map((step, index) => (
+            <li key={index} className={styles.step}>
+              <span className={styles.stepNumber} aria-hidden="true">
+                {index + 1}
+              </span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {exercise.safetyInfo ? (
+        <>
+          <h2 className={styles.cap}>Segurança</h2>
+          <p className={styles.warn}>{exercise.safetyInfo}</p>
+        </>
+      ) : null}
+
+      <ExerciseDetailActions
+        exerciseId={exercise.id}
+        own={own}
+        status={exercise.status}
+        initial={{ name: exercise.name, muscle: exercise.muscle, equipments: exercise.equipments, type: exercise.type, instructions: exercise.instructions ?? "" }}
+        muscles={facets.muscles}
+        types={facets.types}
       />
 
-      <Card title="Dados do exercício">
-        <p className={styles.originLine}>
-          Origem:{" "}
-          <span className={isOwn ? styles.originPersonal : styles.originGlobal}>{isOwn ? "Meu exercício" : "Global"}</span>
-          {isOwn ? (
-            <>
-              {" · "}Status:{" "}
-              <span className={exercise.status === "ATIVO" ? styles.statusAtivo : styles.statusArquivado}>
-                {exercise.status === "ATIVO" ? "Ativo" : "Arquivado"}
-              </span>
-            </>
-          ) : null}
-        </p>
-
-        {isOwn ? (
-          <EditarExercicioForm
-            exerciseId={exercise.id}
-            initialName={exercise.name}
-            initialType={exercise.type ?? ""}
-            initialMuscle={exercise.muscle ?? ""}
-            initialEquipments={exercise.equipments ?? ""}
-            initialInstructions={exercise.instructions ?? ""}
-          />
-        ) : (
-          <dl className={styles.readOnlyFields}>
-            <dt>Tipo</dt>
-            <dd>{exercise.type ?? "—"}</dd>
-            <dt>Músculo principal</dt>
-            <dd>{exercise.muscle ?? "—"}</dd>
-            <dt>Equipamento</dt>
-            <dd>{exercise.equipments ?? "—"}</dd>
-            <dt>Dificuldade</dt>
-            <dd>{exercise.difficulty ?? "—"}</dd>
-            <dt>Instruções</dt>
-            <dd>{exercise.instructions ?? "—"}</dd>
-            {exercise.safetyInfo ? (
-              <>
-                <dt>Informações de segurança</dt>
-                <dd>{exercise.safetyInfo}</dd>
-              </>
-            ) : null}
-          </dl>
-        )}
-      </Card>
-
-      {isOwn ? (
-        <Card title="Ciclo de vida">
-          {exercise.status === "ATIVO" ? (
-            <ArquivarExercicioButton exerciseId={exercise.id} />
-          ) : (
-            <ReativarExercicioButton exerciseId={exercise.id} />
-          )}
-        </Card>
-      ) : null}
-    </AppShell>
+      <div className={styles.bar}>
+        <Button href="/painel/treinos/novo" block size="lg">
+          Usar em um treino
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -17,6 +17,8 @@ export interface FinishedSessionSummary {
   startedAt: Date;
   endedAt: Date | null;
   resultsCount: number;
+  /// BK-13: esforço percebido (1–5) quando informado.
+  perceivedEffort: number | null;
 }
 
 /// Sessões concluídas ou abandonadas, mais recente primeiro — a sessão
@@ -39,6 +41,7 @@ export async function listSessionHistoryForStudent(
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     resultsCount: session.results.length,
+    perceivedEffort: session.perceivedEffort,
   }));
 }
 

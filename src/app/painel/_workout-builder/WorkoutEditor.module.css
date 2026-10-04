@@ -1,0 +1,142 @@
+.editor {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--fitos-space-5) calc(120px + env(safe-area-inset-bottom));
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  padding-top: env(safe-area-inset-top);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-left: -6px;
+  color: var(--fitos-color-on-surface);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.saved {
+  color: var(--fitos-color-success);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.savedError {
+  color: #ffb4ab;
+}
+
+.title {
+  width: 100%;
+  padding: 6px 0 10px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 28px;
+  font-weight: 800;
+  outline: none;
+}
+
+.title:focus {
+  border-bottom-color: var(--fitos-orange-500);
+}
+
+.title::placeholder {
+  color: #5f6b78;
+}
+
+.archived {
+  margin: 8px 0 0;
+  color: #ffd9a0;
+  font-size: 13px;
+}
+
+.section {
+  margin-top: 18px;
+}
+
+.empty {
+  margin-top: 20px;
+  padding: 28px 20px;
+  border-radius: 20px;
+  background-color: var(--fitos-color-surface-card);
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.emptyText {
+  margin: 0 0 18px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.listHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 26px 0 0;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.listMeta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 10px;
+  padding: 12px var(--fitos-space-5) calc(18px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--fitos-color-surface);
+}
+
+@media (min-width: 840px) {
+  .bar {
+    position: sticky;
+    bottom: 0;
+    margin: 24px calc(-1 * var(--fitos-space-5)) 0;
+  }
+
+  .editor {
+    padding-bottom: var(--fitos-space-6);
+  }
+}

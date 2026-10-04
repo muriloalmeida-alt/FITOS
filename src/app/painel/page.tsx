@@ -6,13 +6,13 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getTodayScheduleForStudent, getWeeklyRhythmForStudent, listWorkoutExercisesForWorkout, listWorkoutsForTenant } from "@/modules/workouts/workouts";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
-import { listStudents } from "@/modules/students/students";
-import { getFinancialSummary, listChargesForTenant } from "@/modules/student-finance/charges";
-import { getLastAssessmentDatesForTenant } from "@/modules/evolution/assessments";
-import { getPersonalAttentionItems } from "./getPersonalAttentionItems";
+import { getFinancialSummary } from "@/modules/student-finance/charges";
+import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
+import { getPersonalFeed } from "@/modules/students/personalFeed";
+import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
-import { PersonalHome } from "./PersonalHome";
+import { PersonalHome, type PersonalHomeBanner } from "./PersonalHome";
 import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
 import { AlunoInativo } from "./AlunoInativo";
@@ -49,6 +49,20 @@ function dateLabelFor(date: Date): string {
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dayMonth}`;
 }
 
+/// Faixa do Início (FIT-143): teste grátis, problema na assinatura ou o
+/// plano com as vagas livres. Sempre leva a Assinatura.
+function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activeStudents: number, now: Date): PersonalHomeBanner {
+  if (!subscription) return { tone: "warn", text: "Você ainda não tem um plano.", cta: "Escolher plano" };
+  if (subscription.status === "CANCELADA") return { tone: "warn", text: "Sua assinatura foi cancelada.", cta: "Assinar de novo" };
+  if (subscription.status === "INADIMPLENTE") return { tone: "warn", text: "Pagamento da assinatura pendente.", cta: "Resolver" };
+  if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
+    const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
+    return { tone: "trial", text: `Teste grátis · ${days === 1 ? "último dia" : `${days} dias restantes`}`, cta: "Ver planos" };
+  }
+  const limit = subscription.plan.studentLimit;
+  return { tone: "ok", text: limit ? `${subscription.plan.name} · ${Math.max(0, limit - activeStudents)} vagas livres` : `${subscription.plan.name} · alunos sem limite`, cta: "Assinatura" };
+}
+
 /// Única rota autenticada (FIT-012): o shell exibido (personal ou aluno) é
 /// decidido inteiramente no servidor, a partir do papel derivado da sessão
 /// (`getAuthContext`, FIT-011) — não existem rotas separadas por papel
@@ -69,42 +83,31 @@ export default async function PainelPage() {
     }
     const now = new Date();
     const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const [tenant, activeStudents, activeWorkouts, financialSummary, chargesThisMonth, lastAssessmentAtByStudentId] = await Promise.all([
-      prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
-      listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 100 }),
-      listWorkoutsForTenant({ tenantId: ctx.tenantId }),
+    // O feed e a carteira atualizam cobranças vencidas antes de ler; a
+    // contagem de atrasadas vem depois, já com o status certo.
+    const [roster, feed, financialSummary, subscription] = await Promise.all([
+      listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
+      getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
-      listChargesForTenant({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
-      getLastAssessmentDatesForTenant({ tenantId: ctx.tenantId }),
+      getSubscriptionForTenant(ctx.tenantId),
     ]);
-
-    // "Precisa de atenção" (FIT-120): só considera cobranças vencidas da
-    // competência atual, mesma janela já usada por "Atrasado este mês" —
-    // nunca varre o histórico financeiro inteiro do tenant.
-    const overdueAmountCentsByStudentId = new Map<string, number>();
-    for (const charge of chargesThisMonth) {
-      if (charge.status === "ATRASADO") {
-        overdueAmountCentsByStudentId.set(charge.student.id, (overdueAmountCentsByStudentId.get(charge.student.id) ?? 0) + charge.amountCents);
-      }
-    }
-    const attentionItems = getPersonalAttentionItems({
-      students: activeStudents.items.map((student) => ({ id: student.id, displayName: student.displayName })),
-      overdueAmountCentsByStudentId,
-      lastAssessmentAtByStudentId,
-      now,
-    });
+    const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
     return (
       <PersonalHome
         name={session.user.name}
-        email={session.user.email}
-        tenantName={tenant?.name ?? null}
         greeting={greetingForHour(hourInProductTimeZone(now))}
         dateLabel={dateLabelFor(now)}
-        activeStudentsCount={activeStudents.total}
-        activeWorkoutsCount={activeWorkouts.length}
-        atrasadoCents={financialSummary.atrasadoCents}
-        attentionItems={attentionItems}
+        banner={subscriptionBanner(subscription, roster.counts.ativos, now)}
+        stats={{
+          activeStudents: roster.counts.ativos,
+          studentLimit: subscription?.plan.studentLimit ?? null,
+          weekCompletion: weeklyCompletionRate(roster.rows),
+          receivedCents: financialSummary.recebidoCents,
+          overdueCount,
+        }}
+        feed={feed}
+        isNewSpace={roster.counts.todos === 0}
       />
     );
   }

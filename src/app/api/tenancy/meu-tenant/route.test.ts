@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const requirePersonal = vi.fn();
 const findUniqueOrThrow = vi.fn();
+const updatePersonalAccount = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
@@ -16,6 +17,33 @@ vi.mock("@/modules/tenancy/authContext", async () => {
 vi.mock("@/shared/db/prisma", () => ({
   prisma: { tenant: { findUniqueOrThrow: (...args: unknown[]) => findUniqueOrThrow(...args) } },
 }));
+
+vi.mock("@/modules/personal-onboarding/onboarding", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>("@/modules/personal-onboarding/onboarding");
+  return { ...actual, updatePersonalAccount: (...args: unknown[]) => updatePersonalAccount(...args) };
+});
+
+describe("PATCH /api/tenancy/meu-tenant (FIT-149)", () => {
+  afterEach(() => vi.resetAllMocks());
+
+  it("edita no tenant e no usuário da sessão, ignorando ids do corpo", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(new Request("http://localhost/api/tenancy/meu-tenant", { method: "PATCH", body: JSON.stringify({ businessName: "Studio", tenantId: "outro", userId: "outro", cref: "" }) }));
+    expect(response.status).toBe(204);
+    expect(updatePersonalAccount).toHaveBeenCalledWith({ tenantId: "tenant-real", userId: "u1", businessName: "Studio", phone: undefined, cref: "", studentRangeEstimate: undefined, name: undefined });
+  });
+
+  it("validação vira 400 com a mensagem", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    const { OnboardingError } = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>("@/modules/personal-onboarding/onboarding");
+    updatePersonalAccount.mockRejectedValue(new OnboardingError("VALIDACAO", "Informe um celular válido, com DDD."));
+    const { PATCH } = await import("./route");
+    const response = await PATCH(new Request("http://localhost/api/tenancy/meu-tenant", { method: "PATCH", body: JSON.stringify({ phone: "1" }) }));
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toBe("Informe um celular válido, com DDD.");
+  });
+});
 
 describe("GET /api/tenancy/meu-tenant", () => {
   afterEach(() => {

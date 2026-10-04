@@ -1,0 +1,102 @@
+.view {
+  padding-bottom: var(--fitos-space-6);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 20px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planName {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.price {
+  margin: 4px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-weight: 700;
+}
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.line {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 180, 171, 0.45);
+  background-color: var(--fitos-color-surface-card);
+  color: #ffd9d4;
+  font-weight: 700;
+}
+
+.next {
+  margin-top: 16px;
+}
+
+.cap {
+  margin: 28px 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blocked {
+  display: block;
+  margin-top: 4px;
+  color: #ffd9a0;
+}
+
+.muted {
+  color: var(--fitos-color-text-muted);
+}
+
+.cancel {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

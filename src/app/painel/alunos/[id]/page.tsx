@@ -1,44 +1,45 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Avatar, Button, Card } from "@/shared/ui";
+import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getStudentForTenant } from "@/modules/students/students";
 import { daysUntil, deriveAccessStatus, getLatestInvitationForStudent } from "@/modules/students/invitations";
-import {
-  getActivePlanAssignmentForStudent,
-  listEndedPlanAssignmentsForStudent,
-  listTrainingPlansForTenant,
-} from "@/modules/workouts/workouts";
+import { getActivePlanAssignmentForStudent, getWeeklyRhythmForStudent, listTrainingPlanSummariesForTenant } from "@/modules/workouts/workouts";
 import { listAssessmentsForStudent } from "@/modules/evolution/assessments";
+import { listSessionHistoryForStudent } from "@/modules/execution/history";
+import { listActiveRecurrencesForTenant, listChargesForStudent } from "@/modules/student-finance/charges";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
-import { EditarAlunoForm } from "./EditarAlunoForm";
-import { ReativarAlunoButton } from "./ReativarAlunoButton";
-import { ConviteSection } from "./ConviteSection";
-import { PlanoDoAlunoSection } from "./PlanoDoAlunoSection";
-import { AvaliacoesSection } from "./AvaliacoesSection";
-import styles from "./page.module.css";
+import { StudentProfile } from "./StudentProfile";
 
 export const metadata: Metadata = {
   title: `Perfil do aluno — ${appName}`,
 };
 
-const STUDENT_STATUS_LABEL: Record<string, string> = {
-  ATIVO: "Ativo",
-  INATIVO: "Inativo",
-  VINCULO_ENCERRADO: "Vínculo encerrado",
-};
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
+const monthFmt = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "America/Sao_Paulo" });
+const shortFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+
+function relative(date: Date, now: Date): string {
+  const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+  if (days <= 0) return "hoje";
+  if (days === 1) return "ontem";
+  if (days < 30) return `há ${days} dias`;
+  return `em ${dateFmt.format(date)}`;
+}
+
+type SheetParam = "assign" | "inactivate" | "end" | "assessment" | "pay" | "invite" | null;
 
 interface AlunoPerfilPageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ atribuir?: string; acao?: string }>;
 }
 
-/// Perfil do aluno (FIT-014). Busca sempre por `[id, tenantId da sessão]`
-/// (`getStudentForTenant`) — um `id` de outro tenant nunca é encontrado, e
-/// a resposta (404) não revela se aquele `id` existe em outro lugar.
-export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) {
+/// Perfil do aluno (FIT-145). Busca sempre pelo tenant da sessão: aluno de
+/// outro tenant é 404. `?atribuir=1` abre a escolha de programa (vem do
+/// convite e do Início); `?acao=inativar|encerrar` vem das URLs antigas.
+export default async function AlunoPerfilPage({ params, searchParams }: AlunoPerfilPageProps) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -54,99 +55,70 @@ export default async function AlunoPerfilPage({ params }: AlunoPerfilPageProps) 
   if (!student) {
     notFound();
   }
+  const sp = (await searchParams) ?? {};
+  const now = new Date();
 
-  const podeEditarEmail = student.userId === null;
-  const latestInvitation = await getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id });
-  const accessStatus = deriveAccessStatus(student, latestInvitation);
-  const diasRestantes =
-    accessStatus === "CONVITE_PENDENTE" && latestInvitation ? daysUntil(latestInvitation.expiresAt) : null;
-
-  const [activeAssignment, endedAssignments, availablePlans, assessments] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences] = await Promise.all([
+    getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
-    listEndedPlanAssignmentsForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
-    listTrainingPlansForTenant({ tenantId: ctx.tenantId }),
+    getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listTrainingPlanSummariesForTenant({ tenantId: ctx.tenantId }),
     listAssessmentsForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listSessionHistoryForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listChargesForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
+    listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
   ]);
+  const accessStatus = deriveAccessStatus(student, invitation);
+  const plan = assignment?.trainingPlan ?? null;
+  const weeks = plan?.durationWeeks ?? null;
+  const open = charges
+    .filter((charge) => charge.status === "ATRASADO" || charge.status === "PENDENTE")
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0];
+  const recurrence = recurrences.find((item) => item.studentId === student.id) ?? null;
+  // Ações que chegam do feed do Início (FIT-143) abrem direto a sheet certa.
+  const ACTION_SHEETS: Record<string, SheetParam> = { inativar: "inactivate", encerrar: "end", avaliar: "assessment", receber: open ? "pay" : null, convite: "invite" };
+  const initialSheet: SheetParam = sp.atribuir === "1" ? "assign" : sp.acao && Object.hasOwn(ACTION_SHEETS, sp.acao) ? (ACTION_SHEETS[sp.acao] ?? null) : null;
 
   return (
-    <AppShell eyebrow="Perfil do aluno" title={student.displayName} subtitle="Treino, evolução e vínculo em um lugar." navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
-      <Link href="/painel/alunos" className={styles.backLink}>
-        ← Voltar para a lista
-      </Link>
-
-      <Card title="Dados do aluno">
-        <div className={styles.identity}>
-          <Avatar name={student.displayName} />
-          <p className={styles.statusLine}>
-            Status:{" "}
-            <span className={student.status === "ATIVO" ? styles.statusAtivo : styles.statusInativo}>
-              {STUDENT_STATUS_LABEL[student.status]}
-            </span>
-          </p>
-        </div>
-        <EditarAlunoForm
-          studentId={student.id}
-          initialName={student.displayName}
-          initialEmail={student.email}
-          emailEditavel={podeEditarEmail}
-        />
-      </Card>
-
-      {student.status === "ATIVO" ? (
-        <Card title="Acesso e convite">
-          <ConviteSection studentId={student.id} accessStatus={accessStatus} diasRestantes={diasRestantes} />
-        </Card>
-      ) : null}
-
-      <Card title="Programa de treino">
-        <PlanoDoAlunoSection
-          studentId={student.id}
-          activeAssignment={
-            activeAssignment
-              ? { planName: activeAssignment.trainingPlan.name, assignedAt: activeAssignment.assignedAt.toISOString() }
-              : null
-          }
-          hasEndedAssignments={endedAssignments.length > 0}
-          availablePlans={availablePlans.map((plan) => ({ id: plan.id, name: plan.name }))}
-          podeAtribuir={student.status === "ATIVO"}
-        />
-      </Card>
-
-      <Card title="Avaliações e evolução">
-        <AvaliacoesSection
-          studentId={student.id}
-          assessments={assessments.map((assessment) => ({
-            id: assessment.id,
-            recordedAt: assessment.recordedAt.toISOString(),
-            weightKg: assessment.weightGrams !== null ? assessment.weightGrams / 1000 : null,
-            bodyFatPercent: assessment.bodyFatTenthPercent !== null ? assessment.bodyFatTenthPercent / 10 : null,
-            notes: assessment.notes,
-            measurements: assessment.measurements.map((m) => ({ type: m.type, valueCm: m.valueMillimeters / 10 })),
-          }))}
-        />
-      </Card>
-
-      <Card title="Ciclo de vida">
-        {student.status === "VINCULO_ENCERRADO" ? (
-          <p className={styles.statusLine}>
-            Vínculo encerrado em {new Date(student.endedAt!).toLocaleDateString("pt-BR")}
-            {student.endReason ? ` — motivo: ${student.endReason}` : ""}. Esta ação é definitiva.
-          </p>
-        ) : (
-          <div className={styles.lifecycleActions}>
-            {student.status === "ATIVO" ? (
-              <Button href={`/painel/alunos/${student.id}/inativar`} variant="outlined">
-                Inativar aluno
-              </Button>
-            ) : (
-              <ReativarAlunoButton studentId={student.id} />
-            )}
-            <Button href={`/painel/alunos/${student.id}/encerrar-vinculo`} variant="outlined">
-              Encerrar vínculo
-            </Button>
-          </div>
-        )}
-      </Card>
+    <AppShell eyebrow="Perfil do aluno" title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+      <StudentProfile
+        student={{
+          id: student.id,
+          displayName: student.displayName,
+          email: student.email,
+          status: student.status,
+          hasAccount: student.userId !== null,
+          sinceLabel: monthFmt.format(student.createdAt),
+          endedLabel: student.endedAt ? dateFmt.format(student.endedAt) : null,
+          endReason: student.endReason,
+        }}
+        access={{ status: accessStatus, daysLeft: accessStatus === "CONVITE_PENDENTE" && invitation ? daysUntil(invitation.expiresAt) : null }}
+        program={
+          assignment && plan
+            ? {
+                name: plan.name,
+                weeks,
+                week: weeks ? Math.min(weeks, Math.floor((now.getTime() - assignment.assignedAt.getTime()) / (7 * 86_400_000)) + 1) : null,
+                days: [...new Set(plan.workouts.flatMap((workout) => workout.suggestedDays))],
+                assignedLabel: relative(assignment.assignedAt, now),
+              }
+            : null
+        }
+        programs={programs.map((item) => ({ id: item.id, name: item.name, durationWeeks: item.durationWeeks, workoutCount: item.workoutCount, days: item.days }))}
+        week={{ done: rhythm.completedDays, target: rhythm.targetDays }}
+        sessions={sessions.slice(0, 5).map((session) => ({ id: session.id, workoutName: session.workoutName, dateLabel: relative(session.startedAt, now), status: session.status, perceivedEffort: session.perceivedEffort }))}
+        assessments={assessments.map((assessment) => ({
+          id: assessment.id,
+          dateLabel: dateFmt.format(assessment.recordedAt),
+          weightKg: assessment.weightGrams !== null ? assessment.weightGrams / 1000 : null,
+          bodyFatPercent: assessment.bodyFatTenthPercent !== null ? assessment.bodyFatTenthPercent / 10 : null,
+          notes: assessment.notes,
+          measurements: assessment.measurements.map((m) => ({ type: m.type, valueCm: m.valueMillimeters / 10 })),
+        }))}
+        openCharge={open ? { id: open.id, description: open.description, amountCents: open.amountCents, status: open.status, dueLabel: shortFmt.format(open.dueDate), paidLabel: null } : null}
+        recurrence={recurrence ? { amountCents: recurrence.amountCents, day: recurrence.dueDayOfMonth } : null}
+        initialSheet={initialSheet}
+      />
     </AppShell>
   );
 }

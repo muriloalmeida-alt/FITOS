@@ -1,0 +1,197 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(14px + env(safe-area-inset-top)) 12px 0 8px;
+  min-height: 60px;
+}
+
+.close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.selectedInfo {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  padding-right: 12px;
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--fitos-space-5) var(--fitos-space-6);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
+}
+
+.title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0 14px;
+  min-height: 50px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-text-muted);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+}
+
+.filters {
+  margin-top: 12px;
+}
+
+.empty {
+  color: var(--fitos-color-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 2px solid transparent;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.selected {
+  border-color: var(--fitos-orange-500);
+  background-color: #18140f;
+}
+
+.thumb {
+  flex: none;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.muscle {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.already {
+  margin-top: 4px;
+  color: var(--fitos-color-success);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.check {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fitos-navy-900);
+}
+
+.checkOn {
+  background-color: var(--fitos-orange-500);
+  border-color: var(--fitos-orange-500);
+}
+
+.createLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 12px;
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.bar {
+  padding: 12px var(--fitos-space-5) calc(18px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--fitos-color-surface);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.hint {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
