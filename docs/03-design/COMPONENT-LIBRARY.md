@@ -143,3 +143,25 @@ Wordmark/símbolo oficial do FitOS ("Fit" em peso médio + "OS" em peso forte, c
 - Erro de API.
 - Touch target de 48 dp.
 - Visual regression.
+
+## Componentes de ação (FIT-171, EPIC-23)
+
+Princípio do Momento 1: **ação primeiro, formulário só quando inevitável**. Todos em `src/shared/ui`, testados em `Foundation.test.tsx`.
+
+| Componente | Uso | Acessibilidade |
+| --- | --- | --- |
+| `Sheet` | Edição curta sobre a tela (registrar pagamento, avaliação, convite). Vira diálogo centralizado ≥ 840 px. | `role="dialog"`, `aria-modal`, foco preso, Esc fecha, foco devolvido. |
+| `Stepper` | −/+ para séries, repetições, carga, descanso, peso, dia. `size="lg"` (64 px) na execução de treino. | Botões "Diminuir/Aumentar <rótulo>", valor em `output` com `aria-live`. |
+| `ChipGroup` | Escolha por toque (chips, linha rolável ou cartões) no lugar de `select`. | Única: `radiogroup`/`radio`; múltipla: `aria-pressed`. |
+| `SegmentedTabs` | Alternar vistas da mesma tela. | `aria-pressed` (estado) ou `aria-current` (rota). |
+| `ToastProvider` / `useToast` | Confirmação curta após ação. | Região `role="status"` sempre montada. |
+| `NextStepCard` | "Próximo passo" com a ação principal da tela. | Um único alvo (link ou botão). |
+| `ActionRow` | Linha de lista que termina numa ação. | Nunca aninha alvos. |
+| `Switch` | Liga/desliga (voz, tela ligada). | `role="switch"` + `aria-checked`. |
+| `Skeleton` / `SkeletonScreen` | Carregamento no formato da tela (`app/painel/loading.tsx`). | `role="status"` com texto oculto. |
+| `ProgressBar` | Teste grátis, aderência, semana do programa. | `role="progressbar"` com `aria-valuetext`. |
+| `WeekStrip` | Faixa da semana (previsto, feito, descanso, hoje). | Cada dia com estado por extenso. |
+| `Tag` | Status (ok, atenção, erro, neutro, destaque). | Sempre com texto. |
+| `StatePanel` / `PlanLimitState` | Erro de conexão (`app/error.tsx`), não encontrado (`app/not-found.tsx`), sem permissão, limite do plano. | `role="alert"` só para falha recuperável. |
+
+`Button` ganhou `variant="secondary" | "quiet"`, `size="lg" | "xl"` e `block`.

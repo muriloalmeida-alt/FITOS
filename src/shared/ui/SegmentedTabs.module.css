@@ -1,0 +1,37 @@
+.tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--fitos-space-2);
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--fitos-color-text-muted);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.active {
+  background-color: #252e3b;
+  color: var(--fitos-color-on-surface);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: -2px;
+}

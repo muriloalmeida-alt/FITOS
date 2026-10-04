@@ -27,18 +27,6 @@
   font-family: var(--fitos-font-family);
 }
 
-/* No desktop (tema claro), a tela de execução mantém o fundo escuro. */
-.screen::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(7, 9, 13, 0.28) 0%, rgba(7, 9, 13, 0.12) 40%, rgba(7, 9, 13, 0.34) 100%),
-    url("/media/brand/fitos-bg-mobile-suave.webp") center top / cover no-repeat,
-    #07090d;
-  pointer-events: none;
-}
 
 .header {
   display: flex;

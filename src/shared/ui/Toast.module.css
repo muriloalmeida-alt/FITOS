@@ -1,0 +1,28 @@
+.region {
+  position: fixed;
+  left: var(--fitos-space-5);
+  right: var(--fitos-space-5);
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 480px;
+  width: 100%;
+  background-color: #ffffff;
+  color: var(--fitos-navy-900);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 840px) {
+  .region {
+    bottom: var(--fitos-space-8);
+  }
+}
