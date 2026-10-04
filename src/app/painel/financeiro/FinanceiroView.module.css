@@ -1,0 +1,150 @@
+.view {
+  display: flex;
+  flex-direction: column;
+}
+
+.month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.monthArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 44px;
+  border-radius: 10px;
+  color: var(--fitos-color-on-surface);
+  font-size: 24px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.monthArrow:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+}
+
+.monthLabel {
+  font-weight: 800;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.tile {
+  padding: 14px 12px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.tile dt {
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tile dd {
+  margin: 6px 0 0;
+  font-size: 17px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.ok {
+  color: var(--fitos-color-success);
+}
+
+.danger {
+  color: #ffb4ab;
+}
+
+.notice {
+  margin: 12px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.next {
+  margin: 18px 0 16px;
+}
+
+.generate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 120, 71, 0.35);
+  background-color: var(--fitos-color-surface-card);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.filters {
+  margin: 14px 0 4px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trailing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.amount {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.struck {
+  color: var(--fitos-color-text-muted);
+  text-decoration: line-through;
+}
+
+.empty {
+  margin: 16px 0 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.empty a {
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 840px) {
+  .tile dd {
+    font-size: 24px;
+  }
+
+  .trailing {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
