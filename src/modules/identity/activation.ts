@@ -23,25 +23,43 @@ export class ActivationError extends Error {
   }
 }
 
+export type InvalidInvitationReason = "INVALIDO" | "EXPIRADO" | "CANCELADO" | "USADO" | "CONTA_EXISTENTE";
+
 export interface ActivationTokenCheck {
   valid: boolean;
   studentName?: string;
+  /// FIT-165: e-mail fixo do convite e quem convidou.
+  email?: string;
+  personalName?: string;
+  businessName?: string;
+  /// Por que o link não serve mais — só o estado, nunca dados do aluno.
+  reason?: InvalidInvitationReason;
 }
 
 /// Validação **somente leitura** do token, para a página pública decidir o
-/// que renderizar (formulário de senha vs. "link inválido"). Nunca muta
+/// que renderizar (formulário de senha vs. estado do convite). Nunca muta
 /// nada — a reivindicação atômica de verdade acontece em
-/// `activateStudentAccount`. Nunca retorna nenhum dado do aluno quando o
-/// token é inválido/expirado/usado/cancelado — apenas `{ valid: false }`.
+/// `activateStudentAccount`. Para token que não serve, devolve só o motivo
+/// (expirado, cancelado, já usado ou e-mail que já tem conta), nunca dados
+/// do aluno.
 export async function checkActivationToken(token: string, client: PrismaClient = prisma): Promise<ActivationTokenCheck> {
   const tokenHash = hashInvitationToken(token);
-  const invitation = await client.invitation.findUnique({ where: { tokenHash }, include: { student: true } });
+  const invitation = await client.invitation.findUnique({ where: { tokenHash }, include: { student: true, tenant: { include: { owner: true } } } });
 
-  if (!invitation || invitation.status !== "PENDENTE" || invitation.expiresAt < new Date() || invitation.student.userId) {
-    return { valid: false };
-  }
+  if (!invitation) return { valid: false, reason: "INVALIDO" };
+  if (invitation.status === "CANCELADO") return { valid: false, reason: "CANCELADO" };
+  if (invitation.status !== "PENDENTE" || invitation.student.userId) return { valid: false, reason: "USADO" };
+  if (invitation.expiresAt < new Date()) return { valid: false, reason: "EXPIRADO" };
+  const existing = await client.user.findUnique({ where: { email: invitation.student.email }, select: { id: true } });
+  if (existing) return { valid: false, reason: "CONTA_EXISTENTE" };
 
-  return { valid: true, studentName: invitation.student.displayName };
+  return {
+    valid: true,
+    studentName: invitation.student.displayName,
+    email: invitation.student.email,
+    personalName: invitation.tenant.owner.name,
+    businessName: invitation.tenant.name,
+  };
 }
 
 export interface ActivateStudentAccountInput {

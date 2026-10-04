@@ -104,12 +104,12 @@ describe("checkActivationToken (FIT-015)", () => {
 
     const result = await checkActivationToken(rawToken, prisma);
 
-    expect(result).toEqual({ valid: true, studentName: student.displayName });
+    expect(result).toEqual({ valid: true, studentName: student.displayName, email: student.email, personalName: owner.name, businessName: tenant.name });
   });
 
   it("token inexistente: valid=false, sem nenhum dado do aluno", async () => {
     const result = await checkActivationToken("token-que-nunca-existiu", prisma);
-    expect(result).toEqual({ valid: false });
+    expect(result).toEqual({ valid: false, reason: "INVALIDO" });
   });
 
   it("token expirado: valid=false", async () => {
@@ -121,7 +121,7 @@ describe("checkActivationToken (FIT-015)", () => {
     await prisma.invitation.update({ where: { id: invitation.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
 
     const result = await checkActivationToken(rawToken, prisma);
-    expect(result).toEqual({ valid: false });
+    expect(result).toEqual({ valid: false, reason: "EXPIRADO" });
   });
 
   it("token cancelado: valid=false", async () => {
@@ -133,7 +133,14 @@ describe("checkActivationToken (FIT-015)", () => {
     await prisma.invitation.update({ where: { id: invitation.id }, data: { status: "CANCELADO" } });
 
     const result = await checkActivationToken(rawToken, prisma);
-    expect(result).toEqual({ valid: false });
+    expect(result).toEqual({ valid: false, reason: "CANCELADO" });
+  });
+
+  it("e-mail do convite que já tem conta: CONTA_EXISTENTE (entrar e colar o convite)", async () => {
+    const { tenant, student, owner } = await createTenantWithStudent("check-conta");
+    await prisma.user.create({ data: { email: student.email, name: "Já existe", role: "ALUNO" } });
+    const { rawToken } = await generateInvitation({ tenantId: tenant.id, studentId: student.id, actorUserId: owner.id }, prisma);
+    expect(await checkActivationToken(rawToken, prisma)).toEqual({ valid: false, reason: "CONTA_EXISTENTE" });
   });
 });
 
