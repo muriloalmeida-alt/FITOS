@@ -39,7 +39,7 @@ export function SplashScreen({ destination }: { destination: string }) {
   return (
     <main className={leaving ? `${styles.splash} ${styles.leaving}` : styles.splash} onClick={leave} aria-busy="true">
       <div className={styles.center}>
-        <BrandLogo background="dark" size={86} className={styles.logo} />
+        <BrandLogo background="photo" size={86} className={styles.logo} />
         <p className={styles.tagline}>Treino leva mais longe</p>
       </div>
       <button type="button" className={styles.skip} onClick={leave}>

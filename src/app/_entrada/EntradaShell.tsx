@@ -16,7 +16,7 @@ export function EntradaShell({ children, back }: { children: ReactNode; back?: {
             </Link>
           ) : (
             <Link href="/conheca" aria-label="Conheça o FitOS">
-              <BrandLogo size={44} decorative />
+              <BrandLogo background="photo" size={44} decorative />
             </Link>
           )}
         </div>
