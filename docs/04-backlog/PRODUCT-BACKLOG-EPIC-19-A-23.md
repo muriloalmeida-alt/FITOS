@@ -11,6 +11,9 @@ Em 04/10/2026 Murilo aprovou o protótipo navegável "FitOS — Protótipo EPIC-
 
 Decisões já tomadas por Murilo:
 
+- **Duas fases.** O **Momento 1** (EPIC-19 a EPIC-23) entrega as 29 telas. O **Momento 2** traz dois épicos de evolução, decididos em 04/10/2026 (ver "Momento 2" no fim deste documento):
+  - **EPIC-24 · Comunicação com o aluno por e-mail e push.** Toda comunicação com o aluno fica para essa evolução.
+  - **EPIC-25 · Revisão do módulo de construção de treinos.** A evolução clara dos treinos fica para esse épico.
 - **Tema:** escuro, liso, **sem imagem de fundo** (remove `fitos-bg-mobile-suave.webp` do EPIC-18). Sempre cor escura e lisa.
 - **Preços:** mantêm os valores atuais de `planCatalog.ts`: Personal 20 R$ 49,90; Personal 50 R$ 69,90; Personal Ilimitado R$ 99,90; FitOS Livre R$ 19,90. Todos com 30 dias grátis.
 - **Prescrição padrão** de exercício adicionado pela biblioteca: 3 séries × 12 repetições, 60 s de descanso, carga livre.
@@ -36,7 +39,14 @@ Decisões já tomadas por Murilo:
 | **EPIC-22** | Entrada, cadastro e onboarding | FIT-162 a FIT-170 (9) | E1 a E9 |
 | **EPIC-23** | Fundação visual e estados do sistema | FIT-171 (1) | S1 |
 
-Total: **29 Histórias**, uma por tela.
+Total: **29 Histórias**, uma por tela. Este é o **Momento 1**.
+
+**Momento 2** (registrado, ainda não detalhado em Histórias):
+
+| Épico | Tema |
+|---|---|
+| **EPIC-24** | Comunicação com o aluno por e-mail e push |
+| **EPIC-25** | Revisão do módulo de construção de treinos |
 
 ---
 
@@ -47,9 +57,7 @@ Levantamento feito contra o `main` em 04/10/2026 (`prisma/schema.prisma`, `src/m
 | Código | Funcionalidade nova | Situação hoje | Histórias |
 |---|---|---|---|
 | **BK-01** | Adicionar vários exercícios de uma vez a um treino, com a prescrição padrão | `addWorkoutExercise` adiciona um por vez e exige a prescrição | FIT-146, FIT-157 |
-| **BK-02** | Programa por dia da semana: colocar um treino num dia, trocar, marcar descanso | `Workout` pertence a **um** programa (`trainingPlanId`) e `moveWorkoutToPlan` **move**. Colocar um treino da biblioteca num dia passa a criar uma **cópia** dentro do programa, com `suggestedDays = [dia]` (ver Decisão técnica 1) | FIT-146 |
 | **BK-03** | Atribuir um programa a vários alunos de uma vez | `assignTrainingPlanToStudent` atende um aluno por chamada | FIT-146 |
-| **BK-04** | Atribuir um treino solto: o sistema cria o programa sozinho | Não existe | FIT-146, FIT-144, FIT-145 |
 | **BK-05** | Feed "Acontecendo agora" do Personal: treino concluído, sem programa, convite aceito, programa terminando, avaliação pendente, cobrança atrasada | Só existe `getPersonalAttentionItems` (cobrança e avaliação) | FIT-143 |
 | **BK-06** | Indicadores: % de treinos concluídos na semana (espaço inteiro) e aderência semanal por aluno | `getWeeklyRhythmForStudent` existe por aluno; agregado do espaço e lista com aderência não existem | FIT-143, FIT-144 |
 | **BK-07** | Filtros de alunos "Precisam de você" e "Convites" (pendente ou expirado), com contagem | `listStudents` filtra só por status do aluno | FIT-144 |
@@ -62,8 +70,14 @@ Levantamento feito contra o `main` em 04/10/2026 (`prisma/schema.prisma`, `src/m
 | **BK-14** | Tempo ativo da sessão, descontando pausas | Só `startedAt` e `endedAt` | FIT-153, FIT-158 |
 | **BK-15** | Player de música integrado ao Spotify: entrar, playlists, tocar, pausar, próxima | Hoje só há links para apps externos | FIT-153, FIT-158 |
 | **BK-16** | Dias sugeridos nos treinos do FitOS Livre e "Hoje para você" | A rota `meus-treinos/[id]` ignora `suggestedDays` de propósito | FIT-156, FIT-157 |
-| **BK-17** | E-mail transacional: recuperação de senha e aviso de vínculo encerrado | Não há provedor de e-mail no projeto | FIT-163, FIT-145 |
 | **BK-18** | Assinar de novo depois de cancelar | Validar e ajustar `subscribeTenantToPlan` com assinatura `CANCELADA` | FIT-150, FIT-161 |
+
+Itens levantados que passaram para o **Momento 2**:
+
+- **BK-02** (programa por dia da semana) e **BK-04** (atribuir treino solto com programa automático) → EPIC-25.
+- **BK-17** (e-mail transacional) → EPIC-24.
+
+Os códigos foram mantidos para rastreabilidade.
 
 Funcionalidades novas **só de frontend**, sem backend:
 
@@ -76,10 +90,9 @@ Funcionalidades novas **só de frontend**, sem backend:
 - Mostrar/ocultar senha.
 - Plano sugerido pela faixa de alunos.
 
-### Decisões técnicas propostas (para validar no primeiro PR)
+### Decisão técnica proposta (para validar no PR da FIT-153)
 
-1. **Treino em vários programas (BK-02):** manter o modelo atual, em que um treino pertence a um programa, e **copiar** o treino ao colocá-lo no dia de outro programa. É o mesmo comportamento que a atribuição já tem (cópia imutável, ADR-005). Isso evita uma migração de N:N, e editar o treino original não altera programas já montados. Vira ADR-011.
-2. **Registro por série (BK-11):** nova tabela `workout_set_results` (sessão, item do treino, número da série, carga, repetições ou segundos, horário). O agregado `WorkoutSessionResult` continua sendo atualizado, para não quebrar histórico, recordes e telas antigas. Vira ADR-012.
+1. **Registro por série (BK-11):** nova tabela `workout_set_results` (sessão, item do treino, número da série, carga, repetições ou segundos, horário). O agregado `WorkoutSessionResult` continua sendo atualizado, para não quebrar histórico, recordes e telas antigas. Vira ADR-011.
 
 ---
 
@@ -153,19 +166,19 @@ Critérios de aceite:
 - Cada linha mostra o status (sem programa, nova, cobrança atrasada, convite pendente ou expirado, inativa, vínculo encerrado) e a aderência da semana (BK-06).
 - Paginação por "Carregar mais".
 - Novo aluno em *sheet* (nome e e-mail) cria o aluno e o convite.
-- A tela de confirmação tem: link do convite, Copiar, Compartilhar, "Montar o primeiro treino" (BK-04) e Abrir perfil.
+- A tela de confirmação tem: link do convite, Copiar, Compartilhar (o personal manda por onde quiser; o FitOS não envia mensagem), "Atribuir programa" e Abrir perfil.
 - Limite do plano bloqueia com o estado de FIT-171.
 - Linha de vagas livres no plano.
 
-Backend novo: **BK-06, BK-07.** Usa **BK-04.**
+Backend novo: **BK-06, BK-07.**
 
 ### FIT-145 — P3 · Perfil do aluno com ações no contexto (`P0`)
 
 **Como** personal, **quero** resolver tudo do aluno numa tela, **para** não navegar entre páginas de formulário.
 
 Critérios de aceite:
-- Bloco de foco quando falta programa, com "Atribuir programa" e "Montar treino para o aluno".
-- Com programa ativo, mostra: semana X de Y, faixa da semana, Trocar, Ajustar treinos e Encerrar programa.
+- Bloco de foco quando falta programa, com "Atribuir programa" (escolha em *sheet*) e "Montar um treino", que abre o editor da FIT-146.
+- Com programa ativo, mostra: semana X de Y, faixa da semana, Trocar e Encerrar programa. Ajustar os treinos só deste aluno fica para o EPIC-25 (hoje a cópia atribuída é imutável, ADR-005).
 - Treino: ritmo da semana, última sessão e esforço percebido das últimas sessões (BK-13).
 - Avaliações em *sheet*:
   - Já começa com os valores da última avaliação.
@@ -178,10 +191,10 @@ Critérios de aceite:
   - Se cancelado, gerar convite.
 - Editar dados em *sheet*.
 - Inativar e reativar com *sheet* de impacto.
-- Encerrar vínculo com motivo em chips e confirmação. Avisa o aluno por e-mail (BK-17).
+- Encerrar vínculo com motivo em chips e confirmação. O aluno vê o estado "Sem vínculo" ao entrar; o aviso por e-mail ou push fica no EPIC-24.
 - Rotas `/inativar` e `/encerrar-vinculo` viram *sheets*; as URLs antigas redirecionam para o perfil.
 
-Backend novo: **BK-13, BK-17.** Usa **BK-04.**
+Backend novo: **BK-13.**
 
 ### FIT-146 — P4 · Treinos e programas sem formulário (`P0`, **primeira entrega de valor**)
 
@@ -202,16 +215,21 @@ Critérios de aceite:
   - +/− para séries, repetições ou tempo, e carga.
   - "Medir por repetições ou tempo".
   - Descanso, observação, subir e descer (arrastar no desktop), remover.
-- **Pronto** pergunta o próximo passo: Atribuir a um aluno (BK-04) ou Colocar em um programa.
+- **Pronto** pergunta o próximo passo: Colocar em um programa ou Voltar aos treinos.
 - Usar como base (duplicar), Arquivar e Reativar.
-- **Programa como semana:**
-  - Nome, vigência com +/−.
-  - Segunda a domingo: escolher treino, Descanso ou "Montar um treino novo", que volta já no dia (BK-02).
+- **Programa** (com a estrutura de dados atual):
+  - Nome e vigência com +/−.
+  - Lista dos treinos do programa, com a faixa da semana montada pelos dias sugeridos de cada treino.
+  - Adicionar treino em *sheet*, reordenar e remover.
 - **Atribuir a vários alunos** (BK-03), avisando quem tem programa que será substituído e explicando a cópia (ADR-005).
 - As URLs antigas (`/treinos/novo`, `/treinos/[id]`, `/treinos/planos/*`) continuam funcionando no novo editor.
-- Meta mensurável: aluno novo com treino atribuído em **≤ 2 telas**. Hoje são 4 telas.
 
-Backend novo: **BK-01, BK-02, BK-03, BK-04.** ADR-011.
+Backend novo: **BK-01, BK-03.**
+
+**Fica para o EPIC-25 (Momento 2):**
+- Programa editado dia a dia, com o mesmo treino em vários programas (BK-02).
+- Atribuir um treino solto direto ao aluno (BK-04).
+- A meta de "aluno novo com treino atribuído em ≤ 2 telas".
 
 ### FIT-147 — P5 · Biblioteca de exercícios (`P1`)
 
@@ -351,7 +369,7 @@ Critérios de aceite:
 - Retomar sessão em andamento depois de fechar o app (já existe `startOrResume…`).
 - Funciona com uma mão: nenhuma ação principal fica fora do alcance do polegar.
 
-Backend novo: **BK-11, BK-12, BK-13, BK-14, BK-15.** ADR-012.
+Backend novo: **BK-11, BK-12, BK-13, BK-14, BK-15.** ADR-011.
 
 ### FIT-154 — A4 · Progresso do Aluno (`P1`)
 
@@ -467,19 +485,18 @@ Critérios de aceite:
 
 Backend novo: nenhum.
 
-### FIT-163 — E2 · Entrar e recuperar senha (`P0`)
+### FIT-163 — E2 · Entrar (`P0`)
 
-**Como** usuário, **quero** entrar rápido e recuperar a senha sozinho, **para** não depender de suporte.
+**Como** usuário, **quero** entrar rápido, **para** chegar logo ao meu Início.
 
 Critérios de aceite:
 - E-mail e senha com o erro junto do campo.
-- **Esqueci minha senha:** pede o e-mail e envia o link (BK-17).
-- Mensagem neutra, que não revela se o e-mail existe.
-- Tela de nova senha.
-- Link expira, e o envio tem limite por e-mail e IP.
 - "Começar agora" e "Recebi um convite".
+- Rodapé com Termos e Privacidade.
 
-Backend novo: **BK-17** (provedor de e-mail e o reset do `better-auth`).
+Backend novo: nenhum.
+
+**Fica para o EPIC-24 (Momento 2):** "Esqueci minha senha", que depende do envio de e-mail.
 
 ### FIT-164 — E3 · Começar e criar conta (`P0`)
 
@@ -575,25 +592,71 @@ Um PR por História, a partir de branch própria, nunca direto na `main` (`GOVER
 | Sprint | Histórias | Por quê |
 |---|---|---|
 | **S12 — Fundação** | FIT-171 | Tema liso e componentes que todas as outras usam |
-| **S13 — Montar treino** | FIT-146 (BK-01 a BK-04), FIT-147 (BK-08), FIT-157 (BK-16) | A dor principal: gestão de treinos |
+| **S13 — Montar treino** | FIT-146 (BK-01, BK-03), FIT-147 (BK-08), FIT-157 (BK-16) | A dor principal: gestão de treinos |
 | **S14 — Treino ao vivo** | FIT-153 (BK-11 a BK-15), FIT-158 | O momento de uso mais frequente do aluno |
-| **S15 — Rotina do Personal** | FIT-143 (BK-05, BK-06), FIT-144 (BK-07), FIT-145 (BK-13, BK-17) | Ações no contexto; depende de dados da S14 (esforço, sessões) |
+| **S15 — Rotina do Personal** | FIT-143 (BK-05, BK-06), FIT-144 (BK-07), FIT-145 (BK-13) | Ações no contexto; depende de dados da S14 (esforço, sessões) |
 | **S16 — Negócio** | FIT-148 (BK-09, BK-10), FIT-149, FIT-150 (BK-18), FIT-161 | Financeiro e assinatura |
 | **S17 — Aluno e Livre** | FIT-151, FIT-152, FIT-154, FIT-155, FIT-156, FIT-159, FIT-160 | Telas de consulta sobre dados já prontos |
-| **S18 — Entrada** | FIT-162 a FIT-170 (FIT-163 com BK-17) | Cadastro, onboarding e páginas públicas |
+| **S18 — Entrada** | FIT-162 a FIT-170 | Cadastro, onboarding e páginas públicas |
 
 ## Decisões pendentes (bloqueiam itens específicos)
 
 | # | Decisão | Bloqueia | Proposta |
 |---|---|---|---|
-| D1 | **Provedor de e-mail transacional** e domínio remetente | BK-17 → FIT-163 e o aviso da FIT-145 | Resend, com `RESEND_API_KEY` no Railway e domínio verificado (ex.: `no-reply@fitos.app`) |
-| D2 | **Integração com Spotify** | BK-15 → música da FIT-153/158 | App no Spotify for Developers (Client ID, OAuth PKCE). **Limites do Spotify:** controle de reprodução só para contas **Premium**; em modo de desenvolvimento, só **25 usuários** liberados até o Spotify aprovar cota estendida. Sem Premium, ficam os atalhos para os apps. Alternativa: entregar só os atalhos agora e o Spotify depois |
-| D3 | **Desktop** | Todas | O protótipo é mobile. Proposta: mesmos componentes no layout de rail atual (≥ 840 px), sem prévia desktop separada |
-| D4 | **Ordem das sprints** acima | Planejamento | Confirmar ou reordenar |
+| D1 | **Integração com Spotify** | BK-15 → música da FIT-153/158 | App no Spotify for Developers (Client ID, OAuth PKCE). **Limites do Spotify:** controle de reprodução só para contas **Premium**; em modo de desenvolvimento, só **25 usuários** liberados até o Spotify aprovar cota estendida. Sem Premium, ficam os atalhos para os apps. Alternativa: entregar só os atalhos agora e o Spotify depois |
+| D2 | **Desktop** | Todas | O protótipo é mobile. Proposta: mesmos componentes no layout de rail atual (≥ 840 px), sem prévia desktop separada |
+| D3 | **Ordem das sprints** acima | Planejamento | Confirmar ou reordenar |
+
+O provedor de e-mail deixou de ser decisão do Momento 1: passou para o EPIC-24.
+
+---
+
+## Momento 2 — Épicos de evolução
+
+Registrados por decisão de Murilo em 04/10/2026. Ainda **não detalhados em Histórias** e **sem numeração FIT**: serão detalhados quando forem priorizados, depois do Momento 1. Os itens abaixo são o escopo candidato.
+
+### EPIC-24 — Comunicação com o aluno por e-mail e push
+
+**Objetivo:** o FitOS passa a falar com o aluno (e com o personal) fora do app, com consentimento e controle de quem recebe.
+
+Escopo candidato:
+- **Infraestrutura de e-mail transacional (BK-17):** provedor (proposta: Resend), domínio remetente verificado, modelos de e-mail em PT-BR e registro de envios para auditoria.
+- **Infraestrutura de push na web:**
+  - Instalação como app (PWA) e service worker.
+  - Chaves VAPID.
+  - Pedido de permissão no momento certo (nunca na primeira abertura).
+  - Inscrição por aparelho.
+  - **Limite conhecido:** no iPhone, push na web só funciona com o app adicionado à tela de início (iOS 16.4 ou mais novo).
+- **Preferências de notificação** por usuário e por tipo (ligar ou desligar), em conformidade com a LGPD.
+- **Recuperação de senha** ("Esqueci minha senha", que saiu da FIT-163).
+- **Convite do aluno também por e-mail**, além do link copiado.
+- **Avisos ao aluno:**
+  - Vínculo encerrado, conta inativada ou reativada.
+  - Programa novo atribuído e programa terminando.
+  - Mensalidade a vencer ou atrasada (só aviso; a cobrança continua manual).
+- **Lembrete de treino** nos dias do programa (push).
+- **Avisos ao personal:** treino concluído, esforço alto relatado (BK-13), aluno sem treino na semana.
+
+Decisões que o épico vai pedir: provedor e domínio de e-mail, chaves de push, quais avisos nascem ligados por padrão.
+
+### EPIC-25 — Revisão do módulo de construção de treinos
+
+**Objetivo:** dar aos treinos uma evolução clara ao longo do tempo, a partir do editor sem formulário entregue na FIT-146.
+
+Escopo candidato:
+- **Modelo de dados:** o mesmo treino reutilizado em vários programas (BK-02). Decidir entre cópia ao colocar no programa ou relação N:N, registrando num ADR.
+- **Programa editado dia a dia:** semana de segunda a domingo, com treino, descanso e "montar um treino novo" direto no dia (como no protótipo P4).
+- **Atribuir um treino solto** direto ao aluno, com programa criado automaticamente (BK-04). Meta: aluno novo com treino atribuído em ≤ 2 telas.
+- **Ajustar o programa de um aluno** sem alterar o modelo original (hoje a cópia atribuída é imutável, ADR-005).
+- **Progressão planejada** semana a semana (carga, repetições, séries), com periodização simples.
+- **Sugestão de progressão** a partir do registro por série (BK-11) e do esforço percebido (BK-13).
+- **Modelos prontos** de programa para começar mais rápido.
+- **Técnicas de treino:** bi-set, drop-set, aquecimento.
+- **Histórico de versões** do programa.
 
 ## Fora deste backlog
 
-- Notificações push e por WhatsApp.
+- Notificações por WhatsApp.
 - Player com músicas próprias do FitOS (exige licenciamento).
 - Gestão de agenda e aulas.
 - Mudança de preço ou de regras de cobrança.
