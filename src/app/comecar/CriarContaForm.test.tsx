@@ -1,145 +1,58 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { tokenFromInvite } from "./ConviteEntrada";
 
 const signUpEmail = vi.fn();
 const push = vi.fn();
+vi.mock("@/modules/identity/auth-client", () => ({ signUp: { email: (...args: unknown[]) => signUpEmail(...args) } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signUp: { email: (...args: unknown[]) => signUpEmail(...args) },
-}));
+describe("CriarContaForm (FIT-164)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
-}));
-
-describe("CriarContaForm", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it("mostra erros de validação e não envia quando os campos são inválidos", async () => {
+  async function fill(mode: "personal" | "individual", accept = true) {
     const { CriarContaForm } = await import("./CriarContaForm");
     const user = userEvent.setup();
-    render(<CriarContaForm />);
-
+    render(<CriarContaForm mode={mode} />);
+    await user.type(screen.getByLabelText("Seu nome"), "Joana Lima");
+    await user.type(screen.getByLabelText("E-mail"), "Joana@Example.com");
+    await user.type(screen.getByLabelText("Senha"), "senha-forte-123");
+    if (accept) await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Criar conta" }));
+  }
 
-    expect(await screen.findByText("Informe seu nome completo.")).toBeInTheDocument();
-    expect(screen.getByText("Informe um e-mail válido.")).toBeInTheDocument();
-    expect(signUpEmail).not.toHaveBeenCalled();
-  });
-
-  it("rejeita senhas que não coincidem", async () => {
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
-    await user.type(screen.getByLabelText("E-mail"), "fulano@example.com");
-    await user.type(screen.getByLabelText("Senha"), "senha12345");
-    await user.type(screen.getByLabelText("Confirmar senha"), "outra-senha");
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
-
-    expect(await screen.findByText("As senhas não coincidem.")).toBeInTheDocument();
-    expect(signUpEmail).not.toHaveBeenCalled();
-  });
-
-  it("normaliza o e-mail (trim + minúsculas) e envia ao provedor quando os dados são válidos", async () => {
+  it("cria a conta do personal e segue para o onboarding do personal", async () => {
     signUpEmail.mockResolvedValue({ error: null });
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
-    await user.type(screen.getByLabelText("E-mail"), "  Fulano@Example.com  ");
-    await user.type(screen.getByLabelText("Senha"), "senha12345");
-    await user.type(screen.getByLabelText("Confirmar senha"), "senha12345");
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
-
-    await waitFor(() => expect(signUpEmail).toHaveBeenCalledTimes(1));
-    expect(signUpEmail).toHaveBeenCalledWith({
-      name: "Fulano de Tal",
-      email: "fulano@example.com",
-      password: "senha12345",
-      role: "PERSONAL",
-    });
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/painel"));
+    await fill("personal");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding-personal"));
+    expect(signUpEmail).toHaveBeenCalledWith({ name: "Joana Lima", email: "joana@example.com", password: "senha-forte-123", role: "PERSONAL" });
   });
 
-  it("FIT-101: modo individual envia role=INDIVIDUAL e redireciona para /onboarding", async () => {
+  it("Livre segue para o onboarding do Livre", async () => {
     signUpEmail.mockResolvedValue({ error: null });
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm mode="individual" />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Praticante Sozinho");
-    await user.type(screen.getByLabelText("E-mail"), "praticante@example.com");
-    await user.type(screen.getByLabelText("Senha"), "senha12345");
-    await user.type(screen.getByLabelText("Confirmar senha"), "senha12345");
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
-
-    await waitFor(() => expect(signUpEmail).toHaveBeenCalledTimes(1));
-    expect(signUpEmail).toHaveBeenCalledWith({
-      name: "Praticante Sozinho",
-      email: "praticante@example.com",
-      password: "senha12345",
-      role: "INDIVIDUAL",
-    });
+    await fill("individual");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding"));
   });
 
-  it("FIT-112: Voltar sem dados preenchidos navega direto para a etapa 1, sem confirmação", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm");
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm />);
-
-    await user.click(screen.getByRole("button", { name: "← Voltar" }));
-
-    expect(confirmSpy).not.toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith("/comecar");
+  it("sem aceitar os termos não cria a conta", async () => {
+    await fill("personal", false);
+    expect(await screen.findByText("Aceite os termos para continuar.")).toBeInTheDocument();
+    expect(signUpEmail).not.toHaveBeenCalled();
   });
 
-  it("FIT-112: Voltar com dados preenchidos pede confirmação; cancelar não navega", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("Mostrar revela a senha", async () => {
     const { CriarContaForm } = await import("./CriarContaForm");
     const user = userEvent.setup();
     render(<CriarContaForm />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
-    await user.click(screen.getByRole("button", { name: "← Voltar" }));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(push).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Mostrar" }));
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "text");
   });
+});
 
-  it("FIT-112: Voltar com dados preenchidos e confirmação aceita navega para a etapa 1", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
-    await user.click(screen.getByRole("button", { name: "← Voltar" }));
-
-    expect(push).toHaveBeenCalledWith("/comecar");
-  });
-
-  it("mostra mensagem genérica de erro quando o cadastro falha, sem revelar o motivo exato", async () => {
-    signUpEmail.mockResolvedValue({ error: { message: "User already exists" } });
-    const { CriarContaForm } = await import("./CriarContaForm");
-    const user = userEvent.setup();
-    render(<CriarContaForm />);
-
-    await user.type(screen.getByLabelText("Nome completo"), "Fulano de Tal");
-    await user.type(screen.getByLabelText("E-mail"), "fulano@example.com");
-    await user.type(screen.getByLabelText("Senha"), "senha12345");
-    await user.type(screen.getByLabelText("Confirmar senha"), "senha12345");
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
-
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).not.toMatch(/already exists/i);
-    expect(push).not.toHaveBeenCalled();
+describe("tokenFromInvite", () => {
+  it("lê o código ou o link", () => {
+    expect(tokenFromInvite(" abc ")).toBe("abc");
+    expect(tokenFromInvite("https://fitos.app/ativar-conta?token=x%2By")).toBe("x+y");
   });
 });

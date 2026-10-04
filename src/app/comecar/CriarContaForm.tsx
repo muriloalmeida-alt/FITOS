@@ -1,171 +1,82 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, FormAlert, TextField } from "@/shared/ui";
 import { signUp } from "@/modules/identity/auth-client";
-import styles from "./page.module.css";
+import { PasswordField } from "../_entrada/PasswordField";
+import styles from "../_entrada/Entrada.module.css";
 
 interface FieldErrors {
   name?: string;
   email?: string;
   password?: string;
-  confirmPassword?: string;
+  terms?: string;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(values: { name: string; email: string; password: string; confirmPassword: string }): FieldErrors {
-  const errors: FieldErrors = {};
-
-  if (values.name.trim().length < 2) {
-    errors.name = "Informe seu nome completo.";
-  }
-  if (!EMAIL_PATTERN.test(values.email.trim())) {
-    errors.email = "Informe um e-mail válido.";
-  }
-  if (values.password.length < 8) {
-    errors.password = "A senha deve ter pelo menos 8 caracteres.";
-  }
-  if (values.confirmPassword !== values.password) {
-    errors.confirmPassword = "As senhas não coincidem.";
-  }
-
-  return errors;
-}
-
-interface CriarContaFormProps {
-  /// "individual" é a escolha explícita do onboarding "Treino sozinho"
-  /// (FIT-101, `/comecar?modo=individual`) — qualquer outro valor
-  /// (incluindo ausente) permanece o cadastro de personal de sempre.
-  /// Nunca lido de um campo de formulário: o literal já vem fixado pela
-  /// própria página server-side a partir da query string (ver ADR-007).
-  mode?: "personal" | "individual";
-}
-
-export function CriarContaForm({ mode = "personal" }: CriarContaFormProps) {
+/// Criar conta em uma tela (FIT-164): nome, e-mail e senha com "Mostrar",
+/// sem "Confirmar senha", e o aceite dos termos. O papel vem da página
+/// (ADR-007), nunca de um campo. Segue para o onboarding do papel.
+export function CriarContaForm({ mode = "personal" }: { mode?: "personal" | "individual" }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [terms, setTerms] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const hasData = name.trim() !== "" || email.trim() !== "" || password !== "" || confirmPassword !== "";
-
-  /// Requisito comum do onboarding (FIT-112, seção 6 do pacote): "opção de
-  /// fechar com confirmação se houver dados preenchidos". Cobre fechar a
-  /// aba/recarregar/navegar para fora do site — um descarregamento real de
-  /// página, que `beforeunload` já intercepta nativamente. O "← Voltar"
-  /// abaixo é navegação client-side do Next.js (nunca dispara
-  /// `beforeunload`), por isso tem sua própria confirmação explícita.
-  useEffect(() => {
-    if (!hasData || isSubmitting) {
-      return;
-    }
-    function handleBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasData, isSubmitting]);
-
-  function handleBack() {
-    if (hasData && !window.confirm("Você tem dados preenchidos que serão perdidos. Quer mesmo voltar?")) {
-      return;
-    }
-    router.push("/comecar");
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSubmitting) {
-      return;
-    }
-
+    if (isSubmitting) return;
     const normalizedEmail = email.trim().toLowerCase();
-    const errors = validate({ name, email: normalizedEmail, password, confirmPassword });
+    const errors: FieldErrors = {};
+    if (name.trim().length < 2) errors.name = "Informe seu nome.";
+    if (!EMAIL_PATTERN.test(normalizedEmail)) errors.email = "Informe um e-mail válido.";
+    if (password.length < 8) errors.password = "Use pelo menos 8 caracteres.";
+    if (!terms) errors.terms = "Aceite os termos para continuar.";
     setFieldErrors(errors);
     setFormError(null);
-
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
+    if (Object.keys(errors).length > 0) return;
 
     setIsSubmitting(true);
-    const { error } = await signUp.email({
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: mode === "individual" ? "INDIVIDUAL" : "PERSONAL",
-    });
+    const { error } = await signUp.email({ name: name.trim(), email: normalizedEmail, password, role: mode === "individual" ? "INDIVIDUAL" : "PERSONAL" });
     setIsSubmitting(false);
-
     if (error) {
-      setFormError("Não foi possível criar sua conta com os dados informados. Verifique e tente novamente.");
+      setFormError("Não foi possível criar a conta. Se você já tem conta com este e-mail, entre por aqui.");
       return;
     }
-
-    router.push(mode === "individual" ? "/onboarding" : "/painel");
+    router.push(mode === "individual" ? "/onboarding" : "/onboarding-personal");
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
-      {formError ? <FormAlert variant="error">{formError}</FormAlert> : null}
-
-      <TextField
-        label="Nome completo"
-        name="name"
-        type="text"
-        autoComplete="name"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        error={fieldErrors.name}
-        disabled={isSubmitting}
-        required
-      />
-      <TextField
-        label="E-mail"
-        name="email"
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        error={fieldErrors.email}
-        disabled={isSubmitting}
-        required
-      />
-      <TextField
-        label="Senha"
-        name="password"
-        type="password"
-        autoComplete="new-password"
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-        error={fieldErrors.password}
-        disabled={isSubmitting}
-        required
-      />
-      <TextField
-        label="Confirmar senha"
-        name="confirmPassword"
-        type="password"
-        autoComplete="new-password"
-        value={confirmPassword}
-        onChange={(event) => setConfirmPassword(event.target.value)}
-        error={fieldErrors.confirmPassword}
-        disabled={isSubmitting}
-        required
-      />
-
-      <Button type="submit" variant="filled" disabled={isSubmitting}>
-        {isSubmitting ? "Criando conta…" : "Criar conta"}
+      {formError ? (
+        <FormAlert variant="error">
+          {formError} <Link href="/entrar">Entrar</Link>
+        </FormAlert>
+      ) : null}
+      <TextField label="Seu nome" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} error={fieldErrors.name} disabled={isSubmitting} required />
+      <TextField label="E-mail" name="email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} error={fieldErrors.email} disabled={isSubmitting} required />
+      <PasswordField value={password} onChange={setPassword} error={fieldErrors.password} autoComplete="new-password" disabled={isSubmitting} />
+      <label className={styles.check}>
+        <input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} aria-invalid={fieldErrors.terms ? true : undefined} />
+        <span>
+          Li e aceito os <Link href="/termos-de-uso">Termos de uso</Link> e a <Link href="/politica-de-privacidade">Política de privacidade</Link>.
+        </span>
+      </label>
+      {fieldErrors.terms ? (
+        <p role="alert" className={styles.muted}>
+          {fieldErrors.terms}
+        </p>
+      ) : null}
+      <Button type="submit" size="lg" block disabled={isSubmitting}>
+        {isSubmitting ? "Criando…" : "Criar conta"}
       </Button>
-      <button type="button" className={styles.backButton} onClick={handleBack} disabled={isSubmitting}>
-        ← Voltar
-      </button>
     </form>
   );
 }
