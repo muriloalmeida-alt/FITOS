@@ -86,7 +86,7 @@ export default async function TreinoSozinhoPage() {
             </li>
           ))}
         </ul>
-        <p className={styles.muted}>
+        <p className={`${styles.muted} ${styles.note}`}>
           Tem personal?{" "}
           <Link href="/comecar?caminho=convite" className={styles.inline}>
             Entre com o convite
@@ -101,7 +101,7 @@ export default async function TreinoSozinhoPage() {
             Quanto custa
           </h2>
           <span className={styles.priceValue}>
-            {formatCentsBRL(plan.priceCents)} <span className={styles.muted}>por {plan.billingCycle === "ANUAL" ? "ano" : "mês"}</span>
+            {formatCentsBRL(plan.priceCents)} <span className={styles.unit}>por {plan.billingCycle === "ANUAL" ? "ano" : "mês"}</span>
           </span>
           <span className={styles.muted}>{trialDays ? `${trialDays} dias grátis para testar. Cancele quando quiser.` : "Cancele quando quiser."}</span>
           <Button href="/comecar?caminho=livre" size="lg" block>
