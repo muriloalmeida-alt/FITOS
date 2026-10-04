@@ -1,11 +1,11 @@
 import { copyCatalogExerciseAsOwn, ExerciseError } from "@/modules/exercises/exercises";
-import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { authErrorResponse, requireSubscriber } from "@/modules/tenancy/authContext";
 
 /// BK-08 (FIT-147): "Criar uma versão minha" de um exercício da biblioteca
 /// global. Devolve o exercício próprio criado.
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const ctx = await requirePersonal();
+    const ctx = await requireSubscriber();
     const { id } = await params;
     const exercise = await copyCatalogExerciseAsOwn({ tenantId: ctx.tenantId, actorUserId: ctx.userId, exerciseId: id });
     return Response.json(exercise, { status: 201 });

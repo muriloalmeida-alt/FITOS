@@ -8,6 +8,7 @@ const findUniqueOrThrowTenant = vi.fn();
 const findUniqueStudent = vi.fn();
 const findUniqueOrThrowStudent = vi.fn();
 const getStudentHome = vi.fn();
+const getIndividualHome = vi.fn();
 const getWeeklyRhythmForStudent = vi.fn();
 const listWorkoutsForTenant = vi.fn();
 const listWorkoutExercisesForWorkout = vi.fn();
@@ -70,6 +71,10 @@ vi.mock("@/modules/workouts/workouts", async () => {
     listWorkoutExercisesForWorkout: (...args: unknown[]) => listWorkoutExercisesForWorkout(...args),
   };
 });
+
+vi.mock("@/modules/workouts/individualHome", () => ({
+  getIndividualHome: (...args: unknown[]) => getIndividualHome(...args),
+}));
 
 vi.mock("@/modules/students/studentHome", () => ({
   getStudentHome: (...args: unknown[]) => getStudentHome(...args),
@@ -280,89 +285,26 @@ describe("PainelPage (FIT-012)", () => {
     expect(findUniqueOrThrowTenant).not.toHaveBeenCalled();
   });
 
-  it("FIT-101: individual com onboarding concluído vê o shell individual, com a configuração real", async () => {
+  it("individual com onboarding concluído vê o Início do Livre com os dados da própria conta (FIT-156)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u5",
-      role: "INDIVIDUAL",
-      tenantId: "t5",
-      studentId: null,
+    getAuthContext.mockResolvedValue({ authenticated: true, userId: "u5", role: "INDIVIDUAL", tenantId: "t5", studentId: null });
+    getIndividualOnboardingProfile.mockResolvedValue({ id: "p1", tenantId: "t5", objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS" });
+    getIndividualHome.mockResolvedValue({
+      today: { id: "w1", name: "Força essencial", exercises: 4, estimatedMinutes: 30, days: [], reason: "rodizio" },
+      inProgress: null,
+      workouts: [{ id: "w1", name: "Força essencial", exercises: 4, estimatedMinutes: 30, days: [] }],
+      week: { done: [false, false, false, false, false, false, false], doneCount: 0, target: 4 },
+      monthSessions: 0,
+      activeGoals: 0,
     });
-    getIndividualOnboardingProfile.mockResolvedValue({
-      id: "p1",
-      tenantId: "t5",
-      objective: "GANHAR_MASSA",
-      experienceLevel: "INICIANTE",
-      weeklyAvailability: "TRES_A_QUATRO_DIAS",
-    });
-    listWorkoutsForTenant.mockResolvedValue([{ id: "w1", name: "Força essencial" }]);
-    findUniqueStudent.mockResolvedValue(null);
     const { default: PainelPage } = await import("./page");
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).toBeInTheDocument();
-    expect(screen.queryByText("Treino em andamento")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Praticante\.$/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Iniciar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w1");
+    expect(getIndividualHome).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t5", userId: "u5" }));
     expect(findUniqueOrThrowTenant).not.toHaveBeenCalled();
-    expect(listWorkoutsForTenant).toHaveBeenCalledWith({ tenantId: "t5" });
-    expect(findUniqueStudent).toHaveBeenCalledWith({ where: { userId: "u5" } });
-    expect(getInProgressSessionForStudent).not.toHaveBeenCalled();
-  });
-
-  it("FIT-103: individual com Student de auto-referência já criado, mas sem sessão em andamento", async () => {
-    getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u5",
-      role: "INDIVIDUAL",
-      tenantId: "t5",
-      studentId: null,
-    });
-    getIndividualOnboardingProfile.mockResolvedValue({
-      id: "p1",
-      tenantId: "t5",
-      objective: "GANHAR_MASSA",
-      experienceLevel: "INICIANTE",
-      weeklyAvailability: "TRES_A_QUATRO_DIAS",
-    });
-    listWorkoutsForTenant.mockResolvedValue([]);
-    findUniqueStudent.mockResolvedValue({ id: "student-auto-referencia" });
-    getInProgressSessionForStudent.mockResolvedValue(null);
-    const { default: PainelPage } = await import("./page");
-
-    render(await PainelPage());
-
-    expect(screen.queryByText("Treino em andamento")).not.toBeInTheDocument();
-    expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t5", studentId: "student-auto-referencia" });
-  });
-
-  it("FIT-103: individual com sessão em andamento vê o banner 'Continuar treino'", async () => {
-    getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u5",
-      role: "INDIVIDUAL",
-      tenantId: "t5",
-      studentId: null,
-    });
-    getIndividualOnboardingProfile.mockResolvedValue({
-      id: "p1",
-      tenantId: "t5",
-      objective: "GANHAR_MASSA",
-      experienceLevel: "INICIANTE",
-      weeklyAvailability: "TRES_A_QUATRO_DIAS",
-    });
-    listWorkoutsForTenant.mockResolvedValue([{ id: "w1" }]);
-    findUniqueStudent.mockResolvedValue({ id: "student-auto-referencia" });
-    getInProgressSessionForStudent.mockResolvedValue({ id: "sess1", workout: { name: "Treino de Peito" } });
-    const { default: PainelPage } = await import("./page");
-
-    render(await PainelPage());
-
-    expect(screen.getByText("Treino em andamento")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Treino de Peito" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Continuar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao");
   });
 
   it("aluno autenticado com vínculo inativado vê a tela de conta inativa, sem shell", async () => {

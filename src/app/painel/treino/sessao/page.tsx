@@ -7,56 +7,15 @@ import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
 import { getLastPerformanceForExercises } from "@/modules/execution/sets";
 import { getActivePlanAssignmentForStudent, getTodayScheduleForStudent } from "@/modules/workouts/workouts";
-import { parseLoadKg } from "@/shared/lib/load";
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
-import { LiveWorkout, type LiveItem } from "../../_live/LiveWorkout";
+import { LiveWorkout } from "../../_live/LiveWorkout";
+import { toLiveItems } from "../../_live/liveItems";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Treino ao vivo — ${appName}`,
 };
-
-interface PlanItem {
-  id: string;
-  exerciseId: string;
-  sets: number | null;
-  reps: number | null;
-  durationSeconds: number | null;
-  load: string | null;
-  restSeconds: number | null;
-  notes: string | null;
-  exercise: { name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
-}
-
-function toLiveItems(
-  items: PlanItem[],
-  sets: { workoutExerciseId: string; setNumber: number; reps: number | null; durationSeconds: number | null; loadGrams: number | null }[],
-  last: Map<string, { last: { loadKg: number | null; reps: number | null; durationSeconds: number | null } | null }>
-): LiveItem[] {
-  return items.map((item) => {
-    const loadKg = parseLoadKg(item.load);
-    return {
-      id: item.id,
-      name: item.exercise.name,
-      imageUrl: item.exercise.imageUrl,
-      imageAlt: item.exercise.imageAlt,
-      instructions: item.exercise.instructions,
-      sets: item.sets,
-      reps: item.reps,
-      durationSeconds: item.durationSeconds,
-      loadKg: loadKg && loadKg > 0 ? loadKg : null,
-      load: item.load,
-      restSeconds: item.restSeconds,
-      notes: item.notes,
-      doneSets: sets
-        .filter((set) => set.workoutExerciseId === item.id)
-        .sort((a, b) => a.setNumber - b.setNumber)
-        .map((set) => ({ setNumber: set.setNumber, reps: set.reps, durationSeconds: set.durationSeconds, loadKg: set.loadGrams !== null ? set.loadGrams / 1000 : null })),
-      last: last.get(item.exerciseId)?.last ?? null,
-    };
-  });
-}
 
 /// Treino ao vivo do aluno (FIT-153), sem barra inferior. Retoma a sessão
 /// em andamento (mesmo depois de fechar o app); senão mostra a preparação

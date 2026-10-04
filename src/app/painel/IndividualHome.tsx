@@ -1,135 +1,126 @@
 import Link from "next/link";
-import { AppShell, Card, WeeklyRhythmDots, WorkoutTodayCard } from "@/shared/ui";
+import { ActionRow, AppShell, Button, NextStepCard, ProgressBar, WeekStrip } from "@/shared/ui";
+import type { IndividualHome as IndividualHomeData } from "@/modules/workouts/individualHome";
+import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
 import styles from "./IndividualHome.module.css";
 
-interface SuggestedWorkout {
-  id: string;
-  name: string;
-  exercisesCount: number;
-}
-
 interface IndividualHomeProps {
   name: string;
-  inProgressWorkoutName: string | null;
-  /// Sugestão real do "Hoje para você" (tela-10) — sempre o primeiro treino
-  /// real do próprio praticante (`/painel/page.tsx`), nunca inventado.
-  /// `null` quando ainda não existe nenhum treino.
-  suggestedWorkout: SuggestedWorkout | null;
-  /// Ritmo real da semana atual (FIT-137, `getWeeklyRhythmForStudent`) —
-  /// sem `targetDays` aqui: o workspace individual não tem o conceito de
-  /// plano atribuído, então "Sua evolução" mostra só a contagem real, sem
-  /// fração/meta (diferente da barra do Aluno).
-  weeklyRhythm: { completedDays: number; dayFlags: boolean[] };
-  /// Saudação/data do servidor no fuso do produto (AjustesTelas, print 28).
-  greeting?: string;
+  greeting: string;
   dateLabel?: string;
+  home: IndividualHomeData;
+  todayIso: string;
 }
 
-/// Hero de "Hoje" (tela-10, pacote visual 2026) — três estados reais, nunca
-/// um placeholder: sessão em andamento (igual desde a FIT-134), treino
-/// sugerido real existente (título/meta são o nome e a contagem reais do
-/// próprio treino, nunca um texto motivacional genérico — removido na
-/// FIT-142 a pedido de Murilo) ou nenhum treino ainda (CTA leva para criar
-/// o primeiro, nunca finge que dá para "iniciar" algo que não existe).
-function HeroDoDia({ inProgressWorkoutName, suggestedWorkout }: { inProgressWorkoutName: string | null; suggestedWorkout: SuggestedWorkout | null }) {
-  if (inProgressWorkoutName) {
-    return (
-      <WorkoutTodayCard
-        eyebrow="Treino em andamento"
-        title={inProgressWorkoutName}
-        description="Continue de onde parou."
-        imageSrc="/media/brand/visual-2026/scene-solo.png"
-        action={{ label: "Continuar treino", href: "/painel/meus-treinos/sessao" }}
-      />
-    );
-  }
-  if (suggestedWorkout) {
-    return (
-      <WorkoutTodayCard
-        eyebrow="Seu movimento"
-        title={suggestedWorkout.name}
-        description="Revise os exercícios abaixo e comece quando estiver pronto."
-        meta={`${suggestedWorkout.exercisesCount} ${suggestedWorkout.exercisesCount === 1 ? "exercício" : "exercícios"}`}
-        imageSrc="/media/brand/visual-2026/scene-solo.png"
-        action={{ label: "Iniciar treino", href: `/painel/meus-treinos/${suggestedWorkout.id}` }}
-      />
-    );
-  }
-  return (
-    <WorkoutTodayCard
-      eyebrow="Seu movimento"
-      title="Nenhum treino criado ainda"
-      description="Crie seu primeiro treino para começar."
-      imageSrc="/media/brand/visual-2026/scene-solo.png"
-      action={{ label: "Criar meu primeiro treino", href: "/painel/meus-treinos/novo" }}
-    />
-  );
-}
+const SESSION_HREF = "/painel/meus-treinos/sessao";
 
-/// "Hoje para você" (tela-10): preview do treino sugerido, distinto do
-/// hero acima — aqui é o conteúdo real e específico (nome, quantidade real
-/// de exercícios, link direto).
-function HojeParaVoce({ suggestedWorkout }: { suggestedWorkout: SuggestedWorkout }) {
+/// Início do FitOS Livre (FIT-156, L1 do protótipo): "Hoje para você" com
+/// "Iniciar treino" (BK-16), semana contra a meta do perfil, seus treinos
+/// com "Iniciar", "+ Montar meu treino" e o resumo da evolução.
+export function IndividualHome({ name, greeting, dateLabel, home, todayIso }: IndividualHomeProps) {
+  const firstName = name.trim().split(/\s+/)[0] ?? name;
+  const planned = [...new Set(home.workouts.flatMap((workout) => workout.days))];
+
   return (
-    <Card title="Hoje para você">
-      <div className={styles.suggestedWorkout}>
-        <div className={styles.suggestedWorkoutText}>
-          <strong className={styles.suggestedWorkoutName}>{suggestedWorkout.name}</strong>
-          <span className={styles.suggestedWorkoutMeta}>
-            {suggestedWorkout.exercisesCount} {suggestedWorkout.exercisesCount === 1 ? "exercício" : "exercícios"}
+    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
+      {home.inProgress ? (
+        <section className={`${styles.hero} ${styles.heroLive}`} aria-label="Treino em andamento">
+          <p className={styles.eyebrow}>Em andamento</p>
+          <h2 className={styles.heroTitle}>{home.inProgress.workoutName}</h2>
+          <ProgressBar value={home.inProgress.total ? (100 * home.inProgress.done) / home.inProgress.total : 0} label="Progresso do treino" valueText={`${home.inProgress.done} de ${home.inProgress.total} exercícios`} />
+          <p className={styles.heroMeta}>
+            {home.inProgress.done} de {home.inProgress.total} exercícios · começou há {home.inProgress.minutesAgo < 1 ? "menos de 1 min" : `${home.inProgress.minutesAgo} min`}
+          </p>
+          <Button href={SESSION_HREF} size="xl" block>
+            Continuar treino
+          </Button>
+        </section>
+      ) : home.today ? (
+        <section className={styles.hero} aria-label="Hoje para você">
+          <p className={styles.eyebrow}>{home.today.reason === "dia" ? "Hoje para você" : "Sugestão de hoje"}</p>
+          <h2 className={styles.heroTitle}>{home.today.name}</h2>
+          <p className={styles.heroMeta}>
+            {home.today.exercises} {home.today.exercises === 1 ? "exercício" : "exercícios"} · cerca de {home.today.estimatedMinutes} min
+            {home.today.reason === "rodizio" ? " · o que você fez há mais tempo" : ""}
+          </p>
+          <Button href={`${SESSION_HREF}?treino=${home.today.id}`} size="xl" block>
+            Iniciar treino
+          </Button>
+        </section>
+      ) : (
+        <NextStepCard eyebrow="Primeiro passo" title="Criar meu primeiro treino" description="Escolha os exercícios na biblioteca. Entram com 3 × 12." href="/painel/meus-treinos/novo" />
+      )}
+
+      <section className={styles.section} aria-labelledby="semana">
+        <div className={styles.sectionHead}>
+          <h2 id="semana" className={styles.sectionTitle}>
+            Sua semana
+          </h2>
+          <span className={styles.muted}>
+            {home.week.doneCount} de {home.week.target} treinos
           </span>
         </div>
-        <Link href={`/painel/meus-treinos/${suggestedWorkout.id}`} className={styles.suggestedWorkoutLink}>
-          Ver treino ↗
+        <WeekStrip days={weekStripFromDays(planned, { done: home.week.done, today: new Date(todayIso) })} label="Sua semana" />
+      </section>
+
+      <section className={styles.section} aria-labelledby="seus-treinos">
+        <div className={styles.sectionHead}>
+          <h2 id="seus-treinos" className={styles.sectionTitle}>
+            Seus treinos
+          </h2>
+          <Link href="/painel/meus-treinos" className={styles.link}>
+            Ver todos
+          </Link>
+        </div>
+        {home.workouts.length > 0 ? (
+          <ul className={styles.list}>
+            {home.workouts.slice(0, 4).map((workout) => (
+              <li key={workout.id}>
+                <ActionRow
+                  title={workout.name}
+                  description={`${workout.exercises} ${workout.exercises === 1 ? "exercício" : "exercícios"} · ${formatDays(workout.days)}`}
+                  trailing={
+                    workout.exercises > 0 ? (
+                      <Button href={`${SESSION_HREF}?treino=${workout.id}`} variant="quiet" aria-label={`Iniciar ${workout.name}`}>
+                        Iniciar
+                      </Button>
+                    ) : (
+                      <Button href={`/painel/meus-treinos/${workout.id}`} variant="quiet" aria-label={`Montar ${workout.name}`}>
+                        Montar
+                      </Button>
+                    )
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Link href="/painel/meus-treinos/novo" className={styles.add}>
+          + Montar meu treino
         </Link>
-      </div>
-    </Card>
-  );
-}
+      </section>
 
-function SuaEvolucao({ weeklyRhythm }: { weeklyRhythm: { completedDays: number; dayFlags: boolean[] } }) {
-  return (
-    <Card title="Sua evolução">
-      <div className={styles.evolution}>
-        <p className={styles.evolutionCount}>
-          <strong className={styles.evolutionNumber}>{weeklyRhythm.completedDays}</strong>{" "}
-          {weeklyRhythm.completedDays === 1 ? "treino nesta semana" : "treinos nesta semana"}
-        </p>
-        <WeeklyRhythmDots dayFlags={weeklyRhythm.dayFlags} />
-      </div>
-    </Card>
-  );
-}
-
-/// "Hoje" do workspace individual (FIT-101/FIT-102/FIT-103). Criar treino
-/// (FIT-102) e executar treino (FIT-103, registrar séries/carga/descanso
-/// de verdade) já são reais.
-/// FIT-142: a pedido de Murilo, removido o texto motivacional genérico do
-/// hero ("Treine no seu próprio ritmo...") e os cards "Seu plano", "Seu
-/// espaço" e "Meus treinos" — "Início" fica reduzido ao que é acionável no
-/// dia a dia (hero real, "Hoje para você", "Sua evolução"). Sem perda de
-/// função: workspace/objetivo/experiência/disponibilidade e a assinatura
-/// já são reais em `/painel/perfil` (AjustesTelas 29/09/2026, real na
-/// navegação do Livre desde a mesma rodada) — "Editar respostas" segue
-/// disponível a partir de lá, não daqui.
-export function IndividualHome({ name, inProgressWorkoutName, suggestedWorkout, weeklyRhythm, greeting, dateLabel }: IndividualHomeProps) {
-  const firstName = name.trim().split(/\s+/)[0] ?? name;
-  return (
-    <AppShell
-      eyebrow={dateLabel}
-      title={`${greeting ?? "Olá"}, ${firstName}.`}
-      subtitle="Seu treino em movimento."
-      navItems={INDIVIDUAL_NAV_ITEMS}
-      activeKey="hoje"
-      trailing={<LogoutButton />}
-    >
-      <HeroDoDia inProgressWorkoutName={inProgressWorkoutName} suggestedWorkout={suggestedWorkout} />
-
-      {suggestedWorkout && !inProgressWorkoutName ? <HojeParaVoce suggestedWorkout={suggestedWorkout} /> : null}
-
-      <SuaEvolucao weeklyRhythm={weeklyRhythm} />
+      <section className={styles.section} aria-labelledby="evolucao">
+        <h2 id="evolucao" className={styles.sectionTitle}>
+          Sua evolução
+        </h2>
+        <ul className={styles.stats}>
+          <li>
+            <Link href="/painel/minha-evolucao" className={styles.stat}>
+              <span className={styles.statValue}>{home.monthSessions}</span>{" "}
+              <span className={styles.muted}>treinos no mês</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/painel/minha-evolucao?aba=metas" className={styles.stat}>
+              <span className={styles.statValue}>{home.activeGoals}</span>{" "}
+              <span className={styles.muted}>{home.activeGoals === 1 ? "meta em andamento" : "metas em andamento"}</span>
+            </Link>
+          </li>
+        </ul>
+      </section>
     </AppShell>
   );
 }

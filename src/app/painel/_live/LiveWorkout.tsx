@@ -49,6 +49,8 @@ export interface LiveWorkoutProps {
   apiBase: string;
   exitHref: string;
   progressHref: string;
+  /// "Concluir" no resumo (padrão: `exitHref`). O Livre vai para Minha evolução.
+  doneHref?: string;
 }
 
 interface Summary {
@@ -455,7 +457,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     if (!sessionId) return;
     try {
       await requestJson(`${props.apiBase}/${sessionId}/esforco`, { method: "POST", body: JSON.stringify({ perceivedEffort: value }) });
-      toast.show(props.coachName ? `${props.coachName.split(/\s+/)[0]} vai ver como foi` : "Anotado");
+      toast.show(props.coachName ? `${props.coachName.split(/\s+/)[0]} vai ver como foi` : "Anotado no seu histórico");
     } catch (cause) {
       toast.show(cause instanceof Error ? cause.message : "Não foi possível enviar.");
     }
@@ -588,7 +590,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             >
               Compartilhar
             </Button>
-            <Button href={props.exitHref} block>
+            <Button href={props.doneHref ?? props.exitHref} block>
               Concluir
             </Button>
           </div>

@@ -117,33 +117,24 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("individual (FitOS Livre) vê o próprio perfil real: conta, espaço, perfil de treino e assinatura (AjustesTelas)", async () => {
-    getServerSession.mockResolvedValue({
-      user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" },
-    });
-    getAuthContext.mockResolvedValue({
-      authenticated: true,
-      userId: "u5",
-      role: "INDIVIDUAL",
-      tenantId: "t5",
-      studentId: null,
-    });
-    getIndividualOnboardingProfile.mockResolvedValue({
-      objective: "GANHAR_MASSA",
-      experienceLevel: "INICIANTE",
-      weeklyAvailability: "TRES_A_QUATRO_DIAS",
-    });
+  it("Livre: respostas em chips numa sheet, assinatura com status, dados e nome do espaço (FIT-160)", async () => {
+    getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
+    getAuthContext.mockResolvedValue({ authenticated: true, userId: "u5", role: "INDIVIDUAL", tenantId: "t5", studentId: null });
+    getIndividualOnboardingProfile.mockResolvedValue({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS" });
     findUniqueTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
-    getSubscriptionForTenant.mockResolvedValue({ plan: { name: "FitOS Livre" } });
+    getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: null, plan: { name: "FitOS Livre" } });
     const { default: PerfilPage } = await import("./page");
-    render(await PerfilPage());
+    render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Seu perfil" })).toBeInTheDocument();
-    expect(screen.getByText("praticante@example.test")).toBeInTheDocument();
-    expect(screen.getByText("Espaço de Praticante")).toBeInTheDocument();
     expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
-    expect(screen.getAllByText("FitOS Livre").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Gerenciar assinatura" })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByText("Iniciante · 3 a 4 dias por semana")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Assinatura.*FitOS Livre · ativa/ })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getAllByText("Espaço de Praticante").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Termos de uso" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Editar respostas" }));
+    const dialog = screen.getByRole("dialog", { name: "Editar respostas" });
+    expect(within(dialog).getByRole("radio", { name: "3 a 4 dias por semana" })).toHaveAttribute("aria-checked", "true");
+    expect(within(dialog).getByRole("radio", { name: "Avançado" })).toBeInTheDocument();
   });
 
   it("individual sem onboarding concluído é redirecionado para /onboarding", async () => {

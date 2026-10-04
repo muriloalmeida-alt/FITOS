@@ -1,12 +1,12 @@
 import { archiveExercise, ExerciseError } from "@/modules/exercises/exercises";
-import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { authErrorResponse, requireSubscriber } from "@/modules/tenancy/authContext";
 
 /// Arquiva um exercício próprio do tenant do personal autenticado.
 /// Idempotente — se já estiver arquivado, apenas retorna o estado atual
 /// (sem erro). Nunca exclusão física.
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const ctx = await requirePersonal();
+    const ctx = await requireSubscriber();
     const { id } = await params;
     const exercise = await archiveExercise({ tenantId: ctx.tenantId, exerciseId: id, actorUserId: ctx.userId });
     return Response.json(exercise);

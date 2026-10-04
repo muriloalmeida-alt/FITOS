@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { ToastProvider } from "@/shared/ui";
 
 const requireIndividual = vi.fn();
 const ensureStudentForIndividual = vi.fn();
 const getInProgressSessionForStudent = vi.fn();
+const getLastPerformanceForExercises = vi.fn();
+const findWorkout = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -12,99 +15,52 @@ vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requireIndividual: (...args: unknown[]) => requireIndividual(...args) };
 });
+vi.mock("@/modules/tenancy/ensureStudentForIndividual", () => ({ ensureStudentForIndividual: (...args: unknown[]) => ensureStudentForIndividual(...args) }));
+vi.mock("@/modules/execution/sessions", () => ({ getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) }));
+vi.mock("@/modules/execution/sets", () => ({ getLastPerformanceForExercises: (...args: unknown[]) => getLastPerformanceForExercises(...args) }));
+vi.mock("@/shared/db/prisma", () => ({ prisma: { workout: { findFirst: (...args: unknown[]) => findWorkout(...args) } } }));
+vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/tenancy/ensureStudentForIndividual", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/tenancy/ensureStudentForIndividual")>(
-    "@/modules/tenancy/ensureStudentForIndividual"
-  );
-  return { ...actual, ensureStudentForIndividual: (...args: unknown[]) => ensureStudentForIndividual(...args) };
-});
+const items = [{ id: "we1", exerciseId: "e1", sets: 3, reps: 12, durationSeconds: null, load: "20 kg", restSeconds: 60, notes: "Sem pressa", exercise: { name: "Remada", instructions: null, imageUrl: null, imageAlt: null } }];
 
-vi.mock("@/modules/execution/sessions", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
-  return { ...actual, getInProgressSessionForStudent: (...args: unknown[]) => getInProgressSessionForStudent(...args) };
-});
+function asIndividual() {
+  requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "t1" });
+  ensureStudentForIndividual.mockResolvedValue({ id: "self" });
+  getLastPerformanceForExercises.mockResolvedValue(new Map());
+}
 
-vi.mock("next/navigation", () => ({
-  redirect: (url: string) => redirect(url),
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+async function renderPage(searchParams: Record<string, string> = {}) {
+  const { default: Page } = await import("./page");
+  render(<ToastProvider>{await Page({ searchParams: Promise.resolve(searchParams) })}</ToastProvider>);
+}
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+describe("Treino ao vivo do FitOS Livre (FIT-158)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-describe("SessaoIndividualPage (FIT-103)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it("redireciona para /entrar quando não há sessão", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requireIndividual.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
-
-    const { default: SessaoIndividualPage } = await import("./page");
-
-    await expect(SessaoIndividualPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/entrar");
-  });
-
-  it("redireciona para /painel quando o usuário não é individual", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requireIndividual.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito ao workspace individual (FitOS Livre)."));
-
-    const { default: SessaoIndividualPage } = await import("./page");
-
-    await expect(SessaoIndividualPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/painel");
-  });
-
-  it("mostra a execução quando há sessão em andamento (continuar)", async () => {
-    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "t1" });
-    ensureStudentForIndividual.mockResolvedValue({ id: "student-auto-referencia" });
-    getInProgressSessionForStudent.mockResolvedValue({
-      id: "sess1",
-      workoutId: "w1",
-      startedAt: new Date("2026-09-29T12:00:00Z"),
-      workout: {
-        name: "Treino A",
-        workoutExercises: [
-          {
-            id: "i1",
-            sets: 3,
-            reps: 10,
-            durationSeconds: null,
-            load: null,
-            restSeconds: null,
-            notes: null,
-            exercise: { name: "Supino", muscle: "Peito", instructions: null },
-          },
-        ],
-      },
-      results: [],
-    });
-
-    const { default: SessaoIndividualPage } = await import("./page");
-    render(await SessaoIndividualPage());
-
-    // AjustesTreinoLivre: execução em modo foco (`WorkoutRunner`).
-    expect(screen.getByText("Treino A")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Supino" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Aumentar carga" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Editar sequência do treino" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
-    expect(screen.getByRole("button", { name: "Concluir treino" })).toBeInTheDocument();
-    expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "student-auto-referencia" });
-  });
-
-  it("mostra o estado honesto quando não há sessão em andamento (começar a partir de Meus treinos)", async () => {
-    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "t1" });
-    ensureStudentForIndividual.mockResolvedValue({ id: "student-auto-referencia" });
+  it("prepara o treino escolhido, só do próprio tenant", async () => {
+    asIndividual();
     getInProgressSessionForStudent.mockResolvedValue(null);
+    findWorkout.mockResolvedValue({ id: "w1", name: "Superiores A", workoutExercises: items });
+    await renderPage({ treino: "w1" });
+    expect(screen.getByRole("heading", { level: 1, name: "Superiores A" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Começar treino" })).toBeInTheDocument();
+    expect(findWorkout).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: "w1", tenantId: "t1", status: "ATIVO" }) }));
+  });
 
-    const { default: SessaoIndividualPage } = await import("./page");
-    render(await SessaoIndividualPage());
+  it("retoma a sessão em andamento, sem nota de personal", async () => {
+    asIndividual();
+    getInProgressSessionForStudent.mockResolvedValue({ id: "sess1", workoutId: "w1", startedAt: new Date(), workout: { name: "Superiores A", workoutExercises: items }, setResults: [] });
+    await renderPage();
+    expect(screen.getByRole("heading", { level: 1, name: "Remada" })).toBeInTheDocument();
+    expect(screen.getByText("Sem pressa")).toBeInTheDocument();
+    expect(getInProgressSessionForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "self" });
+  });
 
-    expect(screen.getByRole("heading", { name: "Nenhuma sessão em andamento" })).toBeInTheDocument();
+  it("sem treino escolhido leva a Meus treinos", async () => {
+    asIndividual();
+    getInProgressSessionForStudent.mockResolvedValue(null);
+    await renderPage();
     expect(screen.getByRole("link", { name: "Meus treinos" })).toHaveAttribute("href", "/painel/meus-treinos");
   });
 });

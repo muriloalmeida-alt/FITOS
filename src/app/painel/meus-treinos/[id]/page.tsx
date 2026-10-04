@@ -1,36 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requireIndividual } from "@/modules/tenancy/authContext";
-import { getWorkoutForTenant, listWorkoutExercisesForWorkout } from "@/modules/workouts/workouts";
-import { listCatalogExercisesForPicker } from "@/modules/exercises/exercises";
-import { LogoutButton } from "../../LogoutButton";
-import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
-import { EditarMeuTreinoForm } from "./EditarMeuTreinoForm";
-import { ItensDoMeuTreino } from "./ItensDoMeuTreino";
-import { ArquivarMeuTreinoButton } from "./ArquivarMeuTreinoButton";
-import { ReativarMeuTreinoButton } from "./ReativarMeuTreinoButton";
-import { DuplicarMeuTreinoButton } from "./DuplicarMeuTreinoButton";
-import { ComecarMeuTreinoButton } from "./ComecarMeuTreinoButton";
-import styles from "./page.module.css";
+import { loadEditorWorkout, loadLibrary } from "../../_workout-builder/editorData";
+import { LivreWorkoutEditor } from "../LivreWorkoutEditor";
 
 export const metadata: Metadata = {
   title: `Treino — ${appName}`,
 };
 
-interface MeuTreinoDetalhePageProps {
-  params: Promise<{ id: string }>;
-}
-
-/// Detalhe/builder de um treino do workspace individual (FIT-102). Busca
-/// sempre pelo tenant da sessão (`getWorkoutForTenant`) — um treino de
-/// outro tenant nunca é encontrado, e a resposta (404) não revela se
-/// aquele `id` existe em outro tenant. Reaproveita `listCatalogExercisesForPicker`
-/// (FIT-023/IMP-EX-002) sem alteração — o catálogo local é o mesmo para
-/// qualquer tenant, `PERSONAL` ou `INDIVIDUAL`.
-export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalhePageProps) {
+/// Editor de um treino do FitOS Livre (FIT-157). Sempre pelo tenant da
+/// sessão: treino de outro tenant é 404.
+export default async function MeuTreinoPage({ params }: { params: Promise<{ id: string }> }) {
   let ctx;
   try {
     ctx = await requireIndividual();
@@ -42,68 +23,9 @@ export default async function MeuTreinoDetalhePage({ params }: MeuTreinoDetalheP
   }
 
   const { id } = await params;
-  const workout = await getWorkoutForTenant({ tenantId: ctx.tenantId, workoutId: id });
+  const workout = await loadEditorWorkout(ctx.tenantId, id);
   if (!workout) {
     notFound();
   }
-
-  const [items, catalog] = await Promise.all([
-    listWorkoutExercisesForWorkout({ tenantId: ctx.tenantId, workoutId: id }),
-    listCatalogExercisesForPicker({ tenantId: ctx.tenantId }),
-  ]);
-
-  return (
-    <AppShell eyebrow="Meu treino" title={workout.name} subtitle="Sua sequência de exercícios." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <Link href="/painel/meus-treinos" className={styles.backLink}>
-        ← Voltar para meus treinos
-      </Link>
-
-      <Card title="Dados do treino">
-        <p className={styles.statusLine}>
-          Status: <span className={workout.status === "ATIVO" ? styles.statusAtivo : styles.statusArquivado}>
-            {workout.status === "ATIVO" ? "Ativo" : "Arquivado"}
-          </span>
-        </p>
-        <EditarMeuTreinoForm workoutId={workout.id} initialName={workout.name} />
-      </Card>
-
-      {workout.status === "ATIVO" ? (
-        <Card title="Executar">
-          <ComecarMeuTreinoButton workoutId={workout.id} />
-        </Card>
-      ) : null}
-
-      <Card title="Exercícios do treino">
-        <ItensDoMeuTreino
-          workoutId={workout.id}
-          items={items.map((item) => ({
-            id: item.id,
-            exerciseId: item.exerciseId,
-            exerciseName: item.exercise.name,
-            exerciseMuscle: item.exercise.muscle,
-            sets: item.sets,
-            reps: item.reps,
-            durationSeconds: item.durationSeconds,
-            load: item.load,
-            restSeconds: item.restSeconds,
-            notes: item.notes,
-          }))}
-          catalog={catalog}
-        />
-      </Card>
-
-      <Card title="Duplicar">
-        <p className={styles.duplicateHint}>Cria uma cópia independente deste treino — editar a cópia nunca afeta o original.</p>
-        <DuplicarMeuTreinoButton workoutId={workout.id} />
-      </Card>
-
-      <Card title="Ciclo de vida">
-        {workout.status === "ATIVO" ? (
-          <ArquivarMeuTreinoButton workoutId={workout.id} />
-        ) : (
-          <ReativarMeuTreinoButton workoutId={workout.id} />
-        )}
-      </Card>
-    </AppShell>
-  );
+  return <LivreWorkoutEditor initial={workout} library={await loadLibrary(ctx.tenantId)} />;
 }

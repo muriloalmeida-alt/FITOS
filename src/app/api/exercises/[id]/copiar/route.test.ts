@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const requirePersonal = vi.fn();
+const requireSubscriber = vi.fn();
 const copyCatalogExerciseAsOwn = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-  return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
+  return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
 vi.mock("@/modules/exercises/exercises", async () => {
   const actual = await vi.importActual<typeof import("@/modules/exercises/exercises")>("@/modules/exercises/exercises");
@@ -19,7 +19,7 @@ describe("POST /api/exercises/[id]/copiar (BK-08)", () => {
   afterEach(() => vi.resetAllMocks());
 
   it("cria a versão própria no tenant da sessão", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     copyCatalogExerciseAsOwn.mockResolvedValue({ id: "own1" });
     const { POST } = await import("./route");
     const response = await POST(req(), params);
@@ -29,11 +29,11 @@ describe("POST /api/exercises/[id]/copiar (BK-08)", () => {
 
   it("403 para aluno e 404 para exercício inexistente", async () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requirePersonal.mockRejectedValueOnce(new AuthError("FORBIDDEN", "x"));
+    requireSubscriber.mockRejectedValueOnce(new AuthError("FORBIDDEN", "x"));
     const { POST } = await import("./route");
     expect((await POST(req(), params)).status).toBe(403);
     const { ExerciseError } = await vi.importActual<typeof import("@/modules/exercises/exercises")>("@/modules/exercises/exercises");
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
     copyCatalogExerciseAsOwn.mockRejectedValue(new ExerciseError("NAO_ENCONTRADO", "Exercício não encontrado."));
     expect((await POST(req(), params)).status).toBe(404);
   });
