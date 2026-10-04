@@ -68,7 +68,6 @@ Levantamento feito contra o `main` em 04/10/2026 (`prisma/schema.prisma`, `src/m
 | **BK-12** | "Última vez" por exercício e recordes calculados por série | `listPersonalRecordsForStudent` usa o agregado | FIT-153, FIT-158, FIT-154, FIT-159 |
 | **BK-13** | Esforço percebido (1 a 5) no fim do treino, visível ao personal | Não existe campo | FIT-153, FIT-158, FIT-145 |
 | **BK-14** | Tempo ativo da sessão, descontando pausas | Só `startedAt` e `endedAt` | FIT-153, FIT-158 |
-| **BK-15** | Player de música integrado ao Spotify: entrar, playlists, tocar, pausar, próxima | Hoje só há links para apps externos | FIT-153, FIT-158 |
 | **BK-16** | Dias sugeridos nos treinos do FitOS Livre e "Hoje para você" | A rota `meus-treinos/[id]` ignora `suggestedDays` de propósito | FIT-156, FIT-157 |
 | **BK-18** | Assinar de novo depois de cancelar | Validar e ajustar `subscribeTenantToPlan` com assinatura `CANCELADA` | FIT-150, FIT-161 |
 
@@ -357,10 +356,7 @@ Critérios de aceite:
   - Bipes nos 3 últimos segundos, vibração e voz com a próxima série.
   - −15 s, +15 s, Pular, e "A seguir".
 - **Lista do treino:** trocar a ordem (aparelho ocupado) e pular exercício.
-- **Música (BK-15):**
-  - Mini player fixo com tocar, pausar e próxima.
-  - *Sheet* com playlists, anterior e próxima, e "abaixar a música quando a voz falar".
-  - Atalhos para Spotify, Apple Music e YouTube Music quando não conectado.
+- **Música (decisão D1):** botão fixo "Música" sempre ao alcance, com atalhos para Spotify, Apple Music e YouTube Music. O app de música continua tocando enquanto o treino é registrado; o FitOS não controla a reprodução.
 - **Fim do treino:**
   - Concluir ou abandonar, salvando o que foi feito.
   - Resumo: tempo ativo, séries, volume em kg e novo recorde (BK-12).
@@ -369,7 +365,7 @@ Critérios de aceite:
 - Retomar sessão em andamento depois de fechar o app (já existe `startOrResume…`).
 - Funciona com uma mão: nenhuma ação principal fica fora do alcance do polegar.
 
-Backend novo: **BK-11, BK-12, BK-13, BK-14, BK-15.** ADR-011.
+Backend novo: **BK-11, BK-12, BK-13, BK-14.** ADR-011.
 
 ### FIT-154 — A4 · Progresso do Aluno (`P1`)
 
@@ -433,7 +429,7 @@ Critérios de aceite:
 - Reaproveita o componente da FIT-153. O esforço percebido fica no próprio histórico (não há personal).
 - O fim do treino leva a Minha evolução.
 
-Backend novo: **BK-11 a BK-15** (os mesmos da FIT-153).
+Backend novo: **BK-11 a BK-14** (os mesmos da FIT-153).
 
 ### FIT-159 — L4 · Minha evolução (`P1`)
 
@@ -593,21 +589,26 @@ Um PR por História, a partir de branch própria, nunca direto na `main` (`GOVER
 |---|---|---|
 | **S12 — Fundação** | FIT-171 | Tema liso e componentes que todas as outras usam |
 | **S13 — Montar treino** | FIT-146 (BK-01, BK-03), FIT-147 (BK-08), FIT-157 (BK-16) | A dor principal: gestão de treinos |
-| **S14 — Treino ao vivo** | FIT-153 (BK-11 a BK-15), FIT-158 | O momento de uso mais frequente do aluno |
+| **S14 — Treino ao vivo** | FIT-153 (BK-11 a BK-14), FIT-158 | O momento de uso mais frequente do aluno |
 | **S15 — Rotina do Personal** | FIT-143 (BK-05, BK-06), FIT-144 (BK-07), FIT-145 (BK-13) | Ações no contexto; depende de dados da S14 (esforço, sessões) |
 | **S16 — Negócio** | FIT-148 (BK-09, BK-10), FIT-149, FIT-150 (BK-18), FIT-161 | Financeiro e assinatura |
 | **S17 — Aluno e Livre** | FIT-151, FIT-152, FIT-154, FIT-155, FIT-156, FIT-159, FIT-160 | Telas de consulta sobre dados já prontos |
 | **S18 — Entrada** | FIT-162 a FIT-170 | Cadastro, onboarding e páginas públicas |
 
-## Decisões pendentes (bloqueiam itens específicos)
+## Decisões tomadas (04/10/2026)
 
-| # | Decisão | Bloqueia | Proposta |
-|---|---|---|---|
-| D1 | **Integração com Spotify** | BK-15 → música da FIT-153/158 | App no Spotify for Developers (Client ID, OAuth PKCE). **Limites do Spotify:** controle de reprodução só para contas **Premium**; em modo de desenvolvimento, só **25 usuários** liberados até o Spotify aprovar cota estendida. Sem Premium, ficam os atalhos para os apps. Alternativa: entregar só os atalhos agora e o Spotify depois |
-| D2 | **Desktop** | Todas | O protótipo é mobile. Proposta: mesmos componentes no layout de rail atual (≥ 840 px), sem prévia desktop separada |
-| D3 | **Ordem das sprints** acima | Planejamento | Confirmar ou reordenar |
+| # | Decisão | Efeito |
+|---|---|---|
+| D1 | **Música: atalhos para os players** (Spotify, Apple Music, YouTube Music), sem integração | BK-15 sai do backend: o player da FIT-153/158 vira atalhos que abrem o app de música escolhido, sem controle de reprodução dentro do FitOS. Integração com o Spotify fica fora deste backlog |
+| D2 | **Desktop responsivo** | Mesmos componentes no layout de rail (≥ 840 px); toda História valida 360, 390, 768, 1024 e 1440 px |
+| D3 | **Ordem das sprints confirmada** | Execução por épico, uma branch por épico a partir de `new-fitos`, na ordem EPIC-23 → EPIC-19 → EPIC-20 → EPIC-21 → EPIC-22 (mesma sequência das sprints, agrupada por épico) |
 
-O provedor de e-mail deixou de ser decisão do Momento 1: passou para o EPIC-24.
+### Fluxo de branches
+
+- `new-fitos`: integração do Momento 1, criada a partir da `main`.
+- Uma branch por épico a partir de `new-fitos`: `epic-23-fundacao`, `epic-19-personal`, `epic-20-aluno`, `epic-21-livre`, `epic-22-entrada`.
+- Ao concluir um épico (testes, lint, typecheck e build passando), merge da branch do épico em `new-fitos`.
+- **Merge de `new-fitos` na `main` só com teste e autorização de Murilo**, pelo fluxo protegido (PR).
 
 ---
 
