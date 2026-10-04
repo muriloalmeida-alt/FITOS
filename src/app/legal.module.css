@@ -8,7 +8,54 @@
 .content {
   width: 100%;
   max-width: 720px;
-  padding: var(--fitos-space-6) 0 var(--fitos-space-10) 0;
+  padding: var(--fitos-space-4) 0 var(--fitos-space-10) 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+}
+
+.top .backLink {
+  margin-bottom: 0;
+}
+
+/* Abas (FIT-170): cada aba é a URL da página, então são links. */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: var(--fitos-space-3) 0 var(--fitos-space-6);
+  padding: 4px;
+  border-radius: 24px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 20px;
+  color: var(--fitos-color-text-muted);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tabOn {
+  background-color: var(--fitos-orange-500);
+  color: #fff;
+}
+
+.article {
+  max-width: 65ch;
+  font-size: 16px;
 }
 
 .backLink {

@@ -1,0 +1,190 @@
+.main {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top)) var(--fitos-space-5) calc(24px + env(safe-area-inset-bottom));
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+.column {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--fitos-orange-300);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 4px 0 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.lead {
+  margin: 8px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 15px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 24px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.footer a {
+  color: var(--fitos-color-text-muted);
+  font-weight: 700;
+}
+
+.passwordRow {
+  position: relative;
+}
+
+.toggle {
+  position: absolute;
+  right: 4px;
+  top: 28px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 84px;
+  padding: 16px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cardOn {
+  border-color: var(--fitos-orange-500);
+}
+
+.cardIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}
+
+.cardText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.muted {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--fitos-orange-500);
+}
+
+.check a {
+  color: var(--fitos-orange-300);
+  font-weight: 700;
+}

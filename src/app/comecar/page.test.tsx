@@ -1,45 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import CriarContaPage from "./page";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
-}));
+vi.mock("@/modules/identity/auth-client", () => ({ signUp: { email: vi.fn() } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-function makeSearchParams(params: Record<string, string> = {}) {
-  return Promise.resolve(params);
+async function renderPage(params: Record<string, string> = {}) {
+  const { default: Page } = await import("./page");
+  render(await Page({ searchParams: Promise.resolve(params) }));
 }
 
-describe("CriarContaPage (FIT-112)", () => {
-  it("sem ?modo=: mostra a etapa 1 (os três caminhos), nunca o formulário de personal direto", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Passo 1 de 2")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sou personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tenho convite do meu personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "FitOS Livre" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Nome completo")).not.toBeInTheDocument();
+describe("ComecarPage (FIT-164)", () => {
+  it("três caminhos em cartões", async () => {
+    await renderPage();
+    expect(screen.getByRole("link", { name: /Sou personal/ })).toHaveAttribute("href", "/comecar?caminho=personal");
+    expect(screen.getByRole("link", { name: /Tenho convite/ })).toHaveAttribute("href", "/comecar?caminho=convite");
+    expect(screen.getByRole("link", { name: /Treino por conta/ })).toHaveAttribute("href", "/comecar?caminho=livre");
   });
 
-  it("?modo= com valor não reconhecido: volta para a etapa 1, nunca cai num formulário por engano", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "qualquer-coisa" }) }));
-
-    expect(screen.getByText("Passo 1 de 2")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Nome completo")).not.toBeInTheDocument();
+  it("convite aceita código ou link e oferece Já tenho conta", async () => {
+    await renderPage({ caminho: "convite" });
+    expect(screen.getByLabelText("Código ou link do convite")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Já tenho conta" })).toHaveAttribute("href", "/entrar");
   });
 
-  it("?modo=personal: mostra a etapa 2 com o formulário de personal", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "personal" }) }));
-
-    expect(screen.getByText("Passo 2 de 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
-    expect(screen.getByText(/destinado a personal trainers/)).toBeInTheDocument();
-  });
-
-  it("?modo=individual: mostra a etapa 2 com o formulário do FitOS Livre", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "individual" }) }));
-
-    expect(screen.getByText("Passo 2 de 2")).toBeInTheDocument();
-    expect(screen.getByText(/Cadastro do FitOS Livre/)).toBeInTheDocument();
+  it("criar conta numa tela, sem Confirmar senha, com termos; ?modo= antigo continua valendo", async () => {
+    await renderPage({ modo: "individual" });
+    expect(screen.getByText("FitOS Livre")).toBeInTheDocument();
+    expect(screen.getByLabelText("Seu nome")).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Confirmar senha/)).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 });

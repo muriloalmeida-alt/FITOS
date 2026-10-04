@@ -44,8 +44,9 @@ describe("EntrarForm", () => {
     await user.click(screen.getByRole("button", { name: "Entrar" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("E-mail ou senha inválidos.");
-    expect(alert).toHaveTextContent("Confira os dados e tente novamente.");
+    expect(alert).toHaveTextContent("E-mail ou senha inválidos. Confira e tente de novo.");
+    // O erro fica junto do campo de senha (FIT-163).
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("aria-invalid", "true");
     expect(push).not.toHaveBeenCalled();
     // O e-mail digitado permanece; campos e botão continuam utilizáveis.
     expect(screen.getByLabelText("E-mail")).toHaveValue("alguem@example.com");
