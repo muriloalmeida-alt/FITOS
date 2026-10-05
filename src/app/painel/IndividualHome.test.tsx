@@ -10,6 +10,7 @@ vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 const workout = { id: "w1", name: "Superiores A", exercises: 5, estimatedMinutes: 40, days: ["SEGUNDA", "QUINTA"] };
 const base: Data = {
   today: { ...workout, reason: "dia" },
+  missed: null,
   inProgress: null,
   workouts: [workout, { id: "w2", name: "Rascunho", exercises: 0, estimatedMinutes: 5, days: [] }],
   week: { done: [true, false, false, false, false, false, false], doneCount: 1, target: 4 },
@@ -65,5 +66,18 @@ describe("IndividualHome (FIT-156)", () => {
     renderHome({ progressions: [{ workoutId: "w1", itemId: "i9", workoutName: "Superiores A", exerciseName: "Remada", fromKg: 30, toKg: 32.5, reps: 10 }] });
     await userEvent.click(screen.getByRole("button", { name: "Manter" }));
     expect(screen.queryByText(/Subir remada/)).not.toBeInTheDocument();
+  });
+
+  it("trocar o dia: o treino que ficou para trás aparece como sugestão (EPIC-38)", () => {
+    renderHome({ missed: { id: "w3", name: "Inferiores B", exercises: 5, estimatedMinutes: 40, days: ["QUARTA"], missedDay: "ontem" } });
+    const card = screen.getByRole("link", { name: /Trocar: Inferiores B hoje/ });
+    expect(card).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w3");
+    expect(card).toHaveTextContent("deixa Superiores A para amanhã");
+  });
+
+  it("dia livre com treino atrasado: ele vira o de hoje (EPIC-38)", () => {
+    renderHome({ today: { id: "w3", name: "Inferiores B", exercises: 5, estimatedMinutes: 40, days: ["QUARTA"], reason: "faltou", missedDay: "quarta" } });
+    expect(screen.getByText("Ficou de quarta")).toBeInTheDocument();
+    expect(screen.getByText(/hoje é dia livre, dá para recuperar/)).toBeInTheDocument();
   });
 });

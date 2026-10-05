@@ -89,4 +89,28 @@ describe("registro por série (BK-11, BK-12)", () => {
     await completeWorkoutSession({ ...base, sessionId: session.id }, prisma);
     await expect(recordWorkoutSet({ ...base, sessionId: session.id, workoutExerciseId: f.supinoItem.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 10 }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
   });
+
+  it("aparelho ocupado: a série conta para o exercício feito, não para o do treino (EPIC-38)", async () => {
+    const f = await setup("troca");
+    const base = { tenantId: f.tenant.id, studentId: f.student.id };
+    const smith = await prisma.exercise.create({ data: { tenantId: f.tenant.id, name: `Supino Smith troca ${run}`, origin: "PERSONAL" } });
+    const bike = await prisma.exercise.create({ data: { tenantId: f.tenant.id, name: `Bike troca ${run}`, origin: "PERSONAL", type: "Aeróbico" } });
+
+    const first = await f.session(new Date(Date.now() - 2 * 86_400_000));
+    await recordWorkoutSet({ ...base, sessionId: first.id, workoutExerciseId: f.supinoItem.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 40 }, prisma);
+    await completeWorkoutSession({ ...base, sessionId: first.id }, prisma);
+
+    const second = await f.session();
+    await expect(recordWorkoutSet({ ...base, sessionId: second.id, workoutExerciseId: f.supinoItem.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 50, performedExerciseId: bike.id }, prisma)).rejects.toMatchObject({ kind: "VALIDACAO" });
+    const swapped = await recordWorkoutSet({ ...base, sessionId: second.id, workoutExerciseId: f.supinoItem.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 50, performedExerciseId: smith.id }, prisma);
+    // 50 kg no Smith não é recorde do supino (nunca houve Smith antes).
+    expect(swapped.personalRecord).toBe(false);
+    expect(swapped.set.performedExerciseId).toBe(smith.id);
+    expect(swapped.aggregate?.performedExerciseId).toBe(smith.id);
+    await completeWorkoutSession({ ...base, sessionId: second.id }, prisma);
+
+    const last = await getLastPerformanceForExercises({ ...base, exerciseIds: [f.supino.id, smith.id] }, prisma);
+    expect(last.get(f.supino.id)?.last?.loadKg).toBe(40);
+    expect(last.get(smith.id)?.last?.loadKg).toBe(50);
+  });
 });

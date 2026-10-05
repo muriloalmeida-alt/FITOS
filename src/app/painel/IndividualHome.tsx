@@ -48,11 +48,11 @@ export function IndividualHome({ name, greeting, dateLabel, home, todayIso, tria
         </section>
       ) : home.today ? (
         <section className={styles.hero} aria-label="Hoje para você">
-          <p className={styles.eyebrow}>{home.today.reason === "dia" ? "Hoje para você" : "Sugestão de hoje"}</p>
+          <p className={styles.eyebrow}>{home.today.reason === "dia" ? "Hoje para você" : home.today.reason === "faltou" ? `Ficou de ${home.today.missedDay}` : "Sugestão de hoje"}</p>
           <h2 className={styles.heroTitle}>{home.today.name}</h2>
           <p className={styles.heroMeta}>
             {home.today.exercises} {home.today.exercises === 1 ? "exercício" : "exercícios"} · cerca de {home.today.estimatedMinutes} min
-            {home.today.reason === "rodizio" ? " · o que você fez há mais tempo" : ""}
+            {home.today.reason === "rodizio" ? " · o que você fez há mais tempo" : home.today.reason === "faltou" ? " · hoje é dia livre, dá para recuperar" : ""}
           </p>
           <Button href={`${SESSION_HREF}?treino=${home.today.id}`} size="xl" block>
             Iniciar treino
@@ -61,6 +61,14 @@ export function IndividualHome({ name, greeting, dateLabel, home, todayIso, tria
       ) : (
         <NextStepCard eyebrow="Primeiro passo" title="Criar meu primeiro treino" description="Escolha os exercícios na biblioteca. Entram com 3 × 12." href="/painel/meus-treinos/novo" />
       )}
+      {!home.inProgress && home.missed ? (
+        <NextStepCard
+          eyebrow={`Ficou de ${home.missed.missedDay}`}
+          title={`Trocar: ${home.missed.name} hoje`}
+          description={`Faz o que ficou para trás e deixa ${home.today?.name ?? "o de hoje"} para amanhã.`}
+          href={`${SESSION_HREF}?treino=${home.missed.id}`}
+        />
+      ) : null}
 
       {home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null}
 

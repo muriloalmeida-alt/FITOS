@@ -67,7 +67,7 @@ export type WorkoutSessionWithDetails = WorkoutSession & {
     })[];
   };
   results: WorkoutSessionResult[];
-  setResults: WorkoutSetResult[];
+  setResults: (WorkoutSetResult & { performedExercise: { id: string; name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null } | null })[];
 };
 
 const SESSION_INCLUDE = {
@@ -80,7 +80,7 @@ const SESSION_INCLUDE = {
     },
   },
   results: true,
-  setResults: { orderBy: { setNumber: "asc" as const } },
+  setResults: { orderBy: { setNumber: "asc" as const }, include: { performedExercise: { select: { id: true, name: true, instructions: true, imageUrl: true, imageAlt: true } } } },
 };
 
 export interface StartOrResumeSessionInput {

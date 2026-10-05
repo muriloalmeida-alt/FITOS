@@ -48,7 +48,7 @@ export async function buildPersonalExport(input: { tenantId: string; now?: Date 
     client.workoutSetResult.findMany({
       where: { tenantId },
       orderBy: [{ completedAt: "asc" }, { setNumber: "asc" }],
-      include: { workoutSession: { select: { startedAt: true, student: { select: { displayName: true } }, workout: { select: { name: true } } } }, workoutExercise: { select: { exercise: { select: { name: true } } } } },
+      include: { workoutSession: { select: { startedAt: true, student: { select: { displayName: true } }, workout: { select: { name: true } } } }, workoutExercise: { select: { exercise: { select: { name: true } } } }, performedExercise: { select: { name: true } } },
     }),
     client.assessment.findMany({ where: { tenantId, deletedAt: null }, orderBy: { recordedAt: "asc" }, include: { student: { select: { displayName: true } }, measurements: true } }),
     client.goal.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" }, include: { student: { select: { displayName: true } } } }),
@@ -97,7 +97,7 @@ export async function buildPersonalExport(input: { tenantId: string; now?: Date 
       name: "series-registradas.csv",
       content: toCsv(
         ["Data", "Aluno", "Treino", "Exercício", "Série", "Repetições", "Tempo (s)", "Carga (kg)"],
-        setResults.map((set) => [dateTime(set.workoutSession.startedAt), set.workoutSession.student.displayName, set.workoutSession.workout.name, set.workoutExercise.exercise.name, set.setNumber, set.reps, set.durationSeconds, set.loadGrams !== null ? decimal(set.loadGrams / 1000) : ""])
+        setResults.map((set) => [dateTime(set.workoutSession.startedAt), set.workoutSession.student.displayName, set.workoutSession.workout.name, set.performedExercise ? `${set.performedExercise.name} (no lugar de ${set.workoutExercise.exercise.name})` : set.workoutExercise.exercise.name, set.setNumber, set.reps, set.durationSeconds, set.loadGrams !== null ? decimal(set.loadGrams / 1000) : ""])
       ),
     },
     {

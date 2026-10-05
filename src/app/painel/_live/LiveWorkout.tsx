@@ -17,6 +17,7 @@ import { shareWorkoutImage } from "./shareImage";
 import type { CardioIntensity } from "@/shared/lib/cardio";
 import { CardioRunner, cardioPosition } from "./CardioRunner";
 import { cardioPhases } from "@/shared/lib/cardio";
+import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
 
 export interface LiveSet {
@@ -28,6 +29,12 @@ export interface LiveSet {
 
 export interface LiveItem {
   id: string;
+  /// Exercício do treino (para buscar alternativas).
+  exerciseId: string;
+  /// "Aparelho ocupado" (EPIC-38): trocado só nesta sessão.
+  performedExerciseId?: string | null;
+  /// Nome do exercício do treino quando foi trocado.
+  plannedName?: string | null;
   name: string;
   imageUrl: string | null;
   imageAlt: string | null;
@@ -76,7 +83,7 @@ interface Summary {
 }
 
 type Phase = "ready" | "run" | "done";
-type SheetKind = null | "how" | "list" | "music" | "end";
+type SheetKind = null | "how" | "list" | "music" | "end" | "busy";
 
 const PREFS_KEY = "fitos:treino:prefs";
 const CLOCK_PREFIX = "fitos:sessao:";
@@ -166,6 +173,10 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     props.items.map((_, index) => index),
   );
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
+  /// "Só tenho X min" (EPIC-38): versão menor escolhida na preparação.
+  const [short, setShort] = useState<{ minutes: number; note: string } | null>(null);
+  /// "Aparelho ocupado" (EPIC-38): alternativas do exercício atual.
+  const [alternatives, setAlternatives] = useState<{ id: string; name: string; imageUrl: string | null; imageAlt: string | null }[] | null>(null);
   const firstOpen = props.items.findIndex(
     (item) => item.doneSets.length < totalSets(item),
   );
@@ -569,6 +580,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             reps: entry.reps,
             durationSeconds: entry.durationSeconds,
             loadKg: entry.loadKg,
+            performedExerciseId: item.performedExerciseId ?? null,
           }),
         },
       );
@@ -706,26 +718,67 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   }
 
   const totalPlannedSets = useMemo(
-    () => items.reduce((sum, entry) => sum + totalSets(entry), 0),
-    [items],
+    () => items.filter((entry) => !skipped.has(entry.id)).reduce((sum, entry) => sum + totalSets(entry), 0),
+    [items, skipped],
   );
-  const estimatedMinutes = useMemo(
-    () =>
-      Math.max(
-        5,
-        Math.round(
-          items.reduce(
-            (sum, entry) =>
-              sum +
-              totalSets(entry) *
-                ((entry.durationSeconds ?? 40) +
-                  (entry.restSeconds ?? DEFAULT_REST)),
-            0,
-          ) / 300,
-        ) * 5,
+  const fullMinutes = useMemo(() => workoutMinutes(props.items), [props.items]);
+  const timeOptions = useMemo(() => shortOptions(props.items), [props.items]);
+  const visibleCount = items.filter((entry) => !skipped.has(entry.id)).length;
+
+  function chooseTime(minutes: number | null) {
+    if (minutes === null) {
+      setItems(props.items);
+      setSkipped(new Set());
+      setShort(null);
+      return;
+    }
+    const plan = fitToMinutes(props.items, minutes);
+    const names = props.items.filter((entry) => plan.dropped.includes(entry.id)).map((entry) => entry.name);
+    const note = [
+      plan.setsCut ? "2 séries por exercício" : null,
+      plan.cardioCut ? "aeróbico mais curto" : null,
+      names.length > 0 ? `fica para outro dia: ${names.join(", ")}` : null,
+    ].filter(Boolean).join(" · ");
+    setItems(plan.items);
+    setSkipped(new Set(plan.dropped));
+    setShort({ minutes, note });
+  }
+
+  async function openBusy() {
+    setSheet("busy");
+    if (item.doneSets.length > 0) return;
+    setAlternatives(null);
+    const result = (await fetch(`/api/exercises/${item.exerciseId}/alternativas`).then((r) => (r.ok ? r.json() : null)).catch(() => null)) as { options?: { id: string; name: string; imageUrl: string | null; imageAlt: string | null }[] } | null;
+    setAlternatives(result?.options ?? []);
+  }
+
+  function doLater() {
+    const next = order.filter((index) => index !== current);
+    const reordered = [...next, current];
+    const target = next.find((index) => !skipped.has(items[index]!.id) && items[index]!.doneSets.length < totalSets(items[index]!));
+    setOrder(reordered);
+    setSheet(null);
+    if (target !== undefined) {
+      setCurrent(target);
+      toast.show(`${item.name} fica para o fim`);
+    }
+  }
+
+  function swapToday(option: { id: string; name: string; imageUrl: string | null; imageAlt: string | null } | null) {
+    const original = props.items.find((entry) => entry.id === item.id)!;
+    setItems(
+      items.map((candidate, index) =>
+        index !== current
+          ? candidate
+          : option
+            ? { ...candidate, performedExerciseId: option.id, plannedName: original.name, name: option.name, imageUrl: option.imageUrl, imageAlt: option.imageAlt, instructions: null, last: null }
+            : { ...candidate, performedExerciseId: null, plannedName: null, name: original.name, imageUrl: original.imageUrl, imageAlt: original.imageAlt, instructions: original.instructions, last: original.last },
       ),
-    [items],
-  );
+    );
+    setSheet(null);
+    toast.show(option ? `Hoje: ${option.name}` : `De volta: ${original.name}`);
+  }
+  const estimatedMinutes = useMemo(() => workoutMinutes(items.filter((entry) => !skipped.has(entry.id))), [items, skipped]);
   const steps = instructionSteps(item.instructions);
   const nextForRest = (() => {
     if (done < totalSets(item))
@@ -733,6 +786,43 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     const index = nextOpenIndex(current);
     return index >= 0 ? items[index]!.name : "Fim do treino";
   })();
+
+  const others = order.some((index) => index !== current && !skipped.has(items[index]!.id) && items[index]!.doneSets.length < totalSets(items[index]!));
+  const busySheet = (
+    <Sheet open={sheet === "busy"} onClose={() => setSheet(null)} title="Aparelho ocupado?" description="Faça outro agora e volte depois, ou troque só hoje. Seu treino não muda.">
+      <div className={styles.busyList}>
+        {others ? (
+          <Button type="button" variant="secondary" block onClick={doLater}>
+            Fazer depois, volto no fim
+          </Button>
+        ) : null}
+        {item.doneSets.length > 0 ? (
+          <p className={styles.muted}>Você já fez séries deste exercício; dá para deixá-lo para o fim.</p>
+        ) : (
+          <>
+            <p className={styles.cap}>Trocar só hoje por</p>
+            {item.plannedName ? (
+              <button type="button" className={styles.option} onClick={() => swapToday(null)}>
+                <span>
+                  <strong>{item.plannedName}</strong>
+                  <span className={styles.muted}>Voltar ao do treino</span>
+                </span>
+              </button>
+            ) : null}
+            {alternatives === null ? <p className={styles.muted}>Buscando opções…</p> : alternatives.length === 0 ? <p className={styles.muted}>Sem outra opção do mesmo grupo no catálogo.</p> : null}
+            {(alternatives ?? []).filter((option) => option.id !== item.performedExerciseId).map((option) => (
+              <button key={option.id} type="button" className={styles.option} onClick={() => swapToday(option)}>
+                <span className={styles.altRow}>
+                  <ExerciseThumbnail src={option.imageUrl} alt={option.imageAlt ?? option.name} width={44} height={44} className={styles.altThumb} />
+                  <strong>{option.name}</strong>
+                </span>
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </Sheet>
+  );
 
   const musicSheet = (
     <Sheet
@@ -781,9 +871,29 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           <p className={styles.eyebrow}>Pronto para treinar</p>
           <h1 className={styles.title}>{props.workoutName}</h1>
           <p className={styles.muted}>
-            {items.length} {items.length === 1 ? "exercício" : "exercícios"} ·{" "}
+            {visibleCount} {visibleCount === 1 ? "exercício" : "exercícios"} ·{" "}
             {totalPlannedSets} séries · cerca de {estimatedMinutes} min
           </p>
+          {timeOptions.length > 0 ? (
+            <>
+              <p className={styles.cap}>Tempo hoje</p>
+              <div className={styles.timeChips} role="radiogroup" aria-label="Tempo hoje">
+                {[null, ...timeOptions].map((minutes) => (
+                  <button
+                    key={String(minutes)}
+                    type="button"
+                    role="radio"
+                    aria-checked={(short?.minutes ?? null) === minutes}
+                    className={(short?.minutes ?? null) === minutes ? `${styles.timeChip} ${styles.timeChipOn}` : styles.timeChip}
+                    onClick={() => chooseTime(minutes)}
+                  >
+                    {minutes === null ? `Completo · ${fullMinutes} min` : `Só ${minutes} min`}
+                  </button>
+                ))}
+              </div>
+              {short ? <p className={styles.muted}>Versão de {short.minutes} min: {short.note}. Seu programa não muda.</p> : null}
+            </>
+          ) : null}
           <div className={styles.thumbs}>
             {items.slice(0, 5).map((entry) => (
               <ExerciseThumbnail
@@ -1050,7 +1160,11 @@ export function LiveWorkout(props: LiveWorkoutProps) {
               Exercício {order.indexOf(current) + 1} de {items.length}
             </p>
             <h1 className={styles.exerciseName}>{item.name}</h1>
+            {item.plannedName ? <p className={styles.muted}>Hoje, no lugar de {item.plannedName}</p> : null}
             <p className={styles.muted}>{prescriptionLine(item)}</p>
+            <button type="button" className={styles.busyLink} onClick={() => void openBusy()}>
+              Aparelho ocupado?
+            </button>
           </div>
         </div>
         {item.notes ? (
@@ -1462,6 +1576,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
       </Sheet>
 
       {musicSheet}
+      {busySheet}
     </div>
   );
 }

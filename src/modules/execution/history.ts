@@ -113,7 +113,7 @@ export async function listPersonalRecordsForStudent(
       loadUsed: { not: null },
       workoutSession: { studentId: input.studentId, status: "CONCLUIDA" },
     },
-    include: { workoutExercise: { include: { exercise: { select: { name: true } } } } },
+    include: { workoutExercise: { include: { exercise: { select: { name: true } } } }, performedExercise: { select: { name: true } } },
   });
 
   const bestByExercise = new Map<string, PersonalRecord>();
@@ -122,7 +122,7 @@ export async function listPersonalRecordsForStudent(
     const loadValue = parseLoadValue(result.loadUsed!);
     if (loadValue === null) continue;
 
-    const exerciseName = result.workoutExercise.exercise.name;
+    const exerciseName = result.performedExercise?.name ?? result.workoutExercise.exercise.name;
     const current = bestByExercise.get(exerciseName);
     if (!current || loadValue > current.loadValue) {
       bestByExercise.set(exerciseName, {
