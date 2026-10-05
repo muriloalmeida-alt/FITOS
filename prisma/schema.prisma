@@ -280,17 +280,19 @@ enum TenantType {
 /// e nome, mas sem alunos/carteira/financeiro. Nenhuma regra de isolamento
 /// muda: continua sendo `tenantId` derivado da sessão, nunca do cliente.
 model Tenant {
-  id               String     @id @default(cuid())
-  ownerId          String     @unique
-  name             String
-  type             TenantType @default(PERSONAL)
-  createdAt        DateTime   @default(now())
+  id                    String     @id @default(cuid())
+  ownerId               String     @unique
+  name                  String
+  type                  TenantType @default(PERSONAL)
+  createdAt             DateTime   @default(now())
   /// Quando a biblioteca inicial (programas, treinos e aeróbicos prontos)
   /// foi criada neste espaço; nunca recriada (EPIC-28).
-  starterLibraryAt DateTime?
+  starterLibraryAt      DateTime?
+  /// EPIC-32: última versão da biblioteca inicial já criada no espaço.
+  starterLibraryVersion Int        @default(0)
   /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
   /// própria conta de aluno neste espaço. Gerado no primeiro uso.
-  inviteCode       String?    @unique
+  inviteCode            String?    @unique
 
   owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students              Student[]

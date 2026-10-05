@@ -19,6 +19,8 @@ export interface LibraryEntry {
   meta: string;
   thumbnails: string[];
   cardio: boolean;
+  /// Duração estimada (treinos e aeróbicos; `null` em programas).
+  minutes: number | null;
   /// Conteúdo mostrado antes de aplicar.
   lines: { name: string; dose: string }[];
 }
@@ -83,6 +85,7 @@ export async function getLibrary(input: { tenantId: string }, client: PrismaClie
       meta: parts.join(" · "),
       thumbnails: thumbs(all),
       cardio: false,
+      minutes: null,
       lines: plan.workouts.map((workout) => ({ name: workout.name, dose: workoutDose(workout.workoutExercises, workout.suggestedDays) })),
     };
   });
@@ -93,9 +96,14 @@ export async function getLibrary(input: { tenantId: string }, client: PrismaClie
     return {
       id: workout.id,
       name: workout.name,
-      meta: cardio ? items.map((item) => prescriptionLine(item)).join(" + ") : `${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · cerca de ${estimateMinutes(items)} min`,
+      meta: cardio
+        ? items.length === 1
+          ? prescriptionLine(items[0]!)
+          : `${Math.round(items.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0) / 60)} min · ${items.length} etapas`
+        : `${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · cerca de ${estimateMinutes(items)} min`,
       thumbnails: thumbs(items),
       cardio,
+      minutes: estimateMinutes(items),
       lines: items.map((item) => ({ name: item.exercise.name, dose: prescriptionLine(item) })),
     };
   };
