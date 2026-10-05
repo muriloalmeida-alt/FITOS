@@ -1,0 +1,147 @@
+.runner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-5);
+  margin-top: var(--fitos-space-4);
+}
+
+.panel {
+  padding: var(--fitos-space-5);
+  border: 1px solid rgba(130, 213, 201, 0.35);
+  border-radius: 20px;
+  background-color: var(--fitos-color-surface-card);
+  text-align: center;
+}
+
+.hard {
+  border-color: rgba(255, 120, 71, 0.55);
+}
+
+.phase {
+  margin: 0;
+  color: #82d5c9;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hard .phase {
+  color: var(--fitos-orange-300);
+}
+
+.clock {
+  margin: 8px 0 0;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cue {
+  margin: 10px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.bar {
+  height: 8px;
+  margin-top: var(--fitos-space-4);
+  overflow: hidden;
+  border-radius: 4px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--fitos-orange-500);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fitos-space-3);
+  margin-top: var(--fitos-space-4);
+}
+
+.primary,
+.secondary {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.primary {
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.secondary {
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.total {
+  margin: var(--fitos-space-3) 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+
+.list li.done {
+  color: var(--fitos-color-text-muted);
+}
+
+.list li.now {
+  font-weight: 800;
+}
+
+.num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background-color: var(--fitos-color-surface-raised);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.numHard {
+  background-color: rgba(255, 120, 71, 0.2);
+  color: var(--fitos-orange-300);
+}
+
+.time {
+  margin-left: auto;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

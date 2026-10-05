@@ -10,8 +10,7 @@ export function TrainingTabs({ active, area = "personal" }: { active: "treinos" 
           { key: "exercicios" as const, label: "Exercícios", href: "/painel/exercicios" },
         ]
       : [
-          { key: "treinos" as const, label: "Treinos", href: "/painel/treinos" },
-          { key: "programas" as const, label: "Programas", href: "/painel/treinos/planos" },
+          { key: "treinos" as const, label: "Biblioteca", href: "/painel/treinos" },
           { key: "exercicios" as const, label: "Exercícios", href: "/painel/exercicios" },
         ];
   return <SegmentedTabs label="Área de treinos" value={active} items={items} />;

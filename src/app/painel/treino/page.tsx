@@ -89,6 +89,7 @@ export default async function TreinoAlunoPage() {
               load: item.load,
               restSeconds: item.restSeconds,
               notes: item.notes,
+              intensity: item.intensity,
             })),
           }))}
         />

@@ -55,6 +55,15 @@ enum InvitationStatus {
 /// `origin === "API_NINJAS"` está incompleto — a condição correta é sempre
 /// "`origin !== "PERSONAL"` e `tenantId` nulo" (ver `visibleCatalogOriginCondition`
 /// em `exercises.ts`, corrigida junto com esta migration).
+/// Intensidade de um item aeróbico (EPIC-28, ADR-016). INTERVALADO divide
+/// o tempo em tiros fortes e recuperações no treino ao vivo.
+enum CardioIntensity {
+  LEVE
+  MODERADO
+  FORTE
+  INTERVALADO
+}
+
 enum ExerciseOrigin {
   API_NINJAS
   PERSONAL
@@ -234,11 +243,14 @@ enum TenantType {
 /// e nome, mas sem alunos/carteira/financeiro. Nenhuma regra de isolamento
 /// muda: continua sendo `tenantId` derivado da sessão, nunca do cliente.
 model Tenant {
-  id        String     @id @default(cuid())
-  ownerId   String     @unique
-  name      String
-  type      TenantType @default(PERSONAL)
-  createdAt DateTime   @default(now())
+  id               String     @id @default(cuid())
+  ownerId          String     @unique
+  name             String
+  type             TenantType @default(PERSONAL)
+  createdAt        DateTime   @default(now())
+  /// Quando a biblioteca inicial (programas, treinos e aeróbicos prontos)
+  /// foi criada neste espaço; nunca recriada (EPIC-28).
+  starterLibraryAt DateTime?
 
   owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students              Student[]
@@ -293,8 +305,8 @@ enum WeeklyAvailability {
 /// não gera nenhuma prescrição automática (a FIT-102 decide como o
 /// catálogo/builder usa isso, se usar).
 model IndividualProfile {
-  id                 String             @id @default(cuid())
-  tenantId           String             @unique
+  id                 String              @id @default(cuid())
+  tenantId           String              @unique
   objective          IndividualObjective
   experienceLevel    ExperienceLevel
   weeklyAvailability WeeklyAvailability
@@ -304,16 +316,16 @@ model IndividualProfile {
   /// `PersonalProfile.cpfCnpj`: obrigatório para toda nova submissão do
   /// onboarding, `null` só para perfis concluídos antes deste campo
   /// existir — nunca fabricado retroativamente.
-  cpfCnpj String?
+  cpfCnpj            String?
   /// Sempre preenchido no momento da primeira submissão, nunca sobrescrito
   /// depois (mesmo princípio de "preserva o momento original" de
   /// `endStudentBond`/`softDeleteAssessment`) — reabrir o onboarding para
   /// mudar objetivo/experiência/disponibilidade nunca pede um novo aceite
   /// nem altera esta data (FIT-119). `null` para perfis criados antes deste
   /// campo existir (FIT-101 a FIT-118) — nunca fabricado retroativamente.
-  termsAcceptedAt DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  termsAcceptedAt    DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -358,9 +370,9 @@ model PersonalProfile {
   /// já documentada no rodapé da landing, FIT-110) — o texto apresentado
   /// ao lado do aceite é honesto sobre isso ("em preparação"), nunca um
   /// link morto.
-  termsAcceptedAt DateTime
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  termsAcceptedAt      DateTime
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -620,7 +632,7 @@ model Workout {
 /// "RM"; mesmo padrão de `Exercise.difficulty`/`equipments`), descanso e
 /// observação. RPE/RIR e vídeo são pós-MVP, não representados aqui.
 model WorkoutExercise {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   tenantId        String
   workoutId       String
   exerciseId      String
@@ -631,8 +643,11 @@ model WorkoutExercise {
   load            String?
   restSeconds     Int?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  /// Só em item aeróbico (exercício `type = "Aeróbico"`): o tempo fica em
+  /// `durationSeconds` e não há séries nem repetições.
+  intensity       CardioIntensity?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -701,13 +716,13 @@ model PlanAssignment {
 /// único parcial (não representável no Prisma Schema — ver migration
 /// `20260920020000_add_workout_session_results`).
 model WorkoutSession {
-  id        String               @id @default(cuid())
-  tenantId  String
-  studentId String
-  workoutId String
-  status    WorkoutSessionStatus @default(EM_ANDAMENTO)
-  startedAt DateTime             @default(now())
-  endedAt   DateTime?
+  id              String               @id @default(cuid())
+  tenantId        String
+  studentId       String
+  workoutId       String
+  status          WorkoutSessionStatus @default(EM_ANDAMENTO)
+  startedAt       DateTime             @default(now())
+  endedAt         DateTime?
   /// BK-13 (EPIC-19/20): esforço percebido de 1 (leve) a 5 (no limite),
   /// informado ao concluir. CHECK no banco garante a faixa.
   perceivedEffort Int?
@@ -1062,11 +1077,11 @@ model Plan {
 /// documentado em `src/modules/billing/subscriptions.ts`, nunca um nome de
 /// provedor fictício.
 model SaasSubscription {
-  id             String                 @id @default(cuid())
-  tenantId       String                 @unique
-  planId         String
-  status         SaasSubscriptionStatus @default(ATIVA)
-  provider       String
+  id                     String                 @id @default(cuid())
+  tenantId               String                 @unique
+  planId                 String
+  status                 SaasSubscriptionStatus @default(ATIVA)
+  provider               String
   /// Id do cliente/assinatura reais no Asaas (FIT-128, ADR-010) — só
   /// preenchidos quando a ligação de melhor esforço em
   /// `tryEnsureAsaasSubscription` (`src/modules/billing/subscriptions.ts`)
@@ -1083,22 +1098,22 @@ model SaasSubscription {
   /// para exibição em `/painel/assinatura` ("Cartão terminado em ****").
   /// `null` enquanto nenhum cartão tiver sido cadastrado — nunca obrigatório
   /// para um plano de preço zero.
-  creditCardLast4  String?
-  creditCardBrand  String?
-  canceledAt     DateTime?
-  canceledReason String?
+  creditCardLast4        String?
+  creditCardBrand        String?
+  canceledAt             DateTime?
+  canceledReason         String?
   /// Fim do período de teste grátis desta contratação — `null` quando não
   /// há trial em curso (plano sem `trialDays`, trial já expirado/consumido,
   /// ou nunca contratado). Nunca reiniciado numa troca de plano dentro do
   /// mesmo tenant — ver `trialUsedAt` (FIT-127).
-  trialEndsAt    DateTime?
+  trialEndsAt            DateTime?
   /// Marca a primeira vez que este tenant recebeu um trial, para sempre —
   /// nunca é limpo, nem numa troca de plano. `subscribeTenantToPlan` só
   /// concede um novo `trialEndsAt` quando este campo ainda está `null`;
   /// nunca reinicia o trial trocando de plano (regra explícita do EPIC-16).
-  trialUsedAt    DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  trialUsedAt            DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)

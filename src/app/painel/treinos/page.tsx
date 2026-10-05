@@ -1,27 +1,28 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, EmptyStateAction, NextStepCard } from "@/shared/ui";
+import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { listWorkoutSummariesForTenant } from "@/modules/workouts/workouts";
-import { FilterLinks } from "../_workout-builder/FilterLinks";
+import { getLibrary } from "@/modules/library/library";
+import { listAssignableStudents } from "@/modules/workouts/workouts";
 import { TrainingTabs } from "../_workout-builder/TrainingTabs";
-import { WorkoutSummaryList } from "../_workout-builder/WorkoutSummaryList";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
-import styles from "./page.module.css";
+import { LibraryView, type LibraryTab } from "./LibraryView";
 
 export const metadata: Metadata = {
-  title: `Treinos — ${appName}`,
+  title: `Biblioteca — ${appName}`,
 };
 
+const TABS: LibraryTab[] = ["programas", "treinos", "aerobicos"];
+
 interface TreinosPageProps {
-  searchParams?: Promise<{ arquivados?: string }>;
+  searchParams?: Promise<{ aba?: string; aluno?: string }>;
 }
 
-/// Treinos do Personal (FIT-146, P4 do protótipo): "Montar um treino" como
-/// próximo passo, filtros Ativos/Arquivados e a lista com ações de um
-/// toque. Programas e Exercícios são abas da mesma área.
+/// Biblioteca do Personal (EPIC-28): programas, treinos e aeróbicos
+/// prontos para aplicar a um ou mais alunos. `?aluno=` já deixa um aluno
+/// escolhido (vindo do perfil dele).
 export default async function TreinosPage({ searchParams }: TreinosPageProps = {}) {
   let ctx;
   try {
@@ -33,35 +34,20 @@ export default async function TreinosPage({ searchParams }: TreinosPageProps = {
     throw error;
   }
 
-  const archived = (await searchParams)?.arquivados === "1";
-  const [active, old] = await Promise.all([
-    listWorkoutSummariesForTenant({ tenantId: ctx.tenantId }),
-    listWorkoutSummariesForTenant({ tenantId: ctx.tenantId, status: "ARQUIVADO" }),
-  ]);
-  const shown = archived ? old : active;
+  const sp = (await searchParams) ?? {};
+  const tab = TABS.includes(sp.aba as LibraryTab) ? (sp.aba as LibraryTab) : "programas";
+  const [library, students] = await Promise.all([getLibrary({ tenantId: ctx.tenantId }), listAssignableStudents({ tenantId: ctx.tenantId })]);
+  const preselected = students.some((student) => student.id === sp.aluno) ? sp.aluno! : null;
 
   return (
-    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Treinos" title="Biblioteca" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <TrainingTabs active="treinos" />
-      <div className={styles.next}>
-        <NextStepCard eyebrow="Próximo passo" title="Montar um treino" description="Escolha os exercícios e ajuste com um toque." href="/painel/treinos/novo" />
-      </div>
-      <FilterLinks
-        label="Filtrar treinos"
-        items={[
-          { label: `Ativos · ${active.length}`, href: "/painel/treinos", active: !archived },
-          { label: `Arquivados · ${old.length}`, href: "/painel/treinos?arquivados=1", active: archived },
-        ]}
+      <LibraryView
+        tab={tab}
+        entries={{ programas: library.programs, treinos: library.workouts, aerobicos: library.cardio }}
+        students={students.map((student) => ({ id: student.id, name: student.displayName }))}
+        preselectedStudentId={preselected}
       />
-      {shown.length === 0 ? (
-        archived ? (
-          <p className={styles.empty}>Treinos arquivados ficam guardados aqui e podem voltar quando você quiser.</p>
-        ) : (
-          <EmptyStateAction title="Nenhum treino ainda" description="Monte o primeiro pela biblioteca: leva um minuto." action={{ label: "Montar um treino", href: "/painel/treinos/novo" }} />
-        )
-      ) : (
-        <WorkoutSummaryList area="personal" workouts={shown} />
-      )}
     </AppShell>
   );
 }

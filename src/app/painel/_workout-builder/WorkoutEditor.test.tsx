@@ -91,8 +91,8 @@ describe("WorkoutEditor (FIT-146)", () => {
     suggestedDays: ["SEGUNDA"],
     status: "ATIVO",
     items: [
-      { id: "i1", exerciseId: "ex-agach", name: "Agachamento livre", muscle: "Quadríceps", imageUrl: null, imageAlt: null, sets: 4, reps: 10, durationSeconds: null, load: "40 kg", restSeconds: 90, notes: null },
-      { id: "i2", exerciseId: "ex-remada", name: "Remada baixa", muscle: "Costas", imageUrl: null, imageAlt: null, sets: 3, reps: 12, durationSeconds: null, load: null, restSeconds: 60, notes: null },
+      { id: "i1", exerciseId: "ex-agach", name: "Agachamento livre", muscle: "Quadríceps", imageUrl: null, imageAlt: null, sets: 4, reps: 10, durationSeconds: null, load: "40 kg", restSeconds: 90, notes: null, intensity: null },
+      { id: "i2", exerciseId: "ex-remada", name: "Remada baixa", muscle: "Costas", imageUrl: null, imageAlt: null, sets: 3, reps: 12, durationSeconds: null, load: null, restSeconds: 60, notes: null, intensity: null },
     ],
   };
 

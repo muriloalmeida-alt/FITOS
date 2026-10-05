@@ -1,6 +1,10 @@
 /// Prescrição em uma linha curta (FIT-152, FIT-153): "3 × 12 · 20 kg ·
 /// 60 s de descanso" ou "3 × 45 s". Nunca inventa um valor ausente.
+import { cardioLine, type CardioIntensity } from "./cardio";
+
 export interface PrescriptionInput {
+  /// Item aeróbico: tempo e intensidade, sem séries (EPIC-28).
+  intensity?: CardioIntensity | null;
   sets: number | null;
   reps: number | null;
   durationSeconds: number | null;
@@ -9,6 +13,7 @@ export interface PrescriptionInput {
 }
 
 export function prescriptionLine(item: PrescriptionInput): string {
+  if (item.intensity) return cardioLine(item.durationSeconds, item.intensity);
   const parts: string[] = [];
   const amount = item.durationSeconds ? `${item.durationSeconds} s` : item.reps ? String(item.reps) : null;
   if (item.sets && amount) parts.push(`${item.sets} × ${amount}`);
