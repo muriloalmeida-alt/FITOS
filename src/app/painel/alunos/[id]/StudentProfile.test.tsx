@@ -44,7 +44,7 @@ describe("StudentProfile (FIT-145)", () => {
     renderProfile();
     expect(screen.getByText("Pedro está sem programa")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Atribuir programa" }));
-    const sheet = screen.getByRole("dialog", { name: "Qual programa para Pedro?" });
+    const sheet = screen.getByRole("dialog", { name: "Escolha o programa" });
     await user.click(within(sheet).getByRole("radio", { name: /Hipertrofia/ }));
     await user.click(within(sheet).getByRole("button", { name: "Atribuir a Pedro" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/students/s1/plano", expect.objectContaining({ method: "POST", body: JSON.stringify({ trainingPlanId: "p1" }) }));
@@ -91,7 +91,7 @@ describe("StudentProfile (FIT-145)", () => {
   it("encerrar vínculo pede confirmação com motivo opcional e volta para a lista", async () => {
     const user = userEvent.setup();
     renderProfile({ initialSheet: "end" as never });
-    const sheet = screen.getByRole("dialog", { name: "Encerrar vínculo com Pedro?" });
+    const sheet = screen.getByRole("dialog", { name: "Encerrar vínculo?" });
     await user.click(within(sheet).getByRole("radio", { name: "Mudança de cidade" }));
     await user.click(within(sheet).getByRole("button", { name: "Encerrar vínculo" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/students/s1/encerrar-vinculo", expect.objectContaining({ body: JSON.stringify({ reason: "Mudança de cidade" }) }));

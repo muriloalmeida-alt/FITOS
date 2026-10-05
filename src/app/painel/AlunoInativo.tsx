@@ -11,7 +11,7 @@ export function AlunoInativo({ name, personalName }: { name: string; personalNam
       <div className={styles.content}>
         <BrandLogo background="photo" size={40} />
         <div>
-          <h1 className={styles.title}>{first}, seu acesso está pausado.</h1>
+          <h1 className={styles.title}>Acesso pausado</h1>
           <p className={styles.text}>{personalName} pausou seu acesso. Seus treinos e avaliações continuam guardados. Fale com ele para voltar.</p>
         </div>
         <LogoutButton block />

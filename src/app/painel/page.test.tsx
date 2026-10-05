@@ -321,7 +321,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: "Inativo, seu acesso está pausado." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Acesso pausado" })).toBeInTheDocument();
     expect(screen.getByText(/Joana pausou seu acesso/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Treinar por conta própria" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();

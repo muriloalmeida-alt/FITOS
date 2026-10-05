@@ -132,7 +132,7 @@ describe("WorkoutEditor (FIT-146)", () => {
     await user.click(screen.getByRole("button", { name: "Remover Agachamento livre" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/workouts/w1/itens/i1", expect.objectContaining({ method: "DELETE" }));
     await user.click(screen.getByRole("button", { name: "Pronto" }));
-    expect(await screen.findByRole("dialog", { name: "Treino A está pronto" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Treino pronto" })).toBeInTheDocument();
     expect(screen.getByText("Próximo passo do treino")).toBeInTheDocument();
   });
 

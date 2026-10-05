@@ -263,7 +263,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
       <Sheet
         open={sheet === "assign"}
         onClose={close}
-        title={`Qual programa para ${first}?`}
+        title="Escolha o programa"
         description={`${first} recebe a própria cópia. Mudar o programa original depois não altera o dele.`}
         footer={
           <>
@@ -460,7 +460,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
       <Sheet
         open={sheet === "end"}
         onClose={close}
-        title={`Encerrar vínculo com ${first}?`}
+        title="Encerrar vínculo?"
         description={`${first} sai do seu espaço e continua com a conta como FitOS Livre, levando o histórico de treinos. Isso não pode ser desfeito.`}
         footer={
           <>

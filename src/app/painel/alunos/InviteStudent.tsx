@@ -81,8 +81,8 @@ export function InviteStudent({ startOpen = false }: { startOpen?: boolean }) {
         <Sheet
           open={open}
           onClose={reset}
-          title={`Convite pronto para ${created.firstName}`}
-          description={created.link ? "Mande o link por onde vocês conversam. Ele vale por 7 dias e só aparece agora." : "Aluno cadastrado. Gere o convite no perfil dele."}
+          title="Convite pronto"
+          description={created.link ? `Mande o link para ${created.firstName} por onde vocês conversam. Ele vale por 7 dias e só aparece agora.` : "Aluno cadastrado. Gere o convite no perfil dele."}
           footer={
             <>
               <Button href={`/painel/alunos/${created.id}?atribuir=1`} block onClick={reset}>

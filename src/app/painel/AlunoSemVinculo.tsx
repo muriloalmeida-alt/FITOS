@@ -34,8 +34,8 @@ export function AlunoSemVinculo({ name, ended = false }: { name: string; ended?:
       <div className={styles.content}>
         <BrandLogo background="photo" size={40} />
         <div>
-          <h1 className={styles.title}>{ended ? `${first}, seu vínculo foi encerrado.` : `Oi, ${first}.`}</h1>
-          <p className={styles.text}>{ended ? "Seu histórico continua guardado. Escolha como seguir." : "Sua conta ainda não está ligada a um personal."}</p>
+          <h1 className={styles.title}>{ended ? "Vínculo encerrado" : `Oi, ${first}.`}</h1>
+          <p className={styles.text}>{ended ? `${first}, seu histórico continua guardado. Escolha como seguir.` : "Sua conta ainda não está ligada a um personal."}</p>
         </div>
 
         {error ? <FormAlert>{error}</FormAlert> : null}
