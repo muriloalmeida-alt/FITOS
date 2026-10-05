@@ -48,6 +48,12 @@ export function EntrarForm() {
     const { error } = await signIn.email({ email: normalizedEmail, password });
     setIsSubmitting(false);
 
+    if (error?.status === 429) {
+      // Limite de tentativas do Better Auth: não é senha errada.
+      setFormError("Muitas tentativas seguidas. Aguarde alguns segundos e tente de novo.");
+      return;
+    }
+
     if (error) {
       // Mensagem deliberadamente genérica: não revela se o e-mail existe.
       // Fica junto do campo de senha (FIT-163).
