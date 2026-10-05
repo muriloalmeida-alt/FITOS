@@ -31,6 +31,7 @@ export async function suggestProgressions(input: { tenantId: string; studentId: 
       setResults: {
         select: {
           workoutExerciseId: true,
+          performedExerciseId: true,
           reps: true,
           loadGrams: true,
           workoutExercise: { select: { id: true, workoutId: true, sets: true, reps: true, load: true, intensity: true, exercise: { select: { name: true } }, workout: { select: { name: true, status: true, trainingPlan: { select: { isSnapshot: true } } } } } },
@@ -44,6 +45,8 @@ export async function suggestProgressions(input: { tenantId: string; studentId: 
   for (const session of sessions) {
     const grouped = new Map<string, { reps: number | null; loadGrams: number | null }[]>();
     for (const result of session.setResults) {
+      // Séries feitas com outro exercício (aparelho ocupado) não contam para a progressão do prescrito.
+      if (result.performedExerciseId) continue;
       const list = grouped.get(result.workoutExerciseId) ?? [];
       list.push({ reps: result.reps, loadGrams: result.loadGrams });
       grouped.set(result.workoutExerciseId, list);

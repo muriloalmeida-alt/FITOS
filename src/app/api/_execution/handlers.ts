@@ -38,6 +38,7 @@ export async function recordSetHandler(resolve: ResolveExecutor, request: Reques
       reps: numberOrNull(body.reps),
       durationSeconds: numberOrNull(body.durationSeconds),
       loadKg: numberOrNull(body.loadKg),
+      performedExerciseId: typeof body.performedExerciseId === "string" ? body.performedExerciseId : null,
     });
     return Response.json({ setNumber: result.set.setNumber, personalRecord: result.personalRecord }, { status: 201 });
   } catch (error) {

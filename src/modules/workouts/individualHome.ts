@@ -18,7 +18,11 @@ export interface IndividualWorkoutCard {
 }
 
 export interface IndividualHome {
-  today: (IndividualWorkoutCard & { reason: "dia" | "rodizio" }) | null;
+  /// "faltou" (EPIC-38): dia de descanso hoje, com um treino desta semana que ficou para trás.
+  today: (IndividualWorkoutCard & { reason: "dia" | "rodizio" | "faltou"; missedDay?: string }) | null;
+  /// Treino desta semana que ficou para trás num dia que já tem treino hoje
+  /// (sugestão de trocar o dia).
+  missed: (IndividualWorkoutCard & { missedDay: string }) | null;
   inProgress: { workoutName: string; done: number; total: number; minutesAgo: number } | null;
   workouts: IndividualWorkoutCard[];
   week: { done: boolean[]; doneCount: number; target: number };
@@ -68,6 +72,7 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
     const first = cards.find((card) => card.exercises > 0);
     return {
       today: byDay ? { ...byDay, reason: "dia" } : first ? { ...first, reason: "rodizio" } : null,
+      missed: null,
       inProgress: null,
       workouts: cards,
       week: { done: [false, false, false, false, false, false, false], doneCount: 0, target },
@@ -84,7 +89,7 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
       where: { tenantId: input.tenantId, studentId: self.id, status: "EM_ANDAMENTO" },
       include: { workout: { select: { name: true, _count: { select: { workoutExercises: true } } } }, results: { select: { workoutExerciseId: true } } },
     }),
-    client.workoutSession.findMany({ where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA", startedAt: { gte: start } }, select: { startedAt: true } }),
+    client.workoutSession.findMany({ where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA", startedAt: { gte: start } }, select: { startedAt: true, workoutId: true } }),
     client.workoutSession.count({ where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA", startedAt: { gte: monthStart } } }),
     client.workoutSession.groupBy({ by: ["workoutId"], where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA" }, _max: { startedAt: true } }),
     client.goal.count({ where: { tenantId: input.tenantId, studentId: self.id, status: "EM_ANDAMENTO" } }),
@@ -100,8 +105,21 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
   const lastDone = new Map(lastByWorkout.map((row) => [row.workoutId, row._max.startedAt?.getTime() ?? 0]));
   const rotation = [...usable].sort((a, b) => (lastDone.get(a.id) ?? 0) - (lastDone.get(b.id) ?? 0))[0];
 
+  // EPIC-38: o treino de um dia anterior desta semana que não foi feito
+  // (o mais recente). Sem treino hoje, ele vira o de hoje; com treino hoje,
+  // vira a sugestão de trocar o dia.
+  const doneThisWeek = new Set(weekSessions.map((entry) => entry.workoutId));
+  const todayIndex = mondayFirstIndex(now);
+  let missed: (IndividualWorkoutCard & { missedDay: string }) | null = null;
+  for (let index = todayIndex - 1; index >= 0 && !missed; index -= 1) {
+    const day = WEEKDAYS[index]!;
+    const card = usable.find((entry) => entry.days.includes(day.key) && !doneThisWeek.has(entry.id) && entry.id !== byDay?.id);
+    if (card && !done[index]) missed = { ...card, missedDay: index === todayIndex - 1 ? "ontem" : day.name.toLowerCase() };
+  }
+
   return {
-    today: byDay ? { ...byDay, reason: "dia" } : rotation ? { ...rotation, reason: "rodizio" } : null,
+    today: byDay ? { ...byDay, reason: "dia" } : missed ? { ...missed, reason: "faltou" } : rotation ? { ...rotation, reason: "rodizio" } : null,
+    missed: byDay ? missed : null,
     inProgress: session
       ? {
           workoutName: session.workout.name,

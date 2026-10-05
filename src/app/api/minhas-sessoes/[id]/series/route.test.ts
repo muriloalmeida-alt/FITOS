@@ -21,7 +21,7 @@ describe("POST /api/minhas-sessoes/[id]/series (FIT-158)", () => {
     const { POST } = await import("./route");
     const response = await POST(new Request("http://x", { method: "POST", body: JSON.stringify({ workoutExerciseId: "we1", setNumber: 1, reps: 12, loadKg: 20 }) }), { params: Promise.resolve({ id: "sess1" }) });
     expect(response.status).toBe(201);
-    expect(recordWorkoutSet).toHaveBeenCalledWith({ tenantId: "t1", studentId: "self", sessionId: "sess1", workoutExerciseId: "we1", setNumber: 1, reps: 12, durationSeconds: null, loadKg: 20 });
+    expect(recordWorkoutSet).toHaveBeenCalledWith({ tenantId: "t1", studentId: "self", sessionId: "sess1", workoutExerciseId: "we1", setNumber: 1, reps: 12, durationSeconds: null, loadKg: 20, performedExerciseId: null });
     expect(ensureStudentForIndividual).toHaveBeenCalledWith({ id: "t1", ownerId: "u1" });
   });
 

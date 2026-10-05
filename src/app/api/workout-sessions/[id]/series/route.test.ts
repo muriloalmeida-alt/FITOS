@@ -26,7 +26,7 @@ describe("/api/workout-sessions/[id]/series (FIT-153, BK-11)", () => {
     const response = await POST(req("POST", { workoutExerciseId: "we1", setNumber: 2, reps: 8, loadKg: 42.5, studentId: "outro" }), params);
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ setNumber: 2, personalRecord: true });
-    expect(recordWorkoutSet).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1", sessionId: "sess1", workoutExerciseId: "we1", setNumber: 2, reps: 8, durationSeconds: null, loadKg: 42.5 });
+    expect(recordWorkoutSet).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1", sessionId: "sess1", workoutExerciseId: "we1", setNumber: 2, reps: 8, durationSeconds: null, loadKg: 42.5, performedExerciseId: null });
   });
 
   it("desfaz a série e valida o corpo", async () => {

@@ -2,6 +2,8 @@ import "server-only";
 import type { PrismaClient, WorkoutSessionResult, WorkoutSetResult } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { formatLoadForStorage, parseLoadKg } from "@/shared/lib/load";
+import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
+import { isCardioType } from "@/shared/lib/cardio";
 import { SessionError, getInProgressSessionOwnedByStudentOrThrow } from "./sessions";
 
 /// Registro por série (BK-11, FIT-153, ADR-015) e "última vez"/recordes
@@ -23,6 +25,8 @@ export interface RecordWorkoutSetInput {
   reps: number | null;
   durationSeconds: number | null;
   loadKg: number | null;
+  /// "Aparelho ocupado" (EPIC-38): exercício feito no lugar do prescrito.
+  performedExerciseId?: string | null;
 }
 
 export interface RecordWorkoutSetResult {
@@ -55,6 +59,12 @@ async function itemOfSession(input: { tenantId: string; workoutExerciseId: strin
   return item;
 }
 
+/// Séries/resultados feitos com um exercício: o trocado na hora (EPIC-38)
+/// ou, sem troca, o do treino.
+function doneWith(exerciseId: string | { in: string[] }) {
+  return { OR: [{ performedExerciseId: exerciseId }, { performedExerciseId: null, workoutExercise: { exerciseId } }] };
+}
+
 /// Maior carga (gramas) do aluno num exercício, em sessões CONCLUIDAS
 /// diferentes de `excludeSessionId` — por série e, para sessões antigas
 /// (antes do registro por série), pelo agregado.
@@ -65,11 +75,11 @@ export async function bestLoadGramsForExercise(
   const sessionFilter = { studentId: input.studentId, status: "CONCLUIDA" as const, ...(input.excludeSessionId ? { id: { not: input.excludeSessionId } } : {}) };
   const [fromSets, aggregates] = await Promise.all([
     client.workoutSetResult.aggregate({
-      where: { tenantId: input.tenantId, workoutExercise: { exerciseId: input.exerciseId }, workoutSession: sessionFilter },
+      where: { tenantId: input.tenantId, ...doneWith(input.exerciseId), workoutSession: sessionFilter },
       _max: { loadGrams: true },
     }),
     client.workoutSessionResult.findMany({
-      where: { tenantId: input.tenantId, loadUsed: { not: null }, workoutExercise: { exerciseId: input.exerciseId }, workoutSession: sessionFilter },
+      where: { tenantId: input.tenantId, loadUsed: { not: null }, ...doneWith(input.exerciseId), workoutSession: sessionFilter },
       select: { loadUsed: true },
     }),
   ]);
@@ -95,6 +105,7 @@ async function syncAggregate(input: { tenantId: string; sessionId: string; worko
     repsCompleted: top.reps,
     durationSecondsCompleted: Math.max(...durations) || null,
     loadUsed: top.loadGrams ? formatLoadForStorage(top.loadGrams / 1000) : null,
+    performedExerciseId: top.performedExerciseId,
   };
   return client.workoutSessionResult.upsert({
     where: key,
@@ -114,13 +125,25 @@ export async function recordWorkoutSet(input: RecordWorkoutSetInput, client: Pri
     throw new SessionError("VALIDACAO", "Informe as repetições ou o tempo da série.");
   }
 
-  const previousBest = loadGrams ? await bestLoadGramsForExercise({ tenantId: input.tenantId, studentId: input.studentId, exerciseId: item.exerciseId, excludeSessionId: session.id }, client) : null;
+  let performedExerciseId: string | null = null;
+  if (input.performedExerciseId && input.performedExerciseId !== item.exerciseId) {
+    const [performed, planned] = await Promise.all([
+      getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.performedExerciseId }, client),
+      client.exercise.findUniqueOrThrow({ where: { id: item.exerciseId }, select: { type: true } }),
+    ]);
+    if (!performed || performed.status !== "ATIVO" || isCardioType(performed.type) !== isCardioType(planned.type)) {
+      throw new SessionError("VALIDACAO", "Exercício de troca inválido.");
+    }
+    performedExerciseId = performed.id;
+  }
+  const effectiveExerciseId = performedExerciseId ?? item.exerciseId;
+  const previousBest = loadGrams ? await bestLoadGramsForExercise({ tenantId: input.tenantId, studentId: input.studentId, exerciseId: effectiveExerciseId, excludeSessionId: session.id }, client) : null;
 
   return client.$transaction(async (tx) => {
     const set = await tx.workoutSetResult.upsert({
       where: { workoutSessionId_workoutExerciseId_setNumber: { workoutSessionId: session.id, workoutExerciseId: item.id, setNumber } },
-      create: { tenantId: input.tenantId, workoutSessionId: session.id, workoutExerciseId: item.id, setNumber, reps, durationSeconds, loadGrams },
-      update: { reps, durationSeconds, loadGrams, completedAt: new Date() },
+      create: { tenantId: input.tenantId, workoutSessionId: session.id, workoutExerciseId: item.id, setNumber, reps, durationSeconds, loadGrams, performedExerciseId },
+      update: { reps, durationSeconds, loadGrams, performedExerciseId, completedAt: new Date() },
     });
     const aggregate = await syncAggregate({ tenantId: input.tenantId, sessionId: session.id, workoutExerciseId: item.id }, tx);
     return { set, aggregate, personalRecord: loadGrams !== null && loadGrams > 0 && previousBest !== null && loadGrams > previousBest };
@@ -159,7 +182,7 @@ export async function getLastPerformanceForExercises(
   const aggregates = await client.workoutSessionResult.findMany({
     where: {
       tenantId: input.tenantId,
-      workoutExercise: { exerciseId: { in: input.exerciseIds } },
+      ...doneWith({ in: input.exerciseIds }),
       workoutSession: { studentId: input.studentId, status: "CONCLUIDA", ...(input.excludeSessionId ? { id: { not: input.excludeSessionId } } : {}) },
     },
     include: { workoutExercise: { select: { exerciseId: true } }, workoutSession: { select: { startedAt: true } } },
@@ -167,7 +190,8 @@ export async function getLastPerformanceForExercises(
   });
   for (const exerciseId of input.exerciseIds) result.set(exerciseId, { last: null, bestLoadKg: null });
   for (const aggregate of aggregates) {
-    const entry = result.get(aggregate.workoutExercise.exerciseId)!;
+    const entry = result.get(aggregate.performedExerciseId ?? aggregate.workoutExercise.exerciseId);
+    if (!entry) continue;
     const kg = parseLoadKg(aggregate.loadUsed);
     if (!entry.last) {
       entry.last = { loadKg: kg && kg > 0 ? kg : null, reps: aggregate.repsCompleted, durationSeconds: aggregate.durationSecondsCompleted, at: aggregate.workoutSession.startedAt };
@@ -196,7 +220,7 @@ export async function getSessionSummary(
   const session = await client.workoutSession.findFirst({
     where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId },
     include: {
-      setResults: { include: { workoutExercise: { select: { exerciseId: true, exercise: { select: { name: true } } } } } },
+      setResults: { include: { workoutExercise: { select: { exerciseId: true, exercise: { select: { name: true } } } }, performedExercise: { select: { name: true } } } },
       results: { include: { workoutExercise: { select: { id: true } } } },
     },
   });
@@ -216,9 +240,9 @@ export async function getSessionSummary(
   const bestByExercise = new Map<string, { name: string; grams: number }>();
   for (const set of session.setResults) {
     if (!set.loadGrams) continue;
-    const key = set.workoutExercise.exerciseId;
+    const key = set.performedExerciseId ?? set.workoutExercise.exerciseId;
     const current = bestByExercise.get(key);
-    if (!current || set.loadGrams > current.grams) bestByExercise.set(key, { name: set.workoutExercise.exercise.name, grams: set.loadGrams });
+    if (!current || set.loadGrams > current.grams) bestByExercise.set(key, { name: set.performedExercise?.name ?? set.workoutExercise.exercise.name, grams: set.loadGrams });
   }
   const records: SessionSummary["records"] = [];
   for (const [exerciseId, best] of bestByExercise) {

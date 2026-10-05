@@ -630,8 +630,10 @@ model Exercise {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutExercises WorkoutExercise[]
+  performedSets    WorkoutSetResult[]     @relation("SetPerformedExercise")
+  performedResults WorkoutSessionResult[] @relation("ResultPerformedExercise")
 
   @@unique([origin, externalId])
   @@index([tenantId])
@@ -882,10 +884,14 @@ model WorkoutSessionResult {
   loadUsed                 String?
   recordedAt               DateTime @default(now())
   updatedAt                DateTime @updatedAt
+  /// Exercício feito no lugar do prescrito (EPIC-38), como nas séries.
+  performedExerciseId      String?
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutSession  WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  performedExercise Exercise? @relation("ResultPerformedExercise", fields: [performedExerciseId], references: [id], onDelete: SetNull)
 
   @@unique([workoutSessionId, workoutExerciseId])
   @@index([tenantId])
@@ -900,19 +906,23 @@ model WorkoutSessionResult {
 /// Registrar a mesma série de novo substitui os valores (upsert por
 /// sessão + item + número da série).
 model WorkoutSetResult {
-  id                String   @id @default(cuid())
-  tenantId          String
-  workoutSessionId  String
-  workoutExerciseId String
-  setNumber         Int
-  reps              Int?
-  durationSeconds   Int?
-  loadGrams         Int?
-  completedAt       DateTime @default(now())
+  id                  String   @id @default(cuid())
+  tenantId            String
+  workoutSessionId    String
+  workoutExerciseId   String
+  setNumber           Int
+  reps                Int?
+  durationSeconds     Int?
+  loadGrams           Int?
+  completedAt         DateTime @default(now())
+  /// "Aparelho ocupado" (EPIC-38): exercício feito no lugar do prescrito,
+  /// só nesta sessão. Nulo = o do treino.
+  performedExerciseId String?
 
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  workoutSession  WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
-  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workoutSession    WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  performedExercise Exercise?       @relation("SetPerformedExercise", fields: [performedExerciseId], references: [id], onDelete: SetNull)
 
   @@unique([workoutSessionId, workoutExerciseId, setNumber])
   @@index([tenantId])

@@ -19,17 +19,29 @@ export interface PlanItem {
 
 export function toLiveItems(
   items: PlanItem[],
-  sets: { workoutExerciseId: string; setNumber: number; reps: number | null; durationSeconds: number | null; loadGrams: number | null }[],
+  sets: {
+    workoutExerciseId: string;
+    setNumber: number;
+    reps: number | null;
+    durationSeconds: number | null;
+    loadGrams: number | null;
+    performedExercise?: { id: string; name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null } | null;
+  }[],
   last: Map<string, { last: { loadKg: number | null; reps: number | null; durationSeconds: number | null } | null }>
 ): LiveItem[] {
   return items.map((item) => {
     const loadKg = parseLoadKg(item.load);
+    // Retomada com "aparelho ocupado" (EPIC-38): segue com o exercício trocado.
+    const performed = sets.find((set) => set.workoutExerciseId === item.id && set.performedExercise)?.performedExercise ?? null;
     return {
       id: item.id,
-      name: item.exercise.name,
-      imageUrl: item.exercise.imageUrl,
-      imageAlt: item.exercise.imageAlt,
-      instructions: item.exercise.instructions,
+      exerciseId: item.exerciseId,
+      performedExerciseId: performed?.id ?? null,
+      plannedName: performed ? item.exercise.name : null,
+      name: performed?.name ?? item.exercise.name,
+      imageUrl: performed ? performed.imageUrl : item.exercise.imageUrl,
+      imageAlt: performed ? performed.imageAlt : item.exercise.imageAlt,
+      instructions: performed ? performed.instructions : item.exercise.instructions,
       sets: item.sets,
       reps: item.reps,
       durationSeconds: item.durationSeconds,

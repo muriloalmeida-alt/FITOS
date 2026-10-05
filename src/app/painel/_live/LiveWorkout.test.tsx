@@ -6,8 +6,8 @@ import { LiveWorkout, type LiveItem } from "./LiveWorkout";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
-const squat: LiveItem = { id: "we1", name: "Agachamento", imageUrl: null, imageAlt: null, instructions: null, sets: 2, reps: 10, durationSeconds: null, loadKg: 40, load: "40 kg", restSeconds: 60, notes: null, intensity: null, doneSets: [], last: null };
-const plank: LiveItem = { id: "we2", name: "Prancha", imageUrl: null, imageAlt: null, instructions: null, sets: 1, reps: null, durationSeconds: 30, loadKg: null, load: null, restSeconds: 30, notes: null, intensity: null, doneSets: [], last: null };
+const squat: LiveItem = { id: "we1", exerciseId: "ex1", name: "Agachamento", imageUrl: null, imageAlt: null, instructions: null, sets: 2, reps: 10, durationSeconds: null, loadKg: 40, load: "40 kg", restSeconds: 60, notes: null, intensity: null, doneSets: [], last: null };
+const plank: LiveItem = { id: "we2", exerciseId: "ex2", name: "Prancha", imageUrl: null, imageAlt: null, instructions: null, sets: 1, reps: null, durationSeconds: 30, loadKg: null, load: null, restSeconds: 30, notes: null, intensity: null, doneSets: [], last: null };
 
 function json(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -43,7 +43,7 @@ describe("LiveWorkout (FIT-153)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Fiz 9 × 42,5 kg" }));
     });
-    expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions/sess1/series", expect.objectContaining({ method: "POST", body: JSON.stringify({ workoutExerciseId: "we1", setNumber: 1, reps: 9, durationSeconds: null, loadKg: 42.5 }) }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions/sess1/series", expect.objectContaining({ method: "POST", body: JSON.stringify({ workoutExerciseId: "we1", setNumber: 1, reps: 9, durationSeconds: null, loadKg: 42.5, performedExerciseId: null }) }));
     const rest = screen.getByRole("dialog", { name: "Descanso" });
     expect(within(rest).getByText("Agachamento · série 2 de 2")).toBeInTheDocument();
     fireEvent.click(within(rest).getByRole("button", { name: "Pular descanso" }));
@@ -103,5 +103,45 @@ describe("LiveWorkout (FIT-153)", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions", expect.objectContaining({ body: JSON.stringify({ workoutId: "w1" }) }));
     expect(screen.getByRole("button", { name: /^Fiz / })).toBeInTheDocument();
+  });
+
+  it("aparelho ocupado: troca só hoje e a série vai com o exercício trocado (EPIC-38)", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes("/alternativas") ? json({ options: [{ id: "ex9", name: "Agachamento no Smith", imageUrl: null, imageAlt: null }] }) : json({ setNumber: 1, personalRecord: false }, 201)
+    );
+    renderLive();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Aparelho ocupado?" }));
+    });
+    const sheet = screen.getByRole("dialog", { name: "Aparelho ocupado?" });
+    expect(within(sheet).getByRole("button", { name: "Fazer depois, volto no fim" })).toBeInTheDocument();
+    fireEvent.click(await within(sheet).findByRole("button", { name: /Agachamento no Smith/ }));
+    expect(screen.getByRole("heading", { level: 1, name: "Agachamento no Smith" })).toBeInTheDocument();
+    expect(screen.getByText("Hoje, no lugar de Agachamento")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Fiz / }));
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions/sess1/series", expect.objectContaining({ body: expect.stringContaining('"performedExerciseId":"ex9"') }));
+  });
+
+  it("aparelho ocupado: fazer depois passa para o próximo exercício", async () => {
+    fetchMock.mockReturnValue(json({ options: [] }));
+    renderLive();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Aparelho ocupado?" }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Fazer depois, volto no fim" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Prancha" })).toBeInTheDocument();
+  });
+
+  it("só tenho X min: a preparação oferece uma versão menor sem mudar o programa (EPIC-38)", () => {
+    const many = ["A", "B", "C", "D", "E", "F"].map((name, index) => ({ ...squat, id: `w${index}`, exerciseId: `e${index}`, name, sets: 4 }));
+    renderLive(many, null);
+    expect(screen.getByText(/6 exercícios · 24 séries · cerca de 40 min/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Só 20 min" }));
+    expect(screen.getByText(/6 exercícios · 12 séries · cerca de 20 min/)).toBeInTheDocument();
+    expect(screen.getByText("Versão de 20 min: 2 séries por exercício. Seu programa não muda.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Completo · 40 min" }));
+    expect(screen.getByText(/24 séries/)).toBeInTheDocument();
   });
 });

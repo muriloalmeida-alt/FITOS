@@ -739,3 +739,60 @@ button.control {
   font-weight: 700;
   opacity: 0.7;
 }
+
+/* EPIC-38: "Só tenho X min" e "Aparelho ocupado". */
+.timeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.timeChip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.timeChipOn {
+  border-color: var(--fitos-orange-500);
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.busyLink {
+  margin-top: 6px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.busyList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.altRow {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 12px !important;
+}
+
+.altThumb {
+  flex-shrink: 0;
+  border-radius: 10px;
+}
