@@ -13,6 +13,8 @@ interface IndividualHomeProps {
   dateLabel?: string;
   home: IndividualHomeData;
   todayIso: string;
+  /// EPIC-33: aviso de fim do teste sem cartão.
+  trialNotice?: string | null;
 }
 
 const SESSION_HREF = "/painel/meus-treinos/sessao";
@@ -20,12 +22,18 @@ const SESSION_HREF = "/painel/meus-treinos/sessao";
 /// Início do FitOS Livre (FIT-156, L1 do protótipo): "Hoje para você" com
 /// "Iniciar treino" (BK-16), semana contra a meta do perfil, seus treinos
 /// com "Iniciar", "+ Montar meu treino" e o resumo da evolução.
-export function IndividualHome({ name, greeting, dateLabel, home, todayIso }: IndividualHomeProps) {
+export function IndividualHome({ name, greeting, dateLabel, home, todayIso, trialNotice = null }: IndividualHomeProps) {
   const firstName = name.trim().split(/\s+/)[0] ?? name;
   const planned = [...new Set(home.workouts.flatMap((workout) => workout.days))];
 
   return (
     <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
+      {trialNotice ? (
+        <Link href="/painel/assinatura" className={styles.trial}>
+          <span>{trialNotice}</span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
       {home.inProgress ? (
         <section className={`${styles.hero} ${styles.heroLive}`} aria-label="Treino em andamento">
           <p className={styles.eyebrow}>Em andamento</p>

@@ -7,6 +7,8 @@ export interface ProfileStudent {
   sinceLabel: string;
   endedLabel: string | null;
   endReason: string | null;
+  /// Objetivo escolhido ao entrar pelo convite (EPIC-33).
+  objective?: string | null;
 }
 
 export type AccessStatus = "NAO_CONVIDADO" | "CONVITE_PENDENTE" | "CONVITE_EXPIRADO" | "CONVITE_CANCELADO" | "CONTA_ATIVA";

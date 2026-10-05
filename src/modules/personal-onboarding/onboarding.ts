@@ -20,27 +20,30 @@ const MAX_BUSINESS_NAME_LENGTH = 80;
 
 export interface CompletePersonalOnboardingInput {
   tenantId: string;
-  phone: string;
+  /// Opcional desde a EPIC-33 (cadastro mínimo); validado se vier.
+  phone?: string;
   cref?: string;
   /// Obrigatório (FIT-128, Issue #153) — exigido pelo Asaas em
   /// `POST /v3/customers` para a integração real de pagamento. `null` no
   /// banco existe só para perfis concluídos antes deste campo existir
   /// (ver comentário do campo em `schema.prisma`); toda nova submissão,
   /// inclusive reabrir um onboarding antigo, passa a exigi-lo.
-  cpfCnpj: string;
+  /// Opcional desde a EPIC-33: pedido junto com o cartão, perto do fim do
+  /// teste. Validado se vier.
+  cpfCnpj?: string;
   studentRangeEstimate: PersonalStudentRangeEstimate;
   businessName: string;
   termsAccepted: boolean;
 }
 
 function assertValid(input: CompletePersonalOnboardingInput): void {
-  if (!isValidBrazilianPhone(input.phone)) {
+  if (input.phone !== undefined && !isValidBrazilianPhone(input.phone)) {
     throw new OnboardingError("VALIDACAO", "Informe um celular válido, com DDD.");
   }
   if (input.cref !== undefined && input.cref.trim().length > MAX_CREF_LENGTH) {
     throw new OnboardingError("VALIDACAO", `O CREF deve ter no máximo ${MAX_CREF_LENGTH} caracteres.`);
   }
-  if (!isValidCpfCnpj(input.cpfCnpj)) {
+  if (input.cpfCnpj !== undefined && !isValidCpfCnpj(input.cpfCnpj)) {
     throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
   }
   if (!VALID_STUDENT_RANGES.includes(input.studentRangeEstimate)) {
@@ -80,16 +83,16 @@ export async function completePersonalOnboarding(
       where: { tenantId: input.tenantId },
       create: {
         tenantId: input.tenantId,
-        phone: input.phone,
+        phone: input.phone ?? null,
         cref: cref || null,
-        cpfCnpj: input.cpfCnpj,
+        cpfCnpj: input.cpfCnpj ?? null,
         studentRangeEstimate: input.studentRangeEstimate,
         termsAcceptedAt: new Date(),
       },
       update: {
-        phone: input.phone,
-        cref: cref || null,
-        cpfCnpj: input.cpfCnpj,
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.cref !== undefined ? { cref: cref || null } : {}),
+        ...(input.cpfCnpj !== undefined ? { cpfCnpj: input.cpfCnpj } : {}),
         studentRangeEstimate: input.studentRangeEstimate,
         termsAcceptedAt: new Date(),
       },

@@ -11,6 +11,7 @@ import {
   cancelSubscription,
   getSubscriptionForTenant,
   subscribeTenantToPlan,
+  linkSubscriptionToBilling,
 } from "./subscriptions";
 
 const FAKE_KEY = "$aact_sandbox_fake_key_never_real_1234567890";
@@ -660,5 +661,31 @@ describe("getSubscriptionForTenant (FIT-122)", () => {
     const assinatura = await getSubscriptionForTenant(tenant.id, prisma);
 
     expect(assinatura).toBeNull();
+  });
+});
+
+describe("linkSubscriptionToBilling (EPIC-33: teste sem cartão, CPF junto com o cartão)", () => {
+  it("assinatura criada sem CPF fica local; o CPF chega depois, vai para o perfil e liga ao Asaas com a cobrança no fim do teste", async () => {
+    const { tenant, owner } = await createTenant("ligar-depois");
+    const plano = await createPlan("ligar-depois", { priceCents: 4990, trialDays: 30 });
+    await createPersonalProfile(tenant.id, null);
+    const fetchImpl = createAsaasFetchMock();
+
+    const inicial = await subscribeTenantToPlan({ tenantId: tenant.id, tenantType: "PERSONAL", planId: plano.id, actorUserId: owner.id }, prisma, { apiKey: FAKE_KEY, fetchImpl });
+    expect(inicial.provider).toBe(NO_PAYMENT_PROVIDER);
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    await expect(linkSubscriptionToBilling({ tenantId: tenant.id, tenantType: "PERSONAL", cpfCnpj: "123" }, prisma, { apiKey: FAKE_KEY, fetchImpl })).rejects.toMatchObject({ kind: "VALIDACAO" });
+
+    const ligada = await linkSubscriptionToBilling({ tenantId: tenant.id, tenantType: "PERSONAL", cpfCnpj: "111.444.777-35" }, prisma, { apiKey: FAKE_KEY, fetchImpl });
+    expect(ligada).toMatchObject({ provider: ASAAS_PROVIDER, externalCustomerId: "cus_1", externalSubscriptionId: "sub_1", trialEndsAt: inicial.trialEndsAt });
+    expect((await prisma.personalProfile.findUniqueOrThrow({ where: { tenantId: tenant.id } })).cpfCnpj).toBe("11144477735");
+    const criacao = fetchImpl.mock.calls.find(([url, init]) => String(url).endsWith("/subscriptions") && init?.method === "POST")!;
+    expect(JSON.parse(String(criacao[1]!.body)).nextDueDate).toBe(inicial.trialEndsAt!.toISOString().slice(0, 10));
+
+    // Idempotente: já ligada, não chama o Asaas de novo.
+    const chamadas = fetchImpl.mock.calls.length;
+    await linkSubscriptionToBilling({ tenantId: tenant.id, tenantType: "PERSONAL", cpfCnpj: "111.444.777-35" }, prisma, { apiKey: FAKE_KEY, fetchImpl });
+    expect(fetchImpl.mock.calls.length).toBe(chamadas);
   });
 });

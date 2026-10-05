@@ -9,8 +9,8 @@ import { JoinByLinkForm } from "./JoinByLinkForm";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: `Convite — ${appName}` };
 
-/// Entrar no espaço do personal pelo link (EPIC-29): nome, e-mail e senha,
-/// e o aluno já cai no Início.
+/// Entrar no espaço do personal pelo link (EPIC-29/33): quem convidou, a
+/// conta, o objetivo e o treino de hoje.
 export default async function JoinByLinkPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const link = await getInviteLink(code);
@@ -28,13 +28,24 @@ export default async function JoinByLinkPage({ params }: { params: Promise<{ cod
     );
   }
   const first = link.personalName.trim().split(/\s+/)[0] ?? link.personalName;
+  const initials = link.personalName
+    .trim()
+    .split(/\s+/)
+    .filter((part, index, all) => index === 0 || index === all.length - 1)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
   return (
     <EntradaShell>
-      <div>
-        <p className={styles.eyebrow}>{link.businessName}</p>
-        <h1 className={styles.title}>Treinar com {first}</h1>
+      <div className={styles.account}>
+        <span className={styles.accountIni} aria-hidden="true">
+          {initials}
+        </span>
+        <div>
+          <p className={styles.cardTitle}>{link.personalName} te convidou</p>
+          <p className={styles.muted}>{[link.businessName, link.cref ? `CREF ${link.cref}` : null].filter(Boolean).join(" · ")}</p>
+        </div>
       </div>
-      <JoinByLinkForm code={code} />
+      <JoinByLinkForm code={code} personalFirstName={first} businessName={link.businessName} />
     </EntradaShell>
   );
 }

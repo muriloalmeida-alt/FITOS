@@ -6,6 +6,7 @@ import { ActionRow, Avatar, Button, FormAlert, TextField, useToast } from "@/sha
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
 import { TrainingPreferences } from "../_push/TrainingPreferences";
+import { PasskeyRow } from "../_push/PasskeyRow";
 import styles from "./PersonalProfileView.module.css";
 
 interface StudentProfileViewProps {
@@ -113,6 +114,9 @@ export function StudentProfileView({ name, email, coach, preferences }: StudentP
 
       <h2 className={styles.cap}>Conta</h2>
       <ul className={styles.list}>
+        <li>
+          <PasskeyRow />
+        </li>
         <li>
           <ActionRow href="/termos-de-uso" title="Termos de uso" trailing={<span aria-hidden="true">›</span>} />
         </li>

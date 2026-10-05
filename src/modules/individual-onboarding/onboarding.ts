@@ -33,7 +33,9 @@ export interface CompleteIndividualOnboardingInput {
   /// pago do FitOS Livre. `null` no banco existe só para perfis
   /// concluídos antes deste campo existir; toda nova submissão, inclusive
   /// reabrir um onboarding antigo, passa a exigi-lo.
-  cpfCnpj: string;
+  /// Opcional desde a EPIC-33: o teste grátis começa sem cartão e o CPF é
+  /// pedido junto com o cartão. Validado se vier.
+  cpfCnpj?: string;
   termsAccepted: boolean;
 }
 
@@ -47,7 +49,7 @@ function assertValid(input: CompleteIndividualOnboardingInput): void {
   if (!VALID_AVAILABILITIES.includes(input.weeklyAvailability)) {
     throw new OnboardingError("VALIDACAO", "Disponibilidade semanal inválida.");
   }
-  if (!isValidCpfCnpj(input.cpfCnpj)) {
+  if (input.cpfCnpj !== undefined && !isValidCpfCnpj(input.cpfCnpj)) {
     throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
   }
 }
@@ -81,14 +83,14 @@ export async function completeIndividualOnboarding(
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
-      cpfCnpj: input.cpfCnpj,
+      cpfCnpj: input.cpfCnpj ?? null,
       termsAcceptedAt: new Date(),
     },
     update: {
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
-      cpfCnpj: input.cpfCnpj,
+      ...(input.cpfCnpj !== undefined ? { cpfCnpj: input.cpfCnpj } : {}),
     },
   });
 }

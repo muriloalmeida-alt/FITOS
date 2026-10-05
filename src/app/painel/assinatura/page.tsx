@@ -54,7 +54,9 @@ export default async function AssinaturaPage() {
     getSubscriptionForTenant(ctx.tenantId),
     listActivePlansForAudience(ctx.tenantType),
     isPersonal ? prisma.student.count({ where: { tenantId: ctx.tenantId, status: "ATIVO" } }) : Promise.resolve(0),
-    isPersonal ? prisma.personalProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { phone: true } }) : Promise.resolve(null),
+    isPersonal
+      ? prisma.personalProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { phone: true, cpfCnpj: true } })
+      : prisma.individualProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { cpfCnpj: true } }).then((found) => (found ? { phone: null, cpfCnpj: found.cpfCnpj } : null)),
   ]);
   const now = new Date();
 
@@ -102,6 +104,7 @@ export default async function AssinaturaPage() {
         }))}
         usage={isPersonal ? { active: activeStudents, limit: subscription?.plan.studentLimit ?? null } : null}
         profilePhone={profile?.phone ?? null}
+        needsCpf={!profile?.cpfCnpj}
       />
     </AppShell>
   );

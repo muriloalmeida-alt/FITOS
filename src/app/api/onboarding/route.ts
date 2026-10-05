@@ -3,6 +3,8 @@ import { authErrorResponse, requireIndividual } from "@/modules/tenancy/authCont
 import { completeIndividualOnboarding, getIndividualOnboardingProfile, OnboardingError } from "@/modules/individual-onboarding/onboarding";
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
 import { createStarterPlanForIndividual } from "@/modules/individual-onboarding/starterPlan";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { prisma } from "@/shared/db/prisma";
 
 const VALID_OBJECTIVES: IndividualObjective[] = [
   "GANHAR_MASSA",
@@ -49,15 +51,17 @@ export async function POST(request: Request) {
       !VALID_OBJECTIVES.includes(body.objective) ||
       !VALID_EXPERIENCE_LEVELS.includes(body.experienceLevel) ||
       !VALID_AVAILABILITIES.includes(body.weeklyAvailability) ||
-      typeof body.cpfCnpj !== "string" ||
-      typeof body.termsAccepted !== "boolean" ||
-      typeof body.planId !== "string" ||
-      body.planId.trim() === ""
+      (body.cpfCnpj !== undefined && typeof body.cpfCnpj !== "string") ||
+      (body.termsAccepted !== undefined && typeof body.termsAccepted !== "boolean") ||
+      (body.planId !== undefined && typeof body.planId !== "string")
     ) {
-      return Response.json(
-        { error: "VALIDACAO", message: "Informe objetivo, experiência, disponibilidade, CPF/CNPJ e um plano válidos." },
-        { status: 400 }
-      );
+      return Response.json({ error: "VALIDACAO", message: "Informe objetivo, experiência e disponibilidade válidos." }, { status: 400 });
+    }
+    // EPIC-33: sem CPF e sem plano no cadastro — o teste grátis do plano do
+    // Livre começa na hora; CPF e cartão vêm perto do fim do teste.
+    const planId = (typeof body.planId === "string" && body.planId.trim()) || (await listActivePlansForAudience("INDIVIDUAL"))[0]?.id;
+    if (!planId) {
+      return Response.json({ error: "NAO_ENCONTRADO", message: "Nenhum plano disponível no momento." }, { status: 404 });
     }
 
     const profile = await completeIndividualOnboarding({
@@ -65,16 +69,15 @@ export async function POST(request: Request) {
       objective: body.objective,
       experienceLevel: body.experienceLevel,
       weeklyAvailability: body.weeklyAvailability,
-      cpfCnpj: body.cpfCnpj,
-      termsAccepted: body.termsAccepted,
+      cpfCnpj: typeof body.cpfCnpj === "string" && body.cpfCnpj.trim() ? body.cpfCnpj : undefined,
+      // Os termos são aceitos ao criar a conta (FIT-164).
+      termsAccepted: body.termsAccepted ?? true,
     });
 
-    await subscribeTenantToPlan({
-      tenantId: ctx.tenantId,
-      tenantType: "INDIVIDUAL",
-      planId: body.planId,
-      actorUserId: ctx.userId,
-    });
+    const existing = await prisma.saasSubscription.findUnique({ where: { tenantId: ctx.tenantId }, select: { planId: true } });
+    if (!existing || existing.planId !== planId) {
+      await subscribeTenantToPlan({ tenantId: ctx.tenantId, tenantType: "INDIVIDUAL", planId, actorUserId: ctx.userId });
+    }
 
     // EPIC-30: as respostas viram o plano inicial (só num espaço vazio).
     const starter = await createStarterPlanForIndividual({

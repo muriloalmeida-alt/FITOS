@@ -21,6 +21,7 @@ vi.mock("@/shared/db/prisma", () => ({
   prisma: {
     student: { count: (...args: unknown[]) => countStudents(...args) },
     personalProfile: { findUnique: (...args: unknown[]) => findProfile(...args) },
+    individualProfile: { findUnique: async () => ({ cpfCnpj: "52998224725" }) },
   },
 }));
 vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));

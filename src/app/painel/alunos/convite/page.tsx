@@ -35,7 +35,7 @@ export default async function InviteLinkPage() {
     where: { tenantId: ctx.tenantId, status: "ATIVO", userId: { not: null }, invitations: { some: { status: "ACEITO", acceptedAt: { gte: since } } } },
     orderBy: { createdAt: "desc" },
     take: 10,
-    select: { id: true, displayName: true, planAssignments: { where: { active: true }, select: { id: true }, take: 1 } },
+    select: { id: true, displayName: true, objective: true, planAssignments: { where: { active: true }, select: { id: true }, take: 1 } },
   });
 
   return (
@@ -52,7 +52,7 @@ export default async function InviteLinkPage() {
                 <ActionRow
                   leading={<Avatar name={student.displayName} />}
                   title={student.displayName}
-                  description={student.planAssignments.length > 0 ? "Com programa" : "Sem programa"}
+                  description={[student.objective, student.planAssignments.length > 0 ? "com programa" : "sem programa"].filter(Boolean).join(" · ")}
                   action={student.planAssignments.length > 0 ? { label: "Ver treino", href: `/painel/alunos/${student.id}/treino` } : { label: "Escolher programa", href: `/painel/treinos?aluno=${student.id}` }}
                 />
               </li>

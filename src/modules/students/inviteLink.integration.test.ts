@@ -33,7 +33,7 @@ describe("link de convite (EPIC-29)", () => {
     const tenant = await prisma.tenant.create({ data: { ownerId: owner.id, name: `Studio ${run}` } });
     const code = await getOrCreateInviteCode(tenant.id, prisma);
     expect(await getOrCreateInviteCode(tenant.id, prisma)).toBe(code);
-    expect(await getInviteLink(code, prisma)).toEqual({ tenantId: tenant.id, businessName: `Studio ${run}`, personalName: "Murilo Almeida" });
+    expect(await getInviteLink(code, prisma)).toEqual({ tenantId: tenant.id, businessName: `Studio ${run}`, personalName: "Murilo Almeida", cref: null });
 
     const result = await joinByInviteLink({ code, name: "Gabriel Nunes", email: `Gabriel-${run}@Example.test`, password: "senha-forte-123" }, prisma, testAuth);
     expect(result.headers.getSetCookie().length).toBeGreaterThan(0);

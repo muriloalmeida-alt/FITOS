@@ -212,7 +212,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("link", { name: /Convide seu primeiro aluno/ })).toHaveAttribute("href", "/painel/alunos/convite");
+    expect(screen.getByRole("link", { name: /Seu primeiro aluno/ })).toHaveAttribute("href", "/painel/primeiros-passos");
     expect(screen.queryByRole("heading", { name: "Pede você agora" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Assinar de novo/ })).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();

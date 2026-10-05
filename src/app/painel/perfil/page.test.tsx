@@ -68,6 +68,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/modules/identity/auth-client", () => ({
   signOut: vi.fn(),
+  authClient: { passkey: { listUserPasskeys: async () => ({ data: [] }), addPasskey: vi.fn(), deletePasskey: vi.fn() } },
 }));
 
 describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
@@ -104,6 +105,8 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     // EPIC-31: lembrete e dias (do programa, enquanto o aluno não escolhe).
     expect(screen.getByText("Nos dias de treino, às 7h")).toBeInTheDocument();
     expect(screen.getByText("seg, qua")).toBeInTheDocument();
+    // EPIC-33: entrar com digital ou Face ID, ligado pelo Perfil.
+    expect(screen.getByText("Entrar com digital ou Face ID")).toBeInTheDocument();
   });
 
   it("aluno autenticado sem vínculo ativo (studentId nulo) é redirecionado para /painel", async () => {

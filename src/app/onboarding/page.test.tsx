@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { ToastProvider } from "@/shared/ui";
 
 const getServerSession = vi.fn();
 const getAuthContext = vi.fn();
@@ -68,7 +69,7 @@ describe("OnboardingPage (FIT-101)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("individual autenticado: passo 1 já com a resposta existente e o catálogo real (FIT-167)", async () => {
+  it("individual autenticado sem plano: as três perguntas, sem pagamento (EPIC-33)", async () => {
     getServerSession.mockResolvedValue({ user: { id: "u1" } });
     getAuthContext.mockResolvedValue({ authenticated: true, role: "INDIVIDUAL", userId: "u1", tenantId: "t1", studentId: null });
     getIndividualOnboardingProfile.mockResolvedValue({ id: "p1", tenantId: "t1", objective: "PERDER_PESO", experienceLevel: "AVANCADO", weeklyAvailability: "CINCO_OU_MAIS_DIAS", termsAcceptedAt: null });
@@ -76,10 +77,11 @@ describe("OnboardingPage (FIT-101)", () => {
     getSubscriptionForTenant.mockResolvedValue(null);
 
     const { default: OnboardingPage } = await import("./page");
-    render(await OnboardingPage());
+    render(<ToastProvider>{await OnboardingPage()}</ToastProvider>);
 
     expect(screen.getByRole("heading", { name: "O que você quer?" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Perder peso" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: /Emagrecer/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText("CPF ou CNPJ")).not.toBeInTheDocument();
     expect(listActivePlansForAudience).toHaveBeenCalledWith("INDIVIDUAL");
     expect(redirect).not.toHaveBeenCalled();
   });
