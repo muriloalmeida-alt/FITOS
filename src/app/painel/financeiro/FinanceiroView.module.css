@@ -148,3 +148,33 @@
     gap: 8px;
   }
 }
+
+.auto {
+  margin: 16px 0 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background-color: rgba(130, 213, 201, 0.1);
+  color: #cdf2ec;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.amountButton {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}

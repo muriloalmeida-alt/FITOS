@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/shared/ui";
 
 const requirePersonal = vi.fn();
@@ -38,6 +38,7 @@ vi.mock("@/modules/student-finance/charges", async () => {
     listActiveRecurrencesForTenant: (...args: unknown[]) => listActiveRecurrencesForTenant(...args),
     getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args),
     countPendingRecurrencesForMonth: (...args: unknown[]) => countPendingRecurrencesForMonth(...args),
+    ensureCurrentMonthCharges: async () => ({ created: 0 }),
   };
 });
 
@@ -104,7 +105,6 @@ describe("FinanceiroPage (FIT-148)", () => {
     expect(screen.getByText("Outubro de 2026")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Mês anterior" })).toHaveAttribute("href", "/painel/financeiro?mes=2026-09");
     expect(screen.getByRole("link", { name: "Próximo mês" })).toHaveAttribute("href", "/painel/financeiro?mes=2026-11");
-    expect(screen.getByText(/Controle manual/)).toBeInTheDocument();
     expect(getFinancialSummary.mock.calls[0]![0]).toEqual({ tenantId: "t1", referenceMonth: new Date(Date.UTC(2026, 9, 1)) });
     expect(screen.getByText(/2 mensalidades recorrentes ainda não lançadas/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Gerar todas" })).toBeInTheDocument();
@@ -123,13 +123,26 @@ describe("FinanceiroPage (FIT-148)", () => {
     mockData();
     await renderPage({ mes: "2026-10" });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Recebi de Bruno Reis" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Registrar outro valor ou data para Bruno Reis" })[0]!);
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByLabelText("Valor recebido (R$)")).toHaveValue("180,00");
     expect(within(dialog).getByRole("radio", { name: "Outra data" })).toBeInTheDocument();
     expect(within(dialog).getByRole("radio", { name: "Transferência" })).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar esta cobrança" }));
     expect(screen.getByRole("dialog", { name: "Cancelar cobrança?" })).toBeInTheDocument();
+  });
+
+  it("Recebi registra o valor cheio em um toque e oferece Desfazer; atrasada tem Lembrar no WhatsApp", async () => {
+    mockData();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({}), { status: 200 }));
+    await renderPage({ mes: "2026-10" });
+    fireEvent.click(screen.getAllByRole("button", { name: "Recebi de Bruno Reis" })[0]!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/cobrancas\/.+\/recebi$/), expect.objectContaining({ method: "POST" })));
+    fireEvent.click(await screen.findByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/desfazer-pagamento$/), expect.anything()));
+    const remind = screen.queryAllByRole("link", { name: /^Lembrar/ });
+    for (const link of remind) expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    fetchMock.mockRestore();
   });
 
   it("aba Recorrentes mostra o que já foi lançado no mês e ?nova=1 abre a nova cobrança", async () => {

@@ -49,3 +49,4 @@ export { Tag, type TagTone } from "./Tag";
 export { CardioIcon } from "./CardioIcon";
 export { StatePanel, PlanLimitState } from "./StatePanel";
 export { MetricChart, type MetricPoint } from "./MetricChart";
+export { Ruler } from "./Ruler";

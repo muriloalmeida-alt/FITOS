@@ -29,6 +29,8 @@ export interface PersonalFeedItem {
   at: Date | null;
   /// Valor em centavos (só cobrança atrasada).
   amountCents?: number;
+  /// Cobranças atrasadas, para "Recebi" direto na fila (EPIC-29).
+  chargeIds?: string[];
   /// Esforço percebido 1–5 (só treino concluído, BK-13).
   perceivedEffort?: number | null;
 }
@@ -78,7 +80,7 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
     include: {
       invitations: { orderBy: { createdAt: "desc" }, take: 1 },
       planAssignments: { where: { active: true }, take: 1, include: { trainingPlan: { select: { name: true, durationWeeks: true } } } },
-      charges: { where: { status: "ATRASADO" }, select: { amountCents: true } },
+      charges: { where: { status: "ATRASADO" }, select: { id: true, amountCents: true } },
       workoutSessions: {
         where: { status: "CONCLUIDA", startedAt: { gte: new Date(now.getTime() - RECENT_SESSION_MS) } },
         orderBy: { startedAt: "desc" },
@@ -109,6 +111,7 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
         tone: "error",
         at: null,
         amountCents: overdueCents,
+        chargeIds: student.charges.map((charge) => charge.id),
       });
       continue;
     }
@@ -129,9 +132,9 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
     if (!assignment) {
       const acceptedAt = invitation?.acceptedAt ?? null;
       if (acceptedAt && daysBetween(acceptedAt, now) < INVITE_ACCEPTED_WINDOW_DAYS) {
-        items.push({ ...base, kind: "convite_aceito", description: "Aceitou o convite. Ainda sem programa", actionLabel: "Atribuir o primeiro programa", href: `${profile}?atribuir=1`, tone: "ok", at: acceptedAt });
+        items.push({ ...base, kind: "convite_aceito", description: "Aceitou o convite. Ainda sem programa", actionLabel: "Dar programa", href: `/painel/treinos?aluno=${student.id}`, tone: "ok", at: acceptedAt });
       } else {
-        items.push({ ...base, kind: "sem_programa", description: "Sem programa de treino", actionLabel: "Atribuir programa", href: `${profile}?atribuir=1`, tone: "warn", at: student.createdAt });
+        items.push({ ...base, kind: "sem_programa", description: "Sem programa de treino", actionLabel: "Dar programa", href: `/painel/treinos?aluno=${student.id}`, tone: "warn", at: student.createdAt });
       }
       continue;
     }
@@ -145,8 +148,8 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
           ...base,
           kind: "programa_terminando",
           description: daysLeft <= 0 ? `${assignment.trainingPlan.name} terminou` : `${assignment.trainingPlan.name} termina em ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}`,
-          actionLabel: "Renovar",
-          href: `${profile}?atribuir=1`,
+          actionLabel: "Repetir o programa",
+          href: `/painel/treinos?aluno=${student.id}`,
           tone: "warn",
           at: endsAt,
         });
@@ -161,7 +164,7 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
       const parts = [`Concluiu ${session.workout.name}`];
       if (minutes) parts.push(`${minutes} min`);
       if (session.perceivedEffort) parts.push(`esforço ${effortLabel(session.perceivedEffort)}`);
-      items.push({ ...base, kind: "treino_concluido", description: parts.join(" · "), actionLabel: "Ver evolução", href: profile, tone: "ok", at: session.startedAt, perceivedEffort: session.perceivedEffort });
+      items.push({ ...base, kind: "treino_concluido", description: parts.join(" · "), actionLabel: "Ver o treino", href: `${profile}/treino`, tone: "ok", at: session.startedAt, perceivedEffort: session.perceivedEffort });
       continue;
     }
 
@@ -172,8 +175,8 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
         ...base,
         kind: "avaliacao_pendente",
         description: days === null ? "Nenhuma avaliação registrada" : `Última avaliação há ${days} dias`,
-        actionLabel: "Registrar avaliação",
-        href: `${profile}?acao=avaliar`,
+        actionLabel: "Registrar agora",
+        href: `${profile}/avaliacao`,
         tone: "muted",
         at: lastAssessment,
       });
