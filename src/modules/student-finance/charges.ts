@@ -147,7 +147,7 @@ export async function listChargesForStudent(
 }
 
 export type StudentChargeWithStudentAndPayment = StudentChargeWithPayment & {
-  student: { id: string; displayName: string };
+  student: { id: string; displayName: string; cpf?: string | null };
 };
 
 /// Todas as cobranças do tenant (não só de um aluno) — base da tela
@@ -162,7 +162,7 @@ export async function listChargesForTenant(
   return client.studentCharge.findMany({
     where: { tenantId: input.tenantId, ...(input.referenceMonth ? { referenceMonth: input.referenceMonth } : {}) },
     orderBy: { referenceMonth: "desc" },
-    include: { ...CHARGE_WITH_PAYMENT_INCLUDE, student: { select: { id: true, displayName: true } } },
+    include: { ...CHARGE_WITH_PAYMENT_INCLUDE, student: { select: { id: true, displayName: true, cpf: true } } },
   });
 }
 

@@ -45,6 +45,7 @@ vi.mock("@/shared/db/prisma", () => ({
     studentCharge: {
       count: (...args: unknown[]) => countCharges(...args),
       findMany: async () => [],
+      findFirst: async () => null,
     },
   },
 }));

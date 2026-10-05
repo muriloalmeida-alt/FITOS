@@ -29,3 +29,17 @@
   outline: 2px solid var(--fitos-orange-300);
   outline-offset: 2px;
 }
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.steps a {
+  color: var(--fitos-orange-300);
+}

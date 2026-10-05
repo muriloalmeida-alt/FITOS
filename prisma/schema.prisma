@@ -375,6 +375,7 @@ model Tenant {
   personalProfile          PersonalProfile?
   goals                    Goal[]
   evolutionPhotos          EvolutionPhoto[]
+  paymentAccount           PaymentAccount?
   subscriptionDueReminders SubscriptionDueReminder[]
 
   @@map("tenants")
@@ -520,6 +521,11 @@ model Student {
   /// Autorização explícita para fotos de evolução (EPIC-35,
   /// REGRAS-DE-NEGOCIO seção 7): quando e por quem foi registrada. Nula =
   /// sem autorização, nenhuma foto pode ser enviada.
+  /// CPF do aluno, pedido na primeira cobrança pelo app (EPIC-38): o
+  /// Asaas exige CPF do pagador.
+  cpf                  String?
+  /// Cliente do aluno na conta Asaas do personal (zerado ao trocar a conta).
+  asaasCustomerId      String?
   photoConsentAt       DateTime?
   photoConsentByUserId String?
   createdAt            DateTime      @default(now())
@@ -1068,18 +1074,22 @@ enum GoalStatus {
 /// `cancelReason`/`cancelledAt` só são preenchidos por `CANCELADO` — cancelar
 /// nunca equivale a pagar (seção 8).
 model StudentCharge {
-  id             String              @id @default(cuid())
-  tenantId       String
-  studentId      String
-  description    String
-  status         StudentChargeStatus @default(PENDENTE)
-  amountCents    Int
-  referenceMonth DateTime
-  dueDate        DateTime
-  cancelReason   String?
-  cancelledAt    DateTime?
-  recurrenceId   String?
-  createdAt      DateTime            @default(now())
+  id                String              @id @default(cuid())
+  tenantId          String
+  studentId         String
+  description       String
+  status            StudentChargeStatus @default(PENDENTE)
+  amountCents       Int
+  referenceMonth    DateTime
+  dueDate           DateTime
+  cancelReason      String?
+  cancelledAt       DateTime?
+  recurrenceId      String?
+  /// Cobrança gerada na conta Asaas do personal (EPIC-38): id e link de
+  /// pagamento (Pix, boleto ou cartão). A baixa vem pelo webhook.
+  externalPaymentId String?             @unique
+  paymentUrl        String?
+  createdAt         DateTime            @default(now())
 
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student    Student           @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -1322,4 +1332,24 @@ model PersonalAlert {
 
   @@unique([userId, kind, refKey])
   @@map("personal_alerts")
+}
+
+/// Conta de recebimento do personal (EPIC-38): a conta Asaas dele, para
+/// cobrar os alunos pelo app. O dinheiro cai direto para o personal; o
+/// FitOS só guarda a chave (criptografada) e recebe o aviso de pagamento.
+model PaymentAccount {
+  tenantId        String   @id
+  provider        String
+  /// "producao" ou "sandbox", pela chave.
+  environment     String
+  apiKeyEncrypted String
+  /// Identifica a conta na URL do webhook; `webhookSecret` vai no cabeçalho.
+  webhookToken    String   @unique
+  webhookSecret   String
+  webhookId       String?
+  connectedAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("payment_accounts")
 }
