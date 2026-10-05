@@ -9,6 +9,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
+import { CARDIO_INTENSITIES, DEFAULT_CARDIO, isCardioType, type CardioIntensity } from "@/shared/lib/cardio";
 import { getStudentForTenant } from "@/modules/students/students";
 
 /// Modelo de treino (FIT-030). `tenantId` nunca é um parâmetro
@@ -92,7 +93,7 @@ function normalizeOptionalText(value: string | undefined, label: string, maxLeng
 /// único parcial em `(tenantId) WHERE isDraftBucket = true` garante no
 /// máximo um por tenant). Cria um na primeira chamada. Nunca retorna/cria
 /// um snapshot.
-async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
+export async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
   const existing = await client.trainingPlan.findFirst({
     where: { tenantId, isDraftBucket: true },
   });
@@ -242,9 +243,10 @@ export async function addWorkoutExercise(
     throw new WorkoutError("EXERCICIO_INVALIDO", "Exercício não encontrado no catálogo visível à sua conta.");
   }
 
-  const sets = normalizeOptionalPositiveInt(input.sets, "Séries") ?? null;
-  const reps = normalizeOptionalPositiveInt(input.reps, "Repetições") ?? null;
-  const durationSeconds = normalizeOptionalPositiveInt(input.durationSeconds, "A duração") ?? null;
+  const cardio = isCardioType(exercise.type);
+  const sets = cardio ? null : (normalizeOptionalPositiveInt(input.sets, "Séries") ?? null);
+  const reps = cardio ? null : (normalizeOptionalPositiveInt(input.reps, "Repetições") ?? null);
+  const durationSeconds = normalizeOptionalPositiveInt(input.durationSeconds, "A duração") ?? (cardio ? DEFAULT_CARDIO.durationSeconds : null);
   const restSeconds = normalizeOptionalPositiveInt(input.restSeconds, "O descanso") ?? null;
   const load = normalizeOptionalText(input.load, "A carga", MAX_LOAD_LENGTH) ?? null;
   const notes = normalizeOptionalText(input.notes, "A observação", MAX_NOTES_LENGTH) ?? null;
@@ -267,6 +269,7 @@ export async function addWorkoutExercise(
       load,
       restSeconds,
       notes,
+      intensity: cardio ? DEFAULT_CARDIO.intensity : null,
     },
   });
 }
@@ -307,6 +310,11 @@ export interface UpdateWorkoutExerciseInput {
   load?: string;
   restSeconds?: number | null;
   notes?: string;
+  /// Só em item aeróbico.
+  intensity?: CardioIntensity;
+  /// Troca o exercício mantendo a prescrição (EPIC-30). Só entre exercícios
+  /// do mesmo tipo: aeróbico por aeróbico, força por força.
+  exerciseId?: string;
 }
 
 /// Edita os parâmetros de prescrição de um item. `undefined` mantém o
@@ -348,6 +356,22 @@ export async function updateWorkoutExercise(
   const notes = normalizeOptionalText(input.notes, "A observação", MAX_NOTES_LENGTH);
   if (notes !== undefined) {
     data.notes = notes;
+  }
+  if (input.intensity !== undefined) {
+    if (!CARDIO_INTENSITIES.includes(input.intensity)) {
+      throw new WorkoutError("VALIDACAO", "Intensidade inválida.");
+    }
+    data.intensity = input.intensity;
+  }
+  if (input.exerciseId !== undefined && input.exerciseId !== current.exerciseId) {
+    const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.exerciseId }, client);
+    if (!exercise || exercise.status !== "ATIVO") {
+      throw new WorkoutError("VALIDACAO", "Exercício não encontrado no catálogo.");
+    }
+    if (isCardioType(exercise.type) !== (current.intensity !== null)) {
+      throw new WorkoutError("VALIDACAO", "Troque aeróbico por aeróbico e musculação por musculação.");
+    }
+    data.exercise = { connect: { id: exercise.id } };
   }
 
   if (Object.keys(data).length === 0) {
@@ -457,6 +481,7 @@ async function cloneWorkoutRows(
         load: item.load,
         restSeconds: item.restSeconds,
         notes: item.notes,
+        intensity: item.intensity,
       },
     });
   }
@@ -1099,11 +1124,13 @@ export async function addWorkoutExercisesBatch(
   if (!workout) {
     throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
   }
+  const cardioIds = new Set<string>();
   for (const exerciseId of new Set(input.exerciseIds)) {
     const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId }, client);
     if (!exercise) {
       throw new WorkoutError("EXERCICIO_INVALIDO", "Exercício não encontrado no catálogo visível à sua conta.");
     }
+    if (isCardioType(exercise.type)) cardioIds.add(exerciseId);
   }
 
   return client.$transaction(async (tx) => {
@@ -1121,9 +1148,9 @@ export async function addWorkoutExercisesBatch(
             workoutId: input.workoutId,
             exerciseId,
             position,
-            sets: DEFAULT_PRESCRIPTION.sets,
-            reps: DEFAULT_PRESCRIPTION.reps,
-            restSeconds: DEFAULT_PRESCRIPTION.restSeconds,
+            ...(cardioIds.has(exerciseId)
+              ? { durationSeconds: DEFAULT_CARDIO.durationSeconds, intensity: DEFAULT_CARDIO.intensity }
+              : { sets: DEFAULT_PRESCRIPTION.sets, reps: DEFAULT_PRESCRIPTION.reps, restSeconds: DEFAULT_PRESCRIPTION.restSeconds }),
           },
         })
       );

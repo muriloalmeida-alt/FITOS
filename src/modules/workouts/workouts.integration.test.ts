@@ -338,6 +338,22 @@ describe("updateWorkoutExercise (FIT-030)", () => {
   });
 });
 
+describe("updateWorkoutExercise troca de exercício (EPIC-30)", () => {
+  it("troca mantendo a prescrição; aeróbico só por aeróbico", async () => {
+    const { tenant } = await createTenant("trocar-item");
+    const workout = await createWorkout({ tenantId: tenant.id, name: `Modelo ${run}` }, prisma);
+    const from = await createGlobalExercise("trocar-de");
+    const to = await createGlobalExercise("trocar-para");
+    const cardio = await prisma.exercise.create({ data: { name: `Bike ${run}`, origin: "API_NINJAS", type: "Aeróbico" } });
+    const item = await addWorkoutExercise({ tenantId: tenant.id, workoutId: workout.id, exerciseId: from.id, sets: 4, reps: 8, load: "30 kg" }, prisma);
+
+    const swapped = await updateWorkoutExercise({ tenantId: tenant.id, workoutId: workout.id, workoutExerciseId: item.id, exerciseId: to.id }, prisma);
+    expect(swapped).toMatchObject({ exerciseId: to.id, sets: 4, reps: 8, load: "30 kg" });
+    await expect(updateWorkoutExercise({ tenantId: tenant.id, workoutId: workout.id, workoutExerciseId: item.id, exerciseId: cardio.id }, prisma)).rejects.toMatchObject({ kind: "VALIDACAO" });
+    await prisma.exercise.delete({ where: { id: cardio.id } });
+  });
+});
+
 describe("reorderWorkoutExercises (FIT-030)", () => {
   it("reordena conforme a lista enviada", async () => {
     const { tenant } = await createTenant("reordenar");

@@ -1,3 +1,4 @@
+import type { CardioIntensity } from "@/shared/lib/cardio";
 import { parseLoadKg } from "@/shared/lib/load";
 import type { LiveItem } from "./LiveWorkout";
 
@@ -12,6 +13,7 @@ export interface PlanItem {
   load: string | null;
   restSeconds: number | null;
   notes: string | null;
+  intensity?: CardioIntensity | null;
   exercise: { name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
 }
 
@@ -35,6 +37,7 @@ export function toLiveItems(
       load: item.load,
       restSeconds: item.restSeconds,
       notes: item.notes,
+      intensity: item.intensity ?? null,
       doneSets: sets
         .filter((set) => set.workoutExerciseId === item.id)
         .sort((a, b) => a.setNumber - b.setNumber)

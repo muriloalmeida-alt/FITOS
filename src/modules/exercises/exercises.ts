@@ -403,6 +403,30 @@ export async function getCatalogExerciseForTenant(
   });
 }
 
+export interface SwapOption {
+  id: string;
+  name: string;
+  muscle: string | null;
+  type: string | null;
+  imageUrl: string | null;
+  imageAlt: string | null;
+}
+
+/// Opções para trocar um exercício na cópia do aluno (EPIC-28): mesmo
+/// grupo muscular; para aeróbico, outros aeróbicos. Catálogo visível ao
+/// tenant, ativos, com foto primeiro.
+export async function listSwapOptions(input: { tenantId: string; exerciseId: string; limit?: number }, client: PrismaClient = prisma): Promise<SwapOption[]> {
+  const current = await getCatalogExerciseForTenant(input, client);
+  if (!current) return [];
+  const group: Prisma.ExerciseWhereInput = current.type === "Aeróbico" ? { type: "Aeróbico" } : current.muscle ? { muscle: current.muscle, NOT: { type: "Aeróbico" } } : { id: "__nenhum__" };
+  const rows = await client.exercise.findMany({
+    where: { status: "ATIVO", id: { not: current.id }, ...group, AND: [visibleCatalogOriginCondition(input.tenantId)] },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    take: 200,
+    select: { id: true, name: true, muscle: true, type: true, imageUrl: true, imageAlt: true },
+  });
+  return [...rows.filter((row) => row.imageUrl), ...rows.filter((row) => !row.imageUrl)].slice(0, input.limit ?? 12);
+}
 
 export interface CatalogFacets {
   muscles: string[];

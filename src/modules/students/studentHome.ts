@@ -22,6 +22,8 @@ export interface StudentHome {
   week: { planned: string[]; done: boolean[]; doneCount: number; target: number | null };
   upcoming: { dayLabel: string; dayShort: string; workoutName: string }[];
   lastAssessment: { dateIso: string; weightKg: number | null; bodyFatPercent: number | null } | null;
+  /// Meta em andamento (EPIC-30), a mais recente.
+  goal: string | null;
 }
 
 const DEFAULT_REST_SECONDS = 60;
@@ -29,8 +31,9 @@ const DEFAULT_WORK_SECONDS = 40;
 
 /// Duração estimada: séries × (tempo de execução + descanso), arredondada
 /// para 5 min.
-export function estimateMinutes(items: { sets: number | null; durationSeconds: number | null; restSeconds: number | null }[]): number {
-  const seconds = items.reduce((sum, item) => sum + (item.sets ?? 1) * ((item.durationSeconds ?? DEFAULT_WORK_SECONDS) + (item.restSeconds ?? DEFAULT_REST_SECONDS)), 0);
+export function estimateMinutes(items: { sets: number | null; durationSeconds: number | null; restSeconds: number | null; intensity?: string | null }[]): number {
+  // Aeróbico (EPIC-28) conta só o tempo prescrito.
+  const seconds = items.reduce((sum, item) => sum + (item.intensity ? (item.durationSeconds ?? 0) : (item.sets ?? 1) * ((item.durationSeconds ?? DEFAULT_WORK_SECONDS) + (item.restSeconds ?? DEFAULT_REST_SECONDS))), 0);
   return Math.max(5, Math.round(seconds / 300) * 5);
 }
 
@@ -41,7 +44,7 @@ function dayLabel(offset: number, date: Date): string {
 
 export async function getStudentHome(input: { tenantId: string; studentId: string; now?: Date }, client: PrismaClient = prisma): Promise<StudentHome> {
   const now = input.now ?? new Date();
-  const [assignment, session, rhythm, assessment] = await Promise.all([
+  const [assignment, session, rhythm, assessment, goal] = await Promise.all([
     getActivePlanAssignmentForStudent(input, client),
     client.workoutSession.findFirst({
       where: { tenantId: input.tenantId, studentId: input.studentId, status: "EM_ANDAMENTO" },
@@ -49,6 +52,7 @@ export async function getStudentHome(input: { tenantId: string; studentId: strin
     }),
     getWeeklyRhythmForStudent(input, client),
     client.assessment.findFirst({ where: { tenantId: input.tenantId, studentId: input.studentId, deletedAt: null }, orderBy: { recordedAt: "desc" } }),
+    client.goal.findFirst({ where: { tenantId: input.tenantId, studentId: input.studentId, status: "EM_ANDAMENTO" }, orderBy: { createdAt: "desc" }, select: { description: true } }),
   ]);
 
   const workouts = assignment?.trainingPlan.workouts.filter((workout) => workout.status === "ATIVO") ?? [];
@@ -94,5 +98,6 @@ export async function getStudentHome(input: { tenantId: string; studentId: strin
           bodyFatPercent: assessment.bodyFatTenthPercent !== null ? assessment.bodyFatTenthPercent / 10 : null,
         }
       : null,
+    goal: goal?.description ?? null,
   };
 }

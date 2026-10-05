@@ -17,7 +17,7 @@ vi.mock("@/modules/tenancy/authContext", async () => {
 vi.mock("@/modules/evolution/assessments", () => ({ listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) }));
 vi.mock("@/modules/execution/history", () => ({ listPersonalRecordsForStudent: (...args: unknown[]) => listPersonalRecordsForStudent(...args) }));
 vi.mock("@/shared/db/prisma", () => ({
-  prisma: { workoutSession: { count: (...args: unknown[]) => countSessions(...args) }, student: { findUniqueOrThrow: (...args: unknown[]) => findStudent(...args) } },
+  prisma: { workoutSession: { count: (...args: unknown[]) => countSessions(...args) }, student: { findUniqueOrThrow: (...args: unknown[]) => findStudent(...args) }, goal: { findFirst: async () => null } },
 }));
 vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
@@ -67,7 +67,9 @@ describe("ProgressoPage (FIT-154)", () => {
     listPersonalRecordsForStudent.mockResolvedValue([]);
     const { default: ProgressoPage } = await import("./page");
     render(await ProgressoPage());
-    expect(screen.getByText(/Joana Lima registra a sua/)).toBeInTheDocument();
+    expect(screen.getByText(/Pese-se ou espere a próxima avaliação com Joana/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pesar hoje" })).toHaveAttribute("href", "/painel/pesar");
+    expect(screen.getByRole("link", { name: "Escolher meta" })).toHaveAttribute("href", "/painel/meta");
     expect(screen.queryByRole("img", { name: /Peso/ })).not.toBeInTheDocument();
   });
 });

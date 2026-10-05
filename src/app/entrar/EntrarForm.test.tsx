@@ -53,6 +53,20 @@ describe("EntrarForm", () => {
     expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
   });
 
+  it("excesso de tentativas (429) não é tratado como senha errada", async () => {
+    signInEmail.mockResolvedValue({ error: { status: 429, message: "Too many requests" } });
+    const { EntrarForm } = await import("./EntrarForm");
+    const user = userEvent.setup();
+    render(<EntrarForm />);
+
+    await user.type(screen.getByLabelText("E-mail"), "alguem@example.com");
+    await user.type(screen.getByLabelText("Senha"), "senha-qualquer");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Muitas tentativas seguidas. Aguarde alguns segundos e tente de novo.");
+    expect(screen.queryByText(/E-mail ou senha inválidos/)).not.toBeInTheDocument();
+  });
+
   it("usa autocomplete de login (username/current-password) nos campos", async () => {
     const { EntrarForm } = await import("./EntrarForm");
     render(<EntrarForm />);

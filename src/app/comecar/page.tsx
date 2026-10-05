@@ -40,7 +40,7 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
       <EntradaShell>
         <div>
           <p className={styles.eyebrow}>Começar</p>
-          <h1 className={styles.title}>Como você vai usar o FitOS?</h1>
+          <h1 className={styles.title}>Escolha seu caminho</h1>
         </div>
         <nav className={styles.cards} aria-label="Caminhos">
           {CAMINHOS.map((entry) => (
@@ -67,8 +67,7 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
       <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
         <div>
           <p className={styles.eyebrow}>Tenho convite</p>
-          <h1 className={styles.title}>Cole o convite do seu personal</h1>
-          <p className={styles.lead}>Pode ser o código ou o link inteiro.</p>
+          <h1 className={styles.title}>Cole seu convite</h1>
         </div>
         <ConviteEntrada />
         <Button href="/entrar" variant="quiet" block>
@@ -83,7 +82,6 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
       <div>
         <p className={styles.eyebrow}>{caminho === "personal" ? "Sou personal" : "FitOS Livre"}</p>
         <h1 className={styles.title}>Crie sua conta</h1>
-        <p className={styles.lead}>{caminho === "personal" ? "Depois você configura seu espaço e começa 30 dias grátis." : "Depois são três toques para montar seu primeiro treino. 30 dias grátis."}</p>
       </div>
       <CriarContaForm mode={caminho === "personal" ? "personal" : "individual"} />
       <p className={styles.muted}>

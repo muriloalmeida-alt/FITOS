@@ -26,7 +26,11 @@ const base = {
   sessions: [{ id: "x1", workoutName: "Treino A", dateLabel: "há 9 dias", status: "CONCLUIDA" as const, perceivedEffort: 4 }],
   assessments: [{ id: "a1", dateLabel: "3 de agosto", weightKg: 82.4, bodyFatPercent: 21.5, notes: null, measurements: [{ type: "CINTURA", valueCm: 86 }] }],
   openCharge: { id: "c1", description: "Mensalidade de outubro", amountCents: 18000, status: "ATRASADO" as const, dueLabel: "01/10", paidLabel: null },
-  recurrence: { amountCents: 18000, day: 10 },
+  recurrence: { id: "r1", amountCents: 18000, day: 10 },
+  timeline: [
+    { id: "x1", kind: "treino" as const, title: "Fez Treino A", meta: "há 9 dias · esforço difícil" },
+    { id: "a1", kind: "avaliacao" as const, title: "Avaliação · 82,4 kg", meta: "3 de agosto" },
+  ],
   initialSheet: null,
 };
 
@@ -44,23 +48,23 @@ describe("StudentProfile (FIT-145)", () => {
     renderProfile();
     expect(screen.getByText("Pedro está sem programa")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Atribuir programa" }));
-    const sheet = screen.getByRole("dialog", { name: "Qual programa para Pedro?" });
+    const sheet = screen.getByRole("dialog", { name: "Escolha o programa" });
     await user.click(within(sheet).getByRole("radio", { name: /Hipertrofia/ }));
     await user.click(within(sheet).getByRole("button", { name: "Atribuir a Pedro" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/students/s1/plano", expect.objectContaining({ method: "POST", body: JSON.stringify({ trainingPlanId: "p1" }) }));
   });
 
-  it("avaliação começa com os últimos valores e envia peso, gordura e medidas preenchidas", async () => {
+  it("combinado: avaliação leva à régua e a mensalidade é ajustada no lugar", async () => {
     const user = userEvent.setup();
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
     renderProfile();
-    await user.click(screen.getByRole("button", { name: "Registrar" }));
-    const sheet = screen.getByRole("dialog", { name: "Avaliação de hoje" });
-    expect(within(sheet).getByText("82,4")).toBeInTheDocument();
-    await user.click(within(sheet).getByRole("button", { name: "Diminuir peso (kg)" }));
-    await user.click(within(sheet).getByRole("button", { name: "Salvar avaliação" }));
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/students/s1/avaliacoes");
-    expect(body).toEqual({ weightKg: 82.3, bodyFatPercent: 21.5, notes: null, measurements: [{ type: "CINTURA", valueCm: 86 }] });
+    expect(screen.getByRole("link", { name: "Avaliar" })).toHaveAttribute("href", "/painel/alunos/s1/avaliacao");
+    expect(screen.getByText(/Última em 3 de agosto · 82,4 kg/)).toBeInTheDocument();
+    expect(screen.getByText("R$ 180,00 todo dia 10")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ajustar" }));
+    await user.click(screen.getByRole("button", { name: "Aumentar valor (r$)" }));
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/recorrencias/r1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ amountReais: 190, dueDayOfMonth: 10 }) }));
   });
 
   it("'Recebi' registra a mensalidade com a forma escolhida", async () => {
@@ -79,7 +83,8 @@ describe("StudentProfile (FIT-145)", () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ link: "https://fitos.app/ativar-conta?token=z" }), { status: 201 }));
     renderProfile();
-    expect(screen.getByText("Esforço 4/5 · Difícil")).toBeInTheDocument();
+    const timeline = screen.getByRole("list", { name: "O que aconteceu" });
+    expect(within(timeline).getByText("há 9 dias · esforço difícil")).toBeInTheDocument();
     expect(screen.getByText("Vale por mais 5 dias.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Gerar novo link" }));
     const sheet = screen.getByRole("dialog", { name: "Convite de Pedro" });
@@ -91,7 +96,7 @@ describe("StudentProfile (FIT-145)", () => {
   it("encerrar vínculo pede confirmação com motivo opcional e volta para a lista", async () => {
     const user = userEvent.setup();
     renderProfile({ initialSheet: "end" as never });
-    const sheet = screen.getByRole("dialog", { name: "Encerrar vínculo com Pedro?" });
+    const sheet = screen.getByRole("dialog", { name: "Encerrar vínculo?" });
     await user.click(within(sheet).getByRole("radio", { name: "Mudança de cidade" }));
     await user.click(within(sheet).getByRole("button", { name: "Encerrar vínculo" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/students/s1/encerrar-vinculo", expect.objectContaining({ body: JSON.stringify({ reason: "Mudança de cidade" }) }));

@@ -44,6 +44,7 @@ vi.mock("@/shared/db/prisma", () => ({
     },
     studentCharge: {
       count: (...args: unknown[]) => countCharges(...args),
+      findMany: async () => [],
     },
   },
 }));
@@ -89,7 +90,7 @@ vi.mock("@/modules/student-finance/charges", async () => {
   const actual = await vi.importActual<typeof import("@/modules/student-finance/charges")>(
     "@/modules/student-finance/charges"
   );
-  return { ...actual, getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args) };
+  return { ...actual, getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args), ensureCurrentMonthCharges: async () => ({ created: 0 }) };
 });
 
 vi.mock("@/modules/students/roster", async () => {
@@ -191,9 +192,10 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByRole("link", { name: /Teste grátis · 5 dias restantes/ })).toHaveAttribute("href", "/painel/assinatura");
     expect(screen.getByText("de 15 do plano")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.200,00")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1.200")).toBeInTheDocument();
     expect(screen.getByText("2 atrasadas")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Registrar pagamento →" })).toHaveAttribute("href", "/painel/alunos/s1?acao=receber");
+    expect(screen.getByRole("heading", { name: "Pede você agora" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recebi" })).toBeInTheDocument();
     expect(listStudentRoster).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", filter: "ativos" }));
     expect(getPersonalFeed).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1" }));
     expect(countCharges).toHaveBeenCalledWith({ where: { tenantId: "t1", status: "ATRASADO" } });
@@ -210,8 +212,8 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("link", { name: /Convide seu primeiro aluno/ })).toHaveAttribute("href", "/painel/alunos?novo=1");
-    expect(screen.queryByRole("heading", { name: "Acontecendo agora" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Convide seu primeiro aluno/ })).toHaveAttribute("href", "/painel/alunos/convite");
+    expect(screen.queryByRole("heading", { name: "Pede você agora" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Assinar de novo/ })).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
   });
@@ -296,6 +298,7 @@ describe("PainelPage (FIT-012)", () => {
       week: { done: [false, false, false, false, false, false, false], doneCount: 0, target: 4 },
       monthSessions: 0,
       activeGoals: 0,
+      progressions: [],
     });
     const { default: PainelPage } = await import("./page");
 
@@ -321,7 +324,7 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: "Inativo, seu acesso está pausado." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Acesso pausado" })).toBeInTheDocument();
     expect(screen.getByText(/Joana pausou seu acesso/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Treinar por conta própria" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), / })).not.toBeInTheDocument();

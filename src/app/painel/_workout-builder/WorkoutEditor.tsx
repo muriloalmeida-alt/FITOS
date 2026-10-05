@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, ChipGroup, FormAlert, Sheet, useToast } from "@/shared/ui";
+import { Button, CardioIcon, ChipGroup, ExerciseThumbnail, FormAlert, Sheet, useToast } from "@/shared/ui";
 import { WEEKDAYS, formatDays } from "@/shared/lib/weekdays";
 import { ExerciseLibrary } from "./ExerciseLibrary";
 import { WorkoutItemCard, type ItemPatch } from "./WorkoutItemCard";
@@ -56,6 +56,9 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
+  // Troca pelo mesmo grupo muscular (EPIC-30).
+  const [swapItem, setSwapItem] = useState<EditorItem | null>(null);
+  const [swapOptions, setSwapOptions] = useState<{ id: string; name: string; muscle: string | null; imageUrl: string | null; imageAlt: string | null }[] | null>(null);
   const creating = useRef<Promise<string> | null>(null);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const pending = useRef(new Map<string, Record<string, unknown>>());
@@ -124,6 +127,38 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
     scheduleSave("workout", api.workout, { suggestedDays: next });
   }
 
+  async function openSwap(item: EditorItem) {
+    setSwapItem(item);
+    setSwapOptions(null);
+    try {
+      const { options } = await request<{ options: NonNullable<typeof swapOptions> }>(`/api/exercises/${item.exerciseId}/alternativas`);
+      setSwapOptions(options.filter((option) => !items.some((other) => other.exerciseId === option.id)));
+    } catch {
+      setSwapOptions([]);
+    }
+  }
+
+  async function swapTo(option: NonNullable<typeof swapOptions>[number]) {
+    const item = swapItem;
+    if (!item || !workoutId) return;
+    setSwapItem(null);
+    const previous = items;
+    setItems((current) => current.map((entry) => (entry.id === item.id ? { ...entry, exerciseId: option.id, name: option.name, muscle: option.muscle, imageUrl: option.imageUrl, imageAlt: option.imageAlt } : entry)));
+    try {
+      await request(api.item(workoutId, item.id), { method: "PATCH", body: JSON.stringify({ exerciseId: option.id }) });
+      toast.show(`${item.name} → ${option.name}`, {
+        label: "Desfazer",
+        onClick: () => {
+          setItems((current) => current.map((entry) => (entry.id === item.id ? item : entry)));
+          void request(api.item(workoutId, item.id), { method: "PATCH", body: JSON.stringify({ exerciseId: item.exerciseId }) });
+        },
+      });
+    } catch (cause) {
+      setItems(previous);
+      setError(cause instanceof Error ? cause.message : "Não foi possível trocar.");
+    }
+  }
+
   function onItemChange(itemId: string, patch: ItemPatch) {
     setItems((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
     scheduleSave(`item:${itemId}`, (id) => api.item(id, itemId), toServerPatch(patch));
@@ -143,6 +178,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
         load: string | null;
         restSeconds: number | null;
         notes: string | null;
+        intensity: EditorItem["intensity"];
       }[];
       const byId = new Map(library.map((exercise) => [exercise.id, exercise]));
       setItems((current) => [
@@ -299,6 +335,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
                 onChange={(patch) => onItemChange(item.id, patch)}
                 onMove={(direction) => void onMove(index, direction)}
                 onRemove={() => void onRemove(item.id)}
+                onSwap={workoutId ? () => void openSwap(item) : undefined}
               />
             ))}
           </ol>
@@ -327,7 +364,26 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
         />
       ) : null}
 
-      <Sheet open={doneOpen} onClose={() => setDoneOpen(false)} title={`${name.trim() || DEFAULT_NAME} está pronto`} description={`${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · ${formatDays(days)}. E agora?`}>
+      <Sheet open={swapItem !== null} onClose={() => setSwapItem(null)} title={swapItem ? `Trocar ${swapItem.name}` : ""} description={swapItem ? (swapItem.intensity ? "Outros aeróbicos" : `Outros de ${swapItem.muscle ?? "mesmo grupo"}. Séries e repetições continuam.`) : undefined}>
+        {swapOptions === null ? (
+          <p className={styles.swapMuted}>Carregando…</p>
+        ) : swapOptions.length === 0 ? (
+          <p className={styles.swapMuted}>Nenhuma alternativa no catálogo.</p>
+        ) : (
+          <ul className={styles.tiles}>
+            {swapOptions.map((option) => (
+              <li key={option.id}>
+                <button type="button" className={styles.tile} onClick={() => void swapTo(option)}>
+                  {swapItem?.intensity ? <CardioIcon size={64} /> : <ExerciseThumbnail src={option.imageUrl} alt="" width={160} height={110} className={styles.tileImage} />}
+                  <span className={styles.tileName}>{option.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Sheet>
+
+      <Sheet open={doneOpen} onClose={() => setDoneOpen(false)} title="Treino pronto" description={`${name.trim() || DEFAULT_NAME} · ${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · ${formatDays(days)}. E agora?`}>
         {workoutId ? renderDone({ id: workoutId, name: name.trim() || DEFAULT_NAME, summary: formatDays(days) }, () => setDoneOpen(false)) : null}
       </Sheet>
     </div>

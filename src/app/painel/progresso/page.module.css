@@ -33,7 +33,7 @@
 }
 
 .statValue {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
 }
 
@@ -46,4 +46,10 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fitos-space-3);
 }

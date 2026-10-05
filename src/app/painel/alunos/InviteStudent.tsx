@@ -76,13 +76,16 @@ export function InviteStudent({ startOpen = false }: { startOpen?: boolean }) {
 
   return (
     <>
-      <NextStepCard eyebrow="Novo aluno" title="Convidar ou cadastrar" description="Só nome e e-mail. O resto ele preenche." onClick={() => setOpen(true)} />
+      <NextStepCard eyebrow="Novo aluno" title="Convidar aluno" description="Mande um link. Ele preenche os próprios dados." href="/painel/alunos/convite" />
+      <Button type="button" variant="quiet" block onClick={() => setOpen(true)}>
+        Cadastrar eu mesmo
+      </Button>
       {created ? (
         <Sheet
           open={open}
           onClose={reset}
-          title={`Convite pronto para ${created.firstName}`}
-          description={created.link ? "Mande o link por onde vocês conversam. Ele vale por 7 dias e só aparece agora." : "Aluno cadastrado. Gere o convite no perfil dele."}
+          title="Convite pronto"
+          description={created.link ? `Mande o link para ${created.firstName} por onde vocês conversam. Ele vale por 7 dias e só aparece agora.` : "Aluno cadastrado. Gere o convite no perfil dele."}
           footer={
             <>
               <Button href={`/painel/alunos/${created.id}?atribuir=1`} block onClick={reset}>

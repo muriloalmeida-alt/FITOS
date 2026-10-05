@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ActionRow, Button, ChipGroup, FormAlert, NextStepCard, SegmentedTabs, Sheet, Stepper, Tag, TextField, useToast } from "@/shared/ui";
+import { ActionRow, Button, FormAlert, NextStepCard, SegmentedTabs, Sheet, Tag, useToast } from "@/shared/ui";
 import type { EvolutionSeries, MeasureChange } from "@/modules/evolution/evolutionSeries";
 import { requestJson } from "../_workout-builder/apiClient";
 import { EvolutionView } from "../_evolution/EvolutionView";
@@ -35,19 +35,14 @@ function fmt(value: number) {
 
 /// Minha evolução do FitOS Livre (FIT-159, L4 do protótipo): abas Treinos
 /// (semana, mês, semanas seguidas, recordes por série e histórico), Corpo
-/// (registrar peso e gordura com +/−, observação, excluir) e Metas.
+/// (pesar na régua, excluir) e Metas (sugeridas, EPIC-30).
 export function MinhaEvolucaoView({ tab, overview, records, history, body, assessments, goals }: Props) {
   const router = useRouter();
   const toast = useToast();
   const last = assessments[0] ?? null;
-  const [sheet, setSheet] = useState<null | "medida" | "meta" | { remove: string }>(null);
+  const [sheet, setSheet] = useState<null | { remove: string }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [weight, setWeight] = useState(last?.weightKg ?? 70);
-  const [fat, setFat] = useState(last?.bodyFatPercent ?? 20);
-  const [notes, setNotes] = useState("");
-  const [goal, setGoal] = useState("");
-  const [deadline, setDeadline] = useState("0");
   const open = goals.filter((entry) => entry.status === "EM_ANDAMENTO");
   const closed = goals.filter((entry) => entry.status !== "EM_ANDAMENTO");
 
@@ -64,14 +59,6 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, asses
     } finally {
       setBusy(false);
     }
-  }
-
-  function openMeasure() {
-    setWeight(last?.weightKg ?? 70);
-    setFat(last?.bodyFatPercent ?? 20);
-    setNotes("");
-    setError(null);
-    setSheet("medida");
   }
 
   return (
@@ -135,7 +122,7 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, asses
 
       {tab === "corpo" ? (
         <>
-          <NextStepCard eyebrow="Hoje" title="Registrar peso e gordura" description={last ? "Já começa com os últimos valores." : "Leva dez segundos."} onClick={openMeasure} />
+          <NextStepCard eyebrow="Hoje" title="Pesar hoje" description={last ? "A régua já começa no último peso." : "Leva dez segundos."} href="/painel/pesar" />
           {body.series.length > 0 ? <EvolutionView series={body.series} measures={body.measures} /> : null}
           {assessments.length > 0 ? (
             <>
@@ -162,7 +149,7 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, asses
 
       {tab === "metas" ? (
         <>
-          <NextStepCard eyebrow="Próximo passo" title="Nova meta" description="Escreva o que quer alcançar e escolha um prazo." onClick={() => { setGoal(""); setDeadline("0"); setError(null); setSheet("meta"); }} />
+          <NextStepCard eyebrow="Próximo passo" title="Nova meta" description="Três sugestões feitas para você." href="/painel/meta" />
           <h2 className={styles.title}>Em andamento</h2>
           {open.length === 0 ? (
             <p className={styles.muted}>Nenhuma meta em andamento.</p>
@@ -211,68 +198,13 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, asses
       ) : null}
 
       <Sheet
-        open={sheet === "medida"}
-        onClose={() => setSheet(null)}
-        title="Registrar medidas"
-        description="Ajuste com + e −."
-        footer={
-          <>
-            <Button type="button" block disabled={busy} onClick={() => void run(() => requestJson("/api/minhas-avaliacoes", { method: "POST", body: JSON.stringify({ weightKg: weight, bodyFatPercent: fat, notes: notes.trim() || null, measurementsCm: [] }) }), "Registro salvo")}>
-              Salvar
-            </Button>
-            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
-              Agora não
-            </Button>
-          </>
-        }
-      >
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.stack}>
-          <Stepper label="Peso (kg)" value={weight} step={0.1} min={20} max={300} format={(value) => fmt(value)} onChange={(value) => setWeight(Math.round(value * 10) / 10)} />
-          <Stepper label="Gordura (%)" value={fat} step={0.5} min={2} max={70} format={(value) => fmt(value)} onChange={(value) => setFat(Math.round(value * 10) / 10)} />
-          <TextField label="Observação (opcional)" value={notes} maxLength={300} onChange={(event) => setNotes(event.target.value)} />
-        </div>
-      </Sheet>
-
-      <Sheet
-        open={sheet === "meta"}
-        onClose={() => setSheet(null)}
-        title="Nova meta"
-        footer={
-          <>
-            <Button
-              type="button"
-              block
-              disabled={busy || goal.trim().length === 0}
-              onClick={() => {
-                const months = Number(deadline);
-                const target = months > 0 ? new Date(new Date().setMonth(new Date().getMonth() + months)).toISOString() : null;
-                void run(() => requestJson("/api/minhas-metas", { method: "POST", body: JSON.stringify({ description: goal.trim(), targetDate: target }) }), "Meta criada");
-              }}
-            >
-              Criar meta
-            </Button>
-            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
-              Agora não
-            </Button>
-          </>
-        }
-      >
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.stack}>
-          <TextField label="Sua meta" placeholder="Ex.: correr 5 km sem parar" value={goal} maxLength={200} onChange={(event) => setGoal(event.target.value)} />
-          <ChipGroup label="Prazo" showLabel tone="accent" value={deadline} onChange={setDeadline} options={DEADLINES} />
-        </div>
-      </Sheet>
-
-      <Sheet
-        open={typeof sheet === "object" && sheet !== null}
+        open={sheet !== null}
         onClose={() => setSheet(null)}
         title="Excluir este registro?"
         description="Ele sai do gráfico e do histórico."
         footer={
           <>
-            <Button type="button" variant="danger" block disabled={busy} onClick={() => typeof sheet === "object" && sheet !== null && void run(() => requestJson(`/api/minhas-avaliacoes/${sheet.remove}`, { method: "DELETE" }), "Registro excluído")}>
+            <Button type="button" variant="danger" block disabled={busy} onClick={() => sheet !== null && void run(() => requestJson(`/api/minhas-avaliacoes/${sheet.remove}`, { method: "DELETE" }), "Registro excluído")}>
               Excluir
             </Button>
             <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>

@@ -37,6 +37,7 @@ export async function loadEditorWorkout(tenantId: string, workoutId: string): Pr
       load: item.load,
       restSeconds: item.restSeconds,
       notes: item.notes,
+      intensity: item.intensity,
     })),
   };
 }

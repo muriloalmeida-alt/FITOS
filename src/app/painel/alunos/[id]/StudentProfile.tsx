@@ -7,23 +7,13 @@ import { ActionRow, Avatar, Button, ChipGroup, FormAlert, Sheet, Stepper, Tag, T
 import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
 import { formatCentsBRL as formatBRL } from "@/shared/lib/money";
 import { requestJson } from "../../_workout-builder/apiClient";
-import type { AccessStatus, ProfileAssessment, ProfileCharge, ProfileProgram, ProfileSession, ProfileStudent, ProgramChoice } from "./profileTypes";
+import type { AccessStatus, ProfileAssessment, ProfileCharge, ProfileProgram, ProfileSession, ProfileStudent, ProgramChoice, TimelineEntry } from "./profileTypes";
 import styles from "./StudentProfile.module.css";
 
-const MEASURES = [
-  ["CINTURA", "Cintura"],
-  ["QUADRIL", "Quadril"],
-  ["PEITO", "Peito"],
-  ["BRACO", "Braço"],
-  ["COXA", "Coxa"],
-  ["PANTURRILHA", "Panturrilha"],
-] as const;
-
-const EFFORT_LABEL = ["", "Leve", "Ok", "Puxado", "Difícil", "No limite"];
 const END_REASONS = ["Mudança de cidade", "Objetivo atingido", "Questão financeira", "Outro"];
 const METHODS = ["Pix", "Dinheiro", "Cartão", "Transferência"];
 
-type SheetKind = null | "assign" | "assessment" | "invite" | "data" | "inactivate" | "end" | "pay";
+type SheetKind = null | "assign" | "invite" | "data" | "inactivate" | "end" | "pay";
 
 interface StudentProfileProps {
   student: ProfileStudent;
@@ -34,7 +24,10 @@ interface StudentProfileProps {
   sessions: ProfileSession[];
   assessments: ProfileAssessment[];
   openCharge: ProfileCharge | null;
-  recurrence: { amountCents: number; day: number } | null;
+  recurrence: { id: string; amountCents: number; day: number } | null;
+  /// "O que aconteceu" (EPIC-29): treinos, avaliações e pagamentos juntos,
+  /// do mais recente para o mais antigo.
+  timeline: TimelineEntry[];
   initialSheet: SheetKind;
 }
 
@@ -61,7 +54,7 @@ function fmt(value: number) {
 /// cada ação numa sheet curta — atribuir/trocar/encerrar programa,
 /// avaliação já com os últimos valores, "Recebi" da mensalidade, convite,
 /// dados, inativar/reativar e encerrar vínculo.
-export function StudentProfile({ student, access, program, programs, week, sessions, assessments, openCharge, recurrence, initialSheet }: StudentProfileProps) {
+export function StudentProfile({ student, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(initialSheet);
@@ -72,14 +65,11 @@ export function StudentProfile({ student, access, program, programs, week, sessi
 
   // Programa
   const [picked, setPicked] = useState<string | null>(null);
-  // Avaliação (começa com a última)
   const last = assessments[0] ?? null;
-  const [weight, setWeight] = useState(last?.weightKg ?? 70);
-  const [fat, setFat] = useState(last?.bodyFatPercent ?? 20);
-  const [measures, setMeasures] = useState<Record<string, number>>(() =>
-    Object.fromEntries(MEASURES.map(([key]) => [key, last?.measurements.find((m) => m.type === key)?.valueCm ?? 0]))
-  );
-  const [notes, setNotes] = useState("");
+  // Mensalidade editada no lugar
+  const [feeOpen, setFeeOpen] = useState(false);
+  const [fee, setFee] = useState(recurrence ? recurrence.amountCents / 100 : 150);
+  const [feeDay, setFeeDay] = useState(recurrence?.day ?? 10);
   // Convite
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -152,6 +142,9 @@ export function StudentProfile({ student, access, program, programs, week, sessi
               <WeekStrip days={weekStripFromDays(program.days, { today: new Date() })} label={`Semana do programa ${program.name}`} />
             </div>
             <div className={styles.actions}>
+              <Button href={`/painel/alunos/${student.id}/treino`} variant="quiet">
+                Ajustar
+              </Button>
               <Button type="button" variant="quiet" onClick={() => setSheet("assign")}>
                 Trocar
               </Button>
@@ -173,53 +166,51 @@ export function StudentProfile({ student, access, program, programs, week, sessi
               <Button type="button" block onClick={() => setSheet("assign")}>
                 Atribuir programa
               </Button>
-              <Button href="/painel/treinos/novo" variant="secondary" block>
-                Montar um treino
+              <Button href={`/painel/treinos?aluno=${student.id}`} variant="secondary" block>
+                Escolher na biblioteca
               </Button>
             </div>
           </section>
         )
       ) : null}
 
-      <h2 className={styles.cap}>Treino</h2>
+      <h2 className={styles.cap}>Combinado</h2>
       <ActionRow
         title="Ritmo da semana"
         description={week.target ? `${week.done} de ${week.target} treinos` : `${week.done} ${week.done === 1 ? "treino" : "treinos"} nesta semana`}
       />
-      {sessions.length === 0 ? <p className={styles.muted}>Nenhum treino registrado ainda.</p> : null}
-      {sessions.slice(0, 4).map((session) => (
-        <ActionRow
-          key={session.id}
-          title={session.workoutName}
-          description={`${session.dateLabel}${session.status === "ABANDONADA" ? " · não terminado" : ""}`}
-          trailing={session.perceivedEffort ? <Tag tone={session.perceivedEffort >= 4 ? "warn" : "muted"}>{`Esforço ${session.perceivedEffort}/5 · ${EFFORT_LABEL[session.perceivedEffort]}`}</Tag> : null}
-        />
-      ))}
-
-      <h2 className={styles.cap}>Avaliações</h2>
-      <ActionRow
-        title={last ? `Última: ${last.dateLabel}` : "Nenhuma avaliação ainda"}
-        description={last ? "Registre a de hoje já com estes valores." : "Registre a primeira para acompanhar a evolução."}
-        trailing={active ? <Button type="button" variant="quiet" onClick={() => setSheet("assessment")}>Registrar</Button> : null}
-      />
-      {assessments.slice(0, 4).map((assessment) => (
-        <ActionRow
-          key={assessment.id}
-          title={assessment.dateLabel}
-          description={summary(assessment)}
-          trailing={
-            <Button type="button" variant="quiet" aria-label={`Excluir avaliação de ${assessment.dateLabel}`} onClick={() => void run(async () => {
-              await requestJson(`/api/students/${student.id}/avaliacoes/${assessment.id}`, { method: "DELETE" });
-              toast.show("Avaliação excluída");
+      {feeOpen ? (
+        <div className={styles.inline} role="group" aria-label="Mensalidade">
+          <div className={styles.grid2}>
+            <Stepper label="Valor (R$)" value={fee} step={10} min={10} max={5000} onChange={setFee} />
+            <Stepper label="Todo dia" value={feeDay} step={1} min={1} max={28} onChange={setFeeDay} />
+          </div>
+          {error ? <FormAlert>{error}</FormAlert> : null}
+          <div className={styles.actions}>
+            <Button type="button" disabled={busy} onClick={() => void run(async () => {
+              if (recurrence) {
+                await requestJson(`/api/recorrencias/${recurrence.id}`, { method: "PATCH", body: JSON.stringify({ amountReais: fee, dueDayOfMonth: feeDay }) });
+              } else {
+                await requestJson(`/api/students/${student.id}/recorrencias`, { method: "POST", body: JSON.stringify({ description: "Mensalidade", amountReais: fee, dueDayOfMonth: feeDay }) });
+              }
+              toast.show(`Mensalidade: ${formatBRL(fee * 100)} todo dia ${feeDay}`);
+              setFeeOpen(false);
               router.refresh();
             })}>
-              Excluir
+              Salvar
             </Button>
-          }
+            <Button type="button" variant="quiet" onClick={() => setFeeOpen(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <ActionRow
+          title="Mensalidade"
+          description={recurrence ? `${formatBRL(recurrence.amountCents)} todo dia ${recurrence.day}` : "Ainda não combinada"}
+          trailing={active ? <Button type="button" variant="quiet" onClick={() => setFeeOpen(true)}>{recurrence ? "Ajustar" : "Combinar"}</Button> : null}
         />
-      ))}
-
-      <h2 className={styles.cap}>Mensalidade</h2>
+      )}
       {openCharge ? (
         <ActionRow
           title={`${openCharge.description} · ${formatBRL(openCharge.amountCents)}`}
@@ -230,14 +221,35 @@ export function StudentProfile({ student, access, program, programs, week, sessi
           }
           trailing={<Button type="button" variant="quiet" onClick={() => setSheet("pay")}>Recebi</Button>}
         />
-      ) : (
-        <ActionRow title="Nada em aberto" description="Nenhuma cobrança pendente para este aluno." />
-      )}
+      ) : null}
       <ActionRow
-        title="Cobrança recorrente"
-        description={recurrence ? `${formatBRL(recurrence.amountCents)} todo dia ${recurrence.day}` : "Nenhuma cobrança recorrente."}
-        trailing={<Link href="/painel/financeiro?aba=recorrentes" className={styles.link}>Gerenciar</Link>}
+        title="Avaliação"
+        description={last ? `Última em ${last.dateLabel} · ${summary(last)}` : "Nenhuma ainda"}
+        trailing={active ? <Button href={`/painel/alunos/${student.id}/avaliacao`} variant="quiet">Avaliar</Button> : null}
       />
+
+      <h2 className={styles.cap}>O que aconteceu</h2>
+      {timeline.length === 0 ? <p className={styles.muted}>Nada por aqui ainda.</p> : null}
+      <ol className={styles.timeline} aria-label="O que aconteceu">
+        {timeline.slice(0, 12).map((entry) => (
+          <li key={`${entry.kind}-${entry.id}`} className={styles.event}>
+            <span className={`${styles.dot} ${styles[`dot_${entry.kind}`]}`} aria-hidden="true" />
+            <span className={styles.eventBody}>
+              <span className={styles.eventTitle}>{entry.title}</span>
+              <span className={styles.muted}>{entry.meta}</span>
+            </span>
+            {entry.kind === "avaliacao" ? (
+              <Button type="button" variant="quiet" aria-label={`Excluir avaliação de ${entry.meta}`} onClick={() => void run(async () => {
+                await requestJson(`/api/students/${student.id}/avaliacoes/${entry.id}`, { method: "DELETE" });
+                toast.show("Avaliação excluída");
+                router.refresh();
+              })}>
+                Excluir
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ol>
 
       <h2 className={styles.cap}>Acesso</h2>
       <ActionRow
@@ -263,7 +275,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
       <Sheet
         open={sheet === "assign"}
         onClose={close}
-        title={`Qual programa para ${first}?`}
+        title="Escolha o programa"
         description={`${first} recebe a própria cópia. Mudar o programa original depois não altera o dele.`}
         footer={
           <>
@@ -297,51 +309,6 @@ export function StudentProfile({ student, access, program, programs, week, sessi
             ))}
           </div>
         )}
-      </Sheet>
-
-      {/* Avaliação */}
-      <Sheet
-        open={sheet === "assessment"}
-        onClose={close}
-        title="Avaliação de hoje"
-        description={last ? "Começa com os valores da última. Ajuste só o que mudou." : "Ajuste com + e −."}
-        footer={
-          <>
-            <Button type="button" block disabled={busy} onClick={() => void run(async () => {
-              await requestJson(`/api/students/${student.id}/avaliacoes`, {
-                method: "POST",
-                body: JSON.stringify({
-                  weightKg: weight,
-                  bodyFatPercent: fat,
-                  notes: notes.trim() || null,
-                  measurements: MEASURES.filter(([key]) => (measures[key] ?? 0) > 0).map(([key]) => ({ type: key, valueCm: measures[key] })),
-                }),
-              });
-              toast.show("Avaliação registrada");
-              setNotes("");
-              close();
-              router.refresh();
-            })}>
-              Salvar avaliação
-            </Button>
-            <Button type="button" variant="quiet" block onClick={close}>Cancelar</Button>
-          </>
-        }
-      >
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.grid2}>
-          <Stepper label="Peso (kg)" value={weight} step={0.1} min={20} max={300} format={fmt} onChange={setWeight} />
-          <Stepper label="Gordura (%)" value={fat} step={0.5} min={1} max={70} format={fmt} onChange={setFat} />
-        </div>
-        <p className={styles.subcap}>Medidas (cm) · deixe em 0 o que não mediu</p>
-        <div className={styles.grid2}>
-          {MEASURES.map(([key, label]) => (
-            <Stepper key={key} label={label} value={measures[key] ?? 0} step={0.5} min={0} max={250} format={fmt} onChange={(value) => setMeasures((current) => ({ ...current, [key]: value }))} />
-          ))}
-        </div>
-        <div className={styles.spaced}>
-          <TextField label="Observação (opcional)" value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={500} />
-        </div>
       </Sheet>
 
       {/* Convite */}
@@ -460,7 +427,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
       <Sheet
         open={sheet === "end"}
         onClose={close}
-        title={`Encerrar vínculo com ${first}?`}
+        title="Encerrar vínculo?"
         description={`${first} sai do seu espaço e continua com a conta como FitOS Livre, levando o histórico de treinos. Isso não pode ser desfeito.`}
         footer={
           <>

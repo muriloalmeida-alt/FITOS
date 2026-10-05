@@ -46,5 +46,7 @@ export { Skeleton, SkeletonScreen } from "./Skeleton";
 export { ProgressBar } from "./ProgressBar";
 export { WeekStrip, type WeekStripDay, type WeekStripDayState } from "./WeekStrip";
 export { Tag, type TagTone } from "./Tag";
+export { CardioIcon } from "./CardioIcon";
 export { StatePanel, PlanLimitState } from "./StatePanel";
 export { MetricChart, type MetricPoint } from "./MetricChart";
+export { Ruler } from "./Ruler";

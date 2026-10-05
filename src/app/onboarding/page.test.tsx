@@ -78,7 +78,7 @@ describe("OnboardingPage (FIT-101)", () => {
     const { default: OnboardingPage } = await import("./page");
     render(await OnboardingPage());
 
-    expect(screen.getByRole("heading", { name: "O que você quer alcançar?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "O que você quer?" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Perder peso" })).toHaveAttribute("aria-checked", "true");
     expect(listActivePlansForAudience).toHaveBeenCalledWith("INDIVIDUAL");
     expect(redirect).not.toHaveBeenCalled();

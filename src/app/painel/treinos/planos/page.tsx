@@ -41,8 +41,8 @@ export default async function ProgramasPage({ searchParams }: ProgramasPageProps
   const shown = archived ? old : active;
 
   return (
-    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." subtitle="Programas juntam treinos numa semana e vão para os alunos." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <TrainingTabs active="programas" />
+    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <TrainingTabs active="treinos" />
       <div className={styles.next}>
         <NextStepCard eyebrow="Próximo passo" title="Montar um programa" description="Junte treinos e atribua a quem precisa." href="/painel/treinos/planos/novo" />
       </div>

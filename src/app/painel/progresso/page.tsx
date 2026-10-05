@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ActionRow, AppShell } from "@/shared/ui";
+import { ActionRow, AppShell, Button } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { prisma } from "@/shared/db/prisma";
 import { AuthError, requireStudent } from "@/modules/tenancy/authContext";
@@ -25,7 +25,8 @@ function fmt(value: number) {
 /// Progresso do Aluno (FIT-154, A4 do protótipo), só da própria sessão:
 /// métrica em chips com gráfico, medidas da primeira para a última
 /// avaliação, histórico de avaliações e o bloco Treinos (treinos no mês e
-/// melhores cargas, BK-12). Somente leitura: avaliar é do personal.
+/// melhores cargas, BK-12). O aluno se pesa e escolhe a meta (EPIC-30);
+/// a avaliação completa continua com o personal.
 export default async function ProgressoPage() {
   let ctx;
   try {
@@ -40,11 +41,12 @@ export default async function ProgressoPage() {
   const scope = { tenantId: ctx.tenantId, studentId: ctx.studentId };
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [assessments, records, monthSessions, student] = await Promise.all([
+  const [assessments, records, monthSessions, student, goal] = await Promise.all([
     listAssessmentsForStudent(scope),
     listPersonalRecordsForStudent(scope),
     prisma.workoutSession.count({ where: { ...scope, status: "CONCLUIDA", startedAt: { gte: monthStart } } }),
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
+    prisma.goal.findFirst({ where: { ...scope, status: "EM_ANDAMENTO" }, orderBy: { createdAt: "desc" }, select: { description: true } }),
   ]);
   const { series, measures } = buildEvolution(assessments);
   const best = [...records].sort((a, b) => b.achievedAt.getTime() - a.achievedAt.getTime()).slice(0, 5);
@@ -52,10 +54,19 @@ export default async function ProgressoPage() {
 
   return (
     <AppShell eyebrow="Progresso" title="Sua evolução" navItems={ALUNO_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+      <div className={styles.actions}>
+        <Button href="/painel/pesar" block>
+          Pesar hoje
+        </Button>
+        <Button href="/painel/meta" variant="secondary" block>
+          {goal ? "Trocar meta" : "Escolher meta"}
+        </Button>
+      </div>
+      {goal ? <ActionRow title={goal.description} description="Sua meta" /> : null}
       {series.length > 0 ? (
         <EvolutionView series={series} measures={measures} />
       ) : (
-        <p className={styles.empty}>Nenhuma avaliação ainda. {student.tenant.owner.name} registra a sua na próxima avaliação e ela aparece aqui.</p>
+        <p className={styles.empty}>Nenhum registro ainda. Pese-se ou espere a próxima avaliação com {student.tenant.owner.name.split(" ")[0]}.</p>
       )}
 
       <section className={styles.section} aria-labelledby="treinos">

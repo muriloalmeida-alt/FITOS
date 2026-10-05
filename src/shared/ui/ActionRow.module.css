@@ -3,13 +3,13 @@
   align-items: center;
   gap: var(--fitos-space-3);
   width: 100%;
-  padding: 14px 0;
+  padding: 16px 0;
   border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: transparent;
   color: var(--fitos-color-on-surface);
   font-family: var(--fitos-font-family);
-  font-size: 15px;
+  font-size: 14px;
   text-align: left;
   text-decoration: none;
 }

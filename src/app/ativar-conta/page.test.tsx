@@ -26,14 +26,14 @@ describe("AtivarContaPage (FIT-165)", () => {
 
   it("sem token: convite inexistente, com as duas saídas, sem consultar o domínio", async () => {
     await renderPage();
-    expect(screen.getByRole("heading", { level: 1, name: "Este convite não existe" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Convite inválido" })).toBeInTheDocument();
     expect(checkActivationToken).not.toHaveBeenCalled();
   });
 
   it("expirado mostra o motivo e as saídas Já tenho conta e Treinar por conta própria", async () => {
     checkActivationToken.mockResolvedValue({ valid: false, reason: "EXPIRADO" });
     await renderPage("t1");
-    expect(screen.getByRole("heading", { level: 1, name: "Este convite expirou" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Convite expirado" })).toBeInTheDocument();
     expect(screen.getByText(/valem 7 dias/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Já tenho conta" })).toHaveAttribute("href", "/entrar");
     expect(screen.getByRole("link", { name: "Treinar por conta própria" })).toHaveAttribute("href", "/comecar?caminho=livre");
@@ -42,13 +42,13 @@ describe("AtivarContaPage (FIT-165)", () => {
   it("cancelado tem mensagem própria", async () => {
     checkActivationToken.mockResolvedValue({ valid: false, reason: "CANCELADO" });
     await renderPage("t1");
-    expect(screen.getByRole("heading", { level: 1, name: "Este convite foi cancelado" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Convite cancelado" })).toBeInTheDocument();
   });
 
   it("válido: quem convidou, e-mail fixo e só a senha", async () => {
     checkActivationToken.mockResolvedValue({ valid: true, studentName: "Pedro Lima", email: "pedro@example.test", personalName: "Joana Lima", businessName: "Studio Joana" });
     await renderPage("t1");
-    expect(screen.getByRole("heading", { level: 1, name: "Oi, Pedro. Falta só a senha." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Oi, Pedro." })).toBeInTheDocument();
     expect(screen.getByText("Joana Lima")).toBeInTheDocument();
     expect(screen.getByText(/Studio Joana te convidou/)).toBeInTheDocument();
     expect(screen.getByLabelText("E-mail")).toHaveValue("pedro@example.test");

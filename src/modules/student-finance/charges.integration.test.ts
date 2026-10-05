@@ -17,6 +17,7 @@ import {
   listChargesForTenant,
   refreshOverdueCharges,
   registerPayment,
+  updateChargeRecurrence,
 } from "./charges";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
@@ -363,6 +364,22 @@ describe("createChargeRecurrence / generateNextChargeForRecurrence / endChargeRe
     // Idempotente.
     const encerradaDeNovo = await endChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
     expect(encerradaDeNovo.status).toBe("ENCERRADA");
+  });
+
+  it("updateChargeRecurrence ajusta valor e dia só da própria recorrência ativa (EPIC-29)", async () => {
+    const { tenant } = await createTenant("recorrencia-ajuste");
+    const { tenant: other } = await createTenant("recorrencia-ajuste-b");
+    const student = await createStudent(tenant.id, "recorrencia-ajuste");
+    const recurrence = await createChargeRecurrence(
+      { tenantId: tenant.id, studentId: student.id, description: "Mensalidade", amountReais: 150, dueDayOfMonth: 5 },
+      prisma
+    );
+    const updated = await updateChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id, amountReais: 180, dueDayOfMonth: 10 }, prisma);
+    expect(updated).toMatchObject({ amountCents: 18000, dueDayOfMonth: 10 });
+    await expect(updateChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id, dueDayOfMonth: 31 }, prisma)).rejects.toMatchObject({ kind: "VALIDACAO" });
+    await expect(updateChargeRecurrence({ tenantId: other.id, recurrenceId: recurrence.id, amountReais: 1 }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+    await endChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id }, prisma);
+    await expect(updateChargeRecurrence({ tenantId: tenant.id, recurrenceId: recurrence.id, amountReais: 200 }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
   });
 
   it("isolamento: nunca lista, gera ou encerra recorrência de outro tenant", async () => {

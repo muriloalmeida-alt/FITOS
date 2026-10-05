@@ -91,8 +91,8 @@ describe("WorkoutEditor (FIT-146)", () => {
     suggestedDays: ["SEGUNDA"],
     status: "ATIVO",
     items: [
-      { id: "i1", exerciseId: "ex-agach", name: "Agachamento livre", muscle: "Quadríceps", imageUrl: null, imageAlt: null, sets: 4, reps: 10, durationSeconds: null, load: "40 kg", restSeconds: 90, notes: null },
-      { id: "i2", exerciseId: "ex-remada", name: "Remada baixa", muscle: "Costas", imageUrl: null, imageAlt: null, sets: 3, reps: 12, durationSeconds: null, load: null, restSeconds: 60, notes: null },
+      { id: "i1", exerciseId: "ex-agach", name: "Agachamento livre", muscle: "Quadríceps", imageUrl: null, imageAlt: null, sets: 4, reps: 10, durationSeconds: null, load: "40 kg", restSeconds: 90, notes: null, intensity: null },
+      { id: "i2", exerciseId: "ex-remada", name: "Remada baixa", muscle: "Costas", imageUrl: null, imageAlt: null, sets: 3, reps: 12, durationSeconds: null, load: null, restSeconds: 60, notes: null, intensity: null },
     ],
   };
 
@@ -132,7 +132,7 @@ describe("WorkoutEditor (FIT-146)", () => {
     await user.click(screen.getByRole("button", { name: "Remover Agachamento livre" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/workouts/w1/itens/i1", expect.objectContaining({ method: "DELETE" }));
     await user.click(screen.getByRole("button", { name: "Pronto" }));
-    expect(await screen.findByRole("dialog", { name: "Treino A está pronto" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Treino pronto" })).toBeInTheDocument();
     expect(screen.getByText("Próximo passo do treino")).toBeInTheDocument();
   });
 
@@ -145,5 +145,22 @@ describe("WorkoutEditor (FIT-146)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Séries deve ser um número inteiro maior que zero.");
     expect(screen.getByText("Não salvo")).toBeInTheDocument();
     expect(within(first).getByText("5")).toBeInTheDocument();
+  });
+
+  it("tocar na foto troca por outro do mesmo grupo, mantendo a prescrição (EPIC-30)", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation(async (url: string) =>
+      url === "/api/exercises/ex-agach/alternativas"
+        ? jsonResponse({ options: [{ id: "ex-afundo", name: "Afundo reverso", muscle: "Quadríceps", imageUrl: null, imageAlt: null }] })
+        : jsonResponse({})
+    );
+    renderEditor(existing);
+    await user.click(screen.getByRole("button", { name: "Trocar Agachamento livre" }));
+    const sheet = await screen.findByRole("dialog", { name: "Trocar Agachamento livre" });
+    await user.click(await within(sheet).findByRole("button", { name: /Afundo reverso/ }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/workouts/w1/itens/i1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ exerciseId: "ex-afundo" }) }));
+    const first = screen.getAllByRole("listitem")[0]!;
+    expect(within(first).getByText("Afundo reverso")).toBeInTheDocument();
+    expect(within(first).getByText("40 kg")).toBeInTheDocument();
   });
 });

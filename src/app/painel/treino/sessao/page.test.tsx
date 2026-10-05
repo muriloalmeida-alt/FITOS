@@ -69,7 +69,7 @@ describe("SessaoPage (FIT-153)", () => {
     expect(screen.getByLabelText("1 de 3 séries feitas")).toBeInTheDocument();
     expect(screen.getByText("Joana: Desça até 90°")).toBeInTheDocument();
     expect(screen.getByText("Última vez: 37,5 kg × 10")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Série feita/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fiz 10 × 40 kg" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Música/ })).toBeInTheDocument();
     expect(getLastPerformanceForExercises).toHaveBeenCalledWith({ tenantId: "t1", studentId: "s1", exerciseIds: ["e1", "e2"], excludeSessionId: "sess1" });
   });
