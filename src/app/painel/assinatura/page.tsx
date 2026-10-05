@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { prisma } from "@/shared/db/prisma";
+import { nextChargeDate } from "@/modules/billing/nextCharge";
 import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
@@ -23,15 +24,11 @@ function stateOf(subscription: SaasSubscriptionWithPlan, now: Date): Subscriptio
   return subscription.trialEndsAt && subscription.trialEndsAt > now ? "trial" : "ativa";
 }
 
-/// Próxima cobrança: fim do teste grátis ou o próximo aniversário do ciclo
-/// a partir dele (ou da contratação). Planos gratuitos e cancelados não têm.
+/// Próxima cobrança: ver `nextChargeDate` (compartilhada com os avisos de
+/// vencimento, EPIC-34). Depois do instante atual, como antes.
 function nextCharge(subscription: SaasSubscriptionWithPlan, state: SubscriptionState, now: Date): Date | null {
-  if (state === "cancelada" || subscription.plan.priceCents <= 0) return null;
-  if (state === "trial") return subscription.trialEndsAt;
-  const step = subscription.plan.billingCycle === "ANUAL" ? 12 : 1;
-  const next = new Date(subscription.trialEndsAt ?? subscription.createdAt);
-  while (next <= now) next.setMonth(next.getMonth() + step);
-  return next;
+  if (state === "cancelada") return null;
+  return nextChargeDate(subscription, new Date(now.getTime() + 1));
 }
 
 /// Assinatura FitOS (FIT-150, P8 do protótipo) — do Personal e do FitOS

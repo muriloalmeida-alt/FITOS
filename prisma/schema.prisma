@@ -189,6 +189,22 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+/// Aviso de vencimento da assinatura FitOS já enviado (EPIC-34): um por
+/// tenant, data de vencimento e tipo ("5_DIAS" ou "NO_DIA"). A unicidade
+/// garante um aviso só, mesmo com mais de uma instância rodando.
+model SubscriptionDueReminder {
+  id       String   @id @default(cuid())
+  tenantId String
+  dueOn    String
+  kind     String
+  sentAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dueOn, kind])
+  @@map("subscription_due_reminders")
+}
+
 /// Preferências de notificação (EPIC-31). `reminderHour` (0-23, horário de
 /// Brasília) liga o lembrete de treino; `null` = desligado.
 /// `lastReminderOn` (AAAA-MM-DD) impede mandar o lembrete duas vezes no
@@ -323,27 +339,28 @@ model Tenant {
   /// própria conta de aluno neste espaço. Gerado no primeiro uso.
   inviteCode            String?    @unique
 
-  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  students              Student[]
-  exercises             Exercise[]
-  trainingPlans         TrainingPlan[]
-  workouts              Workout[]
-  workoutExercises      WorkoutExercise[]
-  planAssignments       PlanAssignment[]
-  workoutSessions       WorkoutSession[]
-  workoutSessionResults WorkoutSessionResult[]
-  workoutSetResults     WorkoutSetResult[]
-  assessments           Assessment[]
-  bodyMeasurements      BodyMeasurement[]
-  studentCharges        StudentCharge[]
-  payments              Payment[]
-  chargeRecurrences     ChargeRecurrence[]
-  saasSubscription      SaasSubscription?
-  auditEvents           AuditEvent[]
-  invitations           Invitation[]
-  individualProfile     IndividualProfile?
-  personalProfile       PersonalProfile?
-  goals                 Goal[]
+  owner                    User                      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  students                 Student[]
+  exercises                Exercise[]
+  trainingPlans            TrainingPlan[]
+  workouts                 Workout[]
+  workoutExercises         WorkoutExercise[]
+  planAssignments          PlanAssignment[]
+  workoutSessions          WorkoutSession[]
+  workoutSessionResults    WorkoutSessionResult[]
+  workoutSetResults        WorkoutSetResult[]
+  assessments              Assessment[]
+  bodyMeasurements         BodyMeasurement[]
+  studentCharges           StudentCharge[]
+  payments                 Payment[]
+  chargeRecurrences        ChargeRecurrence[]
+  saasSubscription         SaasSubscription?
+  auditEvents              AuditEvent[]
+  invitations              Invitation[]
+  individualProfile        IndividualProfile?
+  personalProfile          PersonalProfile?
+  goals                    Goal[]
+  subscriptionDueReminders SubscriptionDueReminder[]
 
   @@map("tenants")
 }
