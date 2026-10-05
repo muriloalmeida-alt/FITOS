@@ -9,10 +9,8 @@ import { getStudentForTenant } from "@/modules/students/students";
 /// zero ou negativo. Uma avaliação, uma vez criada, nunca é editada — só
 /// excluída logicamente (`softDeleteAssessment`), mesma filosofia de
 /// "preserva histórico" de toda esta base. Fotografias de evolução
-/// (opcionais, exigem autorização explícita do aluno — mesma seção) estão
-/// fora do escopo desta História: nenhuma Issue pediu a feature, e
-/// implementar o fluxo de autorização sem um pedido de produto para ela
-/// seria especulativo.
+/// (opcionais, exigem autorização explícita do aluno — mesma seção) vivem
+/// em `modules/media/photos.ts` (EPIC-35).
 
 export class AssessmentError extends Error {
   constructor(

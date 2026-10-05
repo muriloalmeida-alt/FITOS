@@ -18,6 +18,7 @@ vi.mock("@/modules/tenancy/authContext", async () => {
   return { ...actual, requireIndividual: (...args: unknown[]) => requireIndividual(...args) };
 });
 vi.mock("@/modules/tenancy/ensureStudentForIndividual", () => ({ ensureStudentForIndividual: (...args: unknown[]) => ensureStudentForIndividual(...args) }));
+vi.mock("@/modules/media/photos", () => ({ listEvolutionPhotos: async () => [] }));
 vi.mock("@/modules/evolution/assessments", () => ({ listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) }));
 vi.mock("@/modules/evolution/goals", () => ({ listGoalsForStudent: (...args: unknown[]) => listGoalsForStudent(...args) }));
 vi.mock("@/modules/execution/history", () => ({
@@ -66,6 +67,14 @@ describe("Minha evolução do FitOS Livre (FIT-159)", () => {
     expect(screen.getByRole("link", { name: /Pesar hoje/ })).toHaveAttribute("href", "/painel/pesar");
     fireEvent.click(screen.getByRole("button", { name: /Excluir registro de/ }));
     expect(screen.getByRole("dialog", { name: "Excluir este registro?" })).toBeInTheDocument();
+  });
+
+  it("Corpo: fotos da avaliação pedem a autorização antes da primeira foto (EPIC-35)", async () => {
+    setup();
+    await renderPage("corpo");
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar fotos/ }));
+    expect(screen.getByRole("dialog", { name: "Suas fotos, só suas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Autorizo" })).toBeInTheDocument();
   });
 
   it("Metas: nova meta com prazo em chips, Concluí e Abandonar, e encerradas", async () => {

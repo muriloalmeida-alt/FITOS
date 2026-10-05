@@ -12,7 +12,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   const user = session?.user as { name: string; email: string; role?: string } | undefined;
   const role = user?.role === "ALUNO" || user?.role === "INDIVIDUAL" || user?.role === "ADMIN" ? user.role : "PERSONAL";
   return (
-    <AccountNameProvider name={session?.user.name ?? null}>
+    <AccountNameProvider name={session?.user.name ?? null} image={session?.user.image ?? null}>
       <RememberAccount account={user ? { name: user.name, email: user.email, role } : null} />
       {children}
     </AccountNameProvider>

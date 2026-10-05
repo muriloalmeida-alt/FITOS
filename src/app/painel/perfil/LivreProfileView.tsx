@@ -3,17 +3,20 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { ActionRow, Avatar, Button, ChipGroup, FormAlert, TextField, useToast } from "@/shared/ui";
+import { ActionRow, Button, ChipGroup, FormAlert, TextField, useToast } from "@/shared/ui";
 import { NavIcon } from "@/shared/ui/NavIcon";
 import { requestJson } from "../_workout-builder/apiClient";
 import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../individualProfileLabels";
 import { LogoutButton } from "../LogoutButton";
 import { TrainingPreferences } from "../_push/TrainingPreferences";
 import { PasskeyRow } from "../_push/PasskeyRow";
+import { AvatarPicker } from "../_photos/AvatarPicker";
 import styles from "./PersonalProfileView.module.css";
 
 interface LivreProfileViewProps {
   name: string;
+  /// Foto de perfil (EPIC-35).
+  image: string | null;
   email: string;
   spaceName: string;
   objective: IndividualObjective;
@@ -107,7 +110,7 @@ export function LivreProfileView(props: LivreProfileViewProps) {
   return (
     <div className={styles.profile}>
       <div className={styles.identity}>
-        <Avatar name={props.name} className={styles.avatar} />
+        <AvatarPicker name={props.name} image={props.image} />
         <div>
           <p className={styles.name}>{props.name}</p>
           <p className={styles.muted}>

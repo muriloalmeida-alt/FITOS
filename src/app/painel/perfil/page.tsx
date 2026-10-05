@@ -66,6 +66,7 @@ export default async function PerfilPage() {
       <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
         <PersonalProfileView
           name={session.user.name}
+          image={session.user.image ?? null}
           email={session.user.email}
           businessName={tenant?.name ?? ""}
           phone={profile.phone}
@@ -96,6 +97,7 @@ export default async function PerfilPage() {
       <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
         <LivreProfileView
           name={session.user.name}
+          image={session.user.image ?? null}
           email={session.user.email}
           spaceName={tenant?.name ?? ""}
           objective={profile.objective}
@@ -125,8 +127,9 @@ export default async function PerfilPage() {
     <AppShell eyebrow="Perfil" title="Sua conta" headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
       <StudentProfileView
         name={session.user.name}
+        image={session.user.image ?? null}
         email={session.user.email}
-        coach={{ name: student.tenant.owner.name, businessName: student.tenant.name, cref: student.tenant.personalProfile?.cref ?? null }}
+        coach={{ name: student.tenant.owner.name, image: student.tenant.owner.image, businessName: student.tenant.name, cref: student.tenant.personalProfile?.cref ?? null }}
         preferences={{
           reminderHour: settings?.reminderHour ?? null,
           days: student.preferredDays,

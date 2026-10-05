@@ -7,19 +7,22 @@ import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
 import { TrainingPreferences } from "../_push/TrainingPreferences";
 import { PasskeyRow } from "../_push/PasskeyRow";
+import { AvatarPicker } from "../_photos/AvatarPicker";
 import styles from "./PersonalProfileView.module.css";
 
 interface StudentProfileViewProps {
   name: string;
+  /// Foto de perfil (EPIC-35).
+  image: string | null;
   email: string;
-  coach: { name: string; businessName: string; cref: string | null };
+  coach: { name: string; image: string | null; businessName: string; cref: string | null };
   /// Lembrete de treino e "Meus dias" (EPIC-31).
   preferences: Parameters<typeof TrainingPreferences>[0];
 }
 
 /// Perfil do Aluno (FIT-155, A5 do protótipo): quem é o personal, nome e
 /// e-mail editáveis no próprio lugar (EPIC-30), Termos, Privacidade e Sair.
-export function StudentProfileView({ name, email, coach, preferences }: StudentProfileViewProps) {
+export function StudentProfileView({ name, image, email, coach, preferences }: StudentProfileViewProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "name" | "email">(null);
@@ -56,7 +59,7 @@ export function StudentProfileView({ name, email, coach, preferences }: StudentP
   return (
     <div className={styles.profile}>
       <div className={styles.identity}>
-        <Avatar name={name} className={styles.avatar} />
+        <AvatarPicker name={name} image={image} />
         <div>
           <p className={styles.name}>{name}</p>
           <p className={styles.muted}>{email}</p>
@@ -67,7 +70,7 @@ export function StudentProfileView({ name, email, coach, preferences }: StudentP
       <TrainingPreferences {...preferences} />
 
       <h2 className={styles.cap}>Seu personal</h2>
-      <ActionRow leading={<Avatar name={coach.name} />} title={coach.name} description={[coach.businessName, coach.cref ? `CREF ${coach.cref}` : null].filter(Boolean).join(" · ")} />
+      <ActionRow leading={<Avatar name={coach.name} src={coach.image} />} title={coach.name} description={[coach.businessName, coach.cref ? `CREF ${coach.cref}` : null].filter(Boolean).join(" · ")} />
       <p className={styles.muted}>Mensalidade e programa são combinados direto com {coachFirst}. O FitOS não cobra você.</p>
 
       <h2 className={styles.cap}>Seus dados</h2>

@@ -9,11 +9,21 @@ import { createContext, useContext, type ReactNode } from "react";
 /// prévias. Sem provedor (ex.: testes de componente), o avatar cai para o
 /// ícone neutro de perfil, nunca iniciais inventadas.
 const AccountNameContext = createContext<string | null>(null);
+/// Foto de perfil da sessão (EPIC-35); nula = iniciais.
+const AccountImageContext = createContext<string | null>(null);
 
-export function AccountNameProvider({ name, children }: { name: string | null; children: ReactNode }) {
-  return <AccountNameContext.Provider value={name}>{children}</AccountNameContext.Provider>;
+export function AccountNameProvider({ name, image = null, children }: { name: string | null; image?: string | null; children: ReactNode }) {
+  return (
+    <AccountNameContext.Provider value={name}>
+      <AccountImageContext.Provider value={image}>{children}</AccountImageContext.Provider>
+    </AccountNameContext.Provider>
+  );
 }
 
 export function useAccountName(): string | null {
   return useContext(AccountNameContext);
+}
+
+export function useAccountImage(): string | null {
+  return useContext(AccountImageContext);
 }

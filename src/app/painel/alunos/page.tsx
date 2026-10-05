@@ -104,7 +104,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps = {})
               <li key={row.id}>
                 <ActionRow
                   href={`/painel/alunos/${row.id}`}
-                  leading={<Avatar name={row.displayName} />}
+                  leading={<Avatar name={row.displayName} src={row.image ?? null} />}
                   title={
                     <>
                       {row.displayName} {tag ? <Tag tone={tag.tone}>{tag.label}</Tag> : null}

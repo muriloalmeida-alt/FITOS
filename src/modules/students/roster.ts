@@ -14,6 +14,8 @@ export interface RosterRow {
   id: string;
   displayName: string;
   email: string;
+  /// Foto de perfil do aluno (EPIC-35).
+  image?: string | null;
   status: StudentStatus;
   accessStatus: StudentAccessStatus;
   activePlanName: string | null;
@@ -76,6 +78,7 @@ export async function listStudentRoster(
     where: { tenantId: input.tenantId },
     orderBy: [{ displayName: "asc" }, { id: "asc" }],
     include: {
+      user: { select: { image: true } },
       invitations: { orderBy: { createdAt: "desc" }, take: 1 },
       planAssignments: {
         where: { active: true },
@@ -100,6 +103,7 @@ export async function listStudentRoster(
       id: student.id,
       displayName: student.displayName,
       email: student.email,
+      image: student.user?.image ?? null,
       status: student.status,
       accessStatus,
       activePlanName: plan?.name ?? null,

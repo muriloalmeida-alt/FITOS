@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
-import { ActionRow, Avatar, Button, ChipGroup, FormAlert, Sheet, TextField, useToast } from "@/shared/ui";
+import { ActionRow, Button, ChipGroup, FormAlert, Sheet, TextField, useToast } from "@/shared/ui";
 import { NavIcon } from "@/shared/ui/NavIcon";
 import { formatBrazilianPhone } from "@/shared/lib/brazilianPhone";
 import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
@@ -11,10 +11,13 @@ import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
 import { PushDeviceRow } from "../_push/PushDeviceRow";
 import { PasskeyRow } from "../_push/PasskeyRow";
+import { AvatarPicker } from "../_photos/AvatarPicker";
 import styles from "./PersonalProfileView.module.css";
 
 interface PersonalProfileViewProps {
   name: string;
+  /// Foto de perfil (EPIC-35).
+  image: string | null;
   email: string;
   businessName: string;
   phone: string | null;
@@ -87,7 +90,7 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
   return (
     <div className={styles.profile}>
       <div className={styles.identity}>
-        <Avatar name={props.name} className={styles.avatar} />
+        <AvatarPicker name={props.name} image={props.image} />
         <div>
           <p className={styles.name}>{props.name}</p>
           <p className={styles.muted}>

@@ -12,6 +12,8 @@ import { listActiveRecurrencesForTenant, listChargesForStudent } from "@/modules
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { StudentProfile } from "./StudentProfile";
+import { prisma } from "@/shared/db/prisma";
+import { listEvolutionPhotos } from "@/modules/media/photos";
 import type { TimelineEntry } from "./profileTypes";
 import { formatCentsBRL } from "@/shared/lib/money";
 
@@ -63,7 +65,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
   if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
-  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser] = await Promise.all([
     getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
@@ -72,6 +74,8 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     listSessionHistoryForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     listChargesForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
+    listEvolutionPhotos({ tenantId: ctx.tenantId, studentId: student.id }),
+    student.userId ? prisma.user.findUnique({ where: { id: student.userId }, select: { image: true } }) : null,
   ]);
   const accessStatus = deriveAccessStatus(student, invitation);
   const plan = assignment?.trainingPlan ?? null;
@@ -120,7 +124,9 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           endedLabel: student.endedAt ? dateFmt.format(student.endedAt) : null,
           endReason: student.endReason,
           objective: student.objective,
+          image: studentUser?.image ?? null,
         }}
+        photos={{ items: photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() })), consent: Boolean(student.photoConsentAt) }}
         access={{ status: accessStatus, daysLeft: accessStatus === "CONVITE_PENDENTE" && invitation ? daysUntil(invitation.expiresAt) : null }}
         program={
           assignment && plan

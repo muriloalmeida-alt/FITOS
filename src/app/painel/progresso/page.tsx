@@ -10,6 +10,8 @@ import { listPersonalRecordsForStudent } from "@/modules/execution/history";
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../navigation";
 import { EvolutionView } from "../_evolution/EvolutionView";
+import { EvolutionPhotos } from "../_photos/EvolutionPhotos";
+import { listEvolutionPhotos } from "@/modules/media/photos";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -26,7 +28,8 @@ function fmt(value: number) {
 /// métrica em chips com gráfico, medidas da primeira para a última
 /// avaliação, histórico de avaliações e o bloco Treinos (treinos no mês e
 /// melhores cargas, BK-12). O aluno se pesa e escolhe a meta (EPIC-30);
-/// a avaliação completa continua com o personal.
+/// a avaliação completa continua com o personal. Fotos da avaliação
+/// (EPIC-35) com a autorização do próprio aluno.
 export default async function ProgressoPage() {
   let ctx;
   try {
@@ -41,13 +44,15 @@ export default async function ProgressoPage() {
   const scope = { tenantId: ctx.tenantId, studentId: ctx.studentId };
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [assessments, records, monthSessions, student, goal] = await Promise.all([
+  const [assessments, records, monthSessions, student, goal, photos] = await Promise.all([
     listAssessmentsForStudent(scope),
     listPersonalRecordsForStudent(scope),
     prisma.workoutSession.count({ where: { ...scope, status: "CONCLUIDA", startedAt: { gte: monthStart } } }),
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
     prisma.goal.findFirst({ where: { ...scope, status: "EM_ANDAMENTO" }, orderBy: { createdAt: "desc" }, select: { description: true } }),
+    listEvolutionPhotos(scope),
   ]);
+  const coachFirst = student.tenant.owner.name.split(" ")[0];
   const { series, measures } = buildEvolution(assessments);
   const best = [...records].sort((a, b) => b.achievedAt.getTime() - a.achievedAt.getTime()).slice(0, 5);
   const month = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(now);
@@ -66,8 +71,13 @@ export default async function ProgressoPage() {
       {series.length > 0 ? (
         <EvolutionView series={series} measures={measures} />
       ) : (
-        <p className={styles.empty}>Nenhum registro ainda. Pese-se ou espere a próxima avaliação com {student.tenant.owner.name.split(" ")[0]}.</p>
+        <p className={styles.empty}>Nenhum registro ainda. Pese-se ou espere a próxima avaliação com {coachFirst}.</p>
       )}
+      <EvolutionPhotos
+        photos={photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() }))}
+        consent={Boolean(student.photoConsentAt)}
+        owner={{ kind: "self", audience: `você e ${coachFirst}` }}
+      />
 
       <section className={styles.section} aria-labelledby="treinos">
         <h2 id="treinos" className={styles.title}>
