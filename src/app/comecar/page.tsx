@@ -68,7 +68,6 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
         <div>
           <p className={styles.eyebrow}>Tenho convite</p>
           <h1 className={styles.title}>Cole seu convite</h1>
-          <p className={styles.lead}>O código ou o link que seu personal mandou.</p>
         </div>
         <ConviteEntrada />
         <Button href="/entrar" variant="quiet" block>
@@ -83,7 +82,6 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
       <div>
         <p className={styles.eyebrow}>{caminho === "personal" ? "Sou personal" : "FitOS Livre"}</p>
         <h1 className={styles.title}>Crie sua conta</h1>
-        <p className={styles.lead}>{caminho === "personal" ? "Depois você configura seu espaço e começa 30 dias grátis." : "Depois são três toques para montar seu primeiro treino. 30 dias grátis."}</p>
       </div>
       <CriarContaForm mode={caminho === "personal" ? "personal" : "individual"} />
       <p className={styles.muted}>

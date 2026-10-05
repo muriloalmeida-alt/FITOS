@@ -41,7 +41,7 @@ export default async function TreinosPage({ searchParams }: TreinosPageProps = {
   const shown = archived ? old : active;
 
   return (
-    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." subtitle="Tudo começa pela biblioteca. Nada de formulário." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <TrainingTabs active="treinos" />
       <div className={styles.next}>
         <NextStepCard eyebrow="Próximo passo" title="Montar um treino" description="Escolha os exercícios e ajuste com um toque." href="/painel/treinos/novo" />

@@ -19,6 +19,23 @@
   font-weight: 800;
   font-size: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  pointer-events: auto;
+}
+
+.action {
+  margin-left: auto;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 var(--fitos-space-2);
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-500);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 @media (min-width: 840px) {

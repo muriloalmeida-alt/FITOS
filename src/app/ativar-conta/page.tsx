@@ -54,7 +54,6 @@ export default async function AtivarContaPage({ searchParams }: { searchParams?:
       <div>
         <p className={styles.eyebrow}>Você foi convidado</p>
         <h1 className={styles.title}>Oi, {first}.</h1>
-        <p className={styles.lead}>Falta só criar a senha.</p>
       </div>
       <ActionRow leading={<Avatar name={check.personalName ?? ""} />} title={check.personalName} description={`${check.businessName} te convidou para treinar no ${appName}`} />
       <AtivarContaForm token={token} email={check.email ?? ""} />
