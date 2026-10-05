@@ -140,7 +140,6 @@ export function PersonalOnboardingWizard({ initialBusinessName, plans, initialPl
       {step === 2 ? (
         <div className={styles.form}>
           <h1 className={styles.title}>Seu plano</h1>
-          <p className={styles.lead}>Sugerimos pelo que você contou. Dá para trocar depois.</p>
           <div className={styles.cards} role="radiogroup" aria-label="Planos">
             {plans.map((entry) => (
               <button key={entry.id} type="button" role="radio" aria-checked={plan?.id === entry.id} className={plan?.id === entry.id ? `${styles.card} ${styles.cardOn}` : styles.card} onClick={() => setPlanId(entry.id)}>

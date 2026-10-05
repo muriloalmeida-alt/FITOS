@@ -46,7 +46,7 @@
 
 .title {
   margin: 6px 0;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   line-height: 1.12;
 }
@@ -409,7 +409,7 @@ button.control {
 }
 
 .value {
-  font-size: 36px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1.1;
 }
@@ -434,7 +434,7 @@ button.control {
   background-color: var(--fitos-color-surface-raised);
   color: var(--fitos-color-on-surface);
   font-family: var(--fitos-font-family);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -652,7 +652,7 @@ button.control {
   border-radius: 50%;
   background-color: rgba(108, 212, 199, 0.18);
   color: var(--fitos-teal-300);
-  font-size: 40px;
+  font-size: 34px;
   font-weight: 800;
 }
 

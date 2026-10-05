@@ -37,7 +37,7 @@ export default async function MeusTreinosPage({ searchParams }: { searchParams?:
   const shown = (archived ? old : active).map((workout) => ({ ...workout, trainingPlanName: null }));
 
   return (
-    <AppShell eyebrow="Meus treinos" title="Do seu jeito." subtitle="Monte pela biblioteca e comece com um toque." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Meus treinos" title="Do seu jeito." navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
       <TrainingTabs active="treinos" area="livre" />
       <div className={styles.next}>
         <NextStepCard eyebrow="Próximo passo" title="Montar meu treino" description="Escolha os exercícios. Entram com 3 × 12 e 60 s." href="/painel/meus-treinos/novo" />

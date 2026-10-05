@@ -73,10 +73,10 @@
 .lg .button {
   width: 64px;
   min-height: 64px;
-  font-size: 28px;
+  font-size: 24px;
   border-radius: 16px;
 }
 
 .lg .value {
-  font-size: 26px;
+  font-size: 22px;
 }

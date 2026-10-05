@@ -92,7 +92,7 @@
     position: absolute;
     top: var(--fitos-space-5);
     right: var(--fitos-space-1);
-    font-size: 26px;
+    font-size: 22px;
     line-height: 1;
     color: var(--fitos-color-on-surface-variant);
   }

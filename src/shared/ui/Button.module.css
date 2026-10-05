@@ -10,7 +10,7 @@
   text-align: center;
   text-decoration: none;
   font-family: var(--fitos-font-family);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 20px;
   border-radius: 14px;
@@ -69,14 +69,14 @@
 }
 
 .lg {
-  min-height: 60px;
-  font-size: 17px;
+  min-height: 54px;
+  font-size: 15px;
   border-radius: 18px;
 }
 
 .xl {
-  min-height: 76px;
-  font-size: 20px;
+  min-height: 64px;
+  font-size: 17px;
   border-radius: 20px;
 }
 
