@@ -172,6 +172,33 @@ describe("AppShell", () => {
     expect(screen.getAllByRole("button", { name: "Sair" }).length).toBe(2);
   });
 
+  it("mostra a foto de perfil da sessão no cabeçalho, no menu e no link do perfil (EPIC-35)", () => {
+    const withLink: AppShellNavItem[] = [
+      { key: "hoje", label: "Hoje", href: "/painel", compact: true },
+      { key: "perfil", label: "Perfil", href: "/painel/perfil", compact: true, accountLink: true },
+    ];
+    const { unmount } = render(
+      <AccountNameProvider name="Pedro Lima" image="/api/avatar/u1?v=1">
+        <AppShell title="Hoje" navItems={withLink} activeKey="hoje">
+          <p>Conteúdo</p>
+        </AppShell>
+      </AccountNameProvider>
+    );
+    const link = screen.getByRole("link", { name: "Perfil de Pedro Lima" });
+    expect(link.querySelector("img")).toHaveAttribute("src", "/api/avatar/u1?v=1");
+    expect(link).not.toHaveTextContent("PL");
+    unmount();
+
+    render(
+      <AccountNameProvider name="Pedro Lima" image="/api/avatar/u1?v=2">
+        <AppShell title="Hoje" navItems={ALUNO_ITEMS} activeKey="hoje">
+          <p>Conteúdo</p>
+        </AppShell>
+      </AccountNameProvider>
+    );
+    expect(screen.getByRole("button", { name: "Conta de Pedro Lima" }).querySelector("img")).toHaveAttribute("src", "/api/avatar/u1?v=2");
+  });
+
   it("eyebrow e subtítulo acompanham o título da página", () => {
     render(
       <AppShell eyebrow="Alunos" title="Alunos" subtitle="Acompanhe cada pessoa em movimento." navItems={items} activeKey="inicio">
