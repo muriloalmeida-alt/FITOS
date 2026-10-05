@@ -143,6 +143,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
         load: string | null;
         restSeconds: number | null;
         notes: string | null;
+        intensity: EditorItem["intensity"];
       }[];
       const byId = new Map(library.map((exercise) => [exercise.id, exercise]));
       setItems((current) => [

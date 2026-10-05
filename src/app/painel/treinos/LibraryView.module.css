@@ -1,0 +1,90 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-4);
+  width: 100%;
+  min-height: 72px;
+  padding: var(--fitos-space-4);
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thumbs {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.thumb {
+  width: 40px;
+  height: 40px;
+  margin-left: -10px;
+  border: 2px solid var(--fitos-color-surface-card);
+  border-radius: 10px;
+}
+
+.thumbs > :first-child {
+  margin-left: 0;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.meta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.chev {
+  color: var(--fitos-color-text-muted);
+  font-size: 22px;
+}
+
+.empty {
+  color: var(--fitos-color-text-muted);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-5);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+}

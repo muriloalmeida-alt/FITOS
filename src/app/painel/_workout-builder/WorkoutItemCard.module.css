@@ -172,3 +172,23 @@
   outline: 2px solid var(--fitos-orange-300);
   outline-offset: 1px;
 }
+
+.cardio {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fitos-space-3);
+  margin-top: var(--fitos-space-3);
+}
+
+.intensity {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 12px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}

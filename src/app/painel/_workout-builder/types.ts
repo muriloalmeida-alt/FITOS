@@ -1,3 +1,5 @@
+import type { CardioIntensity } from "@/shared/lib/cardio";
+
 /// Endpoints do editor de treino. O mesmo editor serve o Personal
 /// (`/api/workouts`) e o FitOS Livre (`/api/meus-treinos`, FIT-157) — só
 /// muda a base das rotas.
@@ -64,6 +66,8 @@ export interface EditorItem {
   load: string | null;
   restSeconds: number | null;
   notes: string | null;
+  /// Aeróbico (EPIC-28): tempo em `durationSeconds`, sem séries.
+  intensity: CardioIntensity | null;
 }
 
 export interface EditorWorkout {

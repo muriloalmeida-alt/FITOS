@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ExerciseThumbnail, Tag } from "@/shared/ui";
+import { Button, CardioIcon, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { formatDays } from "@/shared/lib/weekdays";
 import { prescriptionLine, type PrescriptionInput } from "@/shared/lib/prescription";
 import styles from "./page.module.css";
@@ -12,6 +12,14 @@ export interface ProgramWorkoutView {
   days: string[];
   today: boolean;
   items: (PrescriptionInput & { id: string; name: string; muscle: string | null; imageUrl: string | null; imageAlt: string | null; notes: string | null })[];
+}
+
+/// "5 exercícios" ou, num treino só de aeróbico, "24 min" (EPIC-28).
+function workoutAmount(workout: ProgramWorkoutView): string {
+  if (workout.items.length > 0 && workout.items.every((item) => item.intensity)) {
+    return `${Math.round(workout.items.reduce((sum, item) => sum + (item.durationSeconds ?? 0), 0) / 60)} min de aeróbico`;
+  }
+  return `${workout.items.length} ${workout.items.length === 1 ? "exercício" : "exercícios"}`;
 }
 
 /// Treinos do programa que abrem e fecham (FIT-152). Abre o de hoje (ou o
@@ -31,7 +39,7 @@ export function ProgramWorkouts({ workouts }: { workouts: ProgramWorkoutView[] }
                   {workout.name} {workout.today ? <Tag tone="accent">Hoje</Tag> : null}
                 </span>
                 <span className={styles.workoutMeta}>
-                  {workout.items.length} {workout.items.length === 1 ? "exercício" : "exercícios"} · {formatDays(workout.days)}
+                  {workoutAmount(workout)} · {formatDays(workout.days)}
                 </span>
               </span>
               <span className={styles.chevron} aria-hidden="true">
@@ -46,7 +54,7 @@ export function ProgramWorkouts({ workouts }: { workouts: ProgramWorkoutView[] }
                   <ol className={styles.items} aria-label={`Exercícios de ${workout.name}`}>
                     {workout.items.map((item) => (
                       <li key={item.id} className={styles.item}>
-                        <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={56} height={56} className={styles.thumb} />
+                        {item.intensity ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={56} height={56} className={styles.thumb} />}
                         <span className={styles.itemText}>
                           <span className={styles.itemName}>{item.name}</span>
                           <span className={styles.muted}>{prescriptionLine(item)}</span>

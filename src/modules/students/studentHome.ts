@@ -29,8 +29,9 @@ const DEFAULT_WORK_SECONDS = 40;
 
 /// Duração estimada: séries × (tempo de execução + descanso), arredondada
 /// para 5 min.
-export function estimateMinutes(items: { sets: number | null; durationSeconds: number | null; restSeconds: number | null }[]): number {
-  const seconds = items.reduce((sum, item) => sum + (item.sets ?? 1) * ((item.durationSeconds ?? DEFAULT_WORK_SECONDS) + (item.restSeconds ?? DEFAULT_REST_SECONDS)), 0);
+export function estimateMinutes(items: { sets: number | null; durationSeconds: number | null; restSeconds: number | null; intensity?: string | null }[]): number {
+  // Aeróbico (EPIC-28) conta só o tempo prescrito.
+  const seconds = items.reduce((sum, item) => sum + (item.intensity ? (item.durationSeconds ?? 0) : (item.sets ?? 1) * ((item.durationSeconds ?? DEFAULT_WORK_SECONDS) + (item.restSeconds ?? DEFAULT_REST_SECONDS))), 0);
   return Math.max(5, Math.round(seconds / 300) * 5);
 }
 

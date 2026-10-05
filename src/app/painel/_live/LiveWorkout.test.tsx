@@ -6,8 +6,8 @@ import { LiveWorkout, type LiveItem } from "./LiveWorkout";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
-const squat: LiveItem = { id: "we1", name: "Agachamento", imageUrl: null, imageAlt: null, instructions: null, sets: 2, reps: 10, durationSeconds: null, loadKg: 40, load: "40 kg", restSeconds: 60, notes: null, doneSets: [], last: null };
-const plank: LiveItem = { id: "we2", name: "Prancha", imageUrl: null, imageAlt: null, instructions: null, sets: 1, reps: null, durationSeconds: 30, loadKg: null, load: null, restSeconds: 30, notes: null, doneSets: [], last: null };
+const squat: LiveItem = { id: "we1", name: "Agachamento", imageUrl: null, imageAlt: null, instructions: null, sets: 2, reps: 10, durationSeconds: null, loadKg: 40, load: "40 kg", restSeconds: 60, notes: null, intensity: null, doneSets: [], last: null };
+const plank: LiveItem = { id: "we2", name: "Prancha", imageUrl: null, imageAlt: null, instructions: null, sets: 1, reps: null, durationSeconds: 30, loadKg: null, load: null, restSeconds: 30, notes: null, intensity: null, doneSets: [], last: null };
 
 function json(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status }));
