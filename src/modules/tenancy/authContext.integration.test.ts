@@ -15,6 +15,7 @@ import {
   AuthError,
   assertTenantAccess,
   getAuthContext,
+  requireAdmin,
   requireIndividual,
   requirePersonal,
   requireSession,
@@ -292,5 +293,19 @@ describe("assertTenantAccess e isolamento entre tenants (FIT-011)", () => {
 
     expect(ctx.tenantId).toBe(tenantReal.id);
     expect(ctx.tenantId).not.toBe(tenantAdulterado.id);
+  });
+});
+
+describe("requireAdmin (administração de usuários)", () => {
+  it("ADMIN: contexto sem tenant, nunca tratado como aluno; só ele passa em requireAdmin", async () => {
+    const admin = await prisma.user.create({ data: { email: `admin-${run}@example.test`, name: "Admin", role: "ADMIN" } });
+    expect(await getAuthContext(sessionFor(admin), prisma)).toEqual({ authenticated: true, userId: admin.id, role: "ADMIN", tenantId: null, studentId: null });
+    expect(await requireAdmin(sessionFor(admin), prisma)).toEqual({ userId: admin.id, role: "ADMIN" });
+    await expect(requirePersonal(sessionFor(admin), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+    await expect(requireStudent(sessionFor(admin), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+
+    const { user: personal } = await createPersonalWithTenant("personal-tentando-admin");
+    await expect(requireAdmin(sessionFor(personal), prisma)).rejects.toMatchObject({ kind: "FORBIDDEN" });
+    await expect(requireAdmin(null, prisma)).rejects.toMatchObject({ kind: "UNAUTHENTICATED" });
   });
 });

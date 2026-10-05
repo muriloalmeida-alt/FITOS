@@ -90,3 +90,6 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   // FIT-122: "Assinatura" (FitOS Livre) já é real.
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];
+
+/// Administrador da plataforma: só a gestão de usuários.
+export const ADMIN_NAV_ITEMS: AppShellNavItem[] = [{ key: "usuarios", label: "Usuários", href: "/painel/admin", icon: "alunos", compact: true }];

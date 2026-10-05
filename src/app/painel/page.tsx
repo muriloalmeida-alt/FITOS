@@ -76,6 +76,10 @@ export default async function PainelPage() {
     redirect("/entrar");
   }
 
+  if (ctx.role === "ADMIN") {
+    redirect("/painel/admin");
+  }
+
   if (ctx.role === "PERSONAL") {
     const personalProfile = await getPersonalOnboardingProfile(ctx.tenantId);
     if (!personalProfile) {
