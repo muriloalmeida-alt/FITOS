@@ -8,6 +8,7 @@ import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { listSwapOptions } from "@/modules/exercises/exercises";
 import { ensureCuratedCatalogForTests } from "@/modules/exercises/curatedCatalogForTests";
 import { applyLibraryItem, getLibrary } from "./library";
+import { STARTER_LIBRARY } from "./starterLibrary";
 import { getStudentCopy, repeatStudentProgram, restoreStudentCopy, reviseStudentCopy } from "./studentCopy";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
@@ -45,15 +46,51 @@ describe("biblioteca (EPIC-28)", () => {
   it("cria a biblioteca inicial uma única vez, com programas, treinos e aeróbicos", async () => {
     const f = await setup("inicial");
     const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
-    expect(library.programs.map((entry) => entry.name)).toEqual(["Emagrecimento 6 semanas", "Hipertrofia 8 semanas", "Iniciante corpo todo"]);
+    expect(library.programs).toHaveLength(7);
+    expect(library.programs.map((entry) => entry.name)).toEqual(expect.arrayContaining([
+      "Corpo todo 3× · 30 min",
+      "Corpo todo 3× · 45 min",
+      "Divisão ABC · 60 min",
+      "Emagrecimento · 45 min",
+      "Emagrecimento 6 semanas",
+      "Hipertrofia 8 semanas",
+      "Iniciante corpo todo",
+    ]));
     expect(library.workouts.map((entry) => entry.name)).toContain("Inferiores A");
-    expect(library.cardio.map((entry) => entry.name)).toEqual(["Caminhada inclinada", "Corrida intervalada", "Elíptico contínuo", "HIIT na bike"]);
+    expect(library.cardio.map((entry) => entry.name)).toContain("Caminhada inclinada");
     expect(library.cardio.find((entry) => entry.name === "HIIT na bike")?.meta).toBe("24 min · intervalado");
+    expect(library.cardio.find((entry) => entry.name === "Cardio misto · 60 min")?.meta).toBe("60 min · 4 etapas");
     expect(library.programs.find((entry) => entry.name === "Emagrecimento 6 semanas")?.meta).toBe("2 treinos + 2 aeróbicos · 6 semanas");
     expect(library.programs.find((entry) => entry.name === "Hipertrofia 8 semanas")?.lines[0]).toEqual({ name: "Inferiores A", dose: "seg · 5 exercícios" });
 
     await getLibrary({ tenantId: f.tenant.id }, prisma);
-    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(3);
+    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(7);
+  });
+
+  it("treinos prontos (EPIC-32): cada um fecha no tempo do nome e usa só exercícios do catálogo", async () => {
+    const f = await setup("prontos");
+    const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
+    const ready = [...library.workouts, ...library.cardio].filter((entry) => / · (30|45|60) min$/.test(entry.name));
+    expect(ready.length).toBeGreaterThanOrEqual(20);
+    for (const entry of ready) {
+      expect({ name: entry.name, minutes: entry.minutes }).toEqual({ name: entry.name, minutes: Number(/(\d+) min$/.exec(entry.name)![1]) });
+    }
+    // Nenhum exercício ficou de fora por não existir no catálogo.
+    for (const def of [...STARTER_LIBRARY.workouts, ...STARTER_LIBRARY.cardio]) {
+      const workout = await prisma.workout.findFirstOrThrow({ where: { tenantId: f.tenant.id, name: def.name, trainingPlan: { isDraftBucket: true } }, include: { _count: { select: { workoutExercises: true } } } });
+      expect({ name: def.name, items: workout._count.workoutExercises }).toEqual({ name: def.name, items: def.items.length });
+    }
+  });
+
+  it("espaço com a biblioteca antiga recebe só os treinos prontos novos, uma vez", async () => {
+    const f = await setup("versao-1");
+    await prisma.tenant.update({ where: { id: f.tenant.id }, data: { starterLibraryVersion: 1, starterLibraryAt: new Date() } });
+    const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
+    expect(library.workouts.map((entry) => entry.name)).not.toContain("Inferiores A");
+    expect(library.workouts.map((entry) => entry.name)).toContain("Corpo todo · 45 min");
+    expect(library.programs).toHaveLength(4);
+    await getLibrary({ tenantId: f.tenant.id }, prisma);
+    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(4);
   });
 
   it("aplica programa a dois alunos (uma cópia para cada) e treino aeróbico como mais um treino", async () => {
@@ -81,7 +118,7 @@ describe("biblioteca (EPIC-28)", () => {
     const copy = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.ana.id }, prisma))!;
     expect(copy.planName).toBe("Caminhada inclinada");
     expect(copy.workouts).toHaveLength(1);
-    expect((await getLibrary({ tenantId: f.tenant.id }, prisma)).programs).toHaveLength(3);
+    expect((await getLibrary({ tenantId: f.tenant.id }, prisma)).programs).toHaveLength(7);
   });
 
   it("trocar na cópia gera nova versão, mantém a biblioteca e o histórico e permite desfazer", async () => {
@@ -130,7 +167,7 @@ describe("biblioteca (EPIC-28)", () => {
     let now = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.ana.id }, prisma))!;
     expect(now.workouts.find((workout) => workout.name === "Caminhada inclinada")!.items[0]).toMatchObject({ durationSeconds: 2400, intensity: "FORTE" });
 
-    const elliptical = options.find((option) => option.name === "Elíptico")!;
+    const elliptical = await prisma.exercise.findFirstOrThrow({ where: { externalId: "fitos:aerobico-eliptico" } });
     const strengthWorkout = now.workouts.find((workout) => workout.name === "Corpo todo B")!;
     await reviseStudentCopy({ tenantId: f.tenant.id, actorUserId: f.owner.id, studentId: f.ana.id, edit: { kind: "addItem", workoutId: strengthWorkout.id, exerciseId: elliptical.id } }, prisma);
     now = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.ana.id }, prisma))!;

@@ -11,6 +11,8 @@ export interface LibraryViewEntry {
   meta: string;
   thumbnails: string[];
   cardio: boolean;
+  /// Duração estimada (treinos e aeróbicos).
+  minutes?: number | null;
   lines: { name: string; dose: string }[];
 }
 
@@ -29,6 +31,13 @@ const TABS: { key: LibraryTab; label: string }[] = [
   { key: "aerobicos", label: "Aeróbicos" },
 ];
 
+const DURATIONS = [30, 45, 60] as const;
+
+/// Faixa de tempo do treino (EPIC-32): o mais próximo de 30, 45 ou 60 min.
+export function durationBucket(minutes: number): (typeof DURATIONS)[number] {
+  return minutes <= 37 ? 30 : minutes <= 52 ? 45 : 60;
+}
+
 function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? name;
 }
@@ -43,7 +52,9 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState<{ count: number; firstId: string } | null>(null);
-  const list = entries[tab];
+  const [duration, setDuration] = useState<(typeof DURATIONS)[number] | null>(null);
+  const timed = tab !== "programas";
+  const list = entries[tab].filter((entry) => !timed || duration === null || (entry.minutes != null && durationBucket(entry.minutes) === duration));
   const editHref = (entry: LibraryViewEntry) => (tab === "programas" ? `/painel/treinos/planos/${entry.id}` : `/painel/treinos/${entry.id}`);
   const nameOf = (id: string) => students.find((student) => student.id === id)?.name ?? "";
 
@@ -76,8 +87,18 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
     <>
       <SegmentedTabs label="Biblioteca" value={tab} items={TABS.map((item) => ({ key: item.key, label: item.label, href: `/painel/treinos?aba=${item.key}` }))} />
 
+      {timed ? (
+        <div className={styles.durations} role="radiogroup" aria-label="Tempo por dia">
+          {[null, ...DURATIONS].map((value) => (
+            <button key={String(value)} type="button" role="radio" aria-checked={duration === value} className={duration === value ? `${styles.duration} ${styles.durationOn}` : styles.duration} onClick={() => setDuration(value)}>
+              {value === null ? "Todos" : `${value} min`}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {list.length === 0 ? (
-        <p className={styles.empty}>Nada aqui ainda.</p>
+        <p className={styles.empty}>{duration ? `Nenhum de ${duration} min aqui.` : "Nada aqui ainda."}</p>
       ) : (
         <ul className={styles.list} aria-label={TABS.find((item) => item.key === tab)!.label}>
           {list.map((entry) => (
