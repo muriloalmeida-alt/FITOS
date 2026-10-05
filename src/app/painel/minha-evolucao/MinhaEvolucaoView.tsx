@@ -6,6 +6,7 @@ import { ActionRow, Button, FormAlert, NextStepCard, SegmentedTabs, Sheet, Tag, 
 import type { EvolutionSeries, MeasureChange } from "@/modules/evolution/evolutionSeries";
 import { requestJson } from "../_workout-builder/apiClient";
 import { EvolutionView } from "../_evolution/EvolutionView";
+import { EvolutionPhotos, type EvolutionPhotoItem } from "../_photos/EvolutionPhotos";
 import styles from "./MinhaEvolucaoView.module.css";
 
 export type EvolutionTab = "treinos" | "corpo" | "metas";
@@ -16,6 +17,8 @@ interface Props {
   records: { exerciseName: string; loadKg: number; reps: number | null; dateIso: string }[];
   history: { id: string; workoutName: string; dateIso: string; status: "CONCLUIDA" | "ABANDONADA"; effort: number | null }[];
   body: { series: EvolutionSeries[]; measures: MeasureChange[] };
+  /// Fotos da avaliação (EPIC-35).
+  photos?: { items: EvolutionPhotoItem[]; consent: boolean };
   assessments: { id: string; dateIso: string; weightKg: number | null; bodyFatPercent: number | null; notes: string | null }[];
   goals: { id: string; description: string; targetIso: string | null; status: "EM_ANDAMENTO" | "CONCLUIDA" | "ABANDONADA"; closedIso: string | null }[];
 }
@@ -36,7 +39,7 @@ function fmt(value: number) {
 /// Minha evolução do FitOS Livre (FIT-159, L4 do protótipo): abas Treinos
 /// (semana, mês, semanas seguidas, recordes por série e histórico), Corpo
 /// (pesar na régua, excluir) e Metas (sugeridas, EPIC-30).
-export function MinhaEvolucaoView({ tab, overview, records, history, body, assessments, goals }: Props) {
+export function MinhaEvolucaoView({ tab, overview, records, history, body, photos, assessments, goals }: Props) {
   const router = useRouter();
   const toast = useToast();
   const last = assessments[0] ?? null;
@@ -124,6 +127,7 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, asses
         <>
           <NextStepCard eyebrow="Hoje" title="Pesar hoje" description={last ? "A régua já começa no último peso." : "Leva dez segundos."} href="/painel/pesar" />
           {body.series.length > 0 ? <EvolutionView series={body.series} measures={body.measures} /> : null}
+          {photos ? <EvolutionPhotos photos={photos.items} consent={photos.consent} owner={{ kind: "self", audience: "você" }} /> : null}
           {assessments.length > 0 ? (
             <>
               <h2 className={styles.title}>Registros</h2>

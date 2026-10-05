@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { titleFit } from "@/shared/lib/titleFit";
 import Link from "next/link";
 import { initialsFromName } from "@/shared/lib/initials";
-import { useAccountName } from "./AccountContext";
+import { useAccountImage, useAccountName } from "./AccountContext";
 import { BrandLogo } from "./BrandLogo";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import styles from "./AppShell.module.css";
@@ -137,6 +137,7 @@ function AccountMenu({
   }, [open]);
 
   const initials = name ? initialsFromName(name) : "";
+  const image = useAccountImage();
 
   return (
     <div className={styles.account} ref={containerRef}>
@@ -148,7 +149,8 @@ function AccountMenu({
         aria-label={name ? `Conta de ${name}` : "Conta"}
         onClick={() => setOpen((current) => !current)}
       >
-        {initials ? <span aria-hidden="true">{initials}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+        {/* eslint-disable-next-line @next/next/no-img-element -- foto privada, servida por rota autenticada (EPIC-35) */}
+        {image ? <img src={image} alt="" className={styles.avatarPhoto} /> : initials ? <span aria-hidden="true">{initials}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
       </button>
       {open ? (
         <div id={menuId} className={styles.accountMenu}>
@@ -170,6 +172,7 @@ function AccountMenu({
 export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, children }: AppShellProps) {
   const [showMore, setShowMore] = useState(false);
   const accountName = useAccountName();
+  const accountImage = useAccountImage();
   const { visible, collapsed, usesAccountMenu } = splitCompact(navItems);
   const accountLinkItem = navItems.find((item) => item.accountLink) ?? null;
 
@@ -182,7 +185,8 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
           {accountLinkItem?.href ? (
             <div className={styles.account}>
               <Link href={accountLinkItem.href} className={styles.avatarButton} aria-label={accountName ? `Perfil de ${accountName}` : "Perfil"} aria-current={accountLinkItem.key === activeKey ? "page" : undefined}>
-                {accountName ? <span aria-hidden="true">{initialsFromName(accountName)}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+                {/* eslint-disable-next-line @next/next/no-img-element -- foto privada, servida por rota autenticada (EPIC-35) */}
+                {accountImage ? <img src={accountImage} alt="" className={styles.avatarPhoto} /> : accountName ? <span aria-hidden="true">{initialsFromName(accountName)}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
               </Link>
             </div>
           ) : (

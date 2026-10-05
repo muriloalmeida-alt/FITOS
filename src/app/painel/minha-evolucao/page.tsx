@@ -11,6 +11,7 @@ import { getTrainingOverviewForStudent, listPersonalRecordsForStudent, listSessi
 import { LogoutButton } from "../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { MinhaEvolucaoView, type EvolutionTab } from "./MinhaEvolucaoView";
+import { listEvolutionPhotos } from "@/modules/media/photos";
 
 export const metadata: Metadata = {
   title: `Minha evolução — ${appName}`,
@@ -33,12 +34,13 @@ export default async function MinhaEvolucaoPage({ searchParams }: { searchParams
   const scope = { tenantId: ctx.tenantId, studentId: student.id };
   const aba = (await searchParams)?.aba;
   const tab: EvolutionTab = aba === "corpo" || aba === "metas" ? aba : "treinos";
-  const [overview, records, history, assessments, goals] = await Promise.all([
+  const [overview, records, history, assessments, goals, photos] = await Promise.all([
     getTrainingOverviewForStudent(scope),
     listPersonalRecordsForStudent(scope),
     listSessionHistoryForStudent(scope),
     listAssessmentsForStudent(scope),
     listGoalsForStudent(scope),
+    listEvolutionPhotos(scope),
   ]);
 
   return (
@@ -52,6 +54,7 @@ export default async function MinhaEvolucaoPage({ searchParams }: { searchParams
           .map((record) => ({ exerciseName: record.exerciseName, loadKg: record.loadValue, reps: record.repsCompleted, dateIso: record.achievedAt.toISOString() }))}
         history={history.slice(0, 20).map((session) => ({ id: session.id, workoutName: session.workoutName, dateIso: session.startedAt.toISOString(), status: session.status, effort: session.perceivedEffort }))}
         body={buildEvolution(assessments)}
+        photos={{ items: photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() })), consent: Boolean(student.photoConsentAt) }}
         assessments={assessments.map((entry) => ({
           id: entry.id,
           dateIso: entry.recordedAt.toISOString(),

@@ -8,6 +8,7 @@ import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
 import { formatCentsBRL as formatBRL } from "@/shared/lib/money";
 import { requestJson } from "../../_workout-builder/apiClient";
 import type { AccessStatus, ProfileAssessment, ProfileCharge, ProfileProgram, ProfileSession, ProfileStudent, ProgramChoice, TimelineEntry } from "./profileTypes";
+import { EvolutionPhotos, type EvolutionPhotoItem } from "../../_photos/EvolutionPhotos";
 import styles from "./StudentProfile.module.css";
 
 const END_REASONS = ["Mudança de cidade", "Objetivo atingido", "Questão financeira", "Outro"];
@@ -17,6 +18,8 @@ type SheetKind = null | "assign" | "invite" | "data" | "inactivate" | "end" | "p
 
 interface StudentProfileProps {
   student: ProfileStudent;
+  /// Fotos da avaliação (EPIC-35).
+  photos?: { items: EvolutionPhotoItem[]; consent: boolean };
   access: { status: AccessStatus; daysLeft: number | null };
   program: ProfileProgram | null;
   programs: ProgramChoice[];
@@ -54,7 +57,7 @@ function fmt(value: number) {
 /// cada ação numa sheet curta — atribuir/trocar/encerrar programa,
 /// avaliação já com os últimos valores, "Recebi" da mensalidade, convite,
 /// dados, inativar/reativar e encerrar vínculo.
-export function StudentProfile({ student, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
+export function StudentProfile({ student, photos, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(initialSheet);
@@ -103,7 +106,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
   return (
     <div className={styles.profile}>
       <div className={styles.identity}>
-        <Avatar name={student.displayName} className={styles.avatar} />
+        <Avatar name={student.displayName} src={student.image ?? null} className={styles.avatar} />
         <div>
           <p className={styles.muted}>
             {student.status === "ATIVO" ? `Ativo · aluno desde ${student.sinceLabel}` : student.status === "INATIVO" ? "Inativo" : `Vínculo encerrado em ${student.endedLabel}`}
@@ -229,6 +232,9 @@ export function StudentProfile({ student, access, program, programs, week, sessi
         description={last ? `Última em ${last.dateLabel} · ${summary(last)}` : "Nenhuma ainda"}
         trailing={active ? <Button href={`/painel/alunos/${student.id}/avaliacao`} variant="quiet">Avaliar</Button> : null}
       />
+      {photos && (photos.items.length > 0 || active) ? (
+        <EvolutionPhotos photos={photos.items} consent={photos.consent} owner={{ kind: "personal", studentId: student.id, firstName: first }} />
+      ) : null}
 
       <h2 className={styles.cap}>O que aconteceu</h2>
       {timeline.length === 0 ? <p className={styles.muted}>Nada por aqui ainda.</p> : null}

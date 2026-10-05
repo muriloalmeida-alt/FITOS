@@ -14,6 +14,7 @@ vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requireStudent: (...args: unknown[]) => requireStudent(...args) };
 });
+vi.mock("@/modules/media/photos", () => ({ listEvolutionPhotos: async () => [] }));
 vi.mock("@/modules/evolution/assessments", () => ({ listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) }));
 vi.mock("@/modules/execution/history", () => ({ listPersonalRecordsForStudent: (...args: unknown[]) => listPersonalRecordsForStudent(...args) }));
 vi.mock("@/shared/db/prisma", () => ({
