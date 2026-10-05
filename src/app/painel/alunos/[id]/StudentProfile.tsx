@@ -137,6 +137,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
             <p className={styles.cardTitle}>{program.name}</p>
             <p className={styles.muted}>
               {program.week && program.weeks ? `Semana ${program.week} de ${program.weeks} · ` : ""}atribuído {program.assignedLabel}
+              {program.daysChosenByStudent ? ` · dias escolhidos por ${first}` : ""}
             </p>
             <div className={styles.strip}>
               <WeekStrip days={weekStripFromDays(program.days, { today: new Date() })} label={`Semana do programa ${program.name}`} />

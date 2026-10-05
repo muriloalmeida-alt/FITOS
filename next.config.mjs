@@ -30,6 +30,20 @@ const nextConfig = {
   images: {
     remotePatterns: buildExerciseImageRemotePatterns(),
   },
+  // EPIC-31: o service worker das notificações nunca fica em cache (cada
+  // deploy chega na hora) e é sempre servido como JavaScript.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
+  },
   // FIT-125/EPIC-16: `/criar-conta` foi renomeada para `/comecar` — redirect
   // permanente para não quebrar links já compartilhados/indexados (a query
   // string, ex.: `?modo=personal`, é preservada automaticamente pelo Next.js

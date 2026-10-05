@@ -8,6 +8,7 @@ import { NavIcon } from "@/shared/ui/NavIcon";
 import { requestJson } from "../_workout-builder/apiClient";
 import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../individualProfileLabels";
 import { LogoutButton } from "../LogoutButton";
+import { TrainingPreferences } from "../_push/TrainingPreferences";
 import styles from "./PersonalProfileView.module.css";
 
 interface LivreProfileViewProps {
@@ -18,6 +19,8 @@ interface LivreProfileViewProps {
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
   subscriptionSummary: string;
+  /// Lembrete de treino e "Meus dias" (EPIC-31).
+  preferences: Parameters<typeof TrainingPreferences>[0];
 }
 
 type SheetKind = null | "answers" | "space" | "name" | "email";
@@ -134,6 +137,9 @@ export function LivreProfileView(props: LivreProfileViewProps) {
           }
         />
       )}
+
+      <h2 className={styles.cap}>Preferências</h2>
+      <TrainingPreferences {...props.preferences} />
 
       <h2 className={styles.cap}>Assinatura</h2>
       <ActionRow href="/painel/assinatura" leading={<span className={styles.icon}><NavIcon name="assinatura" /></span>} title="Assinatura" description={props.subscriptionSummary} trailing={<span aria-hidden="true">›</span>} />

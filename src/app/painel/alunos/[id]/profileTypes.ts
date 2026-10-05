@@ -16,6 +16,8 @@ export interface ProfileProgram {
   week: number | null;
   weeks: number | null;
   days: string[];
+  /// EPIC-31: o aluno escolheu os próprios dias ("Meus dias").
+  daysChosenByStudent?: boolean;
   assignedLabel: string;
 }
 

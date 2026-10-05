@@ -9,6 +9,7 @@ import { formatBrazilianPhone } from "@/shared/lib/brazilianPhone";
 import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onboarding/studentRangeLabel";
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
+import { PushDeviceRow } from "../_push/PushDeviceRow";
 import styles from "./PersonalProfileView.module.css";
 
 interface PersonalProfileViewProps {
@@ -123,6 +124,9 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
           <ActionRow title="Você" description={`${props.name} · ${props.email}`} trailing={edit("personal", "Editar seus dados")} />
         </li>
       </ul>
+
+      <h2 className={styles.cap}>Avisos</h2>
+      <PushDeviceRow purpose="Você é avisado quando um aluno muda os dias de treino." />
 
       <h2 className={styles.cap}>Conta</h2>
       <ul className={styles.list}>

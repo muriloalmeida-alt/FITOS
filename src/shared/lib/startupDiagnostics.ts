@@ -3,7 +3,7 @@ import path from "node:path";
 import { describeError, logEvent } from "./serverLog";
 
 const REQUIRED_ENV = ["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL"];
-const OPTIONAL_ENV = ["API_ASAAS", "API_ASAAS_WEBHOOK_TOKEN", "R2_ENDPOINT", "R2_BUCKET_NAME", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_PUBLIC_BASE_URL", "NEXT_PUBLIC_APP_ENV"];
+const OPTIONAL_ENV = ["API_ASAAS", "API_ASAAS_WEBHOOK_TOKEN", "R2_ENDPOINT", "R2_BUCKET_NAME", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_PUBLIC_BASE_URL", "NEXT_PUBLIC_APP_ENV", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"];
 
 /// Roda uma vez na subida (instrumentation `register`). Nunca derruba o
 /// servidor: qualquer falha aqui vira uma linha de log.

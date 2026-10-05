@@ -154,16 +154,53 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  ownedTenant         Tenant?
-  studentProfile      Student?
-  endedStudentBonds   Student[]    @relation("StudentBondEndedBy")
-  authoredAssessments Assessment[] @relation("AssessmentAuthor")
-  recordedPayments    Payment[]
-  auditEvents         AuditEvent[]
-  sessions            Session[]
-  accounts            Account[]
+  ownedTenant          Tenant?
+  studentProfile       Student?
+  endedStudentBonds    Student[]             @relation("StudentBondEndedBy")
+  authoredAssessments  Assessment[]          @relation("AssessmentAuthor")
+  recordedPayments     Payment[]
+  auditEvents          AuditEvent[]
+  sessions             Session[]
+  accounts             Account[]
+  pushSubscriptions    PushSubscription[]
+  notificationSettings NotificationSettings?
 
   @@map("users")
+}
+
+/// Aparelho que aceitou receber notificações (EPIC-31, Web Push). Um
+/// usuário pode ter vários (celular, computador). `endpoint` identifica o
+/// aparelho no serviço de push; inscrição que o serviço recusa (404/410) é
+/// apagada no envio.
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+/// Preferências de notificação (EPIC-31). `reminderHour` (0-23, horário de
+/// Brasília) liga o lembrete de treino; `null` = desligado.
+/// `lastReminderOn` (AAAA-MM-DD) impede mandar o lembrete duas vezes no
+/// mesmo dia, mesmo com mais de uma instância rodando.
+model NotificationSettings {
+  userId         String   @id
+  reminderHour   Int?
+  lastReminderOn String?
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
 }
 
 /// Sessão de autenticação (Better Auth). Não é a fonte de autorização de
@@ -410,6 +447,9 @@ model Student {
   endedAt       DateTime?
   endReason     String?
   endedByUserId String?
+  /// "Meus dias" (EPIC-31): dias em que o aluno combinou treinar
+  /// (SEGUNDA…DOMINGO). Vazio = os dias do programa.
+  preferredDays String[]      @default([])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
