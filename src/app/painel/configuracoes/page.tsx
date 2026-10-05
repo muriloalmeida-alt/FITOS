@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 /// Configurações do personal (EPIC-36): padrões de treino e de novo aluno,
-/// avisos no celular e segurança (senha e aparelhos conectados).
+/// avisos no celular, segurança (senha e aparelhos) e seus dados.
 export default async function ConfiguracoesPage() {
   let ctx;
   try {

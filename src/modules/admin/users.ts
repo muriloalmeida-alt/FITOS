@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma, PrismaClient, UserRole } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "@/shared/db/prisma";
-import { cancelAsaasSubscription } from "@/modules/billing/asaasClient";
+import { eraseAccount } from "@/modules/account/deleteAccount";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
 
 /// Administração da plataforma: listar todos os usuários, trocar a senha e
@@ -166,59 +166,8 @@ export async function deleteUserByAdmin(
   if (!user) throw new AdminError("NAO_ENCONTRADO", "Usuário não encontrado.");
   if (user.role === "ADMIN") throw new AdminError("PROIBIDO", "Administradores não podem ser excluídos aqui.");
 
-  const tenant = user.ownedTenant;
-  const externalSubscriptionId = tenant?.saasSubscription?.status !== "CANCELADA" ? (tenant?.saasSubscription?.externalSubscriptionId ?? null) : null;
-  if (externalSubscriptionId) {
-    const apiKey = deps.apiKey ?? process.env.API_ASAAS;
-    if (apiKey) {
-      try {
-        await cancelAsaasSubscription({ apiKey, fetchImpl: deps.fetchImpl }, externalSubscriptionId);
-      } catch (error) {
-        // Segue com a exclusão: o registro fica no log para cancelar à mão.
-        logEvent("error", "admin_delete_asaas_cancel_failed", { userId: user.id, externalSubscriptionId, ...describeError(error) });
-      }
-    }
-  }
+  const { tenantId } = await eraseAccount(user, client, deps);
 
-  await client.$transaction(async (tx) => {
-    const studentId = user.studentProfile?.id ?? null;
-    if (studentId) {
-      // Pagamento → cobrança e cobrança → recorrência são RESTRICT: saem
-      // antes do aluno; o resto (execuções, avaliações, metas) em cascata.
-      await tx.payment.deleteMany({ where: { studentCharge: { studentId } } });
-      await tx.studentCharge.deleteMany({ where: { studentId } });
-      await tx.student.delete({ where: { id: studentId } });
-    }
-    if (tenant) {
-      // Ordem explícita: várias relações dentro do espaço são RESTRICT
-      // (pagamento → cobrança, execução → treino, item → exercício…), então
-      // uma cascata única a partir do espaço falharia.
-      const where = { tenantId: tenant.id };
-      await tx.payment.deleteMany({ where });
-      await tx.workoutSetResult.deleteMany({ where });
-      await tx.workoutSessionResult.deleteMany({ where });
-      await tx.workoutSession.deleteMany({ where });
-      await tx.planAssignment.deleteMany({ where });
-      await tx.studentCharge.deleteMany({ where });
-      await tx.chargeRecurrence.deleteMany({ where });
-      await tx.workoutExercise.deleteMany({ where });
-      await tx.workout.deleteMany({ where });
-      await tx.trainingPlan.deleteMany({ where });
-      await tx.exercise.deleteMany({ where });
-      await tx.saasSubscription.deleteMany({ where });
-      // O resto (alunos, avaliações, medidas, metas, convites, perfis,
-      // auditoria) sai em cascata. As contas dos alunos ficam, sem vínculo.
-      await tx.tenant.delete({ where: { id: tenant.id } });
-    }
-    // Referências restantes ao usuário em outros espaços (raras: só
-    // histórico de auditoria ou de encerramento de vínculo).
-    await tx.student.updateMany({ where: { endedByUserId: user.id }, data: { endedByUserId: null } });
-    await tx.auditEvent.deleteMany({ where: { actorUserId: user.id } });
-    await tx.payment.deleteMany({ where: { recordedByUserId: user.id } });
-    await tx.assessment.deleteMany({ where: { authorUserId: user.id } });
-    await tx.user.delete({ where: { id: user.id } });
-  });
-
-  logEvent("info", "admin_user_deleted", { adminUserId: input.adminUserId, userId: user.id, role: user.role, tenantId: tenant?.id ?? null });
+  logEvent("info", "admin_user_deleted", { adminUserId: input.adminUserId, userId: user.id, role: user.role, tenantId });
   return { email: user.email };
 }

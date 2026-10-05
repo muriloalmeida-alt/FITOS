@@ -7,7 +7,11 @@ import { formatCentsBRL } from "@/shared/lib/money";
 import { authClient } from "@/modules/identity/auth-client";
 import { requestJson } from "../_workout-builder/apiClient";
 import { PushDeviceRow } from "../_push/PushDeviceRow";
+import { forgetAccount } from "../../_entrada/rememberedAccount";
 import styles from "../perfil/PersonalProfileView.module.css";
+import own from "./Configuracoes.module.css";
+
+const EXPORT_URL = "/api/minha-conta/exportar";
 
 type Prescription = { sets: number; reps: number; restSeconds: number };
 type Alerts = { daysChanged: boolean; inactiveDays: number | null; overdue: boolean; programEnd: boolean };
@@ -21,7 +25,7 @@ interface Props {
   hasPassword: boolean;
 }
 
-type SheetKind = null | "prescription" | "program" | "fee" | "inactive" | "password";
+type SheetKind = null | "prescription" | "program" | "fee" | "inactive" | "password" | "delete";
 
 const NO_PROGRAM = "__nenhum__";
 const INACTIVE_OPTIONS = [
@@ -46,7 +50,8 @@ function lastActiveLabel(iso: string, now: number): string {
 }
 
 /// Configurações do personal (EPIC-36): padrões de treino e de novo aluno,
-/// avisos escolhidos e segurança da conta. Cada ajuste salva na hora.
+/// avisos escolhidos, segurança da conta e seus dados (baixar e excluir,
+/// EPIC-37). Cada ajuste salva na hora.
 export function ConfiguracoesView({ prescription, invite, programs, alerts: initialAlerts, devices, hasPassword }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -58,6 +63,7 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
   const [fee, setFee] = useState({ cents: invite.feeCents ?? 15000, day: invite.feeDay ?? 10 });
   const [alerts, setAlerts] = useState<Alerts>(initialAlerts);
   const [password, setPassword] = useState({ current: "", next: "" });
+  const [confirmDelete, setConfirmDelete] = useState("");
   const [now] = useState(() => Date.now());
 
   function open(kind: Exclude<SheetKind, null>) {
@@ -66,6 +72,7 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
     setProgram(invite.programId ?? NO_PROGRAM);
     setFee({ cents: invite.feeCents ?? 15000, day: invite.feeDay ?? 10 });
     setPassword({ current: "", next: "" });
+    setConfirmDelete("");
     setSheet(kind);
   }
 
@@ -107,6 +114,20 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
       const { error: failure } = await authClient.changePassword({ currentPassword: password.current, newPassword: password.next, revokeOtherSessions: true });
       if (failure) throw new Error(failure.code === "INVALID_PASSWORD" ? "A senha atual não confere." : "Não foi possível trocar a senha.");
     }, "Senha trocada. Os outros aparelhos saíram.");
+  }
+
+  async function deleteAccount() {
+    setBusy(true);
+    setError(null);
+    try {
+      await requestJson("/api/minha-conta/excluir", { method: "POST", body: JSON.stringify(hasPassword ? { password: confirmDelete } : { confirmation: confirmDelete }) });
+      forgetAccount();
+      router.replace("/");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível excluir a conta.");
+      setBusy(false);
+    }
   }
 
   const footer = (onSave: () => void, label = "Salvar") => (
@@ -187,6 +208,24 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
         </Button>
       ) : null}
 
+      <h2 className={styles.cap}>Seus dados</h2>
+      <ul className={styles.list}>
+        <li>
+          <ActionRow
+            title="Baixar meus dados"
+            description="Alunos, treinos, avaliações, metas e cobranças em planilhas."
+            trailing={
+              <a href={EXPORT_URL} download className={own.download}>
+                Baixar
+              </a>
+            }
+          />
+        </li>
+        <li>
+          <ActionRow title="Excluir minha conta" description="Apaga o seu espaço e tudo o que está nele. Não dá para desfazer." trailing={<Button type="button" variant="quiet" onClick={() => open("delete")}>Excluir</Button>} />
+        </li>
+      </ul>
+
       <Sheet open={sheet === "prescription"} onClose={() => setSheet(null)} title="Prescrição padrão" description="Vale para os próximos exercícios que você colocar num treino. Os treinos de hoje não mudam." footer={footer(() => void run(() => requestJson("/api/configuracoes/prescricao", { method: "PATCH", body: JSON.stringify(draft) }), "Prescrição padrão salva"))}>
         <div className={styles.stack}>
           <Stepper label="Séries" value={draft.sets} min={1} max={10} onChange={(sets) => setDraft({ ...draft, sets })} />
@@ -241,6 +280,35 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
           options={INACTIVE_OPTIONS}
         />
         {error ? <FormAlert>{error}</FormAlert> : null}
+      </Sheet>
+
+      <Sheet
+        open={sheet === "delete"}
+        onClose={() => setSheet(null)}
+        title="Excluir sua conta?"
+        description="Seus alunos, programas, treinos, avaliações, fotos e cobranças são apagados e a assinatura do FitOS é cancelada. As contas dos alunos continuam, sem vínculo com você. Não dá para desfazer."
+        footer={
+          <>
+            <Button type="button" block disabled={busy || confirmDelete.trim().length === 0} onClick={() => void deleteAccount()}>
+              {busy ? "Excluindo…" : "Excluir minha conta"}
+            </Button>
+            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
+              Manter minha conta
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.stack}>
+          <a href={EXPORT_URL} download className={own.downloadBlock}>
+            Baixar meus dados antes
+          </a>
+          {hasPassword ? (
+            <TextField label="Sua senha, para confirmar" type="password" autoComplete="current-password" value={confirmDelete} onChange={(event) => setConfirmDelete(event.target.value)} />
+          ) : (
+            <TextField label="Digite EXCLUIR para confirmar" autoCapitalize="characters" value={confirmDelete} onChange={(event) => setConfirmDelete(event.target.value)} />
+          )}
+          {error ? <FormAlert>{error}</FormAlert> : null}
+        </div>
       </Sheet>
 
       <Sheet open={sheet === "password"} onClose={() => setSheet(null)} title="Trocar senha" description="Os outros aparelhos saem da conta; este continua conectado." footer={footer(() => void changePassword(), "Trocar senha")}>
