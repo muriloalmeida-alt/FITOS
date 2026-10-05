@@ -56,7 +56,7 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
   const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
-    <AppShell eyebrow="Exercícios" title="Seu catálogo de movimentos" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"} com foto, execução e cuidados.`} navItems={ctx.role === "PERSONAL" ? PERSONAL_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS} activeKey={ctx.role === "PERSONAL" ? "exercicios" : "treinos"} trailing={<LogoutButton />}>
+    <AppShell eyebrow="Exercícios" title="Sua biblioteca" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"} com foto, execução e cuidados.`} navItems={ctx.role === "PERSONAL" ? PERSONAL_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS} activeKey={ctx.role === "PERSONAL" ? "exercicios" : "treinos"} trailing={<LogoutButton />}>
       <TrainingTabs active="exercicios" area={ctx.role === "PERSONAL" ? "personal" : "livre"} />
       <FilterLinks
         label="Origem"

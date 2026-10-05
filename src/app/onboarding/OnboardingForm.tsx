@@ -107,7 +107,7 @@ export function OnboardingForm(props: Props) {
 
       {step === 1 ? (
         <div className={styles.form}>
-          <h1 className={styles.title}>O que você quer alcançar?</h1>
+          <h1 className={styles.title}>Seu objetivo</h1>
           <ChipGroup label="Objetivo" variant="card" tone="accent" value={objective} onChange={setObjective} options={options(OBJECTIVE_LABELS)} />
           {errors.objective ? <p role="alert" className={styles.muted}>{errors.objective}</p> : null}
         </div>

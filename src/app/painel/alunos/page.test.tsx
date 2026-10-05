@@ -46,7 +46,7 @@ describe("Alunos (FIT-144)", () => {
     const { default: Page } = await import("./page");
     render(<ToastProvider>{await Page({ searchParams: Promise.resolve({ filtro: "atencao" }) })}</ToastProvider>);
 
-    expect(screen.getByRole("heading", { name: "42 pessoas em movimento" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "42 alunos ativos" })).toBeInTheDocument();
     expect(screen.getByText("Personal 50 · 8 vagas livres")).toBeInTheDocument();
     expect(listStudentRoster).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", filter: "atencao" }));
     expect(screen.getByRole("link", { name: "Precisam de você · 2" })).toHaveAttribute("aria-current", "page");
@@ -75,7 +75,7 @@ describe("Alunos (FIT-144)", () => {
     await user.type(within(sheet).getByLabelText("E-mail"), "pedro@email.com");
     await user.click(within(sheet).getByRole("button", { name: "Cadastrar e gerar convite" }));
 
-    const ready = await screen.findByRole("dialog", { name: "Convite pronto para Pedro" });
+    const ready = await screen.findByRole("dialog", { name: "Convite pronto" });
     expect(within(ready).getByRole("textbox", { name: "Link de ativação" })).toHaveValue("https://fitos.app/ativar-conta?token=abc");
     expect(within(ready).getByRole("link", { name: "Atribuir programa" })).toHaveAttribute("href", "/painel/alunos/novo?atribuir=1");
     expect(fetchMock).toHaveBeenCalledWith("/api/students", expect.objectContaining({ body: JSON.stringify({ name: "Pedro Lima", email: "pedro@email.com" }) }));

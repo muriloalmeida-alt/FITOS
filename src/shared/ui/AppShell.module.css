@@ -145,6 +145,24 @@
   overflow-wrap: anywhere;
 }
 
+/* Título em uma linha no celular: fonte menor para texto longo vindo de
+   dados e, no limite, reticências (titleFit). */
+@media (max-width: 839px) {
+  .title-small {
+    font-size: 23px;
+    line-height: 30px;
+  }
+
+  .title-tiny {
+    font-size: 20px;
+    line-height: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+  }
+}
+
 .subtitle {
   margin: 0;
   font-size: 16px;

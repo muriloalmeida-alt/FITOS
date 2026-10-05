@@ -327,7 +327,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
         />
       ) : null}
 
-      <Sheet open={doneOpen} onClose={() => setDoneOpen(false)} title={`${name.trim() || DEFAULT_NAME} está pronto`} description={`${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · ${formatDays(days)}. E agora?`}>
+      <Sheet open={doneOpen} onClose={() => setDoneOpen(false)} title="Treino pronto" description={`${name.trim() || DEFAULT_NAME} · ${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · ${formatDays(days)}. E agora?`}>
         {workoutId ? renderDone({ id: workoutId, name: name.trim() || DEFAULT_NAME, summary: formatDays(days) }, () => setDoneOpen(false)) : null}
       </Sheet>
     </div>

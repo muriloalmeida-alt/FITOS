@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { titleFit } from "@/shared/lib/titleFit";
 import Link from "next/link";
 import { initialsFromName } from "@/shared/lib/initials";
 import { useAccountName } from "./AccountContext";
@@ -200,7 +201,9 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         <main className={styles.content}>
           <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader}>
             {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
-            <h1 className={styles.title}>{title}</h1>
+            <h1 className={`${styles.title} ${styles[`title-${titleFit(title)}`] ?? ""}`} title={titleFit(title) === "tiny" ? title : undefined}>
+              {title}
+            </h1>
             {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
           {children}

@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 };
 
 const REASON: Record<InvalidInvitationReason, { title: string; text: string }> = {
-  INVALIDO: { title: "Este convite não existe", text: "Confira se o link está completo ou peça um novo ao seu personal." },
-  EXPIRADO: { title: "Este convite expirou", text: "Convites valem 7 dias. Peça um novo ao seu personal." },
-  CANCELADO: { title: "Este convite foi cancelado", text: "Peça um novo ao seu personal." },
-  USADO: { title: "Este convite já foi usado", text: "Se a conta é sua, é só entrar." },
+  INVALIDO: { title: "Convite inválido", text: "Confira se o link está completo ou peça um novo ao seu personal." },
+  EXPIRADO: { title: "Convite expirado", text: "Convites valem 7 dias. Peça um novo ao seu personal." },
+  CANCELADO: { title: "Convite cancelado", text: "Peça um novo ao seu personal." },
+  USADO: { title: "Convite já usado", text: "Se a conta é sua, é só entrar." },
   CONTA_EXISTENTE: { title: "Você já tem conta", text: "Entre com seu e-mail e cole este convite no Início para treinar com seu personal." },
 };
 
@@ -53,7 +53,8 @@ export default async function AtivarContaPage({ searchParams }: { searchParams?:
     <EntradaShell>
       <div>
         <p className={styles.eyebrow}>Você foi convidado</p>
-        <h1 className={styles.title}>Oi, {first}. Falta só a senha.</h1>
+        <h1 className={styles.title}>Oi, {first}.</h1>
+        <p className={styles.lead}>Falta só criar a senha.</p>
       </div>
       <ActionRow leading={<Avatar name={check.personalName ?? ""} />} title={check.personalName} description={`${check.businessName} te convidou para treinar no ${appName}`} />
       <AtivarContaForm token={token} email={check.email ?? ""} />

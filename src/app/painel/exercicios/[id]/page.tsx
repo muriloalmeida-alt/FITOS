@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { titleFit } from "@/shared/lib/titleFit";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button, ExerciseThumbnail, Tag } from "@/shared/ui";
@@ -61,7 +62,9 @@ export default async function ExercicioPage({ params }: { params: Promise<{ id: 
       {exercise.imageUrl ? (
         <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? exercise.name} width={680} height={420} priority className={styles.hero} />
       ) : null}
-      <h1 className={styles.title}>{exercise.name}</h1>
+      <h1 className={`${styles.title} ${styles[`title-${titleFit(exercise.name)}`] ?? ""}`} title={titleFit(exercise.name) === "tiny" ? exercise.name : undefined}>
+        {exercise.name}
+      </h1>
       {tags.length > 0 ? (
         <ul className={styles.tags} aria-label="Características">
           {tags.map((tag) => (

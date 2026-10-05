@@ -15,7 +15,7 @@ describe("AlunoSemVinculo (FIT-151)", () => {
   it("entra com o código do convite e volta ao Início", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     render(<AlunoSemVinculo name="Ana Souza" ended />);
-    expect(screen.getByRole("heading", { level: 1, name: "Ana, seu vínculo foi encerrado." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Vínculo encerrado" })).toBeInTheDocument();
     const enter = screen.getByRole("button", { name: "Entrar com o convite" });
     expect(enter).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Código ou link do convite"), { target: { value: "abc123" } });

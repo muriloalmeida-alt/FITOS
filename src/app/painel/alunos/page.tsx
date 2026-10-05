@@ -86,7 +86,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps = {})
   };
 
   return (
-    <AppShell eyebrow="Alunos" title={`${active} ${active === 1 ? "pessoa" : "pessoas"} em movimento`} subtitle={capacity} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Alunos" title={`${active} ${active === 1 ? "aluno ativo" : "alunos ativos"}`} subtitle={capacity} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
       <div className={styles.next}>
         <InviteStudent startOpen={sp.novo === "1"} />
       </div>
