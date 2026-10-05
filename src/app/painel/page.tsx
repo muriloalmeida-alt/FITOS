@@ -72,7 +72,8 @@ function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activ
 /// cartão ou depois que ele acaba sem cartão.
 function livreTrialNotice(subscription: SaasSubscriptionWithPlan | null, now: Date): string | null {
   if (!subscription || subscription.status !== "ATIVA" || subscription.plan.priceCents <= 0 || subscription.creditCardLast4) return null;
-  if (!subscription.trialEndsAt || subscription.trialEndsAt <= now) return "Seu teste grátis acabou. Cadastre o cartão para continuar.";
+  // Depois do fim do teste, a faixa de carência/bloqueio (EPIC-38) avisa em todas as telas.
+  if (!subscription.trialEndsAt || subscription.trialEndsAt <= now) return null;
   const days = Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000);
   return days <= 7 ? `${days <= 1 ? "Último dia" : `Faltam ${days} dias`} de teste grátis. Cadastre o cartão para continuar.` : null;
 }
