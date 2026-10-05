@@ -41,7 +41,7 @@ describe("LiveWorkout (FIT-153)", () => {
     expect(screen.getByText("42,5")).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Série feita/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Fiz 9 × 42,5 kg" }));
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions/sess1/series", expect.objectContaining({ method: "POST", body: JSON.stringify({ workoutExerciseId: "we1", setNumber: 1, reps: 9, durationSeconds: null, loadKg: 42.5 }) }));
     const rest = screen.getByRole("dialog", { name: "Descanso" });
@@ -49,14 +49,14 @@ describe("LiveWorkout (FIT-153)", () => {
     fireEvent.click(within(rest).getByRole("button", { name: "Pular descanso" }));
     expect(screen.queryByRole("dialog", { name: "Descanso" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("1 de 2 séries feitas")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Última série feita/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Fiz .*última série$/ })).toBeInTheDocument();
   });
 
   it("falha ao salvar desfaz a série na tela", async () => {
     fetchMock.mockReturnValue(json({ message: "Sem conexão" }, 500));
     renderLive();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Série feita/ }));
+      fireEvent.click(screen.getByRole("button", { name: /^Fiz / }));
     });
     expect(screen.getByLabelText("0 de 2 séries feitas")).toBeInTheDocument();
     expect(await screen.findByText("Sem conexão")).toBeInTheDocument();
@@ -102,6 +102,6 @@ describe("LiveWorkout (FIT-153)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Começar treino" }));
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/workout-sessions", expect.objectContaining({ body: JSON.stringify({ workoutId: "w1" }) }));
-    expect(screen.getByRole("button", { name: /Série feita|Última série feita/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Fiz / })).toBeInTheDocument();
   });
 });

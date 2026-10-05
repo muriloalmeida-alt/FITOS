@@ -146,4 +146,21 @@ describe("WorkoutEditor (FIT-146)", () => {
     expect(screen.getByText("Não salvo")).toBeInTheDocument();
     expect(within(first).getByText("5")).toBeInTheDocument();
   });
+
+  it("tocar na foto troca por outro do mesmo grupo, mantendo a prescrição (EPIC-30)", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation(async (url: string) =>
+      url === "/api/exercises/ex-agach/alternativas"
+        ? jsonResponse({ options: [{ id: "ex-afundo", name: "Afundo reverso", muscle: "Quadríceps", imageUrl: null, imageAlt: null }] })
+        : jsonResponse({})
+    );
+    renderEditor(existing);
+    await user.click(screen.getByRole("button", { name: "Trocar Agachamento livre" }));
+    const sheet = await screen.findByRole("dialog", { name: "Trocar Agachamento livre" });
+    await user.click(await within(sheet).findByRole("button", { name: /Afundo reverso/ }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/workouts/w1/itens/i1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ exerciseId: "ex-afundo" }) }));
+    const first = screen.getAllByRole("listitem")[0]!;
+    expect(within(first).getByText("Afundo reverso")).toBeInTheDocument();
+    expect(within(first).getByText("40 kg")).toBeInTheDocument();
+  });
 });

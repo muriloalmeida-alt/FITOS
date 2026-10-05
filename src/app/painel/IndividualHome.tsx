@@ -4,6 +4,7 @@ import type { IndividualHome as IndividualHomeData } from "@/modules/workouts/in
 import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
+import { ProgressionCard } from "./ProgressionCard";
 import styles from "./IndividualHome.module.css";
 
 interface IndividualHomeProps {
@@ -52,6 +53,8 @@ export function IndividualHome({ name, greeting, dateLabel, home, todayIso }: In
       ) : (
         <NextStepCard eyebrow="Primeiro passo" title="Criar meu primeiro treino" description="Escolha os exercícios na biblioteca. Entram com 3 × 12." href="/painel/meus-treinos/novo" />
       )}
+
+      {home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null}
 
       <section className={styles.section} aria-labelledby="semana">
         <div className={styles.sectionHead}>

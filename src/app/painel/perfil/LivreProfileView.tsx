@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { ActionRow, Avatar, Button, ChipGroup, FormAlert, Sheet, TextField, useToast } from "@/shared/ui";
+import { ActionRow, Avatar, Button, ChipGroup, FormAlert, TextField, useToast } from "@/shared/ui";
 import { NavIcon } from "@/shared/ui/NavIcon";
 import { requestJson } from "../_workout-builder/apiClient";
 import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../individualProfileLabels";
@@ -23,8 +23,9 @@ interface LivreProfileViewProps {
 type SheetKind = null | "answers" | "space" | "name" | "email";
 const options = <T extends string>(labels: Record<T, string>) => (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
 
-/// Perfil do FitOS Livre (FIT-160, L5 do protótipo): "Editar respostas" em
-/// chips, assinatura com status, dados e nome do espaço, Termos e Sair.
+/// Perfil do FitOS Livre (FIT-160, L5 do protótipo): respostas em chips
+/// que salvam no toque e dados editados no próprio lugar (EPIC-30),
+/// assinatura com status, Termos e Sair.
 export function LivreProfileView(props: LivreProfileViewProps) {
   const router = useRouter();
   const toast = useToast();
@@ -66,15 +67,32 @@ export function LivreProfileView(props: LivreProfileViewProps) {
     }
   }
 
-  const footer = (onSave: () => void, disabled = false) => (
-    <>
-      <Button type="button" block disabled={busy || disabled} onClick={onSave}>
-        Salvar
-      </Button>
-      <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
-        Agora não
-      </Button>
-    </>
+  // Respostas: cada toque salva na hora.
+  function answer(patch: Record<string, string>) {
+    void (async () => {
+      try {
+        await requestJson("/api/minha-conta/perfil-livre", { method: "PATCH", body: JSON.stringify(patch) });
+        toast.show("Salvo");
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Não foi possível salvar.");
+      }
+    })();
+  }
+
+  const inline = (label: string, fields: ReactNode, onSave: () => void, disabled = false) => (
+    <div className={styles.inline} role="group" aria-label={label}>
+      {fields}
+      {error ? <FormAlert>{error}</FormAlert> : null}
+      <div className={styles.inlineActions}>
+        <Button type="button" disabled={busy || disabled} onClick={onSave}>
+          Salvar
+        </Button>
+        <Button type="button" variant="quiet" onClick={() => setSheet(null)}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
   );
   const edit = (kind: Exclude<SheetKind, null>, label: string) => (
     <Button type="button" variant="quiet" aria-label={label} onClick={() => open(kind)}>
@@ -95,15 +113,27 @@ export function LivreProfileView(props: LivreProfileViewProps) {
       </div>
 
       <h2 className={styles.cap}>Seu treino</h2>
-      <ActionRow
-        title={OBJECTIVE_LABELS[props.objective]}
-        description={`${EXPERIENCE_LABELS[props.experienceLevel]} · ${AVAILABILITY_LABELS[props.weeklyAvailability]}`}
-        trailing={
-          <Button type="button" variant="quiet" onClick={() => open("answers")}>
-            Editar respostas
+      {sheet === "answers" ? (
+        <div className={styles.inline} role="group" aria-label="Suas respostas">
+          <ChipGroup label="Objetivo" showLabel tone="accent" value={objective} onChange={(value) => { setObjective(value); answer({ objective: value }); }} options={options(OBJECTIVE_LABELS)} />
+          <ChipGroup label="Experiência" showLabel tone="accent" value={experience} onChange={(value) => { setExperience(value); answer({ experienceLevel: value }); }} options={options(EXPERIENCE_LABELS)} />
+          <ChipGroup label="Dias por semana" showLabel tone="accent" value={availability} onChange={(value) => { setAvailability(value); answer({ weeklyAvailability: value }); }} options={options(AVAILABILITY_LABELS)} />
+          {error ? <FormAlert>{error}</FormAlert> : null}
+          <Button type="button" variant="quiet" onClick={() => setSheet(null)}>
+            Pronto
           </Button>
-        }
-      />
+        </div>
+      ) : (
+        <ActionRow
+          title={OBJECTIVE_LABELS[props.objective]}
+          description={`${EXPERIENCE_LABELS[props.experienceLevel]} · ${AVAILABILITY_LABELS[props.weeklyAvailability]}`}
+          trailing={
+            <Button type="button" variant="quiet" onClick={() => open("answers")}>
+              Editar respostas
+            </Button>
+          }
+        />
+      )}
 
       <h2 className={styles.cap}>Assinatura</h2>
       <ActionRow href="/painel/assinatura" leading={<span className={styles.icon}><NavIcon name="assinatura" /></span>} title="Assinatura" description={props.subscriptionSummary} trailing={<span aria-hidden="true">›</span>} />
@@ -111,13 +141,27 @@ export function LivreProfileView(props: LivreProfileViewProps) {
       <h2 className={styles.cap}>Seus dados</h2>
       <ul className={styles.list}>
         <li>
-          <ActionRow title="Nome" description={props.name} trailing={edit("name", "Editar nome")} />
+          {sheet === "name"
+            ? inline("Seu nome", <TextField label="Nome" value={name} maxLength={120} autoComplete="name" autoFocus onChange={(event) => setName(event.target.value)} />, () => void save("/api/minha-conta", "PATCH", { name }, "Nome salvo"), name.trim().length === 0)
+            : <ActionRow title="Nome" description={props.name} trailing={edit("name", "Editar nome")} />}
         </li>
         <li>
-          <ActionRow title="E-mail de acesso" description={props.email} trailing={edit("email", "Editar e-mail")} />
+          {sheet === "email"
+            ? inline(
+                "E-mail de acesso",
+                <>
+                  <TextField label="Novo e-mail" type="email" inputMode="email" autoComplete="email" autoFocus value={email} onChange={(event) => setEmail(event.target.value)} />
+                  <TextField label="Senha atual" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
+                </>,
+                () => void save("/api/minha-conta/email", "POST", { email, password }, "E-mail atualizado"),
+                password.length === 0
+              )
+            : <ActionRow title="E-mail de acesso" description={props.email} trailing={edit("email", "Editar e-mail")} />}
         </li>
         <li>
-          <ActionRow title="Nome do espaço" description={props.spaceName} trailing={edit("space", "Editar nome do espaço")} />
+          {sheet === "space"
+            ? inline("Nome do espaço", <TextField label="Nome do espaço" value={space} maxLength={80} autoFocus onChange={(event) => setSpace(event.target.value)} />, () => void save("/api/minha-conta/perfil-livre", "PATCH", { spaceName: space }, "Nome do espaço salvo"), space.trim().length === 0)
+            : <ActionRow title="Nome do espaço" description={props.spaceName} trailing={edit("space", "Editar nome do espaço")} />}
         </li>
       </ul>
 
@@ -134,32 +178,6 @@ export function LivreProfileView(props: LivreProfileViewProps) {
         <LogoutButton block />
       </div>
 
-      <Sheet open={sheet === "answers"} onClose={() => setSheet(null)} title="Editar respostas" footer={footer(() => void save("/api/minha-conta/perfil-livre", "PATCH", { objective, experienceLevel: experience, weeklyAvailability: availability }, "Respostas salvas"))}>
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.stack}>
-          <ChipGroup label="Objetivo" showLabel tone="accent" value={objective} onChange={setObjective} options={options(OBJECTIVE_LABELS)} />
-          <ChipGroup label="Experiência" showLabel tone="accent" value={experience} onChange={setExperience} options={options(EXPERIENCE_LABELS)} />
-          <ChipGroup label="Dias por semana" showLabel tone="accent" value={availability} onChange={setAvailability} options={options(AVAILABILITY_LABELS)} />
-        </div>
-      </Sheet>
-
-      <Sheet open={sheet === "space"} onClose={() => setSheet(null)} title="Nome do espaço" footer={footer(() => void save("/api/minha-conta/perfil-livre", "PATCH", { spaceName: space }, "Nome do espaço salvo"))}>
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <TextField label="Nome do espaço" value={space} maxLength={80} onChange={(event) => setSpace(event.target.value)} />
-      </Sheet>
-
-      <Sheet open={sheet === "name"} onClose={() => setSheet(null)} title="Seu nome" footer={footer(() => void save("/api/minha-conta", "PATCH", { name }, "Nome salvo"))}>
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <TextField label="Nome" value={name} maxLength={120} autoComplete="name" onChange={(event) => setName(event.target.value)} />
-      </Sheet>
-
-      <Sheet open={sheet === "email"} onClose={() => setSheet(null)} title="E-mail de acesso" description="Você entra no FitOS com este e-mail. Confirme com sua senha." footer={footer(() => void save("/api/minha-conta/email", "POST", { email, password }, "E-mail atualizado"), password.length === 0)}>
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.stack}>
-          <TextField label="Novo e-mail" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-          <TextField label="Senha atual" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </div>
-      </Sheet>
     </div>
   );
 }

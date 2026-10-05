@@ -25,6 +25,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       load: typeof body.load === "string" ? body.load : undefined,
       notes: typeof body.notes === "string" ? body.notes : undefined,
       intensity: CARDIO_INTENSITIES.includes(body.intensity) ? body.intensity : undefined,
+      exerciseId: typeof body.exerciseId === "string" ? body.exerciseId : undefined,
     });
 
     return Response.json(item);

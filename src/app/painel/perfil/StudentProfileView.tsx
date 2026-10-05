@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ActionRow, Avatar, Button, FormAlert, Sheet, TextField, useToast } from "@/shared/ui";
+import { ActionRow, Avatar, Button, FormAlert, TextField, useToast } from "@/shared/ui";
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
 import styles from "./PersonalProfileView.module.css";
@@ -14,7 +14,7 @@ interface StudentProfileViewProps {
 }
 
 /// Perfil do Aluno (FIT-155, A5 do protótipo): quem é o personal, nome e
-/// e-mail editáveis em sheets, Termos, Privacidade e Sair.
+/// e-mail editáveis no próprio lugar (EPIC-30), Termos, Privacidade e Sair.
 export function StudentProfileView({ name, email, coach }: StudentProfileViewProps) {
   const router = useRouter();
   const toast = useToast();
@@ -66,10 +66,42 @@ export function StudentProfileView({ name, email, coach }: StudentProfileViewPro
       <h2 className={styles.cap}>Seus dados</h2>
       <ul className={styles.list}>
         <li>
-          <ActionRow title="Nome" description={name} trailing={<Button type="button" variant="quiet" aria-label="Editar nome" onClick={() => open("name")}>Editar</Button>} />
+          {sheet === "name" ? (
+            <div className={styles.inline} role="group" aria-label="Seu nome">
+              <TextField label="Nome" value={draftName} maxLength={120} autoComplete="name" autoFocus onChange={(event) => setDraftName(event.target.value)} />
+              <p className={styles.muted}>{coachFirst} também vê este nome.</p>
+              {error ? <FormAlert>{error}</FormAlert> : null}
+              <div className={styles.inlineActions}>
+                <Button type="button" disabled={busy || draftName.trim().length === 0} onClick={() => void run(() => requestJson("/api/minha-conta", { method: "PATCH", body: JSON.stringify({ name: draftName }) }).then(() => undefined), "Nome salvo")}>
+                  Salvar
+                </Button>
+                <Button type="button" variant="quiet" onClick={() => setSheet(null)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ActionRow title="Nome" description={name} trailing={<Button type="button" variant="quiet" aria-label="Editar nome" onClick={() => open("name")}>Editar</Button>} />
+          )}
         </li>
         <li>
-          <ActionRow title="E-mail de acesso" description={email} trailing={<Button type="button" variant="quiet" aria-label="Editar e-mail" onClick={() => open("email")}>Editar</Button>} />
+          {sheet === "email" ? (
+            <div className={styles.inline} role="group" aria-label="E-mail de acesso">
+              <TextField label="Novo e-mail" type="email" inputMode="email" autoComplete="email" autoFocus value={draftEmail} onChange={(event) => setDraftEmail(event.target.value)} />
+              <TextField label="Senha atual" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              {error ? <FormAlert>{error}</FormAlert> : null}
+              <div className={styles.inlineActions}>
+                <Button type="button" disabled={busy || password.length === 0} onClick={() => void run(() => requestJson("/api/minha-conta/email", { method: "POST", body: JSON.stringify({ email: draftEmail, password }) }).then(() => undefined), "E-mail atualizado")}>
+                  Salvar
+                </Button>
+                <Button type="button" variant="quiet" onClick={() => setSheet(null)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ActionRow title="E-mail de acesso" description={email} trailing={<Button type="button" variant="quiet" aria-label="Editar e-mail" onClick={() => open("email")}>Editar</Button>} />
+          )}
         </li>
       </ul>
 
@@ -86,48 +118,6 @@ export function StudentProfileView({ name, email, coach }: StudentProfileViewPro
         <LogoutButton block />
       </div>
 
-      <Sheet
-        open={sheet === "name"}
-        onClose={() => setSheet(null)}
-        title="Seu nome"
-        description={`${coachFirst} também vê este nome.`}
-        footer={
-          <>
-            <Button type="button" block disabled={busy} onClick={() => void run(() => requestJson("/api/minha-conta", { method: "PATCH", body: JSON.stringify({ name: draftName }) }).then(() => undefined), "Nome salvo")}>
-              Salvar
-            </Button>
-            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
-              Agora não
-            </Button>
-          </>
-        }
-      >
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <TextField label="Nome" value={draftName} maxLength={120} autoComplete="name" onChange={(event) => setDraftName(event.target.value)} />
-      </Sheet>
-
-      <Sheet
-        open={sheet === "email"}
-        onClose={() => setSheet(null)}
-        title="E-mail de acesso"
-        description="Você entra no FitOS com este e-mail. Confirme com sua senha."
-        footer={
-          <>
-            <Button type="button" block disabled={busy || password.length === 0} onClick={() => void run(() => requestJson("/api/minha-conta/email", { method: "POST", body: JSON.stringify({ email: draftEmail, password }) }).then(() => undefined), "E-mail atualizado")}>
-              Salvar
-            </Button>
-            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
-              Agora não
-            </Button>
-          </>
-        }
-      >
-        {error ? <FormAlert>{error}</FormAlert> : null}
-        <div className={styles.stack}>
-          <TextField label="Novo e-mail" type="email" inputMode="email" autoComplete="email" value={draftEmail} onChange={(event) => setDraftEmail(event.target.value)} />
-          <TextField label="Senha atual" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </div>
-      </Sheet>
     </div>
   );
 }

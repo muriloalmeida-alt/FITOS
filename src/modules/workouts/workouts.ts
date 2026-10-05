@@ -93,7 +93,7 @@ function normalizeOptionalText(value: string | undefined, label: string, maxLeng
 /// único parcial em `(tenantId) WHERE isDraftBucket = true` garante no
 /// máximo um por tenant). Cria um na primeira chamada. Nunca retorna/cria
 /// um snapshot.
-async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
+export async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
   const existing = await client.trainingPlan.findFirst({
     where: { tenantId, isDraftBucket: true },
   });
@@ -312,6 +312,9 @@ export interface UpdateWorkoutExerciseInput {
   notes?: string;
   /// Só em item aeróbico.
   intensity?: CardioIntensity;
+  /// Troca o exercício mantendo a prescrição (EPIC-30). Só entre exercícios
+  /// do mesmo tipo: aeróbico por aeróbico, força por força.
+  exerciseId?: string;
 }
 
 /// Edita os parâmetros de prescrição de um item. `undefined` mantém o
@@ -359,6 +362,16 @@ export async function updateWorkoutExercise(
       throw new WorkoutError("VALIDACAO", "Intensidade inválida.");
     }
     data.intensity = input.intensity;
+  }
+  if (input.exerciseId !== undefined && input.exerciseId !== current.exerciseId) {
+    const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.exerciseId }, client);
+    if (!exercise || exercise.status !== "ATIVO") {
+      throw new WorkoutError("VALIDACAO", "Exercício não encontrado no catálogo.");
+    }
+    if (isCardioType(exercise.type) !== (current.intensity !== null)) {
+      throw new WorkoutError("VALIDACAO", "Troque aeróbico por aeróbico e musculação por musculação.");
+    }
+    data.exercise = { connect: { id: exercise.id } };
   }
 
   if (Object.keys(data).length === 0) {

@@ -192,3 +192,29 @@
   font-weight: 800;
   cursor: pointer;
 }
+
+.swapThumb {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.swapBadge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+  font-size: 12px;
+  font-weight: 800;
+}

@@ -90,3 +90,26 @@
   color: var(--fitos-orange-300);
   font-weight: 800;
 }
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+  padding: var(--fitos-space-5, 20px);
+  border: 1px solid rgba(255, 120, 71, 0.45);
+  border-radius: 20px;
+  background-color: #141b26;
+}
+
+.askTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.askActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fitos-space-3);
+  margin-top: var(--fitos-space-2);
+}

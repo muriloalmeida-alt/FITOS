@@ -130,3 +130,8 @@ export async function ensureStarterLibrary(tenantId: string, client: PrismaClien
 }
 
 export const STARTER_LIBRARY = { workouts: WORKOUTS, cardio: CARDIO, programs: PROGRAMS };
+
+/// Blocos para montar o plano inicial do FitOS Livre (EPIC-30).
+export const STARTER_BLOCKS = { INFERIORES_A, SUPERIORES_A, INFERIORES_B, SUPERIORES_B, CORPO_TODO_A, CORPO_TODO_B, c, s };
+export type StarterItem = Item;
+export type StarterWorkout = WorkoutDef;
