@@ -23,6 +23,8 @@ interface Props {
   entries: Record<LibraryTab, LibraryViewEntry[]>;
   students: { id: string; name: string }[];
   preselectedStudentId?: string | null;
+  /// FitOS Livre: "Usar" copia para os próprios treinos, sem alunos.
+  mode?: "personal" | "livre";
 }
 
 const TABS: { key: LibraryTab; label: string }[] = [
@@ -44,8 +46,12 @@ function firstName(name: string) {
 
 /// Biblioteca do personal (EPIC-28): programas, treinos e aeróbicos
 /// prontos. Toque num item, escolha os alunos e aplique: cada um recebe a
-/// própria cópia.
-export function LibraryView({ tab, entries, students, preselectedStudentId = null }: Props) {
+/// própria cópia. No FitOS Livre, o mesmo catálogo pronto: "Usar" copia o
+/// item para "Meus treinos".
+export function LibraryView({ tab, entries, students, preselectedStudentId = null, mode = "personal" }: Props) {
+  const livre = mode === "livre";
+  const base = livre ? "/painel/meus-treinos/biblioteca" : "/painel/treinos";
+  const [used, setUsed] = useState<string[] | null>(null);
   const router = useRouter();
   const [open, setOpen] = useState<LibraryViewEntry | null>(null);
   const [picked, setPicked] = useState<string[]>(preselectedStudentId ? [preselectedStudentId] : []);
@@ -77,15 +83,35 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
     router.refresh();
   }
 
+  async function takeItem() {
+    if (!open || busy) return;
+    setBusy(true);
+    setError(null);
+    const response = await fetch("/api/livre/biblioteca", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: tab === "programas" ? "programa" : "treino", key: open.id }),
+    });
+    setBusy(false);
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      setError(body?.message ?? "Não foi possível usar. Tente de novo.");
+      return;
+    }
+    setUsed(body?.workoutIds ?? []);
+    router.refresh();
+  }
+
   function close() {
     setOpen(null);
     setApplied(null);
+    setUsed(null);
     setError(null);
   }
 
   return (
     <>
-      <SegmentedTabs label="Biblioteca" value={tab} items={TABS.map((item) => ({ key: item.key, label: item.label, href: `/painel/treinos?aba=${item.key}` }))} />
+      <SegmentedTabs label="Biblioteca" value={tab} items={TABS.map((item) => ({ key: item.key, label: item.label, href: `${base}?aba=${item.key}` }))} />
 
       {timed ? (
         <div className={styles.durations} role="radiogroup" aria-label="Tempo por dia">
@@ -126,16 +152,27 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
         </ul>
       )}
 
-      <Button href={tab === "programas" ? "/painel/treinos/planos/novo" : "/painel/treinos/novo"} variant="secondary" block>
-        {tab === "programas" ? "Criar programa" : tab === "aerobicos" ? "Criar aeróbico" : "Criar treino"}
-      </Button>
+      {livre ? (
+        <Button href="/painel/meus-treinos/novo" variant="secondary" block>
+          Montar meu treino
+        </Button>
+      ) : (
+        <Button href={tab === "programas" ? "/painel/treinos/planos/novo" : "/painel/treinos/novo"} variant="secondary" block>
+          {tab === "programas" ? "Criar programa" : tab === "aerobicos" ? "Criar aeróbico" : "Criar treino"}
+        </Button>
+      )}
 
       <Sheet
-        open={open !== null && applied === null}
+        open={open !== null && applied === null && used === null}
         onClose={close}
         title={open?.name ?? ""}
-        description={open?.meta}
+        description={livre && tab === "programas" ? `${open?.meta ?? ""}. Seus treinos atuais vão para Arquivados.` : open?.meta}
         footer={
+          livre ? (
+            <Button type="button" block disabled={busy} onClick={() => void takeItem()}>
+              {busy ? "Preparando…" : tab === "programas" ? "Começar este programa" : tab === "aerobicos" ? "Usar este aeróbico" : "Usar este treino"}
+            </Button>
+          ) : (
           <>
             <Button type="button" block disabled={picked.length === 0 || busy} onClick={() => void apply()}>
               {busy ? "Aplicando…" : picked.length <= 1 ? `Aplicar para ${picked[0] ? firstName(nameOf(picked[0])) : "…"}` : `Aplicar para ${picked.length} alunos`}
@@ -146,6 +183,7 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
               </Button>
             ) : null}
           </>
+          )
         }
       >
         {open ? (
@@ -159,7 +197,7 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
               ))}
             </ul>
             {error ? <FormAlert variant="error">{error}</FormAlert> : null}
-            {students.length === 0 ? (
+            {livre ? null : students.length === 0 ? (
               <p className={styles.meta}>Convide um aluno para aplicar.</p>
             ) : (
               <ChipGroup label="Aplicar para" showLabel multiple tone="accent" value={picked} onChange={setPicked} options={students.map((student) => ({ value: student.id, label: firstName(student.name) }))} />
@@ -182,6 +220,25 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
             ) : null}
             <Button type="button" variant="quiet" block onClick={close}>
               Voltar à biblioteca
+            </Button>
+          </>
+        }
+      />
+
+      <Sheet
+        open={used !== null}
+        onClose={close}
+        title={tab === "programas" ? "Programa pronto" : "Está nos seus treinos"}
+        description={tab === "programas" ? "Os treinos do programa já estão nos seus dias. Os anteriores ficaram em Arquivados." : "Ajuste como quiser: a biblioteca não muda."}
+        footer={
+          <>
+            {used && used.length === 1 ? (
+              <Button href={`/painel/meus-treinos/sessao?treino=${used[0]}`} block>
+                Começar agora
+              </Button>
+            ) : null}
+            <Button href="/painel/meus-treinos" variant={used && used.length === 1 ? "quiet" : "filled"} block>
+              Ver meus treinos
             </Button>
           </>
         }
