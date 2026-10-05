@@ -1,0 +1,102 @@
+.list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.empty {
+  color: var(--fitos-color-text-muted);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.pager a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.facts div {
+  padding: 14px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.facts dt {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.section h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.danger {
+  border: 1px solid rgba(255, 92, 92, 0.4);
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.losses {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+@media (min-width: 840px) {
+  .facts {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

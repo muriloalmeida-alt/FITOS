@@ -22,7 +22,8 @@ export type AuthContext =
   | { authenticated: true; userId: string; role: "PERSONAL"; tenantId: string; studentId: null }
   | { authenticated: true; userId: string; role: "ALUNO"; tenantId: string; studentId: string }
   | { authenticated: true; userId: string; role: "ALUNO"; tenantId: null; studentId: null }
-  | { authenticated: true; userId: string; role: "INDIVIDUAL"; tenantId: string; studentId: null };
+  | { authenticated: true; userId: string; role: "INDIVIDUAL"; tenantId: string; studentId: null }
+  | { authenticated: true; userId: string; role: "ADMIN"; tenantId: null; studentId: null };
 
 type ServerSession = Awaited<ReturnType<typeof getServerSession>>;
 
@@ -54,6 +55,11 @@ export async function getAuthContext(sessionOverride?: ServerSession, client: Pr
     // tenantId nulo para um INDIVIDUAL autenticado.
     const tenant = await ensureTenantForIndividual(user, client);
     return { authenticated: true, userId: user.id, role: "INDIVIDUAL", tenantId: tenant.id, studentId: null };
+  }
+
+  // Administrador da plataforma: sem tenant, nunca cai no ramo de aluno.
+  if (user.role === "ADMIN") {
+    return { authenticated: true, userId: user.id, role: "ADMIN", tenantId: null, studentId: null };
   }
 
   const student = await client.student.findUnique({ where: { userId: user.id } });
@@ -157,6 +163,16 @@ export async function requireStudent(
     throw new AuthError("FORBIDDEN", "Acesso restrito a aluno com vínculo ativo.");
   }
   return { userId: ctx.userId, role: ctx.role, tenantId: ctx.tenantId, studentId: ctx.studentId };
+}
+
+/// Área de administração: só o papel ADMIN (nunca concedido pelo cadastro
+/// público).
+export async function requireAdmin(sessionOverride?: ServerSession, client: PrismaClient = prisma): Promise<{ userId: string; role: "ADMIN" }> {
+  const ctx = await requireSession(sessionOverride, client);
+  if (ctx.role !== "ADMIN") {
+    throw new AuthError("FORBIDDEN", "Acesso restrito ao administrador.");
+  }
+  return { userId: ctx.userId, role: ctx.role };
 }
 
 /// Confirma que `tenantId` (sempre derivado do contexto de autorização,

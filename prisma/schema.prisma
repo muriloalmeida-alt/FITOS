@@ -124,6 +124,10 @@ enum UserRole {
   /// um vínculo com um personal (FIT-106) — são papéis diferentes, ver
   /// `05_TRANSICAO_PERSONAL_PARA_LIVRE.md` do pacote pós-MVP.
   INDIVIDUAL
+  /// Administrador da plataforma: gerencia todos os usuários (senha e
+  /// exclusão). Sem tenant. Nunca vem do cadastro público; só do script
+  /// `admin:garantir` (ADMIN_EMAIL/ADMIN_PASSWORD no ambiente).
+  ADMIN
 }
 
 /// Identidade autenticável. A partir da FIT-009, User também é a tabela de
