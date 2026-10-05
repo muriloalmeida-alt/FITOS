@@ -25,6 +25,8 @@ interface WorkoutEditorProps {
   renderActions?: (workout: { id: string; status: "ATIVO" | "ARQUIVADO" }) => ReactNode;
   /// Pronto leva direto para cá, sem sheet (ex.: voltar ao programa que pediu o treino).
   onDoneHref?: (workoutId: string) => Promise<string | null>;
+  /// Prescrição com que os exercícios entram (padrão do espaço, EPIC-36).
+  prescription?: { sets: number; reps: number; restSeconds: number };
 }
 
 const DEFAULT_NAME = "Novo treino";
@@ -43,7 +45,7 @@ function toServerPatch(patch: ItemPatch): Record<string, unknown> {
 /// (vários de uma vez) e prescrição com +/−. Tudo salva sozinho; o treino
 /// novo só é criado no primeiro gesto do usuário (nunca um treino vazio
 /// fantasma por abrir a tela).
-export function WorkoutEditor({ api, initial, library, createExerciseHref, renderDone, renderActions, onDoneHref }: WorkoutEditorProps) {
+export function WorkoutEditor({ api, initial, library, createExerciseHref, renderDone, renderActions, onDoneHref, prescription = { sets: 3, reps: 12, restSeconds: 60 } }: WorkoutEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const [workoutId, setWorkoutId] = useState<string | null>(initial?.id ?? null);
@@ -311,7 +313,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
       {items.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>Comece pelos exercícios</p>
-          <p className={styles.emptyText}>Escolha vários de uma vez. Entram com 3 séries de 12 e 60 s de descanso. Você ajusta depois.</p>
+          <p className={styles.emptyText}>Escolha vários de uma vez. {`Entram com ${prescription.sets} séries de ${prescription.reps} e ${prescription.restSeconds} s de descanso. Você ajusta depois.`}</p>
           <Button type="button" block onClick={() => setLibraryOpen(true)}>
             Escolher na biblioteca
           </Button>
@@ -361,6 +363,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
           onAdd={onAdd}
           adding={adding}
           createExerciseHref={createExerciseHref}
+          prescription={prescription}
         />
       ) : null}
 

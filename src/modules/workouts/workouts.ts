@@ -1103,10 +1103,36 @@ export async function getWeeklyRhythmForStudent(
 /// livre. O personal ajusta depois com +/−.
 export const DEFAULT_PRESCRIPTION = { sets: 3, reps: 12, restSeconds: 60 } as const;
 
+export type Prescription = { sets: number; reps: number; restSeconds: number };
+export const PRESCRIPTION_LIMITS = { sets: [1, 10], reps: [1, 50], restSeconds: [0, 300] } as const;
+
+/// Prescrição padrão do espaço (Configurações, EPIC-36): a que o personal
+/// escolheu, ou a do FitOS quando não escolheu.
+export async function getTenantPrescription(tenantId: string, client: PrismaClient = prisma): Promise<Prescription> {
+  const tenant = await client.tenant.findUnique({ where: { id: tenantId }, select: { defaultSets: true, defaultReps: true, defaultRestSeconds: true } });
+  return {
+    sets: tenant?.defaultSets ?? DEFAULT_PRESCRIPTION.sets,
+    reps: tenant?.defaultReps ?? DEFAULT_PRESCRIPTION.reps,
+    restSeconds: tenant?.defaultRestSeconds ?? DEFAULT_PRESCRIPTION.restSeconds,
+  };
+}
+
+export async function setTenantPrescription(input: { tenantId: string } & Prescription, client: PrismaClient = prisma): Promise<Prescription> {
+  for (const key of ["sets", "reps", "restSeconds"] as const) {
+    const [min, max] = PRESCRIPTION_LIMITS[key];
+    const value = input[key];
+    if (!Number.isInteger(value) || value < min || value > max) {
+      throw new WorkoutError("VALIDACAO", key === "sets" ? `Séries de ${min} a ${max}.` : key === "reps" ? `Repetições de ${min} a ${max}.` : `Descanso de ${min} a ${max} s.`);
+    }
+  }
+  await client.tenant.update({ where: { id: input.tenantId }, data: { defaultSets: input.sets, defaultReps: input.reps, defaultRestSeconds: input.restSeconds } });
+  return { sets: input.sets, reps: input.reps, restSeconds: input.restSeconds };
+}
+
 const MAX_BATCH_EXERCISES = 30;
 
 /// BK-01: adiciona vários exercícios de uma vez ao fim do treino, todos com
-/// a prescrição padrão, numa única transação (ou entram todos, ou nenhum).
+/// a prescrição padrão do espaço (EPIC-36), numa única transação (ou entram todos, ou nenhum).
 /// Cada exercício precisa estar no catálogo visível ao tenant — mesma regra
 /// de `addWorkoutExercise`. Repetir um exercício na lista é permitido (o
 /// mesmo movimento pode aparecer duas vezes num treino).
@@ -1124,6 +1150,7 @@ export async function addWorkoutExercisesBatch(
   if (!workout) {
     throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
   }
+  const prescription = await getTenantPrescription(input.tenantId, client);
   const cardioIds = new Set<string>();
   for (const exerciseId of new Set(input.exerciseIds)) {
     const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId }, client);
@@ -1150,7 +1177,7 @@ export async function addWorkoutExercisesBatch(
             position,
             ...(cardioIds.has(exerciseId)
               ? { durationSeconds: DEFAULT_CARDIO.durationSeconds, intensity: DEFAULT_CARDIO.intensity }
-              : { sets: DEFAULT_PRESCRIPTION.sets, reps: DEFAULT_PRESCRIPTION.reps, restSeconds: DEFAULT_PRESCRIPTION.restSeconds }),
+              : { sets: prescription.sets, reps: prescription.reps, restSeconds: prescription.restSeconds }),
           },
         })
       );

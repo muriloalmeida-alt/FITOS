@@ -130,10 +130,19 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
       </ul>
 
       <h2 className={styles.cap}>Avisos</h2>
-      <PushDeviceRow purpose="Você é avisado quando um aluno muda os dias de treino." />
+      <PushDeviceRow purpose="Escolha em Configurações quais avisos você quer receber." />
 
       <h2 className={styles.cap}>Conta</h2>
       <ul className={styles.list}>
+        <li>
+          <ActionRow
+            href="/painel/configuracoes"
+            leading={<span className={styles.icon}><NavIcon name="config" /></span>}
+            title="Configurações"
+            description="Padrões de treino, novo aluno, avisos e segurança"
+            trailing={<span aria-hidden="true">›</span>}
+          />
+        </li>
         <li>
           <PasskeyRow />
         </li>
