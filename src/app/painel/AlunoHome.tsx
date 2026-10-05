@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ActionRow, AppShell, Button, ProgressBar, WeekStrip } from "@/shared/ui";
+import { ActionRow, AppShell, Button, NextStepCard, ProgressBar, WeekStrip } from "@/shared/ui";
+import { formatCentsBRL } from "@/shared/lib/money";
 import type { StudentHome } from "@/modules/students/studentHome";
 import { weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
@@ -16,6 +17,8 @@ interface AlunoHomeProps {
   home: StudentHome;
   /// Data de "hoje" (ISO) para destacar o dia na faixa da semana.
   todayIso: string;
+  /// Mensalidade em aberto com link de pagamento (EPIC-38).
+  payment?: { description: string; amountCents: number; dueIso: string; overdue: boolean; url: string } | null;
 }
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" });
@@ -76,7 +79,7 @@ function Hero({ home, personalName }: { home: StudentHome; personalName: string 
 /// Início do Aluno (FIT-151, A1 do protótipo): o que fazer hoje com um
 /// toque (começar, continuar, descanso ou programa a caminho), ritmo da
 /// semana, próximos treinos e a última avaliação.
-export function AlunoHome({ displayName, personalName, greeting, dateLabel, home, todayIso }: AlunoHomeProps) {
+export function AlunoHome({ displayName, personalName, greeting, dateLabel, home, todayIso, payment = null }: AlunoHomeProps) {
   const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
   const today = new Date(todayIso);
   const assessment = home.lastAssessment;
@@ -89,6 +92,15 @@ export function AlunoHome({ displayName, personalName, greeting, dateLabel, home
   return (
     <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
       <Hero home={home} personalName={personalName} />
+
+      {payment ? (
+        <NextStepCard
+          eyebrow={payment.overdue ? "Mensalidade atrasada" : "Mensalidade"}
+          title={`Pagar ${formatCentsBRL(payment.amountCents)}`}
+          description={`${payment.description} · ${payment.overdue ? "venceu" : "vence"} em ${dateFmt.format(new Date(payment.dueIso))}. Pix, boleto ou cartão, direto para ${personalName.split(/\s+/)[0]}.`}
+          href={payment.url}
+        />
+      ) : null}
 
       {home.program ? (
         <section className={styles.section} aria-labelledby="sua-semana">

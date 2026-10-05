@@ -164,9 +164,11 @@ export default async function PainelPage() {
   }
 
   const now = new Date();
-  const [student, home] = await Promise.all([
+  const [student, home, openCharge] = await Promise.all([
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
     getStudentHome({ tenantId: ctx.tenantId, studentId: ctx.studentId, now }),
+    // EPIC-38: mensalidade em aberto que o personal mandou pelo app.
+    prisma.studentCharge.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId, status: { in: ["PENDENTE", "ATRASADO"] }, paymentUrl: { not: null } }, orderBy: { dueDate: "asc" } }),
   ]);
   return (
     <AlunoHome
@@ -176,6 +178,7 @@ export default async function PainelPage() {
       dateLabel={dateLabelFor(now)}
       home={home}
       todayIso={now.toISOString()}
+      payment={openCharge?.paymentUrl ? { description: openCharge.description, amountCents: openCharge.amountCents, dueIso: openCharge.dueDate.toISOString(), overdue: openCharge.dueDate < now, url: openCharge.paymentUrl } : null}
     />
   );
 }

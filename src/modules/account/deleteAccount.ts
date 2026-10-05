@@ -4,6 +4,7 @@ import { verifyPassword } from "better-auth/crypto";
 import { prisma } from "@/shared/db/prisma";
 import { cancelAsaasSubscription } from "@/modules/billing/asaasClient";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
+import { disconnectPaymentAccount } from "@/modules/student-finance/paymentAccount";
 
 /// Exclusão de conta (EPIC-26 pelo admin; EPIC-37 pela própria pessoa, em
 /// Configurações). Apaga o usuário e tudo o que é dele, sem volta:
@@ -31,6 +32,10 @@ export async function eraseAccount(user: AccountToErase, client: PrismaClient = 
       }
     }
   }
+
+  // A conta Asaas do personal (cobrança dos alunos, EPIC-38) sai antes:
+  // o aviso de pagamento cadastrado nela é removido. Melhor esforço.
+  if (tenant) await disconnectPaymentAccount({ tenantId: tenant.id }, client, { fetchImpl: deps.fetchImpl }).catch(() => undefined);
 
   await client.$transaction(async (tx) => {
     const studentId = user.studentProfile?.id ?? null;

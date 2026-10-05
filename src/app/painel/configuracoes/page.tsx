@@ -10,6 +10,7 @@ import { getInviteDefaults } from "@/modules/students/inviteLink";
 import { getLibrary } from "@/modules/library/library";
 import { getTenantPrescription } from "@/modules/workouts/workouts";
 import { getAlertSettings } from "@/modules/notifications/personalAlerts";
+import { getPaymentAccountSummary } from "@/modules/student-finance/paymentAccount";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
 import { ConfiguracoesView } from "./ConfiguracoesView";
@@ -29,13 +30,14 @@ export default async function ConfiguracoesPage() {
     throw error;
   }
   const session = await getServerSession();
-  const [prescription, invite, library, alerts, devices, password] = await Promise.all([
+  const [prescription, invite, library, alerts, devices, password, payments] = await Promise.all([
     getTenantPrescription(ctx.tenantId),
     getInviteDefaults(ctx.tenantId),
     getLibrary({ tenantId: ctx.tenantId }),
     getAlertSettings(ctx.userId),
     listDevices({ userId: ctx.userId, currentSessionId: session?.session.id ?? null }),
     prisma.account.findFirst({ where: { userId: ctx.userId, providerId: "credential", password: { not: null } }, select: { id: true } }),
+    getPaymentAccountSummary(ctx.tenantId),
   ]);
 
   return (
@@ -47,6 +49,7 @@ export default async function ConfiguracoesPage() {
         alerts={alerts}
         devices={devices.map((device) => ({ id: device.id, label: device.label, lastActiveIso: device.lastActive.toISOString(), current: device.current }))}
         hasPassword={password !== null}
+        payments={payments}
       />
     </AppShell>
   );

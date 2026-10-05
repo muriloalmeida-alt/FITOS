@@ -23,9 +23,11 @@ interface Props {
   alerts: Alerts;
   devices: { id: string; label: string; lastActiveIso: string; current: boolean }[];
   hasPassword: boolean;
+  /// Conta Asaas do personal para cobrar os alunos pelo app (EPIC-38).
+  payments?: { connected: boolean; environment: "producao" | "sandbox" | null; automatic: boolean };
 }
 
-type SheetKind = null | "prescription" | "program" | "fee" | "inactive" | "password" | "delete";
+type SheetKind = null | "prescription" | "program" | "fee" | "inactive" | "password" | "delete" | "payments";
 
 const NO_PROGRAM = "__nenhum__";
 const INACTIVE_OPTIONS = [
@@ -52,7 +54,7 @@ function lastActiveLabel(iso: string, now: number): string {
 /// Configurações do personal (EPIC-36): padrões de treino e de novo aluno,
 /// avisos escolhidos, segurança da conta e seus dados (baixar e excluir,
 /// EPIC-37). Cada ajuste salva na hora.
-export function ConfiguracoesView({ prescription, invite, programs, alerts: initialAlerts, devices, hasPassword }: Props) {
+export function ConfiguracoesView({ prescription, invite, programs, alerts: initialAlerts, devices, hasPassword, payments = { connected: false, environment: null, automatic: false } }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(null);
@@ -64,6 +66,7 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
   const [alerts, setAlerts] = useState<Alerts>(initialAlerts);
   const [password, setPassword] = useState({ current: "", next: "" });
   const [confirmDelete, setConfirmDelete] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [now] = useState(() => Date.now());
 
   function open(kind: Exclude<SheetKind, null>) {
@@ -73,6 +76,7 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
     setFee({ cents: invite.feeCents ?? 15000, day: invite.feeDay ?? 10 });
     setPassword({ current: "", next: "" });
     setConfirmDelete("");
+    setApiKey("");
     setSheet(kind);
   }
 
@@ -163,6 +167,31 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
         </li>
         <li>
           <ActionRow title="Mensalidade" description={invite.feeCents ? `${formatCentsBRL(invite.feeCents)} todo dia ${invite.feeDay ?? 10}` : "Nenhuma: você combina depois"} trailing={edit("fee", "Editar mensalidade do novo aluno")} />
+        </li>
+      </ul>
+
+      <h2 className={styles.cap}>Receber pelo app</h2>
+      <ul className={styles.list}>
+        <li>
+          <ActionRow
+            title="Conta Asaas"
+            description={
+              payments.connected
+                ? `Conectada${payments.environment === "sandbox" ? " (testes)" : ""} · ${payments.automatic ? "a baixa é automática quando o aluno paga" : "a baixa automática não ligou: reconecte"}`
+                : "Mande Pix, boleto ou cartão para o aluno. O dinheiro cai na sua conta e a mensalidade se dá baixa sozinha."
+            }
+            trailing={
+              payments.connected ? (
+                <Button type="button" variant="quiet" disabled={busy} onClick={() => void run(() => requestJson("/api/configuracoes/recebimento", { method: "DELETE" }), "Conta desconectada")}>
+                  Desconectar
+                </Button>
+              ) : (
+                <Button type="button" variant="quiet" onClick={() => open("payments")}>
+                  Conectar
+                </Button>
+              )
+            }
+          />
         </li>
       </ul>
 
@@ -280,6 +309,26 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
           options={INACTIVE_OPTIONS}
         />
         {error ? <FormAlert>{error}</FormAlert> : null}
+      </Sheet>
+
+      <Sheet
+        open={sheet === "payments"}
+        onClose={() => setSheet(null)}
+        title="Conectar sua conta Asaas"
+        description="O aluno paga direto para você. O FitOS só gera a cobrança e avisa quando o pagamento entra."
+        footer={footer(() => void run(() => requestJson("/api/configuracoes/recebimento", { method: "PUT", body: JSON.stringify({ apiKey }) }), "Conta Asaas conectada"), "Conectar")}
+      >
+        <div className={styles.stack}>
+          <ol className={own.steps}>
+            <li>
+              Entre no Asaas (ou crie sua conta em <a href="https://www.asaas.com" target="_blank" rel="noreferrer">asaas.com</a>).
+            </li>
+            <li>Vá em Integrações › Chave de API e toque em Gerar chave.</li>
+            <li>Copie a chave e cole aqui.</li>
+          </ol>
+          <TextField label="Chave de API" autoComplete="off" spellCheck={false} value={apiKey} onChange={(event) => setApiKey(event.target.value)} />
+          {error ? <FormAlert>{error}</FormAlert> : null}
+        </div>
       </Sheet>
 
       <Sheet

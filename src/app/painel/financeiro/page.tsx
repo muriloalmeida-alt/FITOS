@@ -8,6 +8,7 @@ import { countPendingRecurrencesForMonth, ensureCurrentMonthCharges, getFinancia
 import { currentReferenceMonth, parseReferenceMonth, referenceMonthKey, referenceMonthLabel } from "@/shared/lib/referenceMonth";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
+import { getPaymentAccountSummary } from "@/modules/student-finance/paymentAccount";
 import { FinanceiroView, type FinanceTab } from "./FinanceiroView";
 
 export const metadata: Metadata = {
@@ -39,12 +40,13 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
   const isCurrentMonth = referenceMonthKey(referenceMonth) === referenceMonthKey(currentReferenceMonth());
   if (isCurrentMonth) await ensureCurrentMonthCharges({ tenantId: ctx.tenantId });
 
-  const [students, summary, charges, recurrences, pendingRecurrences] = await Promise.all([
+  const [students, summary, charges, recurrences, pendingRecurrences, payments] = await Promise.all([
     listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 100 }),
     getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth }),
     listChargesForTenant({ tenantId: ctx.tenantId, referenceMonth }),
     listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
     countPendingRecurrencesForMonth({ tenantId: ctx.tenantId, referenceMonth }),
+    getPaymentAccountSummary(ctx.tenantId),
   ]);
   const generated = new Set(charges.filter((charge) => charge.recurrenceId).map((charge) => charge.recurrenceId));
   const statusOrder = { ATRASADO: 0, PENDENTE: 1, PAGO: 2, CANCELADO: 3 } as const;
@@ -69,7 +71,10 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
             paidAt: charge.payment?.paidAt.toISOString() ?? null,
             paidCents: charge.payment?.amountCentsPaid ?? null,
             method: charge.payment?.method ?? null,
+            paymentUrl: charge.paymentUrl,
+            hasCpf: Boolean(charge.student.cpf),
           }))}
+        canChargeOnline={payments.connected}
         recurrences={recurrences.map((recurrence) => ({
           id: recurrence.id,
           studentId: recurrence.student.id,
