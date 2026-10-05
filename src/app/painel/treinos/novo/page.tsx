@@ -4,6 +4,7 @@ import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { loadLibrary, loadPrograms } from "../../_workout-builder/editorData";
 import { PersonalWorkoutEditor } from "../PersonalWorkoutEditor";
+import { getTenantPrescription } from "@/modules/workouts/workouts";
 
 export const metadata: Metadata = {
   title: `Montar treino — ${appName}`,
@@ -29,7 +30,7 @@ export default async function NovoTreinoPage({ searchParams }: NovoTreinoPagePro
   }
 
   const programa = (await searchParams)?.programa ?? null;
-  const [library, programs] = await Promise.all([loadLibrary(ctx.tenantId), loadPrograms(ctx.tenantId)]);
+  const [library, programs, prescription] = await Promise.all([loadLibrary(ctx.tenantId), loadPrograms(ctx.tenantId), getTenantPrescription(ctx.tenantId)]);
 
-  return <PersonalWorkoutEditor initial={null} library={library} programs={programs} returnToProgramId={programa} />;
+  return <PersonalWorkoutEditor initial={null} library={library} programs={programs} returnToProgramId={programa} prescription={prescription} />;
 }

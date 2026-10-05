@@ -26,8 +26,8 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// existia para o ALUNO desde a FIT-016) — dados profissionais (celular/
 /// CREF/faixa de alunos) e um resumo real da assinatura, com link para a
 /// gestão completa em `/painel/assinatura` (FIT-122, item próprio abaixo).
-/// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
-/// ainda.
+/// "Configurações" é real desde o EPIC-36 (`/painel/configuracoes`):
+/// padrões de treino e de novo aluno, avisos e segurança.
 ///
 /// AjustesPainel/AjustesTelas (29/09/2026): a barra inferior mobile do
 /// Personal passa a ser **Início, Alunos, Treinos, Perfil** (`compact`),
@@ -42,7 +42,7 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
   { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
-  { key: "config", label: "Configurações", comingSoon: true, icon: "config" },
+  { key: "config", label: "Configurações", href: "/painel/configuracoes", icon: "config" },
 ];
 
 /// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"

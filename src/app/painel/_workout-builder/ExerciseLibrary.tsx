@@ -15,6 +15,8 @@ interface ExerciseLibraryProps {
   adding?: boolean;
   /// Destino de "Cadastrar exercício próprio" (null no FitOS Livre sem catálogo próprio).
   createExerciseHref?: string | null;
+  /// Prescrição com que os exercícios entram (padrão do espaço, EPIC-36).
+  prescription?: { sets: number; reps: number; restSeconds: number };
 }
 
 const ALL = "__todos__";
@@ -26,7 +28,7 @@ function normalize(text: string) {
 /// Biblioteca em tela cheia (FIT-146): busca, filtro por músculo e seleção
 /// de vários exercícios de uma vez. "Adicionar N" usa a prescrição padrão
 /// (3 × 12, 60 s). Diálogo modal com Esc para fechar.
-export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, adding = false, createExerciseHref }: ExerciseLibraryProps) {
+export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, adding = false, createExerciseHref, prescription = { sets: 3, reps: 12, restSeconds: 60 } }: ExerciseLibraryProps) {
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<string>(ALL);
   const [selected, setSelected] = useState<string[]>([]);
@@ -135,7 +137,7 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
         <Button type="button" block size="lg" disabled={count === 0 || adding} onClick={() => onAdd(selected)}>
           {adding ? "Adicionando…" : count === 0 ? "Escolha um ou mais" : `Adicionar ${count === 1 ? "1 exercício" : `${count} exercícios`}`}
         </Button>
-        <p className={styles.hint}>Entram com 3 × 12 e 60 s de descanso</p>
+        <p className={styles.hint}>{`Entram com ${prescription.sets} × ${prescription.reps} e ${prescription.restSeconds} s de descanso`}</p>
       </div>
     </div>
   );

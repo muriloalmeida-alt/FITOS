@@ -2,7 +2,7 @@ import "server-only";
 import type { CardioIntensity, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
-import { DEFAULT_PRESCRIPTION, WorkoutError } from "@/modules/workouts/workouts";
+import { getTenantPrescription, type Prescription, WorkoutError } from "@/modules/workouts/workouts";
 import { CARDIO_INTENSITIES, CARDIO_MAX_SECONDS, CARDIO_MIN_SECONDS, DEFAULT_CARDIO, isCardioType } from "@/shared/lib/cardio";
 
 /// Cópia do aluno (EPIC-28, ADR-016). Atribuir cria uma cópia imutável
@@ -97,10 +97,10 @@ function itemData(row: ItemRow): ItemData {
   return { exerciseId: row.exerciseId, sets: row.sets, reps: row.reps, durationSeconds: row.durationSeconds, load: row.load, restSeconds: row.restSeconds, notes: row.notes, intensity: row.intensity };
 }
 
-function defaultsFor(exerciseId: string, cardio: boolean): ItemData {
+function defaultsFor(exerciseId: string, cardio: boolean, prescription: Prescription): ItemData {
   return cardio
     ? { exerciseId, durationSeconds: DEFAULT_CARDIO.durationSeconds, intensity: DEFAULT_CARDIO.intensity }
-    : { exerciseId, sets: DEFAULT_PRESCRIPTION.sets, reps: DEFAULT_PRESCRIPTION.reps, restSeconds: DEFAULT_PRESCRIPTION.restSeconds };
+    : { exerciseId, sets: prescription.sets, reps: prescription.reps, restSeconds: prescription.restSeconds };
 }
 
 function intInRange(value: number | undefined, min: number, max: number, label: string): number | undefined {
@@ -142,7 +142,7 @@ export async function reviseStudentCopy(
     const exercise = await visibleExercise(edit.exerciseId);
     const currentExercise = await client.exercise.findUniqueOrThrow({ where: { id: current.exerciseId }, select: { type: true } });
     const sameKind = isCardioType(exercise.type) === isCardioType(currentExercise.type);
-    replace = { itemId: current.id, data: sameKind ? { ...itemData(current), exerciseId: exercise.id } : defaultsFor(exercise.id, isCardioType(exercise.type)) };
+    replace = { itemId: current.id, data: sameKind ? { ...itemData(current), exerciseId: exercise.id } : defaultsFor(exercise.id, isCardioType(exercise.type), await getTenantPrescription(input.tenantId, client)) };
   } else if (edit.kind === "update") {
     const current = findItem(edit.itemId);
     if (edit.intensity !== undefined && !CARDIO_INTENSITIES.includes(edit.intensity)) throw new WorkoutError("VALIDACAO", "Intensidade inválida.");
@@ -162,7 +162,7 @@ export async function reviseStudentCopy(
   } else if (edit.kind === "addItem") {
     if (!workouts.some((workout) => workout.id === edit.workoutId)) throw new WorkoutError("NAO_ENCONTRADO", "Treino não encontrado na cópia do aluno.");
     const exercise = await visibleExercise(edit.exerciseId);
-    append = { workoutId: edit.workoutId, data: defaultsFor(exercise.id, isCardioType(exercise.type)) };
+    append = { workoutId: edit.workoutId, data: defaultsFor(exercise.id, isCardioType(exercise.type), await getTenantPrescription(input.tenantId, client)) };
   } else {
     const source = await client.workout.findFirst({ where: { id: edit.sourceWorkoutId, tenantId: input.tenantId, trainingPlan: { isSnapshot: false } }, include: { workoutExercises: { orderBy: { position: "asc" } } } });
     if (!source) throw new WorkoutError("NAO_ENCONTRADO", "Treino não encontrado na biblioteca.");

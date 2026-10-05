@@ -28,12 +28,13 @@ export async function setPreferredDays(
 ): Promise<{ days: string[]; notified: boolean }> {
   const client = options.client ?? prisma;
   const days = normalizeDays(input.days);
-  const student = await client.student.findFirst({ where: { id: input.studentId, tenantId: input.tenantId }, select: { id: true, displayName: true, preferredDays: true, tenant: { select: { ownerId: true } } } });
+  const student = await client.student.findFirst({ where: { id: input.studentId, tenantId: input.tenantId }, select: { id: true, displayName: true, preferredDays: true, tenant: { select: { ownerId: true, owner: { select: { notificationSettings: { select: { alertDaysChanged: true } } } } } } } });
   if (!student) throw new PreferredDaysError("Aluno não encontrado.");
   const changed = student.preferredDays.join(",") !== days.join(",");
   if (!changed) return { days, notified: false };
   await client.student.update({ where: { id: student.id }, data: { preferredDays: days } });
-  if (!input.notifyPersonal) return { days, notified: false };
+  // O personal pode desligar este aviso em Configurações (EPIC-36).
+  if (!input.notifyPersonal || student.tenant.owner.notificationSettings?.alertDaysChanged === false) return { days, notified: false };
   const first = student.displayName.trim().split(/\s+/)[0] ?? student.displayName;
   const delivered = await sendToUser(
     student.tenant.ownerId,

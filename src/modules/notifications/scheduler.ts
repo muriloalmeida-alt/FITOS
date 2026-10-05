@@ -3,6 +3,7 @@ import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { pushConfig } from "./push";
 import { runDueReminders } from "./reminders";
 import { runDueReminders as runBillingDueReminders } from "./billingReminders";
+import { runPersonalAlerts } from "./personalAlerts";
 
 /// Agendador dos lembretes de treino (EPIC-31) e dos avisos de vencimento
 /// da assinatura (EPIC-34): roda dentro do próprio servidor, a
@@ -33,6 +34,14 @@ export function startReminderScheduler(): void {
       if (billing.sent > 0) logEvent("info", "push.vencimentos", { enviados: billing.sent });
     } catch (error) {
       logEvent("error", "push.vencimentos_falhou", describeError(error));
+    }
+    // EPIC-36: avisos que o personal escolheu (aluno sem treinar, atraso,
+    // fim de programa).
+    try {
+      const alerts = await runPersonalAlerts();
+      if (alerts.sent > 0) logEvent("info", "push.avisos_personal", { enviados: alerts.sent });
+    } catch (error) {
+      logEvent("error", "push.avisos_personal_falhou", describeError(error));
     }
   };
   const timer = setInterval(() => void tick(), INTERVAL_MS);

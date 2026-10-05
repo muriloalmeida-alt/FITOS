@@ -166,6 +166,7 @@ model User {
   notificationSettings NotificationSettings?
   passkeys             Passkey[]
   avatar               UserAvatar?
+  personalAlerts       PersonalAlert[]
   uploadedPhotos       EvolutionPhoto[]      @relation("EvolutionPhotoUploader")
 
   @@map("users")
@@ -212,10 +213,16 @@ model SubscriptionDueReminder {
 /// `lastReminderOn` (AAAA-MM-DD) impede mandar o lembrete duas vezes no
 /// mesmo dia, mesmo com mais de uma instância rodando.
 model NotificationSettings {
-  userId         String   @id
-  reminderHour   Int?
-  lastReminderOn String?
-  updatedAt      DateTime @updatedAt
+  userId            String   @id
+  reminderHour      Int?
+  lastReminderOn    String?
+  /// Avisos do personal (Configurações, EPIC-36). `alertInactiveDays` nulo
+  /// desliga o aviso de aluno sem treinar.
+  alertDaysChanged  Boolean  @default(true)
+  alertInactiveDays Int?     @default(7)
+  alertOverdue      Boolean  @default(true)
+  alertProgramEnd   Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -337,6 +344,11 @@ model Tenant {
   inviteProgramId       String?
   inviteFeeCents        Int?
   inviteFeeDay          Int?
+  /// Prescrição com que um exercício entra num treino (Configurações,
+  /// EPIC-36). Nulo = padrão do FitOS (3 × 12, 60 s).
+  defaultSets           Int?
+  defaultReps           Int?
+  defaultRestSeconds    Int?
   /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
   /// própria conta de aluno neste espaço. Gerado no primeiro uso.
   inviteCode            String?    @unique
@@ -1284,4 +1296,20 @@ model EvolutionPhoto {
 
   @@index([studentId, tenantId, takenAt])
   @@map("evolution_photos")
+}
+
+/// Aviso já enviado ao personal (EPIC-36): um por motivo e referência
+/// (aluno sem treinar desde a última sessão, cobrança atrasada, programa
+/// que terminou). Evita repetir o mesmo aviso a cada rodada.
+model PersonalAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  refKey    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refKey])
+  @@map("personal_alerts")
 }
