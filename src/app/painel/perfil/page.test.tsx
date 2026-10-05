@@ -31,7 +31,10 @@ vi.mock("@/shared/db/prisma", () => ({
     },
     studentCharge: { count: (...args: unknown[]) => countCharges(...args) },
     exercise: { count: (...args: unknown[]) => countExercises(...args) },
-    student: { findUniqueOrThrow: (...args: unknown[]) => findStudentOrThrow(...args) },
+    student: { findUniqueOrThrow: (...args: unknown[]) => findStudentOrThrow(...args), findUnique: async () => ({ preferredDays: [] }) },
+    notificationSettings: { findUnique: async () => ({ reminderHour: 7 }) },
+    planAssignment: { findFirst: async () => ({ trainingPlan: { workouts: [{ suggestedDays: ["SEGUNDA", "QUARTA"] }] } }) },
+    workout: { findMany: async () => [{ suggestedDays: ["TERCA"] }] },
   },
 }));
 
@@ -84,7 +87,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
   it("aluno vê o personal vinculado, edita nome e e-mail no lugar e tem Termos, Privacidade e Sair (FIT-155)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Pedro Lima", email: "pedro@example.test", role: "ALUNO" } });
     getAuthContext.mockResolvedValue({ authenticated: true, userId: "u2", role: "ALUNO", tenantId: "t1", studentId: "s1" });
-    findStudentOrThrow.mockResolvedValue({ id: "s1", tenant: { name: "Studio Joana", owner: { name: "Joana Lima" }, personalProfile: { cref: "123456-G/SP" } } });
+    findStudentOrThrow.mockResolvedValue({ id: "s1", preferredDays: [], tenant: { name: "Studio Joana", owner: { name: "Joana Lima" }, personalProfile: { cref: "123456-G/SP" } } });
     const { default: PerfilPage } = await import("./page");
 
     render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
@@ -98,6 +101,9 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     const inline = screen.getByRole("group", { name: "E-mail de acesso" });
     expect(within(inline).getByLabelText("Senha atual")).toBeInTheDocument();
     expect(within(inline).getByRole("button", { name: "Salvar" })).toBeDisabled();
+    // EPIC-31: lembrete e dias (do programa, enquanto o aluno não escolhe).
+    expect(screen.getByText("Nos dias de treino, às 7h")).toBeInTheDocument();
+    expect(screen.getByText("seg, qua")).toBeInTheDocument();
   });
 
   it("aluno autenticado sem vínculo ativo (studentId nulo) é redirecionado para /painel", async () => {

@@ -5,17 +5,20 @@ import { useRouter } from "next/navigation";
 import { ActionRow, Avatar, Button, FormAlert, TextField, useToast } from "@/shared/ui";
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
+import { TrainingPreferences } from "../_push/TrainingPreferences";
 import styles from "./PersonalProfileView.module.css";
 
 interface StudentProfileViewProps {
   name: string;
   email: string;
   coach: { name: string; businessName: string; cref: string | null };
+  /// Lembrete de treino e "Meus dias" (EPIC-31).
+  preferences: Parameters<typeof TrainingPreferences>[0];
 }
 
 /// Perfil do Aluno (FIT-155, A5 do protótipo): quem é o personal, nome e
 /// e-mail editáveis no próprio lugar (EPIC-30), Termos, Privacidade e Sair.
-export function StudentProfileView({ name, email, coach }: StudentProfileViewProps) {
+export function StudentProfileView({ name, email, coach, preferences }: StudentProfileViewProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "name" | "email">(null);
@@ -58,6 +61,9 @@ export function StudentProfileView({ name, email, coach }: StudentProfileViewPro
           <p className={styles.muted}>{email}</p>
         </div>
       </div>
+
+      <h2 className={styles.cap}>Preferências</h2>
+      <TrainingPreferences {...preferences} />
 
       <h2 className={styles.cap}>Seu personal</h2>
       <ActionRow leading={<Avatar name={coach.name} />} title={coach.name} description={[coach.businessName, coach.cref ? `CREF ${coach.cref}` : null].filter(Boolean).join(" · ")} />

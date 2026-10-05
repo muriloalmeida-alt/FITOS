@@ -84,7 +84,13 @@ export default async function PerfilPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [tenant, subscription] = await Promise.all([prisma.tenant.findUnique({ where: { id: ctx.tenantId } }), getSubscriptionForTenant(ctx.tenantId)]);
+    const [tenant, subscription, settings, self, workouts] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
+      getSubscriptionForTenant(ctx.tenantId),
+      prisma.notificationSettings.findUnique({ where: { userId: ctx.userId } }),
+      prisma.student.findUnique({ where: { userId: ctx.userId }, select: { preferredDays: true } }),
+      prisma.workout.findMany({ where: { tenantId: ctx.tenantId, status: "ATIVO", trainingPlan: { isSnapshot: false } }, select: { suggestedDays: true } }),
+    ]);
 
     return (
       <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
@@ -96,6 +102,7 @@ export default async function PerfilPage() {
           experienceLevel={profile.experienceLevel}
           weeklyAvailability={profile.weeklyAvailability}
           subscriptionSummary={subscriptionSummary(subscription, new Date())}
+          preferences={{ reminderHour: settings?.reminderHour ?? null, days: self?.preferredDays ?? [], planDays: [...new Set(workouts.flatMap((workout) => workout.suggestedDays))], coachFirst: null }}
         />
       </AppShell>
     );
@@ -105,10 +112,14 @@ export default async function PerfilPage() {
     redirect("/painel");
   }
 
-  const student = await prisma.student.findUniqueOrThrow({
-    where: { id: ctx.studentId },
-    include: { tenant: { include: { owner: true, personalProfile: { select: { cref: true } } } } },
-  });
+  const [student, settings, assignment] = await Promise.all([
+    prisma.student.findUniqueOrThrow({
+      where: { id: ctx.studentId },
+      include: { tenant: { include: { owner: true, personalProfile: { select: { cref: true } } } } },
+    }),
+    prisma.notificationSettings.findUnique({ where: { userId: ctx.userId } }),
+    prisma.planAssignment.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId, active: true }, select: { trainingPlan: { select: { workouts: { select: { suggestedDays: true } } } } } }),
+  ]);
 
   return (
     <AppShell eyebrow="Perfil" title="Sua conta" headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
@@ -116,6 +127,12 @@ export default async function PerfilPage() {
         name={session.user.name}
         email={session.user.email}
         coach={{ name: student.tenant.owner.name, businessName: student.tenant.name, cref: student.tenant.personalProfile?.cref ?? null }}
+        preferences={{
+          reminderHour: settings?.reminderHour ?? null,
+          days: student.preferredDays,
+          planDays: [...new Set((assignment?.trainingPlan.workouts ?? []).flatMap((workout) => workout.suggestedDays))],
+          coachFirst: student.tenant.owner.name.trim().split(/\s+/)[0] ?? null,
+        }}
       />
     </AppShell>
   );

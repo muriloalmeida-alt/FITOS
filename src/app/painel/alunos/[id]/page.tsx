@@ -127,7 +127,8 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
                 name: plan.name,
                 weeks,
                 week: weeks ? Math.min(weeks, Math.floor((now.getTime() - assignment.assignedAt.getTime()) / (7 * 86_400_000)) + 1) : null,
-                days: [...new Set(plan.workouts.flatMap((workout) => workout.suggestedDays))],
+                days: student.preferredDays.length > 0 ? student.preferredDays : [...new Set(plan.workouts.flatMap((workout) => workout.suggestedDays))],
+                daysChosenByStudent: student.preferredDays.length > 0,
                 assignedLabel: relative(assignment.assignedAt, now),
               }
             : null
