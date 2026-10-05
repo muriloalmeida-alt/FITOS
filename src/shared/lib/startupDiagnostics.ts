@@ -37,12 +37,19 @@ export async function runStartupDiagnostics(): Promise<void> {
       // Pasta de migrações fora da imagem: só não dá para comparar.
     }
     const plans = await prisma.plan.count({ where: { active: true } });
+    const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const adminEmailAccount = adminEmail ? await prisma.user.findUnique({ where: { email: adminEmail }, select: { role: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }) : null;
     logEvent(failed.length > 0 || pending.length > 0 ? "error" : "info", "startup_database", {
       ok: true,
       appliedMigrations: done.size,
       failedMigrations: failed,
       pendingMigrations: pending,
       activePlans: plans,
+      admins,
+      // Diagnóstico do login do admin: a conta de ADMIN_EMAIL existe, é
+      // ADMIN e tem senha?
+      adminEmailAccount: adminEmail ? (adminEmailAccount ? { role: adminEmailAccount.role, hasPassword: adminEmailAccount.accounts.length > 0 } : "nao_existe") : "sem_ADMIN_EMAIL",
     });
   } catch (error) {
     logEvent("error", "startup_database", { ok: false, ...describeError(error) });

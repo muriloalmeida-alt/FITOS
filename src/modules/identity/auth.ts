@@ -74,6 +74,15 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
   advanced: {
+    // Railway (e qualquer proxy à frente do app) entrega o IP do cliente
+    // em `x-real-ip`, valor único definido pelo proxy. Sem isso o Better
+    // Auth não resolve o IP (o `x-forwarded-for` chega com a cadeia de
+    // proxies) e o limite de tentativas vira um contador único para todos
+    // os usuários: 3 logins em 10 s de qualquer pessoa bloqueavam o login
+    // de todo mundo.
+    ipAddress: {
+      ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
+    },
     database: {
       // Deixa o Prisma gerar o id (cuid), consistente com o restante do
       // schema físico (Tenant, Student, etc. também usam @default(cuid())).
