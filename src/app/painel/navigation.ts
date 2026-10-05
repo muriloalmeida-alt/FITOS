@@ -40,7 +40,7 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos", compact: true },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios", icon: "exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
   { key: "config", label: "Configurações", comingSoon: true, icon: "config" },
 ];
@@ -56,7 +56,7 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos", compact: true },
   { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
 ];
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
@@ -86,7 +86,7 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos", compact: true },
   { key: "progresso", label: "Evolução", href: "/painel/minha-evolucao", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   // FIT-122: "Assinatura" (FitOS Livre) já é real.
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];

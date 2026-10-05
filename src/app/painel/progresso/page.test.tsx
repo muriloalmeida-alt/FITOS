@@ -1,111 +1,73 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 const requireStudent = vi.fn();
 const listAssessmentsForStudent = vi.fn();
+const listPersonalRecordsForStudent = vi.fn();
+const countSessions = vi.fn();
+const findStudent = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
 
 vi.mock("@/modules/tenancy/authContext", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-    "@/modules/tenancy/authContext"
-  );
+  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requireStudent: (...args: unknown[]) => requireStudent(...args) };
 });
-
-vi.mock("@/modules/evolution/assessments", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/evolution/assessments")>(
-    "@/modules/evolution/assessments"
-  );
-  return { ...actual, listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) };
-});
-
-vi.mock("next/navigation", () => ({
-  redirect: (url: string) => redirect(url),
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+vi.mock("@/modules/evolution/assessments", () => ({ listAssessmentsForStudent: (...args: unknown[]) => listAssessmentsForStudent(...args) }));
+vi.mock("@/modules/execution/history", () => ({ listPersonalRecordsForStudent: (...args: unknown[]) => listPersonalRecordsForStudent(...args) }));
+vi.mock("@/shared/db/prisma", () => ({
+  prisma: { workoutSession: { count: (...args: unknown[]) => countSessions(...args) }, student: { findUniqueOrThrow: (...args: unknown[]) => findStudent(...args) } },
 }));
+vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url), useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+function asStudent() {
+  requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+  findStudent.mockResolvedValue({ id: "s1", tenant: { owner: { name: "Joana Lima" } } });
+  countSessions.mockResolvedValue(6);
+}
 
-describe("ProgressoPage (FIT-042)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+describe("ProgressoPage (FIT-154)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-  it("redireciona para /entrar quando não há sessão", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requireStudent.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
+  it("sem sessão vai para /entrar", async () => {
+    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
+    requireStudent.mockRejectedValue(new AuthError("UNAUTHENTICATED", "x"));
     const { default: ProgressoPage } = await import("./page");
-
     await expect(ProgressoPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
-  it("redireciona para /painel quando o usuário não é aluno com vínculo ativo", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requireStudent.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito a aluno com vínculo ativo."));
+  it("métrica em chips com variação, medidas, treinos do mês e melhores cargas", async () => {
+    asStudent();
+    listAssessmentsForStudent.mockResolvedValue([
+      { id: "a2", recordedAt: new Date("2026-09-20T12:00:00Z"), weightGrams: 72400, bodyFatTenthPercent: 185, notes: null, measurements: [{ type: "CINTURA", valueMillimeters: 820 }] },
+      { id: "a1", recordedAt: new Date("2026-07-20T12:00:00Z"), weightGrams: 75000, bodyFatTenthPercent: 210, notes: "Início", measurements: [{ type: "CINTURA", valueMillimeters: 860 }] },
+    ]);
+    listPersonalRecordsForStudent.mockResolvedValue([{ exerciseName: "Supino reto", loadUsed: "45 kg", loadValue: 45, repsCompleted: 8, achievedAt: new Date("2026-10-01T12:00:00Z") }]);
     const { default: ProgressoPage } = await import("./page");
+    render(await ProgressoPage());
 
-    await expect(ProgressoPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/painel");
+    expect(screen.getByRole("tab", { name: "Peso" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(/−2,6 kg desde/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Peso: de 75 kg .* para 72,4 kg/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Gordura" }));
+    expect(screen.getByText(/−2,5 % desde/)).toBeInTheDocument();
+    expect(screen.getByText("−4 cm")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
+    expect(screen.getByText("45 kg × 8")).toBeInTheDocument();
+    expect(screen.getByText("75 kg · 21% gordura · Início")).toBeInTheDocument();
+    expect(screen.getAllByText("Ver os dados").length).toBeGreaterThan(0);
   });
 
-  it("estado vazio honesto quando não há nenhuma avaliação", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
+  it("sem avaliação diz quem registra, sem gráfico inventado", async () => {
+    asStudent();
     listAssessmentsForStudent.mockResolvedValue([]);
+    listPersonalRecordsForStudent.mockResolvedValue([]);
     const { default: ProgressoPage } = await import("./page");
-
     render(await ProgressoPage());
-
-    expect(screen.getByText("Nenhuma avaliação registrada ainda. Fale com seu personal.")).toBeInTheDocument();
-  });
-
-  it("mostra a tabela com peso, gordura, medidas e observação, sempre presente mesmo com uma única avaliação", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
-    listAssessmentsForStudent.mockResolvedValue([
-      {
-        id: "a1",
-        recordedAt: new Date("2026-09-01T00:00:00.000Z"),
-        weightGrams: 82500,
-        bodyFatTenthPercent: 185,
-        notes: "Evolução consistente",
-        measurements: [{ type: "CINTURA", valueMillimeters: 855 }],
-      },
-    ]);
-    const { default: ProgressoPage } = await import("./page");
-
-    render(await ProgressoPage());
-
-    expect(screen.getByRole("columnheader", { name: "Peso" })).toBeInTheDocument();
-    expect(screen.getByText("82.5kg")).toBeInTheDocument();
-    expect(screen.getByText("18.5%")).toBeInTheDocument();
-    expect(screen.getByText("Cintura: 85.5cm")).toBeInTheDocument();
-    expect(screen.getByText("Evolução consistente")).toBeInTheDocument();
-    // Só uma avaliação com peso — gráfico exige ao menos 2 pontos (a marca no
-    // cabeçalho do AppShell é a única imagem esperada na página).
-    expect(screen.getAllByRole("img")).toHaveLength(1);
-  });
-
-  it("mostra o gráfico de evolução (equivalente ao texto/tabela) quando há duas ou mais avaliações com peso", async () => {
-    requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "t1", studentId: "s1" });
-    listAssessmentsForStudent.mockResolvedValue([
-      { id: "a2", recordedAt: new Date("2026-09-15T00:00:00.000Z"), weightGrams: 80000, bodyFatTenthPercent: null, notes: null, measurements: [] },
-      { id: "a1", recordedAt: new Date("2026-09-01T00:00:00.000Z"), weightGrams: 82500, bodyFatTenthPercent: null, notes: null, measurements: [] },
-    ]);
-    const { default: ProgressoPage } = await import("./page");
-
-    render(await ProgressoPage());
-
-    const chart = screen.getByRole("img", { name: /82.5kg.*80kg/ });
-    expect(chart).toBeInTheDocument();
-    expect(screen.getByText("82.5kg")).toBeInTheDocument();
-    expect(screen.getByText("80kg")).toBeInTheDocument();
+    expect(screen.getByText(/Joana Lima registra a sua/)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /Peso/ })).not.toBeInTheDocument();
   });
 });

@@ -1,0 +1,65 @@
+.profile {
+  padding-bottom: var(--fitos-space-6);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+
+.name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 2px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cap {
+  margin: 28px 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logout {
+  margin-top: 28px;
+}

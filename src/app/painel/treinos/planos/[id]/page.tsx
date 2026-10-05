@@ -1,31 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { getTrainingPlanForTenant, listWorkoutsAvailableForPlan, listWorkoutsInPlan } from "@/modules/workouts/workouts";
-import { LogoutButton } from "../../../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../../../navigation";
-import { EditarPlanoForm } from "./EditarPlanoForm";
-import { ModelosDoPrograma } from "./ModelosDoPrograma";
-import { ArquivarPlanoButton } from "./ArquivarPlanoButton";
-import { ReativarPlanoButton } from "./ReativarPlanoButton";
-import styles from "./page.module.css";
+import { getTrainingPlanForTenant } from "@/modules/workouts/workouts";
+import { ProgramEditor } from "../ProgramEditor";
+import { loadProgramData } from "../programData";
 
 export const metadata: Metadata = {
   title: `Programa — ${appName}`,
 };
 
-interface PlanoDetalhePageProps {
-  params: Promise<{ id: string }>;
-}
-
-/// Detalhe do plano semanal (FIT-032). Busca sempre pelo tenant da sessão
-/// e nunca um snapshot (`getTrainingPlanForTenant`) — um plano de outro
-/// tenant, ou uma cópia imutável de atribuição (FIT-033/ADR-005), nunca é
-/// encontrado por esta via.
-export default async function PlanoDetalhePage({ params }: PlanoDetalhePageProps) {
+/// Programa do Personal (FIT-146). Busca sempre pelo tenant da sessão e
+/// nunca um snapshot — programa de outro tenant (ou cópia atribuída) é 404.
+export default async function ProgramaPage({ params }: { params: Promise<{ id: string }> }) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -38,46 +25,9 @@ export default async function PlanoDetalhePage({ params }: PlanoDetalhePageProps
 
   const { id } = await params;
   const plan = await getTrainingPlanForTenant({ tenantId: ctx.tenantId, trainingPlanId: id });
-  if (!plan) {
+  if (!plan || plan.isDraftBucket) {
     notFound();
   }
-
-  const [workouts, availableWorkouts] = await Promise.all([
-    listWorkoutsInPlan({ tenantId: ctx.tenantId, trainingPlanId: id }),
-    listWorkoutsAvailableForPlan({ tenantId: ctx.tenantId, excludeTrainingPlanId: id }),
-  ]);
-
-  return (
-    <AppShell eyebrow="Detalhe do programa" title={plan.name} subtitle="Duração, treinos e atribuições do programa." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <Link href="/painel/treinos/planos" className={styles.backLink}>
-        ← Voltar para os programas
-      </Link>
-
-      <Card title="Dados do programa">
-        <p className={styles.statusLine}>
-          Status:{" "}
-          <span className={plan.status === "ATIVO" ? styles.statusAtivo : styles.statusArquivado}>
-            {plan.status === "ATIVO" ? "Ativo" : "Arquivado"}
-          </span>
-        </p>
-        <EditarPlanoForm trainingPlanId={plan.id} initialName={plan.name} initialDurationWeeks={plan.durationWeeks} />
-      </Card>
-
-      <Card title="Modelos do programa">
-        <ModelosDoPrograma
-          trainingPlanId={plan.id}
-          workouts={workouts.map((workout) => ({ id: workout.id, name: workout.name, suggestedDays: workout.suggestedDays }))}
-          availableWorkouts={availableWorkouts.map((workout) => ({ id: workout.id, name: workout.name }))}
-        />
-      </Card>
-
-      <Card title="Ciclo de vida">
-        {plan.status === "ATIVO" ? (
-          <ArquivarPlanoButton trainingPlanId={plan.id} />
-        ) : (
-          <ReativarPlanoButton trainingPlanId={plan.id} />
-        )}
-      </Card>
-    </AppShell>
-  );
+  const data = await loadProgramData(ctx.tenantId, plan.id);
+  return <ProgramEditor initial={{ id: plan.id, name: plan.name, durationWeeks: plan.durationWeeks, status: plan.status }} {...data} />;
 }

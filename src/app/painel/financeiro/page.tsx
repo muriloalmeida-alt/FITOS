@@ -1,58 +1,27 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
-import { AppShell, Button, Card } from "@/shared/ui";
-import { formatCentsBRL } from "@/shared/lib/money";
+import { AppShell } from "@/shared/ui";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { listStudents } from "@/modules/students/students";
-import { getFinancialSummary, listActiveRecurrencesForTenant, listChargesForTenant } from "@/modules/student-finance/charges";
+import { countPendingRecurrencesForMonth, getFinancialSummary, listActiveRecurrencesForTenant, listChargesForTenant } from "@/modules/student-finance/charges";
+import { currentReferenceMonth, parseReferenceMonth, referenceMonthKey, referenceMonthLabel } from "@/shared/lib/referenceMonth";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
-import { FinanceiroHero } from "./FinanceiroHero";
-import { FinanceiroSection } from "./FinanceiroSection";
-import { RecorrenciasSection } from "./RecorrenciasSection";
-import styles from "./page.module.css";
+import { FinanceiroView, type FinanceTab } from "./FinanceiroView";
 
 export const metadata: Metadata = {
   title: `Financeiro — ${appName}`,
 };
 
 interface FinanceiroPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<{ mes?: string; aba?: string; nova?: string }>;
 }
 
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/// "YYYY-MM" (formato do `<input type="month">`) → primeiro dia daquele
-/// mês em UTC. Mês inválido/ausente cai no mês atual — o resumo sempre
-/// mostra algo, nunca uma tela em branco por falta de filtro explícito.
-function referenceMonthFromParam(param: string | undefined): Date {
-  if (param) {
-    const match = /^(\d{4})-(\d{2})$/.exec(param);
-    if (match) {
-      const year = Number(match[1]);
-      const month = Number(match[2]);
-      if (month >= 1 && month <= 12) {
-        return new Date(Date.UTC(year, month - 1, 1));
-      }
-    }
-  }
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-}
-
-function monthInputValue(referenceMonth: Date): string {
-  return `${referenceMonth.getUTCFullYear()}-${String(referenceMonth.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-/// Página "Financeiro" do shell do personal (FIT-050/053), protegida por
-/// `requirePersonal()` — mesma camada de autorização de toda a aplicação.
-/// "Visão geral" e a lista de cobranças compartilham o mesmo filtro de
-/// competência explícito (`?mes=YYYY-MM`, `CRITICAL-SCREEN-SPECS.md`
-/// seção 7) — nunca dois filtros independentes na mesma tela.
-export default async function FinanceiroPage({ searchParams }: FinanceiroPageProps) {
+/// Financeiro do Personal (FIT-148, P6 do protótipo). Competência por
+/// `?mes=AAAA-MM` (mês atual quando ausente ou inválida), abas por
+/// `?aba=recorrentes` e `?nova=1` abre a nova cobrança (atalho do Início).
+export default async function FinanceiroPage({ searchParams }: FinanceiroPageProps = {}) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -63,82 +32,55 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
     throw error;
   }
 
-  const params = await searchParams;
-  const referenceMonth = referenceMonthFromParam(firstValue(params.mes));
+  const sp = (await searchParams) ?? {};
+  const referenceMonth = parseReferenceMonth(sp.mes) ?? currentReferenceMonth();
+  const tab: FinanceTab = sp.aba === "recorrentes" ? "recorrentes" : "cobrancas";
 
-  const [studentsResult, summary, charges, recurrences] = await Promise.all([
+  const [students, summary, charges, recurrences, pendingRecurrences] = await Promise.all([
     listStudents({ tenantId: ctx.tenantId, status: "ATIVO", pageSize: 100 }),
     getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth }),
     listChargesForTenant({ tenantId: ctx.tenantId, referenceMonth }),
     listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
+    countPendingRecurrencesForMonth({ tenantId: ctx.tenantId, referenceMonth }),
   ]);
-
-  const students = studentsResult.items.map((s) => ({ id: s.id, displayName: s.displayName }));
+  const generated = new Set(charges.filter((charge) => charge.recurrenceId).map((charge) => charge.recurrenceId));
+  const statusOrder = { ATRASADO: 0, PENDENTE: 1, PAGO: 2, CANCELADO: 3 } as const;
 
   return (
-    <AppShell eyebrow="Financeiro" title="Financeiro" subtitle="Acompanhe cobranças e recebimentos dos seus alunos." navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
-      <FinanceiroHero recebidoCents={summary.recebidoCents} />
-
-      <Card title="Visão geral">
-        <form method="GET" className={styles.filterForm} aria-label="Filtrar competência">
-          <label className={styles.filterLabel} htmlFor="mes">
-            Competência
-          </label>
-          <input id="mes" name="mes" type="month" defaultValue={monthInputValue(referenceMonth)} className={styles.filterInput} />
-          <Button type="submit" variant="outlined">
-            Filtrar
-          </Button>
-        </form>
-
-        <dl className={styles.summaryGrid}>
-          <div className={styles.summaryTile}>
-            <dt>Previsto</dt>
-            <dd>{formatCentsBRL(summary.previstoCents)}</dd>
-          </div>
-          <div className={styles.summaryTile} data-tone="positive">
-            <dt>Recebido</dt>
-            <dd>{formatCentsBRL(summary.recebidoCents)}</dd>
-          </div>
-          <div className={styles.summaryTile}>
-            <dt>Pendente</dt>
-            <dd>{formatCentsBRL(summary.pendenteCents)}</dd>
-          </div>
-          <div className={styles.summaryTile} data-tone="negative">
-            <dt>Atrasado — exige ação</dt>
-            <dd>{formatCentsBRL(summary.atrasadoCents)}</dd>
-          </div>
-        </dl>
-      </Card>
-
-      <Card title="Cobranças">
-        <FinanceiroSection
-          students={students}
-          charges={charges.map((c) => ({
-            id: c.id,
-            description: c.description,
-            amountCents: c.amountCents,
-            referenceMonth: c.referenceMonth.toISOString(),
-            dueDate: c.dueDate.toISOString(),
-            status: c.status,
-            cancelReason: c.cancelReason,
-            student: c.student,
-            payment: c.payment ? { amountCentsPaid: c.payment.amountCentsPaid, paidAt: c.payment.paidAt.toISOString(), method: c.payment.method } : null,
+    <AppShell eyebrow="Financeiro" title="Mensalidades" navItems={PERSONAL_NAV_ITEMS} activeKey="financeiro" trailing={<LogoutButton />}>
+      <FinanceiroView
+        monthKey={referenceMonthKey(referenceMonth)}
+        monthLabel={referenceMonthLabel(referenceMonth)}
+        summary={summary}
+        charges={[...charges]
+          .sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.dueDate.getTime() - b.dueDate.getTime())
+          .map((charge) => ({
+            id: charge.id,
+            studentId: charge.student.id,
+            studentName: charge.student.displayName,
+            description: charge.description,
+            amountCents: charge.amountCents,
+            dueDate: charge.dueDate.toISOString(),
+            status: charge.status,
+            cancelReason: charge.cancelReason,
+            paidAt: charge.payment?.paidAt.toISOString() ?? null,
+            paidCents: charge.payment?.amountCentsPaid ?? null,
+            method: charge.payment?.method ?? null,
           }))}
-        />
-      </Card>
-
-      <Card title="Cobranças recorrentes">
-        <RecorrenciasSection
-          students={students}
-          recurrences={recurrences.map((r) => ({
-            id: r.id,
-            description: r.description,
-            amountCents: r.amountCents,
-            dueDayOfMonth: r.dueDayOfMonth,
-            student: r.student,
-          }))}
-        />
-      </Card>
+        recurrences={recurrences.map((recurrence) => ({
+          id: recurrence.id,
+          studentId: recurrence.student.id,
+          studentName: recurrence.student.displayName,
+          description: recurrence.description,
+          amountCents: recurrence.amountCents,
+          dueDay: recurrence.dueDayOfMonth,
+          generatedThisMonth: generated.has(recurrence.id),
+        }))}
+        students={students.items.map((student) => ({ id: student.id, displayName: student.displayName }))}
+        pendingRecurrences={pendingRecurrences}
+        tab={tab}
+        startNew={sp.nova === "1"}
+      />
     </AppShell>
   );
 }

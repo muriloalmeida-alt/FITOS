@@ -245,6 +245,7 @@ model Tenant {
   planAssignments       PlanAssignment[]
   workoutSessions       WorkoutSession[]
   workoutSessionResults WorkoutSessionResult[]
+  workoutSetResults     WorkoutSetResult[]
   assessments           Assessment[]
   bodyMeasurements      BodyMeasurement[]
   studentCharges        StudentCharge[]
@@ -634,6 +635,7 @@ model WorkoutExercise {
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
 
   workoutSessionResults WorkoutSessionResult[]
+  workoutSetResults     WorkoutSetResult[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -702,12 +704,20 @@ model WorkoutSession {
   status    WorkoutSessionStatus @default(EM_ANDAMENTO)
   startedAt DateTime             @default(now())
   endedAt   DateTime?
+  /// BK-13 (EPIC-19/20): esforço percebido de 1 (leve) a 5 (no limite),
+  /// informado ao concluir. CHECK no banco garante a faixa.
+  perceivedEffort Int?
+  /// BK-14 (FIT-153): tempo ativo da sessão em segundos, descontando as
+  /// pausas do cronômetro. Informado ao concluir; nunca maior que o tempo
+  /// de relógio entre `startedAt` e `endedAt`.
+  activeSeconds   Int?
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workout Workout @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
-  results WorkoutSessionResult[]
+  results    WorkoutSessionResult[]
+  setResults WorkoutSetResult[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -746,6 +756,33 @@ model WorkoutSessionResult {
   @@index([tenantId])
   @@index([workoutSessionId, tenantId])
   @@map("workout_session_results")
+}
+
+/// Série executada (BK-11, FIT-153, ADR-015): uma linha por série de um
+/// item do treino, na sessão. `WorkoutSessionResult` (agregado por item)
+/// continua sendo mantido a cada série, para não quebrar histórico,
+/// recordes e telas antigas. Carga em gramas (Int), como `weightGrams`.
+/// Registrar a mesma série de novo substitui os valores (upsert por
+/// sessão + item + número da série).
+model WorkoutSetResult {
+  id                String   @id @default(cuid())
+  tenantId          String
+  workoutSessionId  String
+  workoutExerciseId String
+  setNumber         Int
+  reps              Int?
+  durationSeconds   Int?
+  loadGrams         Int?
+  completedAt       DateTime @default(now())
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workoutSession  WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([workoutSessionId, workoutExerciseId, setNumber])
+  @@index([tenantId])
+  @@index([workoutExerciseId, tenantId])
+  @@map("workout_set_results")
 }
 
 /// Avaliação/evolução manual do aluno. Peso em gramas (Int) para evitar

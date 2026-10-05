@@ -1,177 +1,64 @@
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-3);
+.next {
+  margin: 4px 0 16px;
 }
 
-.subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-.inviteCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-1);
-  padding: var(--fitos-space-5);
-  border-radius: var(--fitos-shape-card);
-  background-color: var(--fitos-navy-900);
-  text-decoration: none;
-}
-
-.inviteTitle {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.inviteDescription {
-  margin: 0;
-  font-size: 14px;
-  color: var(--fitos-navy-300);
-}
-
-.filters {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
-}
-
-.searchInput {
-  font-family: var(--fitos-font-family);
-  font-size: 16px;
-  min-height: 48px;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  border-radius: var(--fitos-shape-small);
-  border: 1px solid var(--fitos-color-outline);
-  background-color: var(--fitos-color-surface);
-  color: var(--fitos-color-on-surface);
-}
-
-.segmented {
-  display: flex;
-  gap: var(--fitos-space-1);
-  padding: 4px;
-  border-radius: var(--fitos-shape-full);
-  background-color: var(--fitos-color-surface-container);
-  width: fit-content;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.segment {
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 650;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  min-height: 40px;
+.search {
   display: flex;
   align-items: center;
-  border-radius: var(--fitos-shape-full);
-  color: var(--fitos-color-on-surface-variant);
-  text-decoration: none;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-text-muted);
 }
 
-.segmentActive {
-  background-color: var(--fitos-color-surface);
+.search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  outline: none;
+  background: transparent;
   color: var(--fitos-color-on-surface);
-  box-shadow: 0 1px 3px rgba(16, 28, 44, 0.12);
-}
-
-.empty {
-  margin: var(--fitos-space-6) 0;
-  color: var(--fitos-color-on-surface-variant);
+  font-family: var(--fitos-font-family);
   font-size: 16px;
 }
 
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-2);
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
 }
 
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--fitos-space-3);
-  padding-top: var(--fitos-space-2);
-}
-
-.pageLink,
-.pageLinkDisabled {
-  font-size: 14px;
-  font-weight: 650;
-  padding: var(--fitos-space-2) var(--fitos-space-3);
-  min-height: 48px;
+.week {
   display: flex;
   align-items: center;
-  border-radius: var(--fitos-shape-small);
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+  min-width: 200px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.pageLink {
-  color: var(--fitos-color-primary);
+.week > span:first-child {
+  flex: 1;
+}
+
+.empty {
+  color: var(--fitos-color-text-muted);
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 14px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
   text-decoration: none;
-}
-
-.pageLinkDisabled {
-  color: var(--fitos-color-outline);
-}
-
-.pageIndicator {
-  font-size: 14px;
-  color: var(--fitos-color-on-surface-variant);
-}
-
-@media (min-width: 840px) {
-  .header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .filters {
-    flex-direction: row;
-  }
-
-  .searchInput {
-    flex: 1;
-  }
-
-}
-
-
-/*
- * Mobile editorial (AjustesTelas, 29/09/2026): linhas abertas com divisor
- * discreto no lugar de cartões, sem perder a área de toque inteira da
- * linha (chevron indica que abre um detalhe).
- */
-@media (max-width: 839px) {
-  .list {
-    gap: 0;
-    border-top: 1px solid var(--fitos-color-divider);
-  }
-
-  .searchInput {
-    padding: var(--fitos-space-2) 0;
-    border: none;
-    border-bottom: 1px solid var(--fitos-color-outline);
-    border-radius: 0;
-    background-color: transparent;
-  }
-
-  .searchInput:focus-visible {
-    outline: none;
-    border-bottom: 2px solid var(--fitos-orange-500);
-  }
-
-  .inviteCard {
-    padding: var(--fitos-space-4) var(--fitos-space-8) var(--fitos-space-4) 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--fitos-color-divider);
-    background-color: transparent;
-  }
 }

@@ -237,6 +237,11 @@ export async function subscribeTenantToPlan(
   }
 
   const existing = await client.saasSubscription.findUnique({ where: { tenantId: input.tenantId } });
+  /// BK-18 (FIT-150): assinar de novo depois de cancelar. A assinatura do
+  /// Asaas foi cancelada junto (e o cartão estava ligado a ela), então
+  /// nunca é reaproveitada: a ligação cria uma nova e o cartão é pedido de
+  /// novo. O teste grátis continua não se repetindo (`trialUsedAt`).
+  const reactivating = existing?.status === "CANCELADA";
   const now = new Date();
   const grantsNewTrial = plan.trialDays !== null && !existing?.trialUsedAt;
   const trialEndsAt = grantsNewTrial
@@ -251,7 +256,7 @@ export async function subscribeTenantToPlan(
     tenantType: input.tenantType,
     tenantId: input.tenantId,
     plan,
-    existing,
+    existing: existing && reactivating ? { ...existing, externalSubscriptionId: null } : existing,
     trialEndsAt,
     client,
     deps,
@@ -280,6 +285,7 @@ export async function subscribeTenantToPlan(
         canceledReason: null,
         trialEndsAt,
         trialUsedAt,
+        ...(reactivating ? { creditCardLast4: null, creditCardBrand: null } : {}),
       },
     });
 
@@ -287,7 +293,7 @@ export async function subscribeTenantToPlan(
       data: {
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        action: "ASSINATURA_CONTRATADA",
+        action: reactivating ? "ASSINATURA_REATIVADA" : "ASSINATURA_CONTRATADA",
         entityType: "SaasSubscription",
         entityId: subscription.id,
       },

@@ -68,6 +68,8 @@ interface CreditCardFieldsProps {
   value: CreditCardFieldsValue;
   onChange: (value: CreditCardFieldsValue) => void;
   errors?: CreditCardFieldErrors;
+  /// FIT-150: o celular já vem do cadastro — não pede de novo.
+  hidePhone?: boolean;
 }
 
 /// Checkout embutido de cartão (FIT-128) — decisão de Murilo: "toda a
@@ -81,7 +83,7 @@ interface CreditCardFieldsProps {
 /// Número do cartão e CVV nunca são persistidos pelo FitOS em nenhum
 /// lugar — passam só em trânsito até o Asaas tokenizar
 /// (`src/modules/billing/checkout.ts`).
-export function CreditCardFields({ value, onChange, errors }: CreditCardFieldsProps) {
+export function CreditCardFields({ value, onChange, errors, hidePhone = false }: CreditCardFieldsProps) {
   function set<K extends keyof CreditCardFieldsValue>(key: K, next: string) {
     onChange({ ...value, [key]: next });
   }
@@ -173,17 +175,19 @@ export function CreditCardFields({ value, onChange, errors }: CreditCardFieldsPr
         error={errors?.addressNumber}
         required
       />
-      <TextField
-        label="Celular"
-        name="checkoutPhone"
-        type="tel"
-        autoComplete="tel"
-        placeholder="(11) 91234-5678"
-        value={value.phone}
-        onChange={(event) => set("phone", formatBrazilianPhone(event.target.value))}
-        error={errors?.phone}
-        required
-      />
+      {hidePhone ? null : (
+        <TextField
+          label="Celular"
+          name="checkoutPhone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="(11) 91234-5678"
+          value={value.phone}
+          onChange={(event) => set("phone", formatBrazilianPhone(event.target.value))}
+          error={errors?.phone}
+          required
+        />
+      )}
     </div>
   );
 }

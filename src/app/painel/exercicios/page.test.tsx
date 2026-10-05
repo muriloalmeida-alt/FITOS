@@ -1,211 +1,115 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/shared/ui";
 
-const requirePersonal = vi.fn();
+const requireSubscriber = vi.fn();
 const listCatalogExercises = vi.fn();
+const listCatalogFacets = vi.fn();
+const getCatalogExerciseForTenant = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
+const notFound = vi.fn(() => {
+  throw new Error("NEXT_NOT_FOUND");
+});
+const push = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-    "@/modules/tenancy/authContext"
-  );
-  return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
+  const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
+  return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
-
 vi.mock("@/modules/exercises/exercises", async () => {
   const actual = await vi.importActual<typeof import("@/modules/exercises/exercises")>("@/modules/exercises/exercises");
-  return { ...actual, listCatalogExercises: (...args: unknown[]) => listCatalogExercises(...args) };
+  return {
+    ...actual,
+    listCatalogExercises: (...args: unknown[]) => listCatalogExercises(...args),
+    listCatalogFacets: (...args: unknown[]) => listCatalogFacets(...args),
+    getCatalogExerciseForTenant: (...args: unknown[]) => getCatalogExerciseForTenant(...args),
+  };
 });
-
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => redirect(url),
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  notFound: () => notFound(),
+  useRouter: () => ({ push, refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/painel/exercicios",
+  useSearchParams: () => new URLSearchParams(),
 }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+const facets = { muscles: ["Costas", "Core"], types: ["Pesos livres"], difficulties: ["iniciante"] };
+const global = { id: "g1", name: "Remada baixa", origin: "FITOS_CURATED", status: "ATIVO", muscle: "Costas", equipments: "polia", type: "Cabos e polias", difficulty: "iniciante", imageUrl: null, imageAlt: null, instructions: "Sente. Puxe até o abdômen.", safetyInfo: "Coluna neutra." };
+const own = { ...global, id: "o1", name: "Meu circuito", origin: "PERSONAL", status: "ARQUIVADO", instructions: null, safetyInfo: null };
 
-function makeSearchParams(params: Record<string, string> = {}) {
-  return Promise.resolve(params);
-}
+describe("Biblioteca de exercícios (FIT-147)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-describe("ExerciciosPage (FIT-023)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
+  it("lista com origem, filtros e etiqueta de cada exercício", async () => {
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listCatalogFacets.mockResolvedValue(facets);
+    listCatalogExercises.mockResolvedValue({ items: [global, own], total: 2, page: 1, pageSize: 30 });
+    const { default: Page } = await import("./page");
+    render(<ToastProvider>{await Page({ searchParams: Promise.resolve({ origem: "meus", musculo: "Costas" }) })}</ToastProvider>);
+
+    expect(listCatalogExercises).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", origin: "meus", muscle: "Costas", pageSize: 30 }));
+    expect(screen.getByRole("link", { name: "Meus" })).toHaveAttribute("aria-current", "page");
+    const list = screen.getByRole("list", { name: "Lista de exercícios" });
+    expect(within(list).getByRole("link", { name: /Remada baixa/ })).toHaveAttribute("href", "/painel/exercicios/g1");
+    expect(within(list).getByText("Biblioteca FitOS")).toBeInTheDocument();
+    expect(within(list).getByText("Arquivado")).toBeInTheDocument();
+    expect(screen.getAllByText("Costas · polia · Iniciante")).toHaveLength(2);
   });
 
-  it("redireciona para /entrar quando não há sessão", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
-    const { default: ExerciciosPage } = await import("./page");
+  it("cadastrar abre a sheet com chips e envia o exercício", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "novo" }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listCatalogFacets.mockResolvedValue(facets);
+    listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 30 });
+    const { default: Page } = await import("./page");
+    render(<ToastProvider>{await Page({ searchParams: Promise.resolve({ novo: "1" }) })}</ToastProvider>);
 
-    await expect(ExerciciosPage({ searchParams: makeSearchParams() })).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/entrar");
+    const sheet = screen.getByRole("dialog", { name: "Novo exercício" });
+    expect(within(sheet).getByRole("button", { name: "Salvar exercício" })).toBeDisabled();
+    await user.type(within(sheet).getByLabelText("Nome"), "Agachamento no banco");
+    await user.click(within(sheet).getByRole("radio", { name: "Core" }));
+    await user.click(within(sheet).getByRole("radio", { name: "peso corporal" }));
+    await user.click(within(sheet).getByRole("button", { name: "Salvar exercício" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/exercises", expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Agachamento no banco", muscle: "Core", equipments: "peso corporal", type: "", instructions: "" }) }));
+    expect(push).toHaveBeenCalledWith("/painel/exercicios/novo");
+    vi.unstubAllGlobals();
   });
 
-  it("redireciona para /painel quando o usuário autenticado não é personal", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
-      "@/modules/tenancy/authContext"
-    );
-    requirePersonal.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito a personal."));
-    const { default: ExerciciosPage } = await import("./page");
-
-    await expect(ExerciciosPage({ searchParams: makeSearchParams() })).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/painel");
+  it("detalhe do global mostra passos, segurança e 'Criar uma versão minha'", async () => {
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    getCatalogExerciseForTenant.mockResolvedValue(global);
+    const { default: Detail } = await import("./[id]/page");
+    render(<ToastProvider>{await Detail({ params: Promise.resolve({ id: "g1" }) })}</ToastProvider>);
+    expect(screen.getByRole("heading", { name: "Remada baixa" })).toBeInTheDocument();
+    expect(screen.getByText("Sente.")).toBeInTheDocument();
+    expect(screen.getByText("Puxe até o abdômen.")).toBeInTheDocument();
+    expect(screen.getByText("Coluna neutra.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Criar uma versão minha" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Usar em um treino" })).toHaveAttribute("href", "/painel/treinos/novo");
   });
 
-  it("lista exercícios globais e próprios, com origem visível", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({
-      items: [
-        { id: "g1", name: "Push-up", muscle: "chest", origin: "API_NINJAS", status: "ATIVO" },
-        { id: "p1", name: "Rosca própria", muscle: "bíceps", origin: "PERSONAL", status: "ATIVO" },
-      ],
-      total: 2,
-      page: 1,
-      pageSize: 20,
-    });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Push-up")).toBeInTheDocument();
-    expect(screen.getByText("Rosca própria")).toBeInTheDocument();
-    expect(screen.getByText("Global")).toBeInTheDocument();
-    expect(screen.getByText("Meu exercício")).toBeInTheDocument();
-    expect(listCatalogExercises).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantId: "tenant-real" })
-    );
+  it("detalhe do próprio arquivado oferece Editar e Reativar; outro tenant é 404", async () => {
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listCatalogFacets.mockResolvedValue(facets);
+    getCatalogExerciseForTenant.mockResolvedValueOnce(own);
+    const { default: Detail } = await import("./[id]/page");
+    render(<ToastProvider>{await Detail({ params: Promise.resolve({ id: "o1" }) })}</ToastProvider>);
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reativar" })).toBeInTheDocument();
+    getCatalogExerciseForTenant.mockResolvedValueOnce(null);
+    await expect(Detail({ params: Promise.resolve({ id: "alheio" }) })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  it("IMP-EX-002: exercício de origem FITOS_CURATED também é mostrado como Global, não Meu exercício", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({
-      items: [{ id: "c1", name: "Rosca alta no cabo", muscle: "Bíceps", origin: "FITOS_CURATED", status: "ATIVO" }],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Rosca alta no cabo")).toBeInTheDocument();
-    expect(screen.getByText("Global")).toBeInTheDocument();
-    expect(screen.queryByText("Meu exercício")).not.toBeInTheDocument();
-  });
-
-  it("FIT-111: exercício com imagem ilustrada mostra a imagem com o alt funcional do movimento", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({
-      items: [
-        {
-          id: "c1",
-          name: "Agachamento livre com barra",
-          muscle: "Quadríceps",
-          origin: "FITOS_CURATED",
-          status: "ATIVO",
-          imageUrl: "/media/exercises/agachamento-livre-com-barra.webp",
-          imageAlt: "Agachamento livre com barra. Ilustração em duas fases do movimento.",
-        },
-      ],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(
-      screen.getByRole("img", { name: "Agachamento livre com barra. Ilustração em duas fases do movimento." })
-    ).toBeInTheDocument();
-  });
-
-  it("FIT-111: exercício sem imagem ainda vinculada mostra o placeholder, nunca uma quebra visual", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({
-      items: [{ id: "p1", name: "Rosca própria", muscle: "bíceps", origin: "PERSONAL", status: "ATIVO", imageUrl: null, imageAlt: null }],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Sem imagem")).toBeInTheDocument();
-  });
-
-  it("FIT-136: card usa a composição de tela-08 (foto grande, músculo • tipo, \"Ver movimento\")", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({
-      items: [
-        {
-          id: "c1",
-          name: "Agachamento livre com barra",
-          muscle: "Pernas",
-          type: "força",
-          origin: "FITOS_CURATED",
-          status: "ATIVO",
-          imageUrl: "/media/exercises/agachamento-livre-com-barra.webp",
-          imageAlt: "Agachamento livre com barra.",
-        },
-      ],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Pernas • força")).toBeInTheDocument();
-    expect(screen.getByText("Ver movimento →")).toBeInTheDocument();
-  });
-
-  it("estado vazio honesto quando não há resultado", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText(/Nenhum exercício no catálogo ainda/)).toBeInTheDocument();
-  });
-
-  it("estado de sem resultado (com filtro) é distinto do catálogo vazio", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
-
-    const { default: ExerciciosPage } = await import("./page");
-    render(await ExerciciosPage({ searchParams: makeSearchParams({ q: "algo" }) }));
-
-    expect(screen.getByText("Nenhum resultado para essa busca.")).toBeInTheDocument();
-  });
-
-  it("repassa busca e filtros para listCatalogExercises, nunca um tenantId de query string", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listCatalogExercises.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
-
-    const { default: ExerciciosPage } = await import("./page");
-    await ExerciciosPage({
-      searchParams: makeSearchParams({ q: "supino", muscle: "peito", tenantId: "tenant-adulterado" }),
-    });
-
-    expect(listCatalogExercises).toHaveBeenCalledWith({
-      tenantId: "tenant-real",
-      search: "supino",
-      muscle: "peito",
-      type: undefined,
-      difficulty: undefined,
-      page: 1,
-      pageSize: 20,
-    });
+  it("URL antiga de cadastro abre a sheet na biblioteca", async () => {
+    const { default: Novo } = await import("./novo/page");
+    expect(() => Novo()).toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/painel/exercicios?origem=meus&novo=1");
   });
 });

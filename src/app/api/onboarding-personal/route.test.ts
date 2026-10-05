@@ -110,7 +110,7 @@ describe("POST /api/onboarding-personal", () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toEqual({ redirectTo: "/painel/alunos/novo" });
+    expect(body).toEqual({ redirectTo: "/painel/alunos?novo=1" });
     expect(completePersonalOnboarding).toHaveBeenCalledWith({
       tenantId: "tenant-real",
       phone: "(11) 91234-5678",

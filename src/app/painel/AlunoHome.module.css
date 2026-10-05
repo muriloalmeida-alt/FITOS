@@ -1,42 +1,92 @@
-.empty {
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 20px;
+  border-radius: 24px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.heroLive {
+  border: 1px solid rgba(255, 120, 71, 0.45);
+}
+
+.eyebrow {
   margin: 0;
-  color: var(--fitos-color-on-surface-variant);
+  color: var(--fitos-orange-300);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.heroMeta {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
   font-size: 14px;
 }
 
-.itemList {
-  list-style: none;
-  margin: var(--fitos-space-3) 0 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-3);
+.section {
+  margin-top: 26px;
 }
 
-.itemList li {
+.sectionHead {
   display: flex;
-  flex-direction: column;
-  gap: var(--fitos-space-1);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.notes,
-.instructions {
+.sectionTitle {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.sectionMeta {
+  color: var(--fitos-color-text-muted);
   font-size: 13px;
-  color: var(--fitos-color-on-surface-variant);
-  padding: 0 var(--fitos-space-1);
+  font-weight: 700;
 }
 
-.notes {
-  font-style: italic;
+.program {
+  margin: 10px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
 }
 
-.rowLink {
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
   display: inline-flex;
   align-items: center;
-  gap: var(--fitos-space-1);
-  min-height: 44px;
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-  color: var(--fitos-color-eyebrow, var(--fitos-color-primary));
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: var(--fitos-color-surface-raised);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.footnote {
+  margin: 28px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.footnote a {
+  color: var(--fitos-orange-300);
+  font-weight: 800;
 }

@@ -1,52 +1,62 @@
 import type { Metadata } from "next";
 import { appName } from "@/shared/config/env";
-import { checkActivationToken } from "@/modules/identity/activation";
+import { ActionRow, Avatar, Button } from "@/shared/ui";
+import { checkActivationToken, type InvalidInvitationReason } from "@/modules/identity/activation";
+import { EntradaShell } from "../_entrada/EntradaShell";
+import styles from "../_entrada/Entrada.module.css";
 import { AtivarContaForm } from "./AtivarContaForm";
-import { PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: `Ativar conta — ${appName}`,
-  description: "Ativação de conta de aluno do FitOS a partir de um convite.",
+  title: `Ativar convite — ${appName}`,
+  description: "Ative seu acesso ao FitOS a partir do convite do seu personal.",
 };
 
-interface AtivarContaPageProps {
-  searchParams: Promise<{ token?: string }>;
-}
+const REASON: Record<InvalidInvitationReason, { title: string; text: string }> = {
+  INVALIDO: { title: "Este convite não existe", text: "Confira se o link está completo ou peça um novo ao seu personal." },
+  EXPIRADO: { title: "Este convite expirou", text: "Convites valem 7 dias. Peça um novo ao seu personal." },
+  CANCELADO: { title: "Este convite foi cancelado", text: "Peça um novo ao seu personal." },
+  USADO: { title: "Este convite já foi usado", text: "Se a conta é sua, é só entrar." },
+  CONTA_EXISTENTE: { title: "Você já tem conta", text: "Entre com seu e-mail e cole este convite no Início para treinar com seu personal." },
+};
 
-/// Página pública (sem sessão) de ativação da conta do aluno (FIT-015).
-/// A validação aqui é só para decidir o que renderizar — nunca confiada
-/// como autorização real (a validação de verdade, atômica, acontece no
-/// servidor ao submeter a senha: `activateStudentAccount`). Para token
-/// inválido/expirado/usado, nunca mostra nenhum dado do aluno — apenas a
-/// mensagem genérica.
-export default async function AtivarContaPage({ searchParams }: AtivarContaPageProps) {
-  const { token } = await searchParams;
-  const check = token ? await checkActivationToken(token) : { valid: false as const };
+/// Ativar convite (FIT-165, E4 do protótipo): quem convidou, e-mail fixo e
+/// só a senha. Convite que não serve mais mostra o motivo e as saídas
+/// "Já tenho conta" e "Treinar por conta própria". A validação real e
+/// atômica continua no envio (`activateStudentAccount`).
+export default async function AtivarContaPage({ searchParams }: { searchParams?: Promise<{ token?: string }> } = {}) {
+  const { token } = (await searchParams) ?? {};
+  const check = token ? await checkActivationToken(token) : { valid: false as const, reason: "INVALIDO" as const };
 
+  if (!check.valid || !token) {
+    const info = REASON[check.reason ?? "INVALIDO"];
+    return (
+      <EntradaShell>
+        <div>
+          <p className={styles.eyebrow}>Convite</p>
+          <h1 className={styles.title}>{info.title}</h1>
+          <p className={styles.lead}>{info.text}</p>
+        </div>
+        <div className={styles.alt}>
+          <Button href="/entrar" size="lg" block>
+            Já tenho conta
+          </Button>
+          <Button href="/comecar?caminho=livre" variant="secondary" block>
+            Treinar por conta própria
+          </Button>
+        </div>
+      </EntradaShell>
+    );
+  }
+
+  const first = check.studentName?.split(/\s+/)[0] ?? "";
   return (
-    <main className={styles.main}>
-      <PublicMobileHeader />
-      <div className={styles.card}>
-        <header className={styles.header}>
-          <p className={styles.eyebrow}>Ativar conta</p>
-          <h1 className={styles.title}>Ative seu acesso</h1>
-        </header>
-
-        {check.valid ? (
-          <>
-            <p className={styles.subtitle}>
-              Olá, {check.studentName}. Defina sua senha para ativar seu acesso ao {appName}.
-            </p>
-            <AtivarContaForm token={token as string} />
-          </>
-        ) : (
-          <p className={styles.subtitle}>
-            Este link não é válido ou já expirou. Fale com seu personal para receber um novo convite.
-          </p>
-        )}
+    <EntradaShell>
+      <div>
+        <p className={styles.eyebrow}>Você foi convidado</p>
+        <h1 className={styles.title}>Oi, {first}. Falta só a senha.</h1>
       </div>
-      <PublicMobileFooter />
-    </main>
+      <ActionRow leading={<Avatar name={check.personalName ?? ""} />} title={check.personalName} description={`${check.businessName} te convidou para treinar no ${appName}`} />
+      <AtivarContaForm token={token} email={check.email ?? ""} />
+    </EntradaShell>
   );
 }

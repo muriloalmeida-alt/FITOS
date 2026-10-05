@@ -4,6 +4,7 @@ import {
   type WorkoutExercise,
   type WorkoutSession,
   type WorkoutSessionResult,
+  type WorkoutSetResult,
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
@@ -62,10 +63,11 @@ function normalizeOptionalText(value: string | null, label: string, maxLength: n
 export type WorkoutSessionWithDetails = WorkoutSession & {
   workout: Workout & {
     workoutExercises: (WorkoutExercise & {
-      exercise: { name: string; muscle: string | null; instructions: string | null };
+      exercise: { name: string; muscle: string | null; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
     })[];
   };
   results: WorkoutSessionResult[];
+  setResults: WorkoutSetResult[];
 };
 
 const SESSION_INCLUDE = {
@@ -73,11 +75,12 @@ const SESSION_INCLUDE = {
     include: {
       workoutExercises: {
         orderBy: { position: "asc" as const },
-        include: { exercise: { select: { name: true, muscle: true, instructions: true } } },
+        include: { exercise: { select: { name: true, muscle: true, instructions: true, imageUrl: true, imageAlt: true } } },
       },
     },
   },
   results: true,
+  setResults: { orderBy: { setNumber: "asc" as const } },
 };
 
 export interface StartOrResumeSessionInput {
@@ -184,7 +187,7 @@ export async function getSessionForStudent(
   });
 }
 
-async function getInProgressSessionOwnedByStudentOrThrow(
+export async function getInProgressSessionOwnedByStudentOrThrow(
   input: { tenantId: string; studentId: string; sessionId: string },
   client: PrismaClient
 ): Promise<WorkoutSession> {
@@ -255,13 +258,42 @@ export async function recordSessionResult(
 
 /// Conclui uma sessão `EM_ANDAMENTO`. Rejeita (`ESTADO_INVALIDO`) se a
 /// sessão já foi concluída ou abandonada — nunca reabre nem "conclui de
-/// novo" silenciosamente.
+/// novo" silenciosamente. BK-14 (FIT-153): `activeSeconds` é o tempo do
+/// cronômetro, sem as pausas; nunca passa do tempo de relógio da sessão.
 export async function completeWorkoutSession(
-  input: { tenantId: string; studentId: string; sessionId: string },
+  input: { tenantId: string; studentId: string; sessionId: string; activeSeconds?: number | null },
   client: PrismaClient = prisma
 ): Promise<WorkoutSession> {
   const session = await getInProgressSessionOwnedByStudentOrThrow(input, client);
-  return client.workoutSession.update({ where: { id: session.id }, data: { status: "CONCLUIDA", endedAt: new Date() } });
+  const endedAt = new Date();
+  return client.workoutSession.update({
+    where: { id: session.id },
+    data: { status: "CONCLUIDA", endedAt, activeSeconds: activeSecondsFor(input.activeSeconds, session.startedAt, endedAt) },
+  });
+}
+
+function activeSecondsFor(value: number | null | undefined, startedAt: Date, endedAt: Date): number | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new SessionError("VALIDACAO", "Tempo ativo inválido.");
+  }
+  return Math.min(value, Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 1000)));
+}
+
+/// BK-13 (FIT-153): "Como foi o treino?" de 1 (leve) a 5 (no limite),
+/// respondido no resumo, depois de concluir. Só da própria sessão concluída;
+/// responder de novo substitui.
+export async function rateWorkoutSession(
+  input: { tenantId: string; studentId: string; sessionId: string; perceivedEffort: number },
+  client: PrismaClient = prisma
+): Promise<WorkoutSession> {
+  if (!Number.isInteger(input.perceivedEffort) || input.perceivedEffort < 1 || input.perceivedEffort > 5) {
+    throw new SessionError("VALIDACAO", "Escolha de 1 a 5.");
+  }
+  const session = await client.workoutSession.findFirst({ where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId } });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Sessão não encontrada.");
+  if (session.status !== "CONCLUIDA") throw new SessionError("ESTADO_INVALIDO", "Só um treino concluído pode ser avaliado.");
+  return client.workoutSession.update({ where: { id: session.id }, data: { perceivedEffort: input.perceivedEffort } });
 }
 
 /// Abandona uma sessão `EM_ANDAMENTO`. Mesma validação de `completeWorkoutSession`

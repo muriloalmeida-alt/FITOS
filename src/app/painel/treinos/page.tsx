@@ -1,23 +1,28 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button, EmptyStateAction } from "@/shared/ui";
+import { AppShell, EmptyStateAction, NextStepCard } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { listWorkoutsForTenant } from "@/modules/workouts/workouts";
+import { listWorkoutSummariesForTenant } from "@/modules/workouts/workouts";
+import { FilterLinks } from "../_workout-builder/FilterLinks";
+import { TrainingTabs } from "../_workout-builder/TrainingTabs";
+import { WorkoutSummaryList } from "../_workout-builder/WorkoutSummaryList";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
-import { TreinosSubNav } from "./TreinosSubNav";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Treinos — ${appName}`,
 };
 
-/// Lista de modelos de treino do tenant (FIT-030). Planos semanais
-/// (agrupando modelos, dias e vigência) ficam em `/painel/treinos/planos`
-/// (FIT-032) — ver `TreinosSubNav`.
-export default async function TreinosPage() {
+interface TreinosPageProps {
+  searchParams?: Promise<{ arquivados?: string }>;
+}
+
+/// Treinos do Personal (FIT-146, P4 do protótipo): "Montar um treino" como
+/// próximo passo, filtros Ativos/Arquivados e a lista com ações de um
+/// toque. Programas e Exercícios são abas da mesma área.
+export default async function TreinosPage({ searchParams }: TreinosPageProps = {}) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -28,49 +33,34 @@ export default async function TreinosPage() {
     throw error;
   }
 
-  const workouts = await listWorkoutsForTenant({ tenantId: ctx.tenantId });
+  const archived = (await searchParams)?.arquivados === "1";
+  const [active, old] = await Promise.all([
+    listWorkoutSummariesForTenant({ tenantId: ctx.tenantId }),
+    listWorkoutSummariesForTenant({ tenantId: ctx.tenantId, status: "ARQUIVADO" }),
+  ]);
+  const shown = archived ? old : active;
 
   return (
-    <AppShell eyebrow="Modelos de treino" title="Treinos" subtitle="Modelos prontos para montar programas." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <TreinosSubNav active="modelos" />
-      <div className={styles.header}>
-        <p className={styles.subtitle}>
-          {workouts.length} {workouts.length === 1 ? "modelo de treino" : "modelos de treino"}
-        </p>
-        <Button href="/painel/treinos/novo" variant="filled">
-          + Criar modelo
-        </Button>
+    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." subtitle="Tudo começa pela biblioteca. Nada de formulário." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <TrainingTabs active="treinos" />
+      <div className={styles.next}>
+        <NextStepCard eyebrow="Próximo passo" title="Montar um treino" description="Escolha os exercícios e ajuste com um toque." href="/painel/treinos/novo" />
       </div>
-
-      {workouts.length === 0 ? (
-        <EmptyStateAction
-          title="Nenhum modelo de treino ainda"
-          description="Crie o primeiro para começar a montar planos."
-          action={{ label: "+ Criar modelo", href: "/painel/treinos/novo" }}
-        />
+      <FilterLinks
+        label="Filtrar treinos"
+        items={[
+          { label: `Ativos · ${active.length}`, href: "/painel/treinos", active: !archived },
+          { label: `Arquivados · ${old.length}`, href: "/painel/treinos?arquivados=1", active: archived },
+        ]}
+      />
+      {shown.length === 0 ? (
+        archived ? (
+          <p className={styles.empty}>Treinos arquivados ficam guardados aqui e podem voltar quando você quiser.</p>
+        ) : (
+          <EmptyStateAction title="Nenhum treino ainda" description="Monte o primeiro pela biblioteca: leva um minuto." action={{ label: "Montar um treino", href: "/painel/treinos/novo" }} />
+        )
       ) : (
-        <>
-          <Link href="/painel/treinos/novo" className={styles.nextStepCard}>
-            <p className={styles.nextStepEyebrow}>Próximo passo</p>
-            <p className={styles.nextStepTitle}>Crie um treino memorável</p>
-            <span className={styles.nextStepArrow} aria-hidden="true">
-              ↗
-            </span>
-          </Link>
-
-          <ul className={styles.list} aria-label="Lista de modelos de treino">
-            {workouts.map((workout) => (
-              <li key={workout.id}>
-                <Link href={`/painel/treinos/${workout.id}`} className={styles.row}>
-                  <span className={styles.cellName}>{workout.name}</span>
-                  {workout.suggestedDays.length > 0 ? (
-                    <span className={styles.cellDays}>{workout.suggestedDays.join(", ")}</span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
+        <WorkoutSummaryList area="personal" workouts={shown} />
       )}
     </AppShell>
   );

@@ -1,19 +1,26 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { LogoutButton } from "../../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../../navigation";
-import { CriarModeloForm } from "./CriarModeloForm";
+import { loadLibrary, loadPrograms } from "../../_workout-builder/editorData";
+import { PersonalWorkoutEditor } from "../PersonalWorkoutEditor";
 
 export const metadata: Metadata = {
-  title: `Criar modelo de treino — ${appName}`,
+  title: `Montar treino — ${appName}`,
 };
 
-export default async function CriarModeloPage() {
+interface NovoTreinoPageProps {
+  searchParams?: Promise<{ programa?: string }>;
+}
+
+/// "Montar um treino" (FIT-146): abre direto o editor, sem formulário
+/// prévio. O treino só é criado no primeiro gesto (nome ou exercícios).
+/// `?programa=<id>` vem de "Montar um treino novo" na semana do programa:
+/// "Pronto" coloca o treino lá e volta.
+export default async function NovoTreinoPage({ searchParams }: NovoTreinoPageProps = {}) {
+  let ctx;
   try {
-    await requirePersonal();
+    ctx = await requirePersonal();
   } catch (error) {
     if (error instanceof AuthError) {
       redirect(error.kind === "UNAUTHENTICATED" ? "/entrar" : "/painel");
@@ -21,11 +28,8 @@ export default async function CriarModeloPage() {
     throw error;
   }
 
-  return (
-    <AppShell eyebrow="Criar modelo" title="Criar modelo de treino" subtitle="Dê um nome e monte a sequência de exercícios." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <Card title="Dados do modelo">
-        <CriarModeloForm />
-      </Card>
-    </AppShell>
-  );
+  const programa = (await searchParams)?.programa ?? null;
+  const [library, programs] = await Promise.all([loadLibrary(ctx.tenantId), loadPrograms(ctx.tenantId)]);
+
+  return <PersonalWorkoutEditor initial={null} library={library} programs={programs} returnToProgramId={programa} />;
 }

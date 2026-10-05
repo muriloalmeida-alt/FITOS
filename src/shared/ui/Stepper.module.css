@@ -1,0 +1,82 @@
+.stepper {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+  margin-bottom: 5px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--fitos-color-surface-raised);
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+.button {
+  flex: none;
+  width: 40px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: -2px;
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.lg .control {
+  min-height: 64px;
+  border-radius: 16px;
+}
+
+.lg .button {
+  width: 64px;
+  min-height: 64px;
+  font-size: 28px;
+  border-radius: 16px;
+}
+
+.lg .value {
+  font-size: 26px;
+}

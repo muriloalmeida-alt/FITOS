@@ -1,19 +1,20 @@
-import { Card } from "@/shared/ui";
+import { BrandLogo } from "@/shared/ui";
 import { LogoutButton } from "./LogoutButton";
 import styles from "./AlunoSemVinculo.module.css";
 
-/// Estado real, distinto de "nunca vinculado" (`AlunoSemVinculo`): o aluno
-/// já teve acesso, mas o personal inativou o vínculo (FIT-014). Mensagem
-/// própria — não é a mesma coisa que "nunca chegou a ter um personal", e
-/// confundir os dois casos seria uma informação enganosa para o aluno.
-export function AlunoInativo() {
+/// Aluno inativado pelo personal (FIT-014, FIT-151): estado reversível,
+/// distinto de "sem vínculo". Sem barra inferior e sem ações de treino.
+export function AlunoInativo({ name, personalName }: { name: string; personalName: string }) {
+  const first = name.trim().split(/\s+/)[0] ?? name;
   return (
     <main className={styles.main}>
       <div className={styles.content}>
-        <Card title="Conta inativa">
-          <p>Sua conta foi inativada pelo seu personal. Fale com ele para reativar o acesso.</p>
-        </Card>
-        <LogoutButton />
+        <BrandLogo background="photo" size={40} />
+        <div>
+          <h1 className={styles.title}>{first}, seu acesso está pausado.</h1>
+          <p className={styles.text}>{personalName} pausou seu acesso. Seus treinos e avaliações continuam guardados. Fale com ele para voltar.</p>
+        </div>
+        <LogoutButton block />
       </div>
     </main>
   );

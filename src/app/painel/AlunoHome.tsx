@@ -1,200 +1,138 @@
 import Link from "next/link";
-import { AppShell, Card, WeeklyRhythmBar, WorkoutExerciseCard, WorkoutTodayCard } from "@/shared/ui";
-import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
+import { ActionRow, AppShell, Button, ProgressBar, WeekStrip } from "@/shared/ui";
+import type { StudentHome } from "@/modules/students/studentHome";
+import { weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
 import { ALUNO_NAV_ITEMS } from "./navigation";
 import styles from "./AlunoHome.module.css";
 
 interface AlunoHomeProps {
   displayName: string;
-  tenantName: string;
   personalName: string;
-  schedule: StudentTodaySchedule;
-  hasInProgressSession: boolean;
-  /// Ritmo real da semana atual (FIT-137, `getWeeklyRhythmForStudent`).
-  /// `targetDays` só existe com plano ativo — a seção "Seu ritmo nesta
-  /// semana" (tela-09) só aparece quando há uma meta real para comparar.
-  weeklyRhythm: { completedDays: number; targetDays: number | null };
-  /// Saudação/data do servidor no fuso do produto (AjustesTelas, print 24).
-  /// Opcionais: sem elas, o cabeçalho cai para "Olá, <nome>.".
-  greeting?: string;
+  /// Saudação e data do servidor, no fuso do produto.
+  greeting: string;
   dateLabel?: string;
+  home: StudentHome;
+  /// Data de "hoje" (ISO) para destacar o dia na faixa da semana.
+  todayIso: string;
 }
 
-interface PrescriptionSummaryInput {
-  sets: number | null;
-  reps: number | null;
-  durationSeconds: number | null;
-  load: string | null;
-  restSeconds: number | null;
-}
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" });
 
-function prescriptionSummary(item: PrescriptionSummaryInput): string {
-  const parts: string[] = [];
-  if (item.sets) {
-    parts.push(`${item.sets} série${item.sets > 1 ? "s" : ""}`);
-  }
-  if (item.reps) {
-    parts.push(`${item.reps} repetiç${item.reps > 1 ? "ões" : "ão"}`);
-  }
-  if (item.durationSeconds) {
-    parts.push(`${item.durationSeconds}s de duração`);
-  }
-  if (item.load) {
-    parts.push(`carga: ${item.load}`);
-  }
-  if (item.restSeconds) {
-    parts.push(`descanso: ${item.restSeconds}s`);
-  }
-  return parts.length > 0 ? parts.join(" · ") : "Sem parâmetros de prescrição";
-}
-
-function itemMeta(item: PrescriptionSummaryInput & { exercise: { muscle: string | null } }): string {
-  const summary = prescriptionSummary(item);
-  return item.exercise.muscle ? `${item.exercise.muscle} · ${summary}` : summary;
-}
-
-/// Sessão em andamento cuja atribuição não é mais "o treino de hoje" (ex.:
-/// aluno começou ontem e ainda não concluiu) — sem o nome do treino
-/// disponível aqui (`hasInProgressSession` é só um booleano, mesmo
-/// contrato de antes da FIT-120), texto sempre genérico, nunca inventado.
-function ContinuarSessaoCard() {
-  return (
-    <WorkoutTodayCard
-      eyebrow="Treino em andamento"
-      title="Você tem um treino em andamento"
-      description="Continue de onde parou."
-      imageSrc="/media/brand/visual-2026/scene-coach.png"
-      action={{ label: "Continuar treino em andamento", href: "/painel/treino/sessao" }}
-    />
-  );
-}
-
-function TreinoDeHoje({ schedule, hasInProgressSession }: { schedule: StudentTodaySchedule; hasInProgressSession: boolean }) {
-  if (schedule.state === "SEM_PLANO") {
+function Hero({ home, personalName }: { home: StudentHome; personalName: string }) {
+  const { hero } = home;
+  if (hero.kind === "progress") {
+    const percent = hero.total > 0 ? (100 * hero.done) / hero.total : 0;
     return (
-      <>
-        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
-        <p className={styles.empty}>Você ainda não tem um programa de treino atribuído. Fale com seu personal.</p>
-      </>
-    );
-  }
-  if (schedule.state === "PLANO_ENCERRADO") {
-    return (
-      <>
-        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
-        <p className={styles.empty}>
-          Seu programa &quot;{schedule.planName}&quot; foi encerrado. Fale com seu personal para receber um novo.
+      <section className={`${styles.hero} ${styles.heroLive}`} aria-label="Treino em andamento">
+        <p className={styles.eyebrow}>Em andamento</p>
+        <h2 className={styles.heroTitle}>{hero.workoutName}</h2>
+        <ProgressBar value={percent} label="Progresso do treino" valueText={`${hero.done} de ${hero.total} exercícios`} />
+        <p className={styles.heroMeta}>
+          {hero.done} de {hero.total} exercícios · começou há {hero.minutesAgo < 1 ? "menos de 1 min" : `${hero.minutesAgo} min`}
         </p>
-      </>
+        <Button href="/painel/treino/sessao" size="xl" block>
+          Continuar treino
+        </Button>
+      </section>
     );
   }
-  if (schedule.state === "DESCANSO") {
+  if (hero.kind === "today") {
     return (
-      <>
-        {hasInProgressSession ? <ContinuarSessaoCard /> : null}
-        <p className={styles.empty}>Hoje é dia de descanso. Nenhum treino previsto para hoje.</p>
-      </>
+      <section className={styles.hero} aria-label="Treino de hoje">
+        <p className={styles.eyebrow}>Treino de hoje</p>
+        <h2 className={styles.heroTitle}>{hero.workoutName}</h2>
+        <p className={styles.heroMeta}>
+          {hero.exercises} {hero.exercises === 1 ? "exercício" : "exercícios"} · cerca de {hero.estimatedMinutes} min
+        </p>
+        <Button href="/painel/treino/sessao" size="xl" block>
+          Começar treino
+        </Button>
+      </section>
     );
   }
-
-  const { workout } = schedule;
+  if (hero.kind === "rest") {
+    return (
+      <section className={styles.hero} aria-label="Hoje">
+        <p className={styles.eyebrow}>Hoje é descanso</p>
+        <h2 className={styles.heroTitle}>Recupere bem.</h2>
+        <p className={styles.heroMeta}>{hero.next ? `Próximo: ${hero.next.workoutName} · ${hero.next.dayLabel.toLowerCase()}` : "Nenhum treino previsto nos próximos dias."}</p>
+        <Button href="/painel/treino" variant="secondary" block>
+          Ver meu programa
+        </Button>
+      </section>
+    );
+  }
   return (
-    <>
-      <WorkoutTodayCard
-        eyebrow="Treino de hoje"
-        title={workout.name}
-        description="Revise os exercícios abaixo e comece quando estiver pronto."
-        meta={`${workout.workoutExercises.length} ${workout.workoutExercises.length === 1 ? "exercício" : "exercícios"}`}
-        imageSrc="/media/brand/visual-2026/scene-coach.png"
-        action={{
-          label: hasInProgressSession ? "Continuar treino em andamento" : "Começar treino",
-          href: "/painel/treino/sessao",
-        }}
-      />
-
-      {workout.workoutExercises.length === 0 ? (
-        <p className={styles.empty}>Este treino ainda não tem exercícios.</p>
-      ) : (
-        <ul className={styles.itemList} aria-label={`Exercícios de ${workout.name}, em ordem`}>
-          {workout.workoutExercises.map((item) => (
-            <li key={item.id}>
-              <WorkoutExerciseCard
-                name={item.exercise.name}
-                meta={itemMeta(item)}
-                thumbnailSrc={item.exercise.imageUrl}
-                thumbnailAlt={item.exercise.imageAlt ?? item.exercise.name}
-              />
-              {item.notes ? <span className={styles.notes}>{item.notes}</span> : null}
-              {item.exercise.instructions ? <span className={styles.instructions}>{item.exercise.instructions}</span> : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    <section className={styles.hero} aria-label="Programa">
+      <p className={styles.eyebrow}>{hero.endedPlanName ? "Programa encerrado" : "Sem programa"}</p>
+      <h2 className={styles.heroTitle}>{hero.endedPlanName ? `${hero.endedPlanName} terminou.` : "Seu programa está a caminho."}</h2>
+      <p className={styles.heroMeta}>{personalName} já foi avisado e vai montar o próximo. Ele aparece aqui assim que estiver pronto.</p>
+    </section>
   );
 }
 
-/// "Hoje" real do aluno (FIT-016: vínculo; FIT-040: treino do dia). Deriva
-/// tudo da sessão e da atribuição ativa no servidor (`/painel/page.tsx`),
-/// nunca de algo que o cliente poderia influenciar. Quatro estados
-/// honestos (ver `getTodayScheduleForStudent`) — nenhum treino é simulado.
-/// FIT-120: o hero de "Treino de hoje" (`WorkoutTodayCard`) já é a própria
-/// ação de começar/continuar a sessão — nenhum botão separado abaixo dele.
-/// FIT-134 (pacote visual 2026): `imageSrc` já existia em `WorkoutTodayCard`
-/// desde a FIT-120 mas nunca tinha sido usado aqui — agora aponta para
-/// `scene-coach.png` ("área do aluno e card de convite" na tabela de
-/// assets do pacote), só nos dois estados em que o card já é a ação real
-/// (treino atribuído ou sessão em andamento); os estados sem treino nunca
-/// mostram o card, então nunca mostram a foto.
-/// FIT-137 (PR de correção pós-validação real, pacote visual 2026):
-/// "Seu ritmo nesta semana" (tela-09) — `getWeeklyRhythmForStudent`,
-/// dias reais com sessão CONCLUIDA nesta semana contra a meta real (dias
-/// distintos configurados no plano atribuído). Só aparece com meta real
-/// (`targetDays !== null`) — sem plano ativo, não há o que comparar.
-export function AlunoHome({ displayName, tenantName, personalName, schedule, hasInProgressSession, weeklyRhythm, greeting, dateLabel }: AlunoHomeProps) {
+/// Início do Aluno (FIT-151, A1 do protótipo): o que fazer hoje com um
+/// toque (começar, continuar, descanso ou programa a caminho), ritmo da
+/// semana, próximos treinos e a última avaliação.
+export function AlunoHome({ displayName, personalName, greeting, dateLabel, home, todayIso }: AlunoHomeProps) {
   const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
-  return (
-    <AppShell
-      eyebrow={dateLabel}
-      title={`${greeting ?? "Olá"}, ${firstName}.`}
-      subtitle="Seu treino em movimento."
-      navItems={ALUNO_NAV_ITEMS}
-      activeKey="hoje"
-      trailing={<LogoutButton />}
-    >
-      <Card title="Treino de hoje">
-        <TreinoDeHoje schedule={schedule} hasInProgressSession={hasInProgressSession} />
-      </Card>
+  const today = new Date(todayIso);
+  const assessment = home.lastAssessment;
+  const assessmentParts = assessment
+    ? [assessment.weightKg !== null ? `${assessment.weightKg.toLocaleString("pt-BR")} kg` : null, assessment.bodyFatPercent !== null ? `${assessment.bodyFatPercent.toLocaleString("pt-BR")}% gordura` : null].filter(Boolean)
+    : [];
 
-      {weeklyRhythm.targetDays !== null ? (
-        <Card title="Seu ritmo nesta semana">
-          <WeeklyRhythmBar
-            completedDays={weeklyRhythm.completedDays}
-            targetDays={weeklyRhythm.targetDays}
-            label={`${weeklyRhythm.completedDays} de ${weeklyRhythm.targetDays} dias treinados nesta semana`}
-          />
-        </Card>
+  return (
+    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
+      <Hero home={home} personalName={personalName} />
+
+      {home.program ? (
+        <section className={styles.section} aria-labelledby="sua-semana">
+          <div className={styles.sectionHead}>
+            <h2 id="sua-semana" className={styles.sectionTitle}>
+              Sua semana
+            </h2>
+            <span className={styles.sectionMeta}>{home.week.target ? `${home.week.doneCount} de ${home.week.target} treinos` : `${home.week.doneCount} treinos`}</span>
+          </div>
+          <WeekStrip days={weekStripFromDays(home.week.planned, { done: home.week.done, today })} label="Sua semana" />
+          <p className={styles.program}>
+            {home.program.name}
+            {home.program.week && home.program.weeks ? ` · semana ${home.program.week} de ${home.program.weeks}` : ""}
+          </p>
+        </section>
       ) : null}
 
-      <Card title="Evolução">
-        <p>Suas avaliações registradas pelo seu personal.</p>
-        <Link href="/painel/progresso" className={styles.rowLink}>
-          Ver evolução <span aria-hidden="true">→</span>
-        </Link>
-      </Card>
+      {home.upcoming.length > 0 ? (
+        <section className={styles.section} aria-labelledby="proximos">
+          <h2 id="proximos" className={styles.sectionTitle}>
+            Próximos treinos
+          </h2>
+          <ul className={styles.list}>
+            {home.upcoming.map((item) => (
+              <li key={item.dayLabel}>
+                <ActionRow href="/painel/treino" leading={<span className={styles.day}>{item.dayShort}</span>} title={item.workoutName} description={item.dayLabel} trailing={<span aria-hidden="true">›</span>} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-      <Card title="Seu vínculo">
-        <p>
-          Personal: <strong>{personalName}</strong>
-        </p>
-        <p>
-          Espaço: <strong>{tenantName}</strong>
-        </p>
-        <p>
-          Estado da conta: <strong>Ativa</strong>
-        </p>
-      </Card>
+      <section className={styles.section} aria-labelledby="avaliacao">
+        <h2 id="avaliacao" className={styles.sectionTitle}>
+          Última avaliação
+        </h2>
+        <ActionRow
+          href="/painel/progresso"
+          title={assessment ? (assessmentParts.length > 0 ? assessmentParts.join(" · ") : "Avaliação registrada") : "Nenhuma avaliação ainda"}
+          description={assessment ? `${dateFmt.format(new Date(assessment.dateIso))} · ver sua evolução` : `${personalName} registra a sua na próxima avaliação.`}
+          trailing={<span aria-hidden="true">›</span>}
+        />
+      </section>
+
+      <p className={styles.footnote}>
+        Treinando com {personalName}. <Link href="/painel/perfil">Seu perfil</Link>
+      </p>
     </AppShell>
   );
 }

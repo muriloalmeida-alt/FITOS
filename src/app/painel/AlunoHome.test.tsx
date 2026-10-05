@@ -1,125 +1,53 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { StudentTodaySchedule } from "@/modules/workouts/workouts";
+import type { StudentHome } from "@/modules/students/studentHome";
 import { AlunoHome } from "./AlunoHome";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+const base: StudentHome = {
+  hero: { kind: "today", workoutName: "Treino A · Peito", exercises: 6, estimatedMinutes: 45 },
+  program: { name: "Hipertrofia", week: 3, weeks: 8 },
+  week: { planned: ["SEGUNDA", "QUARTA", "SEXTA"], done: [true, false, false, false, false, false, false], doneCount: 1, target: 3 },
+  upcoming: [{ dayLabel: "Amanhã", dayShort: "Ter", workoutName: "Treino B" }],
+  lastAssessment: { dateIso: "2026-09-20T12:00:00.000Z", weightKg: 72.4, bodyFatPercent: 18.5 },
+};
 
-function renderHome(
-  schedule: StudentTodaySchedule,
-  hasInProgressSession = false,
-  weeklyRhythm: { completedDays: number; targetDays: number | null } = { completedDays: 0, targetDays: null }
-) {
-  render(
-    <AlunoHome
-      displayName="Pedro"
-      tenantName="Espaço de Joana"
-      personalName="Joana"
-      schedule={schedule}
-      hasInProgressSession={hasInProgressSession}
-      weeklyRhythm={weeklyRhythm}
-    />
-  );
+function renderHome(home: Partial<StudentHome> = {}) {
+  render(<AlunoHome displayName="Pedro Lima" personalName="Joana" greeting="Bom dia" dateLabel="Domingo, 4 de outubro" home={{ ...base, ...home }} todayIso="2026-10-05T12:00:00.000Z" />);
 }
 
-describe("AlunoHome (FIT-040 — treino de hoje)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
+describe("AlunoHome (FIT-151)", () => {
+  it("treino do dia começa com um toque, com semana, próximos e última avaliação", () => {
+    renderHome();
+    expect(screen.getByRole("heading", { level: 1, name: "Bom dia, Pedro." })).toBeInTheDocument();
+    expect(screen.getByText("6 exercícios · cerca de 45 min")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Começar treino" })).toHaveAttribute("href", "/painel/treino/sessao");
+    expect(screen.getByText("1 de 3 treinos")).toBeInTheDocument();
+    expect(screen.getByText("Hipertrofia · semana 3 de 8")).toBeInTheDocument();
+    expect(screen.getByLabelText("Segunda (hoje): treino feito")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Treino B/ })).toHaveAttribute("href", "/painel/treino");
+    expect(screen.getByRole("link", { name: /72,4 kg · 18,5% gordura/ })).toHaveAttribute("href", "/painel/progresso");
   });
 
-  it("estado SEM_PLANO", () => {
-    renderHome({ state: "SEM_PLANO" });
-
-    expect(
-      screen.getByText("Você ainda não tem um programa de treino atribuído. Fale com seu personal.")
-    ).toBeInTheDocument();
+  it("em andamento continua com progresso e tempo", () => {
+    renderHome({ hero: { kind: "progress", workoutName: "Treino A", done: 2, total: 6, minutesAgo: 14 } });
+    expect(screen.getByText("2 de 6 exercícios · começou há 14 min")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continuar treino" })).toHaveAttribute("href", "/painel/treino/sessao");
   });
 
-  it("estado PLANO_ENCERRADO", () => {
-    renderHome({ state: "PLANO_ENCERRADO", planName: "Programa A" });
-
-    expect(screen.getByText(/Programa A/)).toBeInTheDocument();
-    expect(screen.getByText(/foi encerrado/)).toBeInTheDocument();
-  });
-
-  it("estado DESCANSO", () => {
-    renderHome({ state: "DESCANSO" });
-
-    expect(screen.getByText("Hoje é dia de descanso. Nenhum treino previsto para hoje.")).toBeInTheDocument();
-  });
-
-  it("estado TREINO_HOJE: exercícios, parâmetros e instruções legíveis", () => {
-    renderHome({
-      state: "TREINO_HOJE",
-      workout: {
-        id: "w1",
-        name: "Treino A",
-        workoutExercises: [
-          {
-            id: "i1",
-            sets: 3,
-            reps: 10,
-            durationSeconds: null,
-            load: "20kg",
-            restSeconds: 60,
-            notes: "Foco na execução",
-            exercise: { name: "Supino", muscle: "Peito", instructions: "Manter os cotovelos a 45 graus." },
-          },
-        ],
-      },
-    } as unknown as StudentTodaySchedule);
-
-    expect(screen.getByText("Treino A")).toBeInTheDocument();
-    expect(screen.getByText("Supino")).toBeInTheDocument();
-    expect(screen.getByText(/Peito.*3 séries.*10 repetições.*carga: 20kg.*descanso: 60s/)).toBeInTheDocument();
-    expect(screen.getByText("Foco na execução")).toBeInTheDocument();
-    expect(screen.getByText("Manter os cotovelos a 45 graus.")).toBeInTheDocument();
-  });
-
-  it("estado TREINO_HOJE sem exercícios: estado vazio honesto", () => {
-    renderHome({
-      state: "TREINO_HOJE",
-      workout: { id: "w1", name: "Treino A", workoutExercises: [] },
-    } as unknown as StudentTodaySchedule);
-
-    expect(screen.getByText("Este treino ainda não tem exercícios.")).toBeInTheDocument();
-  });
-
-  it("mostra 'Começar treino' quando há treino previsto para hoje e nenhuma sessão em andamento", () => {
-    renderHome({ state: "TREINO_HOJE", workout: { id: "w1", name: "Treino A", workoutExercises: [] } } as unknown as StudentTodaySchedule, false);
-
-    expect(screen.getByRole("link", { name: "Começar treino" })).toBeInTheDocument();
-  });
-
-  it("mostra 'Continuar treino em andamento' quando há sessão em andamento, mesmo em dia de descanso", () => {
-    renderHome({ state: "DESCANSO" }, true);
-
-    expect(screen.getByRole("link", { name: "Continuar treino em andamento" })).toBeInTheDocument();
-  });
-
-  it("não mostra nenhum link para sessão sem treino de hoje e sem sessão em andamento", () => {
-    renderHome({ state: "SEM_PLANO" }, false);
-
+  it("descanso mostra o próximo treino e leva ao programa", () => {
+    renderHome({ hero: { kind: "rest", next: { dayLabel: "Amanhã", dayShort: "Ter", workoutName: "Treino B" } } });
+    expect(screen.getByText("Próximo: Treino B · amanhã")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver meu programa" })).toHaveAttribute("href", "/painel/treino");
     expect(screen.queryByRole("link", { name: "Começar treino" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Continuar treino em andamento" })).not.toBeInTheDocument();
   });
 
-  it("FIT-137: mostra 'Seu ritmo nesta semana' quando há meta real (plano ativo com dias configurados)", () => {
-    renderHome({ state: "DESCANSO" }, false, { completedDays: 2, targetDays: 3 });
-
-    expect(screen.getByText("Seu ritmo nesta semana")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar", { name: "2 de 3 dias treinados nesta semana" })).toBeInTheDocument();
-  });
-
-  it("FIT-137: não mostra 'Seu ritmo nesta semana' sem meta real (sem plano ativo)", () => {
-    renderHome({ state: "SEM_PLANO" }, false, { completedDays: 0, targetDays: null });
-
-    expect(screen.queryByText("Seu ritmo nesta semana")).not.toBeInTheDocument();
+  it("sem programa diz que o personal já foi avisado, sem semana nem avaliação inventada", () => {
+    renderHome({ hero: { kind: "noPlan", endedPlanName: null }, program: null, upcoming: [], lastAssessment: null });
+    expect(screen.getByText(/Joana já foi avisado/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Sua semana" })).not.toBeInTheDocument();
+    expect(screen.getByText("Nenhuma avaliação ainda")).toBeInTheDocument();
   });
 });

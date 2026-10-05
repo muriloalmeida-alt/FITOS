@@ -6,9 +6,8 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
-import { AuthHero, PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
+import { EntradaShell } from "../_entrada/EntradaShell";
 import { PersonalOnboardingWizard } from "./PersonalOnboardingWizard";
-import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Configurar seu espaço — ${appName}`,
@@ -36,32 +35,20 @@ export default async function OnboardingPersonalPage() {
   ]);
 
   return (
-    <main className={styles.main}>
-      <PublicMobileHeader />
-      <AuthHero
-        headline="Treinar pessoas é a sua paixão."
-        subtitle="Vamos cuidar da rotina junto com você."
-        image={{ src: "/media/brand/visual-2026/scene-trainer.png", objectPosition: "58% 35%" }}
+    <EntradaShell>
+      <PersonalOnboardingWizard
+        initialBusinessName={tenant.name}
+        plans={plans.map((plan) => ({
+          id: plan.id,
+          name: plan.name,
+          description: plan.description,
+          priceCents: plan.priceCents,
+          billingCycle: plan.billingCycle,
+          studentLimit: plan.studentLimit,
+          trialDays: plan.trialDays,
+        }))}
+        initialPlanId={subscription?.planId ?? null}
       />
-
-      <div className={styles.formColumn}>
-        <div className={styles.card}>
-          <PersonalOnboardingWizard
-            initialBusinessName={tenant.name}
-            plans={plans.map((plan) => ({
-              id: plan.id,
-              name: plan.name,
-              description: plan.description,
-              priceCents: plan.priceCents,
-              billingCycle: plan.billingCycle,
-              studentLimit: plan.studentLimit,
-              trialDays: plan.trialDays,
-            }))}
-            initialPlanId={subscription?.planId ?? null}
-          />
-        </div>
-      </div>
-      <PublicMobileFooter />
-    </main>
+    </EntradaShell>
   );
 }

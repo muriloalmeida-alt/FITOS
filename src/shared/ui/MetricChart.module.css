@@ -1,0 +1,91 @@
+.figure {
+  position: relative;
+  margin: 0;
+  color: var(--fitos-teal-300);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.valueLabel {
+  fill: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.axisLabel {
+  fill: var(--fitos-color-text-muted);
+  font-family: var(--fitos-font-family);
+  font-size: 11px;
+}
+
+.hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hit {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hit:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+}
+
+.tip {
+  margin-top: 6px;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.details {
+  margin-top: 8px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--fitos-color-on-surface);
+}
+
+.table th,
+.table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

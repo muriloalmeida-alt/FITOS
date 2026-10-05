@@ -1,27 +1,26 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
+import { AppShell, Button } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { prisma } from "@/shared/db/prisma";
 import { AuthError, requireIndividual } from "@/modules/tenancy/authContext";
 import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
 import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
+import { getLastPerformanceForExercises } from "@/modules/execution/sets";
 import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
-import { WorkoutRunner } from "../../WorkoutRunner";
+import { LiveWorkout } from "../../_live/LiveWorkout";
+import { toLiveItems } from "../../_live/liveItems";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: `Sessão de treino — ${appName}`,
+  title: `Treino ao vivo — ${appName}`,
 };
 
-/// Execução de sessão do workspace individual (FIT-103), exclusiva do
-/// papel `INDIVIDUAL` — `requireIndividual()` garante isso no servidor.
-/// Diferente de `/painel/treino/sessao` (ALUNO): não existe "treino de
-/// hoje" aqui — começar um treino é uma ação explícita a partir de
-/// `/painel/meus-treinos/[id]` (`ComecarMeuTreinoButton`); esta página só
-/// mostra a sessão `EM_ANDAMENTO`, se houver.
-export default async function SessaoIndividualPage() {
+/// Treino ao vivo do FitOS Livre (FIT-158): o mesmo componente do aluno
+/// (FIT-153), sem personal. Retoma a sessão em andamento; senão prepara o
+/// treino escolhido (`?treino=`). O fim leva a Minha evolução.
+export default async function SessaoIndividualPage({ searchParams }: { searchParams?: Promise<{ treino?: string }> } = {}) {
   let ctx;
   try {
     ctx = await requireIndividual();
@@ -33,55 +32,49 @@ export default async function SessaoIndividualPage() {
   }
 
   const student = await ensureStudentForIndividual({ id: ctx.tenantId, ownerId: ctx.userId });
-  const inProgress = await getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: student.id });
+  const scope = { tenantId: ctx.tenantId, studentId: student.id };
+  const common = { coachName: null, apiBase: "/api/minhas-sessoes", exitHref: "/painel", progressHref: "/painel/minha-evolucao", doneHref: "/painel/minha-evolucao" };
+  const inProgress = await getInProgressSessionForStudent(scope);
 
-  if (!inProgress) {
+  if (inProgress) {
+    const items = inProgress.workout.workoutExercises;
+    const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: items.map((item) => item.exerciseId), excludeSessionId: inProgress.id });
     return (
-      <AppShell eyebrow="Sessão" title="Sessão de treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-        <Card title="Nenhuma sessão em andamento">
-          <p className={styles.empty}>
-            Escolha um treino em <Link href="/painel/meus-treinos">Meus treinos</Link> e toque em &quot;Começar treino&quot;.
-          </p>
-        </Card>
-      </AppShell>
+      <LiveWorkout
+        {...common}
+        sessionId={inProgress.id}
+        workoutId={inProgress.workoutId}
+        workoutName={inProgress.workout.name}
+        startedAt={inProgress.startedAt.toISOString()}
+        items={toLiveItems(items, inProgress.setResults, last)}
+      />
     );
   }
 
-  // AjustesTreinoLivre (29/09/2026): execução em modo foco — sem shell/
-  // barra inferior, com cronômetro, descanso, séries, ajuste rápido de
-  // carga e áudio.
+  const workoutId = (await searchParams)?.treino;
+  const workout = workoutId
+    ? await prisma.workout.findFirst({
+        where: { id: workoutId, tenantId: ctx.tenantId, status: "ATIVO", trainingPlan: { isSnapshot: false } },
+        include: {
+          workoutExercises: {
+            orderBy: { position: "asc" },
+            include: { exercise: { select: { name: true, instructions: true, imageUrl: true, imageAlt: true } } },
+          },
+        },
+      })
+    : null;
+
+  if (workout && workout.workoutExercises.length > 0) {
+    const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: workout.workoutExercises.map((item) => item.exerciseId) });
+    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} />;
+  }
+
   return (
-    <WorkoutRunner
-      sessionId={inProgress.id}
-      workoutName={inProgress.workout.name}
-      workoutId={inProgress.workoutId}
-      startedAt={inProgress.startedAt.toISOString()}
-      mode="individual"
-      apiBase="/api/minhas-sessoes"
-      exitHref="/painel/meus-treinos"
-      items={inProgress.workout.workoutExercises.map((item) => {
-        const result = inProgress.results.find((r) => r.workoutExerciseId === item.id) ?? null;
-        return {
-          id: item.id,
-          exerciseName: item.exercise.name,
-          exerciseMuscle: item.exercise.muscle,
-          instructions: item.exercise.instructions,
-          sets: item.sets,
-          reps: item.reps,
-          durationSeconds: item.durationSeconds,
-          load: item.load,
-          restSeconds: item.restSeconds,
-          notes: item.notes,
-          result: result
-            ? {
-                setsCompleted: result.setsCompleted,
-                repsCompleted: result.repsCompleted,
-                durationSecondsCompleted: result.durationSecondsCompleted,
-                loadUsed: result.loadUsed,
-              }
-            : null,
-        };
-      })}
-    />
+    <AppShell eyebrow="Treino" title="Escolha um treino" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <p className={styles.empty}>{workout ? "Este treino ainda não tem exercícios." : "Escolha um dos seus treinos para começar."}</p>
+      <Button href={workout ? `/painel/meus-treinos/${workout.id}` : "/painel/meus-treinos"} variant="secondary">
+        {workout ? "Montar o treino" : "Meus treinos"}
+      </Button>
+    </AppShell>
   );
 }

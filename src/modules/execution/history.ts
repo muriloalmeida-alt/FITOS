@@ -17,6 +17,8 @@ export interface FinishedSessionSummary {
   startedAt: Date;
   endedAt: Date | null;
   resultsCount: number;
+  /// BK-13: esforço percebido (1–5) quando informado.
+  perceivedEffort: number | null;
 }
 
 /// Sessões concluídas ou abandonadas, mais recente primeiro — a sessão
@@ -39,6 +41,7 @@ export async function listSessionHistoryForStudent(
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     resultsCount: session.results.length,
+    perceivedEffort: session.perceivedEffort,
   }));
 }
 
@@ -133,4 +136,50 @@ export async function listPersonalRecordsForStudent(
   }
 
   return Array.from(bestByExercise.values()).sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, "pt-BR"));
+}
+
+export interface TrainingOverview {
+  thisWeek: number;
+  thisMonth: number;
+  /// Semanas seguidas (segunda a domingo) com ao menos um treino concluído,
+  /// contando a atual se já tiver treino; senão, a partir da anterior.
+  streakWeeks: number;
+}
+
+function mondayOf(date: Date): Date {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay();
+  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+  return start;
+}
+
+/// FIT-159: treinos na semana e no mês e semanas seguidas, só de sessões
+/// `CONCLUIDA` do próprio executor.
+export async function getTrainingOverviewForStudent(
+  input: { tenantId: string; studentId: string; now?: Date },
+  client: PrismaClient = prisma
+): Promise<TrainingOverview> {
+  const now = input.now ?? new Date();
+  const sessions = await client.workoutSession.findMany({
+    where: { tenantId: input.tenantId, studentId: input.studentId, status: "CONCLUIDA", startedAt: { lte: now } },
+    select: { startedAt: true },
+  });
+  const weekStart = mondayOf(now);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const weeks = new Set(sessions.map((session) => mondayOf(session.startedAt).getTime()));
+
+  let streakWeeks = 0;
+  const cursor = new Date(weekStart);
+  if (!weeks.has(cursor.getTime())) cursor.setDate(cursor.getDate() - 7);
+  while (weeks.has(cursor.getTime())) {
+    streakWeeks += 1;
+    cursor.setDate(cursor.getDate() - 7);
+  }
+
+  return {
+    thisWeek: sessions.filter((session) => session.startedAt >= weekStart).length,
+    thisMonth: sessions.filter((session) => session.startedAt >= monthStart).length,
+    streakWeeks,
+  };
 }

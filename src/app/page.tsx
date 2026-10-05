@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getServerSession } from "@/modules/identity/session";
 import { appName } from "@/shared/config/env";
 import { SplashScreen } from "./SplashScreen";
@@ -15,7 +16,13 @@ export const metadata: Metadata = {
 /// (`PersonalHome`/`AlunoHome`/`IndividualHome` — nenhuma lógica de papel
 /// duplicada aqui). Links diretos para `/entrar` ou `/painel` não passam
 /// pela abertura, para não atrasar quem já sabe para onde vai.
+///
+/// FIT-162: quem já tem sessão não passa pela abertura — vai direto ao
+/// Início.
 export default async function RootPage() {
   const session = await getServerSession();
-  return <SplashScreen destination={session ? "/painel" : "/entrar"} />;
+  if (session) {
+    redirect("/painel");
+  }
+  return <SplashScreen destination="/entrar" />;
 }

@@ -1,22 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button, EmptyStateAction } from "@/shared/ui";
+import { AppShell, EmptyStateAction, NextStepCard, WeekStrip } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { weekStripFromDays } from "@/shared/lib/weekdays";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { listTrainingPlansForTenant } from "@/modules/workouts/workouts";
+import { listTrainingPlanSummariesForTenant } from "@/modules/workouts/workouts";
+import { FilterLinks } from "../../_workout-builder/FilterLinks";
+import { TrainingTabs } from "../../_workout-builder/TrainingTabs";
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
-import { TreinosSubNav } from "../TreinosSubNav";
-import styles from "../page.module.css";
+import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: `Programas — ${appName}`,
 };
 
-/// Lista de planos semanais do tenant (FIT-032). Agrupam modelos de
-/// treino (FIT-030/031) com dias sugeridos e vigência sugerida.
-export default async function PlanosPage() {
+interface ProgramasPageProps {
+  searchParams?: Promise<{ arquivados?: string }>;
+}
+
+/// Programas do Personal (FIT-146): "Montar um programa" como próximo
+/// passo, filtros Ativos/Arquivados e cada programa com a faixa da semana.
+export default async function ProgramasPage({ searchParams }: ProgramasPageProps = {}) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -27,33 +33,45 @@ export default async function PlanosPage() {
     throw error;
   }
 
-  const plans = await listTrainingPlansForTenant({ tenantId: ctx.tenantId });
+  const archived = (await searchParams)?.arquivados === "1";
+  const [active, old] = await Promise.all([
+    listTrainingPlanSummariesForTenant({ tenantId: ctx.tenantId }),
+    listTrainingPlanSummariesForTenant({ tenantId: ctx.tenantId, status: "ARQUIVADO" }),
+  ]);
+  const shown = archived ? old : active;
 
   return (
-    <AppShell eyebrow="Programas" title="Programas" subtitle="Organize treinos em uma sequência." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <TreinosSubNav active="planos" />
-      <div className={styles.header}>
-        <p className={styles.subtitle}>
-          {plans.length} {plans.length === 1 ? "programa" : "programas"}
-        </p>
-        <Button href="/painel/treinos/planos/novo" variant="filled">
-          + Criar programa
-        </Button>
+    <AppShell eyebrow="Treinos" title="Monte, organize, atribua." subtitle="Programas juntam treinos numa semana e vão para os alunos." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <TrainingTabs active="programas" />
+      <div className={styles.next}>
+        <NextStepCard eyebrow="Próximo passo" title="Montar um programa" description="Junte treinos e atribua a quem precisa." href="/painel/treinos/planos/novo" />
       </div>
-
-      {plans.length === 0 ? (
-        <EmptyStateAction
-          title="Nenhum programa ainda"
-          description="Crie o primeiro para agrupar seus modelos de treino."
-          action={{ label: "+ Criar programa", href: "/painel/treinos/planos/novo" }}
-        />
+      <FilterLinks
+        label="Filtrar programas"
+        items={[
+          { label: `Ativos · ${active.length}`, href: "/painel/treinos/planos", active: !archived },
+          { label: `Arquivados · ${old.length}`, href: "/painel/treinos/planos?arquivados=1", active: archived },
+        ]}
+      />
+      {shown.length === 0 ? (
+        archived ? (
+          <p className={styles.meta}>Programas arquivados continuam valendo para quem já recebeu.</p>
+        ) : (
+          <EmptyStateAction title="Nenhum programa ainda" description="Junte seus treinos numa semana e atribua aos alunos." action={{ label: "Montar um programa", href: "/painel/treinos/planos/novo" }} />
+        )
       ) : (
-        <ul className={styles.list} aria-label="Lista de programas">
-          {plans.map((plan) => (
+        <ul className={styles.list} aria-label="Seus programas">
+          {shown.map((plan) => (
             <li key={plan.id}>
-              <Link href={`/painel/treinos/planos/${plan.id}`} className={styles.row}>
-                <span className={styles.cellName}>{plan.name}</span>
-                {plan.durationWeeks ? <span className={styles.cellDays}>{plan.durationWeeks} semanas</span> : null}
+              <Link href={`/painel/treinos/planos/${plan.id}`} className={styles.card}>
+                <span className={styles.name}>{plan.name}</span>
+                <span className={styles.meta}>
+                  {plan.durationWeeks ? `${plan.durationWeeks} semanas · ` : ""}
+                  {plan.workoutCount} {plan.workoutCount === 1 ? "treino" : "treinos"} · {plan.days.length} {plan.days.length === 1 ? "dia" : "dias"} por semana
+                </span>
+                <span className={styles.strip}>
+                  <WeekStrip days={weekStripFromDays(plan.days)} label={`Semana de ${plan.name}`} />
+                </span>
               </Link>
             </li>
           ))}

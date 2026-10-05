@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { appName } from "@/shared/config/env";
+import { ToastProvider } from "@/shared/ui/Toast";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -31,7 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={manrope.variable}>
-      <body>{children}</body>
+      <body>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
