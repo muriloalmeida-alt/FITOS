@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { ActionRow, Button, useToast } from "@/shared/ui";
 import { PUSH_HINT, usePush } from "./usePush";
+import { InstallGuide, useInstallPrompt } from "./InstallGuide";
 
 /// "Notificações neste aparelho" (EPIC-31): liga, desliga e testa.
 export function PushDeviceRow({ purpose }: { purpose: string }) {
   const { state, enable, disable } = usePush();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [guide, setGuide] = useState(false);
+  const installer = useInstallPrompt();
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -42,7 +45,20 @@ export function PushDeviceRow({ purpose }: { purpose: string }) {
       })}>
         Ligar
       </Button>
+    ) : state === "install" ? (
+      <Button type="button" variant="quiet" onClick={() => setGuide(true)}>
+        Como instalar
+      </Button>
+    ) : state === "unsupported" && installer.canInstall ? (
+      <Button type="button" variant="quiet" onClick={() => void installer.install()}>
+        Instalar app
+      </Button>
     ) : null;
 
-  return <ActionRow title="Notificações neste aparelho" description={description} trailing={trailing} />;
+  return (
+    <>
+      <ActionRow title="Notificações neste aparelho" description={description} trailing={trailing} />
+      <InstallGuide open={guide} onClose={() => setGuide(false)} />
+    </>
+  );
 }
