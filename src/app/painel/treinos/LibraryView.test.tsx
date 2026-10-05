@@ -27,4 +27,29 @@ describe("Biblioteca por tempo (EPIC-32)", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Todos" }));
     expect(within(list()).getAllByRole("listitem")).toHaveLength(3);
   });
+
+  it("no FitOS Livre, usar um treino copia para Meus treinos e oferece começar agora", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ workoutIds: ["w1"] }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LibraryView mode="livre" tab="treinos" students={[]} entries={{ programas: [], treinos: [entry("Corpo todo · 30 min", 30)], aerobicos: [] }} />);
+
+    expect(screen.getByRole("link", { name: "Treinos" })).toHaveAttribute("href", "/painel/meus-treinos/biblioteca?aba=treinos");
+    expect(screen.getByRole("link", { name: "Montar meu treino" })).toHaveAttribute("href", "/painel/meus-treinos/novo");
+    await userEvent.click(screen.getByRole("button", { name: /Corpo todo · 30 min/ }));
+    expect(screen.queryByText("Aplicar para")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Editar modelo" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Usar este treino" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/livre/biblioteca", expect.objectContaining({ body: JSON.stringify({ kind: "treino", key: "Corpo todo · 30 min" }) }));
+    expect(await screen.findByRole("dialog", { name: "Está nos seus treinos" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Começar agora" })).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w1");
+    vi.unstubAllGlobals();
+  });
+
+  it("no FitOS Livre, o programa avisa que os treinos atuais vão para Arquivados", async () => {
+    render(<LibraryView mode="livre" tab="programas" students={[]} entries={{ programas: [{ ...entry("Divisão ABC · 60 min", 60), minutes: null, meta: "2 treinos + 1 aeróbico · 8 semanas" }], treinos: [], aerobicos: [] }} />);
+    await userEvent.click(screen.getByRole("button", { name: /Divisão ABC/ }));
+    expect(screen.getByText(/Seus treinos atuais vão para Arquivados/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Começar este programa" })).toBeInTheDocument();
+  });
 });
