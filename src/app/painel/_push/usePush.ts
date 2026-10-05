@@ -92,7 +92,7 @@ export function usePush() {
 }
 
 export const PUSH_HINT: Partial<Record<PushState, string>> = {
-  install: "No iPhone, toque em Compartilhar › Adicionar à Tela de Início e abra o FitOS por lá para receber avisos.",
+  install: "No iPhone, os avisos só chegam com o FitOS instalado na Tela de Início.",
   unsupported: "Este navegador não recebe notificações. Use o Chrome no Android ou instale o app no iPhone.",
   unavailable: "Notificações ainda não estão disponíveis.",
   denied: "As notificações estão bloqueadas. Libere nas configurações do navegador para este site.",

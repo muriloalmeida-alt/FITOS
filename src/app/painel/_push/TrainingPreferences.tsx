@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormAlert, useToast } from "@/shared/ui";
 import { WEEKDAYS } from "@/shared/lib/weekdays";
 import { PUSH_HINT, usePush } from "./usePush";
+import { InstallGuide } from "./InstallGuide";
 import styles from "./TrainingPreferences.module.css";
 
 const HOURS = [6, 7, 8, 12, 17, 18, 19, 20];
@@ -33,10 +34,12 @@ export function TrainingPreferences({ reminderHour, days, planDays, coachFirst }
   const [hour, setHour] = useState(reminderHour);
   const [mine, setMine] = useState(days.length > 0 ? days : planDays);
   const [error, setError] = useState<string | null>(null);
+  const [guide, setGuide] = useState(false);
 
   async function saveHour(next: number | null) {
     setError(null);
     if (next !== null && push.state !== "on") {
+      if (push.state === "install") return setGuide(true);
       const hint = PUSH_HINT[push.state];
       if (hint) return setError(hint);
       let ok: boolean;
@@ -73,6 +76,7 @@ export function TrainingPreferences({ reminderHour, days, planDays, coachFirst }
 
   return (
     <div className={styles.group}>
+      <InstallGuide open={guide} onClose={() => setGuide(false)} />
       <button type="button" className={open === "lembrete" ? `${styles.fact} ${styles.open}` : styles.fact} aria-expanded={open === "lembrete"} onClick={() => setOpen(open === "lembrete" ? null : "lembrete")}>
         <span>
           <span className={styles.label}>Lembrete de treino</span>

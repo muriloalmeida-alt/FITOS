@@ -7,6 +7,7 @@ import { STUDENT_OBJECTIVES } from "@/shared/lib/studentObjectives";
 import { PasswordField } from "../../_entrada/PasswordField";
 import { rememberAccount } from "../../_entrada/rememberedAccount";
 import { usePush } from "../../painel/_push/usePush";
+import { InstallGuide } from "../../painel/_push/InstallGuide";
 import styles from "../../_entrada/Entrada.module.css";
 
 type Hero =
@@ -22,6 +23,7 @@ export function JoinByLinkForm({ code, personalFirstName, businessName }: { code
   const router = useRouter();
   const push = usePush();
   const [step, setStep] = useState<"conta" | "objetivo" | "pronto">("conta");
+  const [guide, setGuide] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,6 +66,10 @@ export function JoinByLinkForm({ code, personalFirstName, businessName }: { code
   }
 
   async function remind() {
+    if (push.state === "install") {
+      setGuide(true);
+      return;
+    }
     try {
       if (push.state !== "on" && !(await push.enable())) {
         setReminder("fail");
@@ -128,6 +134,7 @@ export function JoinByLinkForm({ code, personalFirstName, businessName }: { code
           </Button>
         )}
         {reminder === "fail" ? <p className={styles.muted}>Sem permissão para avisar. Você pode ligar depois no Perfil.</p> : null}
+        <InstallGuide open={guide} onClose={() => setGuide(false)} />
         <Button
           type="button"
           variant="quiet"
