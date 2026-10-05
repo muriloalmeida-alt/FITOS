@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/shared/db/prisma";
+import { describeError, logEvent } from "@/shared/lib/serverLog";
 
 /// Readiness check (FIT-008): confirma que o PostgreSQL está acessível antes
 /// de considerar a instância pronta para receber tráfego. A resposta é
@@ -10,7 +11,8 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return NextResponse.json({ status: "ready" }, { status: 200 });
-  } catch {
+  } catch (error) {
+    logEvent("error", "ready_check_failed", describeError(error));
     return NextResponse.json({ status: "unavailable" }, { status: 503 });
   }
 }

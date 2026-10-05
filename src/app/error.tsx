@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { StatePanel } from "@/shared/ui/StatePanel";
+import { reportClientError } from "@/shared/lib/reportClientError";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -11,10 +12,11 @@ interface GlobalErrorProps {
 
 /// Estado de erro do segmento `app/` (FIT-171, S1 "Erro de conexão"). Nunca
 /// expõe `error.message`/stack ao usuário — só registra no console para
-/// diagnóstico. Diz que nada foi perdido e oferece "Tentar de novo".
+/// diagnóstico (no console e nos logs do servidor). Diz que nada foi perdido e oferece "Tentar de novo".
 export default function GlobalError({ error, retry }: GlobalErrorProps) {
   useEffect(() => {
     console.error(error);
+    reportClientError("app", error);
   }, [error]);
 
   return (
