@@ -3,6 +3,9 @@ import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContex
 import { completePersonalOnboarding, getPersonalOnboardingProfile, OnboardingError } from "@/modules/personal-onboarding/onboarding";
 import { listStudents } from "@/modules/students/students";
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { suggestPlan } from "@/modules/billing/suggestPlan";
+import { prisma } from "@/shared/db/prisma";
 
 const VALID_STUDENT_RANGES: PersonalStudentRangeEstimate[] = ["COMECANDO_AGORA", "ATE_20", "DE_21_A_50", "MAIS_DE_50"];
 
@@ -35,49 +38,43 @@ export async function GET() {
 /// `completePersonalOnboarding` é idempotente, então reenviar o formulário
 /// com um plano válido só atualiza o mesmo registro, nunca cria um
 /// duplicado.
+/// Cadastro mínimo do personal (EPIC-33): faixa de alunos e, se vier, nome
+/// do espaço. Celular, CPF/CNPJ e CREF são opcionais (ficam para o Perfil e
+/// para o cartão, no fim do teste). Sem `planId`, assina o plano sugerido
+/// pela faixa, com o teste grátis — sem cartão.
 export async function POST(request: Request) {
   try {
     const ctx = await requirePersonal();
     const body = await request.json().catch(() => null);
+    const optionalString = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value : undefined);
 
-    if (
-      !body ||
-      typeof body.phone !== "string" ||
-      typeof body.cpfCnpj !== "string" ||
-      !VALID_STUDENT_RANGES.includes(body.studentRangeEstimate) ||
-      typeof body.businessName !== "string" ||
-      typeof body.termsAccepted !== "boolean" ||
-      typeof body.planId !== "string" ||
-      body.planId.trim() === ""
-    ) {
-      return Response.json(
-        {
-          error: "VALIDACAO",
-          message: "Informe celular, CPF/CNPJ, faixa de alunos, nome do espaço, um plano e o aceite dos termos.",
-        },
-        { status: 400 }
-      );
+    if (!body || !VALID_STUDENT_RANGES.includes(body.studentRangeEstimate) || (body.termsAccepted !== undefined && typeof body.termsAccepted !== "boolean")) {
+      return Response.json({ error: "VALIDACAO", message: "Escolha quantos alunos você atende." }, { status: 400 });
     }
 
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId }, select: { name: true } });
     await completePersonalOnboarding({
       tenantId: ctx.tenantId,
-      phone: body.phone,
-      cref: typeof body.cref === "string" ? body.cref : undefined,
-      cpfCnpj: body.cpfCnpj,
+      phone: optionalString(body.phone),
+      cref: optionalString(body.cref),
+      cpfCnpj: optionalString(body.cpfCnpj),
       studentRangeEstimate: body.studentRangeEstimate,
-      businessName: body.businessName,
-      termsAccepted: body.termsAccepted,
+      businessName: optionalString(body.businessName) ?? tenant.name,
+      // Os termos são aceitos ao criar a conta (FIT-164).
+      termsAccepted: body.termsAccepted ?? true,
     });
 
-    await subscribeTenantToPlan({
-      tenantId: ctx.tenantId,
-      tenantType: "PERSONAL",
-      planId: body.planId,
-      actorUserId: ctx.userId,
-    });
+    const planId = optionalString(body.planId) ?? suggestPlan(await listActivePlansForAudience("PERSONAL"), body.studentRangeEstimate)?.id;
+    if (!planId) {
+      return Response.json({ error: "NAO_ENCONTRADO", message: "Nenhum plano disponível no momento." }, { status: 404 });
+    }
+    const existing = await prisma.saasSubscription.findUnique({ where: { tenantId: ctx.tenantId }, select: { planId: true } });
+    if (!existing || existing.planId !== planId) {
+      await subscribeTenantToPlan({ tenantId: ctx.tenantId, tenantType: "PERSONAL", planId, actorUserId: ctx.userId });
+    }
 
     const students = await listStudents({ tenantId: ctx.tenantId, pageSize: 1 });
-    const redirectTo = students.total === 0 ? "/painel/alunos?novo=1" : "/painel";
+    const redirectTo = students.total === 0 ? "/painel/primeiros-passos" : "/painel";
     return Response.json({ redirectTo }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);

@@ -107,6 +107,7 @@ export function StudentProfile({ student, access, program, programs, week, sessi
         <div>
           <p className={styles.muted}>
             {student.status === "ATIVO" ? `Ativo · aluno desde ${student.sinceLabel}` : student.status === "INATIVO" ? "Inativo" : `Vínculo encerrado em ${student.endedLabel}`}
+            {student.objective ? ` · objetivo: ${student.objective.toLowerCase()}` : ""}
           </p>
         </div>
       </div>

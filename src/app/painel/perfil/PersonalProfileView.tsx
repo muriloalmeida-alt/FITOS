@@ -10,13 +10,14 @@ import { STUDENT_RANGE_OPTIONS, studentRangeLabel } from "@/modules/personal-onb
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
 import { PushDeviceRow } from "../_push/PushDeviceRow";
+import { PasskeyRow } from "../_push/PasskeyRow";
 import styles from "./PersonalProfileView.module.css";
 
 interface PersonalProfileViewProps {
   name: string;
   email: string;
   businessName: string;
-  phone: string;
+  phone: string | null;
   cref: string | null;
   studentRange: PersonalStudentRangeEstimate;
   /// "Seu negócio": resumos já formatados no servidor.
@@ -37,14 +38,14 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState(props.businessName);
-  const [phone, setPhone] = useState(formatBrazilianPhone(props.phone));
+  const [phone, setPhone] = useState(formatBrazilianPhone(props.phone ?? ""));
   const [cref, setCref] = useState(props.cref ?? "");
   const [range, setRange] = useState<PersonalStudentRangeEstimate>(props.studentRange);
   const [name, setName] = useState(props.name);
 
   function open(kind: Exclude<SheetKind, null>) {
     setBusinessName(props.businessName);
-    setPhone(formatBrazilianPhone(props.phone));
+    setPhone(formatBrazilianPhone(props.phone ?? ""));
     setCref(props.cref ?? "");
     setRange(props.studentRange);
     setName(props.name);
@@ -116,7 +117,7 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
         <li>
           <ActionRow
             title="Perfil profissional"
-            description={`${formatBrazilianPhone(props.phone)} · ${props.cref ? `CREF ${props.cref}` : "sem CREF"} · ${studentRangeLabel(props.studentRange)}`}
+            description={`${props.phone ? formatBrazilianPhone(props.phone) : "sem celular"} · ${props.cref ? `CREF ${props.cref}` : "sem CREF"} · ${studentRangeLabel(props.studentRange)}`}
             trailing={edit("professional", "Editar perfil profissional")}
           />
         </li>
@@ -130,6 +131,9 @@ export function PersonalProfileView(props: PersonalProfileViewProps) {
 
       <h2 className={styles.cap}>Conta</h2>
       <ul className={styles.list}>
+        <li>
+          <PasskeyRow />
+        </li>
         <li>
           <ActionRow href="/termos-de-uso" title="Termos de uso" trailing={<span aria-hidden="true">›</span>} />
         </li>

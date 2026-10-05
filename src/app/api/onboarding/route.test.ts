@@ -29,6 +29,11 @@ vi.mock("@/modules/individual-onboarding/onboarding", async () => {
 const createStarterPlanForIndividual = vi.fn(async () => ({ created: 2 }));
 vi.mock("@/modules/individual-onboarding/starterPlan", () => ({ createStarterPlanForIndividual: (...args: unknown[]) => createStarterPlanForIndividual(...(args as [])) }));
 
+const listPlans = vi.fn(async () => [{ id: "plan-individual-livre-v2" }]);
+const findSubscription = vi.fn(async () => null);
+vi.mock("@/modules/billing/plans", () => ({ listActivePlansForAudience: (...args: unknown[]) => listPlans(...(args as [])) }));
+vi.mock("@/shared/db/prisma", () => ({ prisma: { saasSubscription: { findUnique: (...args: unknown[]) => findSubscription(...(args as [])) } } }));
+
 vi.mock("@/modules/billing/subscriptions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
   return { ...actual, subscribeTenantToPlan: (...args: unknown[]) => subscribeTenantToPlan(...args) };
@@ -163,44 +168,36 @@ describe("POST /api/onboarding", () => {
     expect(completeIndividualOnboarding).not.toHaveBeenCalled();
   });
 
-  it("retorna 400 quando termsAccepted não é enviado como booleano", async () => {
+  it("retorna 400 quando termsAccepted vem com tipo errado", async () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
-
     const { POST } = await import("./route");
     const response = await POST(
       new Request("http://localhost/api/onboarding", {
         method: "POST",
-        body: JSON.stringify({
-          objective: "GANHAR_MASSA",
-          experienceLevel: "INICIANTE",
-          weeklyAvailability: "UM_A_DOIS_DIAS",
-          planId: "plan-individual-livre-v2",
-        }),
+        body: JSON.stringify({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "UM_A_DOIS_DIAS", termsAccepted: "sim" }),
       })
     );
-
     expect(response.status).toBe(400);
     expect(completeIndividualOnboarding).not.toHaveBeenCalled();
   });
 
-  it("retorna 400 quando planId está ausente, mesmo com os demais campos válidos", async () => {
+  it("só as três respostas (EPIC-33): sem CPF nem plano, assina o plano do Livre com teste grátis e monta o plano inicial", async () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
-
+    completeIndividualOnboarding.mockResolvedValue({ id: "p1" });
+    subscribeTenantToPlan.mockResolvedValue({});
+    listPlans.mockResolvedValue([{ id: "plan-livre" }]);
+    findSubscription.mockResolvedValue(null);
     const { POST } = await import("./route");
     const response = await POST(
       new Request("http://localhost/api/onboarding", {
         method: "POST",
-        body: JSON.stringify({
-          objective: "GANHAR_MASSA",
-          experienceLevel: "INICIANTE",
-          weeklyAvailability: "UM_A_DOIS_DIAS",
-          termsAccepted: true,
-        }),
+        body: JSON.stringify({ objective: "PERDER_PESO", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS" }),
       })
     );
-
-    expect(response.status).toBe(400);
-    expect(completeIndividualOnboarding).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(completeIndividualOnboarding).toHaveBeenCalledWith(expect.objectContaining({ cpfCnpj: undefined, termsAccepted: true }));
+    expect(subscribeTenantToPlan).toHaveBeenCalledWith({ tenantId: "tenant-real", tenantType: "INDIVIDUAL", planId: "plan-livre", actorUserId: "u1" });
+    expect(createStarterPlanForIndividual).toHaveBeenCalled();
   });
 
   it("retorna 400 com o motivo quando o domínio rejeita", async () => {

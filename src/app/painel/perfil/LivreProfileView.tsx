@@ -9,6 +9,7 @@ import { requestJson } from "../_workout-builder/apiClient";
 import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../individualProfileLabels";
 import { LogoutButton } from "../LogoutButton";
 import { TrainingPreferences } from "../_push/TrainingPreferences";
+import { PasskeyRow } from "../_push/PasskeyRow";
 import styles from "./PersonalProfileView.module.css";
 
 interface LivreProfileViewProps {
@@ -173,6 +174,9 @@ export function LivreProfileView(props: LivreProfileViewProps) {
 
       <h2 className={styles.cap}>Conta</h2>
       <ul className={styles.list}>
+        <li>
+          <PasskeyRow />
+        </li>
         <li>
           <ActionRow href="/termos-de-uso" title="Termos de uso" trailing={<span aria-hidden="true">›</span>} />
         </li>

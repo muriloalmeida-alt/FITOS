@@ -2,6 +2,7 @@
 
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 import type { auth } from "./auth";
 
 /// Cliente do Better Auth para uso em componentes client-side (formulários
@@ -16,7 +17,7 @@ import type { auth } from "./auth";
 /// só usa esse tipo para tipar `role` em `signUp.email` (FIT-101) — sem
 /// isso, o TypeScript rejeitaria passar `role` por não conhecer o campo.
 export const authClient = createAuthClient({
-  plugins: [inferAdditionalFields<typeof auth>()],
+  plugins: [inferAdditionalFields<typeof auth>(), passkeyClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

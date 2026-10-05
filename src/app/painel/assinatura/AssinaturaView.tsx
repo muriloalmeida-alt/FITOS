@@ -22,6 +22,7 @@ import {
 } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { formatBrazilianPhone } from "@/shared/lib/brazilianPhone";
+import { formatCpfCnpj, isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import { requestJson } from "../_workout-builder/apiClient";
 import styles from "./AssinaturaView.module.css";
 
@@ -58,6 +59,8 @@ interface AssinaturaViewProps {
   usage: { active: number; limit: number | null } | null;
   /// Celular do cadastro, usado no cartão sem pedir de novo (FIT-150).
   profilePhone: string | null;
+  /// EPIC-33: o teste começa sem CPF/CNPJ; ele é pedido junto com o cartão.
+  needsCpf?: boolean;
 }
 
 const STATE_TAG: Record<SubscriptionState, { label: string; tone: TagTone }> = {
@@ -72,7 +75,7 @@ const CANCEL_REASONS = ["Está caro", "Parei de atender", "Faltou algum recurso"
 /// Assinatura FitOS (FIT-150, P8 do protótipo): plano, status, teste
 /// grátis, próxima cobrança e uso de alunos; cartão, troca de plano,
 /// cancelamento e "Assinar de novo" (BK-18), cada um numa sheet.
-export function AssinaturaView({ subscription, plans, usage, profilePhone }: AssinaturaViewProps) {
+export function AssinaturaView({ subscription, plans, usage, profilePhone, needsCpf = false }: AssinaturaViewProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "card" | "plan" | "cancel">(null);
@@ -80,6 +83,8 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
   const [error, setError] = useState<string | null>(null);
   const [card, setCard] = useState<CreditCardFieldsValue>(EMPTY_CREDIT_CARD_FIELDS);
   const [cardErrors, setCardErrors] = useState<CreditCardFieldErrors>({});
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [cpfError, setCpfError] = useState<string | undefined>(undefined);
   const [pickedPlan, setPickedPlan] = useState<PlanChoice | null>(null);
   const [reason, setReason] = useState<string | null>(null);
   const [otherReason, setOtherReason] = useState("");
@@ -244,15 +249,17 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
         open={sheet === "card"}
         onClose={close}
         title={subscription?.card ? "Atualizar cartão" : "Cadastrar cartão"}
-        description={profilePhone ? "CPF/CNPJ e celular vêm do seu cadastro." : "CPF/CNPJ vem do seu cadastro."}
+        description={needsCpf ? "A primeira cobrança só acontece no fim do teste grátis." : profilePhone ? "CPF/CNPJ e celular vêm do seu cadastro." : "CPF/CNPJ vem do seu cadastro."}
         footer={
           <>
             <Button type="button" block disabled={busy} onClick={() => {
               const errors = validateCreditCardFields(card);
               setCardErrors(errors);
-              if (Object.keys(errors).length > 0) return;
+              const badCpf = needsCpf && !isValidCpfCnpj(cpfCnpj) ? "Informe um CPF ou CNPJ válido." : undefined;
+              setCpfError(badCpf);
+              if (Object.keys(errors).length > 0 || badCpf) return;
               void run(async () => {
-                await requestJson("/api/tenancy/minha-assinatura/cartao", { method: "POST", body: JSON.stringify(card) });
+                await requestJson("/api/tenancy/minha-assinatura/cartao", { method: "POST", body: JSON.stringify(needsCpf ? { ...card, cpfCnpj } : card) });
                 toast.show("Cartão salvo");
                 setCard(EMPTY_CREDIT_CARD_FIELDS);
                 close();
@@ -268,6 +275,7 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone }: Ass
         }
       >
         {error ? <FormAlert>{error}</FormAlert> : null}
+        {needsCpf ? <TextField label="CPF ou CNPJ" name="cpfCnpj" inputMode="numeric" value={cpfCnpj} onChange={(event) => setCpfCnpj(formatCpfCnpj(event.target.value))} error={cpfError} /> : null}
         <CreditCardFields value={card} onChange={setCard} errors={cardErrors} hidePhone={profilePhone !== null} />
       </Sheet>
 

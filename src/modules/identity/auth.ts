@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { passkey } from "@better-auth/passkey";
 import * as z from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
@@ -30,6 +31,10 @@ function requiredEnv(name: string): string {
     );
   }
   return value;
+}
+
+function passkeyRpId(): string {
+  return new URL(requiredEnv("BETTER_AUTH_URL")).hostname;
 }
 
 export const auth = betterAuth({
@@ -130,7 +135,12 @@ export const auth = betterAuth({
   // último plugin da lista (exigência do próprio Better Auth) para
   // interceptar as respostas de Server Actions e propagar os cookies de
   // sessão corretamente no App Router.
-  plugins: [nextCookies()],
+  plugins: [
+    // EPIC-33: entrar com digital, Face ID ou o bloqueio do aparelho. O
+    // domínio do passkey é o do BETTER_AUTH_URL (produção ou localhost).
+    passkey({ rpID: passkeyRpId(), rpName: "FitOS", origin: new URL(requiredEnv("BETTER_AUTH_URL")).origin }),
+    nextCookies(),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

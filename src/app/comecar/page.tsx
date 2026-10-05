@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { appName } from "@/shared/config/env";
 import { Button } from "@/shared/ui";
-import { NavIcon, type NavIconName } from "@/shared/ui/NavIcon";
 import { EntradaShell } from "../_entrada/EntradaShell";
 import styles from "../_entrada/Entrada.module.css";
 import { ConviteEntrada } from "./ConviteEntrada";
-import { CriarContaForm } from "./CriarContaForm";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { LivreComecar } from "./LivreComecar";
+import { PersonalComecar } from "./PersonalComecar";
 
 export const metadata: Metadata = {
   title: `Começar — ${appName}`,
@@ -15,10 +16,10 @@ export const metadata: Metadata = {
 
 type Caminho = "personal" | "convite" | "livre";
 
-const CAMINHOS: { key: Caminho; title: string; description: string; icon: NavIconName }[] = [
-  { key: "personal", title: "Sou personal", description: "Alunos, treinos e mensalidades num lugar só.", icon: "alunos" },
-  { key: "convite", title: "Tenho convite", description: "Meu personal me mandou um código ou link.", icon: "novo" },
-  { key: "livre", title: "Treino por conta", description: "Monto meus treinos e registro tudo no FitOS Livre.", icon: "treinos" },
+const CAMINHOS: { key: Caminho; kicker: string; title: string; description: string }[] = [
+  { key: "personal", kicker: "Sou personal", title: "Dar treino aos meus alunos", description: "Seu primeiro aluno recebe o treino hoje." },
+  { key: "convite", kicker: "Tenho personal", title: "Treinar com meu personal", description: "Abra o link que ele mandou ou cole o código." },
+  { key: "livre", kicker: "FitOS Livre", title: "Treinar por conta", description: "Três toques e seu plano está pronto." },
 ];
 
 /// `?modo=` antigo (FIT-101/112, links já publicados) continua valendo.
@@ -29,29 +30,22 @@ function caminhoFrom(params: { caminho?: string; modo?: string }): Caminho | nul
   return null;
 }
 
-/// Começar (FIT-164, E3 do protótipo): três caminhos em cartões; o
-/// convite aceita código ou link; criar conta é uma tela só e segue para o
-/// onboarding do papel escolhido.
+/// Começar (EPIC-33, E2): "o que você quer fazer?", com o resultado de cada
+/// caminho. Personal: uma pergunta e a conta. Convite: código ou link.
+/// Livre: três toques, o plano e só então a conta.
 export default async function ComecarPage({ searchParams }: { searchParams?: Promise<{ caminho?: string; modo?: string }> } = {}) {
   const caminho = caminhoFrom((await searchParams) ?? {});
 
   if (!caminho) {
     return (
       <EntradaShell>
-        <div>
-          <p className={styles.eyebrow}>Começar</p>
-          <h1 className={styles.title}>Escolha seu caminho</h1>
-        </div>
+        <h1 className={styles.title}>O que você quer fazer?</h1>
         <nav className={styles.cards} aria-label="Caminhos">
           {CAMINHOS.map((entry) => (
-            <Link key={entry.key} href={`/comecar?caminho=${entry.key}`} className={styles.card}>
-              <span className={styles.cardIcon} aria-hidden="true">
-                <NavIcon name={entry.icon} />
-              </span>
-              <span className={styles.cardText}>
-                <span className={styles.cardTitle}>{entry.title}</span>
-                <span className={styles.muted}>{entry.description}</span>
-              </span>
+            <Link key={entry.key} href={`/comecar?caminho=${entry.key}`} className={styles.action}>
+              <span className={styles.actionKicker}>{entry.kicker}</span>
+              <span className={styles.actionTitle}>{entry.title}</span>
+              <span className={styles.muted}>{entry.description}</span>
             </Link>
           ))}
         </nav>
@@ -66,7 +60,7 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
     return (
       <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
         <div>
-          <p className={styles.eyebrow}>Tenho convite</p>
+          <p className={styles.eyebrow}>Tenho personal</p>
           <h1 className={styles.title}>Cole seu convite</h1>
         </div>
         <ConviteEntrada />
@@ -77,13 +71,22 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
     );
   }
 
+  if (caminho === "personal") {
+    const plans = await listActivePlansForAudience("PERSONAL");
+    return (
+      <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+        <PersonalComecar plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} />
+        <p className={styles.muted}>
+          Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
+        </p>
+      </EntradaShell>
+    );
+  }
+
+  const plan = (await listActivePlansForAudience("INDIVIDUAL"))[0] ?? null;
   return (
     <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
-      <div>
-        <p className={styles.eyebrow}>{caminho === "personal" ? "Sou personal" : "FitOS Livre"}</p>
-        <h1 className={styles.title}>Crie sua conta</h1>
-      </div>
-      <CriarContaForm mode={caminho === "personal" ? "personal" : "individual"} />
+      <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} />
       <p className={styles.muted}>
         Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
       </p>

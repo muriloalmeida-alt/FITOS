@@ -5,6 +5,14 @@ const completePersonalOnboarding = vi.fn();
 const getPersonalOnboardingProfile = vi.fn();
 const listStudents = vi.fn();
 const subscribeTenantToPlan = vi.fn();
+const listPlans = vi.fn();
+const findTenant = vi.fn();
+const findSubscription = vi.fn();
+
+vi.mock("@/modules/billing/plans", () => ({ listActivePlansForAudience: (...args: unknown[]) => listPlans(...args) }));
+vi.mock("@/shared/db/prisma", () => ({
+  prisma: { tenant: { findUniqueOrThrow: (...args: unknown[]) => findTenant(...args) }, saasSubscription: { findUnique: (...args: unknown[]) => findSubscription(...args) } },
+}));
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
@@ -71,175 +79,73 @@ describe("GET /api/onboarding-personal", () => {
   });
 });
 
-describe("POST /api/onboarding-personal", () => {
+describe("POST /api/onboarding-personal (cadastro mínimo, EPIC-33)", () => {
   afterEach(() => {
     vi.resetAllMocks();
   });
 
+  function post(body: unknown) {
+    return new Request("http://x/api/onboarding-personal", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  function setup(students = 0, existingPlanId: string | null = null) {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    findTenant.mockResolvedValue({ name: "Studio Murilo" });
+    findSubscription.mockResolvedValue(existingPlanId ? { planId: existingPlanId } : null);
+    listPlans.mockResolvedValue([
+      { id: "p20", studentLimit: 20, priceCents: 4990 },
+      { id: "p50", studentLimit: 50, priceCents: 6990 },
+      { id: "pinf", studentLimit: null, priceCents: 9990 },
+    ]);
+    listStudents.mockResolvedValue({ total: students });
+    completePersonalOnboarding.mockResolvedValue({});
+    subscribeTenantToPlan.mockResolvedValue({});
+  }
+
   it("retorna 401 quando não há sessão", async () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
     requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
-
     const { POST } = await import("./route");
-    const response = await POST(new Request("http://localhost/api/onboarding-personal", { method: "POST", body: "{}" }));
-
-    expect(response.status).toBe(401);
+    expect((await POST(post({ studentRangeEstimate: "ATE_20" }))).status).toBe(401);
   });
 
-  it("conclui usando o tenantId da sessão, ignorando tenantId do corpo; redireciona para cadastrar o primeiro aluno quando o tenant não tem nenhum", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
-    subscribeTenantToPlan.mockResolvedValue({ id: "sub1" });
-    listStudents.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 1 });
-
+  it("só a faixa de alunos: conclui com o nome do espaço atual, assina o plano sugerido (teste sem cartão) e leva aos primeiros passos", async () => {
+    setup();
     const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: "(11) 91234-5678",
-          cpfCnpj: "111.444.777-35",
-          studentRangeEstimate: "COMECANDO_AGORA",
-          businessName: "Meu Espaço",
-          termsAccepted: true,
-          planId: "plan-personal-20",
-          tenantId: "tenant-adulterado",
-        }),
-      })
-    );
-    const body = await response.json();
-
+    const response = await POST(post({ studentRangeEstimate: "DE_21_A_50", tenantId: "outro" }));
     expect(response.status).toBe(201);
-    expect(body).toEqual({ redirectTo: "/painel/alunos?novo=1" });
-    expect(completePersonalOnboarding).toHaveBeenCalledWith({
-      tenantId: "tenant-real",
-      phone: "(11) 91234-5678",
-      cref: undefined,
-      cpfCnpj: "111.444.777-35",
-      studentRangeEstimate: "COMECANDO_AGORA",
-      businessName: "Meu Espaço",
-      termsAccepted: true,
-    });
-    expect(subscribeTenantToPlan).toHaveBeenCalledWith({
-      tenantId: "tenant-real",
-      tenantType: "PERSONAL",
-      planId: "plan-personal-20",
-      actorUserId: "u1",
-    });
+    expect(await response.json()).toEqual({ redirectTo: "/painel/primeiros-passos" });
+    expect(completePersonalOnboarding).toHaveBeenCalledWith({ tenantId: "tenant-real", phone: undefined, cref: undefined, cpfCnpj: undefined, studentRangeEstimate: "DE_21_A_50", businessName: "Studio Murilo", termsAccepted: true });
+    expect(subscribeTenantToPlan).toHaveBeenCalledWith({ tenantId: "tenant-real", tenantType: "PERSONAL", planId: "p50", actorUserId: "u1" });
   });
 
-  it("redireciona para /painel quando o tenant já tem pelo menos um aluno", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
-    subscribeTenantToPlan.mockResolvedValue({ id: "sub1" });
-    listStudents.mockResolvedValue({ items: [], total: 3, page: 1, pageSize: 1 });
-
+  it("aceita nome do espaço e plano escolhidos; não assina de novo o mesmo plano; com alunos vai ao Início", async () => {
+    setup(3, "pinf");
     const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: "(11) 91234-5678",
-          cpfCnpj: "111.444.777-35",
-          studentRangeEstimate: "MAIS_DE_50",
-          businessName: "Meu Espaço",
-          termsAccepted: true,
-          planId: "plan-personal-ilimitado-v2",
-        }),
-      })
-    );
-    const body = await response.json();
-
-    expect(body).toEqual({ redirectTo: "/painel" });
+    const response = await POST(post({ studentRangeEstimate: "MAIS_DE_50", businessName: "Equipe M", planId: "pinf" }));
+    expect(await response.json()).toEqual({ redirectTo: "/painel" });
+    expect(completePersonalOnboarding).toHaveBeenCalledWith(expect.objectContaining({ businessName: "Equipe M" }));
+    expect(subscribeTenantToPlan).not.toHaveBeenCalled();
   });
 
-  it("retorna 400 quando faltam ou são inválidos os campos obrigatórios", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-
+  it("400 sem faixa de alunos; erro de domínio vira 400 com o motivo", async () => {
+    setup();
     const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", { method: "POST", body: JSON.stringify({ phone: "(11) 91234-5678" }) })
-    );
-
-    expect(response.status).toBe(400);
-    expect(completePersonalOnboarding).not.toHaveBeenCalled();
-  });
-
-  it("retorna 400 quando planId está ausente, mesmo com os demais campos válidos", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-
-    const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: "(11) 91234-5678",
-          studentRangeEstimate: "ATE_20",
-          businessName: "Meu Espaço",
-          termsAccepted: true,
-        }),
-      })
-    );
-
-    expect(response.status).toBe(400);
-    expect(completePersonalOnboarding).not.toHaveBeenCalled();
-  });
-
-  it("retorna 400 com o motivo quando o domínio rejeita", async () => {
-    const { OnboardingError } = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>(
-      "@/modules/personal-onboarding/onboarding"
-    );
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    expect((await POST(post({}))).status).toBe(400);
+    const { OnboardingError } = await vi.importActual<typeof import("@/modules/personal-onboarding/onboarding")>("@/modules/personal-onboarding/onboarding");
     completePersonalOnboarding.mockRejectedValue(new OnboardingError("VALIDACAO", "Informe um celular válido, com DDD."));
-
-    const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: "123",
-          cpfCnpj: "111.444.777-35",
-          studentRangeEstimate: "ATE_20",
-          businessName: "Nome",
-          termsAccepted: true,
-          planId: "plan-personal-20",
-        }),
-      })
-    );
-    const body = await response.json();
-
+    const response = await POST(post({ studentRangeEstimate: "ATE_20", phone: "123" }));
     expect(response.status).toBe(400);
-    expect(body.error).toBe("VALIDACAO");
+    expect(await response.json()).toMatchObject({ message: "Informe um celular válido, com DDD." });
   });
 
-  it("retorna o erro de assinatura quando o plano é rejeitado (ex.: downgrade acima do limite), sem quebrar depois de salvar o perfil", async () => {
-    const { SubscriptionError } = await vi.importActual<typeof import("@/modules/billing/subscriptions")>(
-      "@/modules/billing/subscriptions"
-    );
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    completePersonalOnboarding.mockResolvedValue({ id: "p1", tenantId: "tenant-real" });
-    subscribeTenantToPlan.mockRejectedValue(
-      new SubscriptionError("LIMITE_ABAIXO_DO_USO_ATUAL", "Você tem mais alunos ativos do que este plano permite.")
-    );
-
+  it("erro de assinatura (ex.: limite abaixo do uso) vira 409, depois de salvar o perfil", async () => {
+    setup();
+    const { SubscriptionError } = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
+    subscribeTenantToPlan.mockRejectedValue(new SubscriptionError("LIMITE_ABAIXO_DO_USO_ATUAL", "Você tem 25 alunos."));
     const { POST } = await import("./route");
-    const response = await POST(
-      new Request("http://localhost/api/onboarding-personal", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: "(11) 91234-5678",
-          cpfCnpj: "111.444.777-35",
-          studentRangeEstimate: "MAIS_DE_50",
-          businessName: "Meu Espaço",
-          termsAccepted: true,
-          planId: "plan-personal-20",
-        }),
-      })
-    );
-    const body = await response.json();
-
+    const response = await POST(post({ studentRangeEstimate: "ATE_20" }));
     expect(response.status).toBe(409);
-    expect(body.error).toBe("LIMITE_ABAIXO_DO_USO_ATUAL");
-    expect(completePersonalOnboarding).toHaveBeenCalledTimes(1);
+    expect(completePersonalOnboarding).toHaveBeenCalled();
   });
 });

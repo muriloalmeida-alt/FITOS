@@ -119,6 +119,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           sinceLabel: monthFmt.format(student.createdAt),
           endedLabel: student.endedAt ? dateFmt.format(student.endedAt) : null,
           endReason: student.endReason,
+          objective: student.objective,
         }}
         access={{ status: accessStatus, daysLeft: accessStatus === "CONVITE_PENDENTE" && invitation ? daysUntil(invitation.expiresAt) : null }}
         program={

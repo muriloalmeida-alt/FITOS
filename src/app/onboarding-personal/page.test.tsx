@@ -61,7 +61,7 @@ describe("OnboardingPersonalPage (FIT-113)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("personal autenticado: renderiza o wizard, pré-preenchido com o nome atual do tenant e o catálogo real de planos", async () => {
+  it("personal autenticado sem cadastro concluído: só \"quantos alunos hoje?\" (EPIC-33)", async () => {
     getServerSession.mockResolvedValue({ user: { id: "u1" } });
     getAuthContext.mockResolvedValue({ authenticated: true, role: "PERSONAL", userId: "u1", tenantId: "t1", studentId: null });
     findUniqueOrThrowTenant.mockResolvedValue({ id: "t1", name: "Espaço de Fulano" });
@@ -73,8 +73,9 @@ describe("OnboardingPersonalPage (FIT-113)", () => {
     const { default: OnboardingPersonalPage } = await import("./page");
     render(await OnboardingPersonalPage());
 
-    expect(screen.getByText(/Passo 1 de 4/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Nome do espaço")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Quantos alunos hoje?" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Até 20 alunos.*Personal 20/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Nome do espaço")).not.toBeInTheDocument();
     expect(listActivePlansForAudience).toHaveBeenCalledWith("PERSONAL");
     expect(redirect).not.toHaveBeenCalled();
   });

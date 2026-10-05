@@ -3,21 +3,17 @@ import { redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
 import { getServerSession } from "@/modules/identity/session";
 import { getAuthContext } from "@/modules/tenancy/authContext";
-import { prisma } from "@/shared/db/prisma";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
-import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { EntradaShell } from "../_entrada/EntradaShell";
-import { PersonalOnboardingWizard } from "./PersonalOnboardingWizard";
+import { PersonalComecar } from "../comecar/PersonalComecar";
 
 export const metadata: Metadata = {
-  title: `Configurar seu espaço — ${appName}`,
+  title: `Seu espaço — ${appName}`,
 };
 
-/// Onboarding profissional do Personal (FIT-113, EPIC-14, seção 7 do
-/// pacote) — mesmo padrão de guard server-side de `/onboarding` (FIT-101):
-/// só `PERSONAL`, quem não está autenticado vai para `/entrar`, quem está
-/// autenticado com outro papel vai para `/painel` (não é o onboarding
-/// dessa pessoa).
+/// Retomar o cadastro do personal (EPIC-33): quem criou a conta mas não
+/// concluiu responde só "quantos alunos hoje?" e segue para o primeiro
+/// aluno. Só `PERSONAL`; sem sessão vai para `/entrar`.
 export default async function OnboardingPersonalPage() {
   const [session, ctx] = await Promise.all([getServerSession(), getAuthContext()]);
 
@@ -28,27 +24,10 @@ export default async function OnboardingPersonalPage() {
     redirect("/painel");
   }
 
-  const [tenant, plans, subscription] = await Promise.all([
-    prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId } }),
-    listActivePlansForAudience("PERSONAL"),
-    getSubscriptionForTenant(ctx.tenantId),
-  ]);
-
+  const plans = await listActivePlansForAudience("PERSONAL");
   return (
     <EntradaShell>
-      <PersonalOnboardingWizard
-        initialBusinessName={tenant.name}
-        plans={plans.map((plan) => ({
-          id: plan.id,
-          name: plan.name,
-          description: plan.description,
-          priceCents: plan.priceCents,
-          billingCycle: plan.billingCycle,
-          studentLimit: plan.studentLimit,
-          trialDays: plan.trialDays,
-        }))}
-        initialPlanId={subscription?.planId ?? null}
-      />
+      <PersonalComecar signedIn plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} />
     </EntradaShell>
   );
 }

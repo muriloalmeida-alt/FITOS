@@ -55,12 +55,26 @@ function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activ
   if (!subscription) return { tone: "warn", text: "Você ainda não tem um plano.", cta: "Escolher plano" };
   if (subscription.status === "CANCELADA") return { tone: "warn", text: "Sua assinatura foi cancelada.", cta: "Assinar de novo" };
   if (subscription.status === "INADIMPLENTE") return { tone: "warn", text: "Pagamento da assinatura pendente.", cta: "Resolver" };
+  // EPIC-33: o teste começa sem cartão; o aviso pede o cartão perto do fim.
+  const needsCard = subscription.plan.priceCents > 0 && !subscription.creditCardLast4;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
     const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
-    return { tone: "trial", text: `Teste grátis · ${days === 1 ? "último dia" : `${days} dias restantes`}`, cta: "Ver planos" };
+    const left = days === 1 ? "último dia" : `${days} dias restantes`;
+    if (needsCard && days <= 7) return { tone: "warn", text: `Teste grátis · ${left}`, cta: "Cadastrar cartão" };
+    return { tone: "trial", text: `Teste grátis · ${left}`, cta: needsCard ? "Cadastrar cartão" : "Ver planos" };
   }
+  if (needsCard) return { tone: "warn", text: "Seu teste grátis acabou.", cta: "Cadastrar cartão" };
   const limit = subscription.plan.studentLimit;
   return { tone: "ok", text: limit ? `${subscription.plan.name} · ${Math.max(0, limit - activeStudents)} vagas livres` : `${subscription.plan.name} · alunos sem limite`, cta: "Assinatura" };
+}
+
+/// Aviso do FitOS Livre (EPIC-33): só na última semana do teste sem
+/// cartão ou depois que ele acaba sem cartão.
+function livreTrialNotice(subscription: SaasSubscriptionWithPlan | null, now: Date): string | null {
+  if (!subscription || subscription.status !== "ATIVA" || subscription.plan.priceCents <= 0 || subscription.creditCardLast4) return null;
+  if (!subscription.trialEndsAt || subscription.trialEndsAt <= now) return "Seu teste grátis acabou. Cadastre o cartão para continuar.";
+  const days = Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000);
+  return days <= 7 ? `${days <= 1 ? "Último dia" : `Faltam ${days} dias`} de teste grátis. Cadastre o cartão para continuar.` : null;
 }
 
 /// Única rota autenticada (FIT-012): o shell exibido (personal ou aluno) é
@@ -132,8 +146,8 @@ export default async function PainelPage() {
       redirect("/onboarding");
     }
     const now = new Date();
-    const home = await getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now });
-    return <IndividualHome name={session.user.name} greeting={greetingForHour(hourInProductTimeZone(now))} dateLabel={dateLabelFor(now)} home={home} todayIso={now.toISOString()} />;
+    const [home, subscription] = await Promise.all([getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now }), getSubscriptionForTenant(ctx.tenantId)]);
+    return <IndividualHome name={session.user.name} greeting={greetingForHour(hourInProductTimeZone(now))} dateLabel={dateLabelFor(now)} home={home} todayIso={now.toISOString()} trialNotice={livreTrialNotice(subscription, now)} />;
   }
 
   if (!ctx.studentId) {

@@ -5,6 +5,9 @@ import { prisma } from "@/shared/db/prisma";
 import { activateStudentAccount } from "@/modules/identity/activation";
 import { createStudent } from "./students";
 import { generateInvitation } from "./invitations";
+import { applyLibraryItem } from "@/modules/library/library";
+import { createChargeRecurrence } from "@/modules/student-finance/charges";
+import { describeError, logEvent } from "@/shared/lib/serverLog";
 
 /// Link de convite do personal (EPIC-29): um código fixo por espaço
 /// (`/c/<código>`). Quem abre o link cria a própria conta de aluno, com o
@@ -43,13 +46,14 @@ export interface InviteLinkInfo {
   tenantId: string;
   businessName: string;
   personalName: string;
+  cref: string | null;
 }
 
 export async function getInviteLink(code: string, client: PrismaClient = prisma): Promise<InviteLinkInfo | null> {
   if (!/^[a-z0-9]{6,16}$/.test(code)) return null;
-  const tenant = await client.tenant.findUnique({ where: { inviteCode: code }, select: { id: true, name: true, type: true, owner: { select: { name: true } } } });
+  const tenant = await client.tenant.findUnique({ where: { inviteCode: code }, select: { id: true, name: true, type: true, owner: { select: { name: true } }, personalProfile: { select: { cref: true } } } });
   if (!tenant || tenant.type !== "PERSONAL") return null;
-  return { tenantId: tenant.id, businessName: tenant.name, personalName: tenant.owner.name };
+  return { tenantId: tenant.id, businessName: tenant.name, personalName: tenant.owner.name, cref: tenant.personalProfile?.cref ?? null };
 }
 
 export class InviteLinkError extends Error {
@@ -79,10 +83,76 @@ export async function joinByInviteLink(
   try {
     const { rawToken } = await generateInvitation({ tenantId: link.tenantId, studentId: student.id, actorUserId: owner.ownerId }, client);
     const result = await activateStudentAccount({ token: rawToken, password: input.password }, { client, authInstance });
+    await applyInviteDefaults({ tenantId: link.tenantId, studentId: student.id, actorUserId: owner.ownerId }, client);
     return { studentId: student.id, headers: result.headers };
   } catch (error) {
     await client.invitation.deleteMany({ where: { studentId: student.id } }).catch(() => undefined);
     await client.student.delete({ where: { id: student.id } }).catch(() => undefined);
     throw error;
+  }
+}
+
+export interface InviteDefaults {
+  programId: string | null;
+  programName: string | null;
+  feeCents: number | null;
+  feeDay: number | null;
+}
+
+/// O que quem entra pelo link já recebe (EPIC-33): o programa da
+/// biblioteca (uma cópia só dele) e a mensalidade combinada.
+export async function getInviteDefaults(tenantId: string, client: PrismaClient = prisma): Promise<InviteDefaults> {
+  const tenant = await client.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { inviteProgramId: true, inviteFeeCents: true, inviteFeeDay: true } });
+  const program = tenant.inviteProgramId
+    ? await client.trainingPlan.findFirst({ where: { id: tenant.inviteProgramId, tenantId, status: "ATIVO", isSnapshot: false, isDraftBucket: false }, select: { name: true } })
+    : null;
+  return { programId: program ? tenant.inviteProgramId : null, programName: program?.name ?? null, feeCents: tenant.inviteFeeCents, feeDay: tenant.inviteFeeDay };
+}
+
+export async function setInviteDefaults(
+  input: { tenantId: string; programId?: string | null; feeCents?: number | null; feeDay?: number | null },
+  client: PrismaClient = prisma
+): Promise<InviteDefaults> {
+  const data: { inviteProgramId?: string | null; inviteFeeCents?: number | null; inviteFeeDay?: number | null } = {};
+  if (input.programId !== undefined) {
+    if (input.programId !== null) {
+      const plan = await client.trainingPlan.findFirst({ where: { id: input.programId, tenantId: input.tenantId, status: "ATIVO", isSnapshot: false, isDraftBucket: false }, select: { id: true } });
+      if (!plan) throw new InviteLinkError("VALIDACAO", "Programa não encontrado na biblioteca.");
+    }
+    data.inviteProgramId = input.programId;
+  }
+  if (input.feeCents !== undefined) {
+    if (input.feeCents !== null && (!Number.isInteger(input.feeCents) || input.feeCents <= 0 || input.feeCents > 10_000_000)) {
+      throw new InviteLinkError("VALIDACAO", "Valor da mensalidade inválido.");
+    }
+    data.inviteFeeCents = input.feeCents;
+  }
+  if (input.feeDay !== undefined) {
+    if (input.feeDay !== null && (!Number.isInteger(input.feeDay) || input.feeDay < 1 || input.feeDay > 28)) {
+      throw new InviteLinkError("VALIDACAO", "O dia de vencimento deve ser de 1 a 28.");
+    }
+    data.inviteFeeDay = input.feeDay;
+  }
+  await client.tenant.update({ where: { id: input.tenantId }, data });
+  return getInviteDefaults(input.tenantId, client);
+}
+
+/// Aplica o combinado ao aluno que acabou de entrar. Melhor esforço: a
+/// conta já existe; uma falha aqui é registrada e o personal ajusta à mão.
+export async function applyInviteDefaults(input: { tenantId: string; studentId: string; actorUserId: string }, client: PrismaClient = prisma): Promise<void> {
+  const defaults = await getInviteDefaults(input.tenantId, client);
+  if (defaults.programId) {
+    try {
+      await applyLibraryItem({ tenantId: input.tenantId, actorUserId: input.actorUserId, kind: "programa", id: defaults.programId, studentIds: [input.studentId] }, client);
+    } catch (error) {
+      logEvent("warn", "convite.programa_nao_aplicado", { tenantId: input.tenantId, ...describeError(error) });
+    }
+  }
+  if (defaults.feeCents) {
+    try {
+      await createChargeRecurrence({ tenantId: input.tenantId, studentId: input.studentId, description: "Mensalidade", amountReais: defaults.feeCents / 100, dueDayOfMonth: defaults.feeDay ?? 10 }, client);
+    } catch (error) {
+      logEvent("warn", "convite.mensalidade_nao_criada", { tenantId: input.tenantId, ...describeError(error) });
+    }
   }
 }

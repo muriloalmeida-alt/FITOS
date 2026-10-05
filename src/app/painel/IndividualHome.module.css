@@ -125,3 +125,18 @@
   gap: var(--fitos-space-3);
   margin-top: var(--fitos-space-2);
 }
+
+.trial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 185, 69, 0.12);
+  color: #ffe2b3;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+}
