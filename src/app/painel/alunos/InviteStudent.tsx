@@ -76,7 +76,10 @@ export function InviteStudent({ startOpen = false }: { startOpen?: boolean }) {
 
   return (
     <>
-      <NextStepCard eyebrow="Novo aluno" title="Convidar ou cadastrar" description="Só nome e e-mail. O resto ele preenche." onClick={() => setOpen(true)} />
+      <NextStepCard eyebrow="Novo aluno" title="Convidar aluno" description="Mande um link. Ele preenche os próprios dados." href="/painel/alunos/convite" />
+      <Button type="button" variant="quiet" block onClick={() => setOpen(true)}>
+        Cadastrar eu mesmo
+      </Button>
       {created ? (
         <Sheet
           open={open}

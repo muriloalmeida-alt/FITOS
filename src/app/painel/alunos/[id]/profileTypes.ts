@@ -52,3 +52,10 @@ export interface ProfileSession {
   status: "CONCLUIDA" | "ABANDONADA";
   perceivedEffort: number | null;
 }
+
+export interface TimelineEntry {
+  id: string;
+  kind: "treino" | "avaliacao" | "pagamento";
+  title: string;
+  meta: string;
+}

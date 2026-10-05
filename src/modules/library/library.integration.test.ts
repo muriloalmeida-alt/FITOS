@@ -8,7 +8,7 @@ import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { listSwapOptions } from "@/modules/exercises/exercises";
 import { ensureCuratedCatalogForTests } from "@/modules/exercises/curatedCatalogForTests";
 import { applyLibraryItem, getLibrary } from "./library";
-import { getStudentCopy, restoreStudentCopy, reviseStudentCopy } from "./studentCopy";
+import { getStudentCopy, repeatStudentProgram, restoreStudentCopy, reviseStudentCopy } from "./studentCopy";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -137,5 +137,20 @@ describe("biblioteca (EPIC-28)", () => {
     expect(now.workouts.find((workout) => workout.name === "Corpo todo B")!.items.at(-1)).toMatchObject({ name: "Elíptico", isCardio: true, durationSeconds: 1200, intensity: "MODERADO", sets: null });
 
     await expect(reviseStudentCopy({ tenantId: f.tenant.id, actorUserId: f.owner.id, studentId: f.ana.id, edit: { kind: "update", itemId: "nao-existe", sets: 3 } }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+  });
+
+  it("repetir o programa cria o ciclo 2 a partir de hoje com a mesma prescrição", async () => {
+    const f = await setup("repetir");
+    const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
+    const hipertrofia = library.programs.find((entry) => entry.name === "Hipertrofia 8 semanas")!;
+    await applyLibraryItem({ tenantId: f.tenant.id, actorUserId: f.owner.id, kind: "programa", id: hipertrofia.id, studentIds: [f.pedro.id] }, prisma);
+    const before = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.pedro.id }, prisma))!;
+    await repeatStudentProgram({ tenantId: f.tenant.id, actorUserId: f.owner.id, studentId: f.pedro.id }, prisma);
+    const after = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.pedro.id }, prisma))!;
+    expect(after.planName).toBe("Hipertrofia 8 semanas, ciclo 2");
+    expect(after.assignmentId).not.toBe(before.assignmentId);
+    expect(after.workouts.map((workout) => workout.items.map((item) => [item.exerciseId, item.sets, item.reps]))).toEqual(before.workouts.map((workout) => workout.items.map((item) => [item.exerciseId, item.sets, item.reps])));
+    await repeatStudentProgram({ tenantId: f.tenant.id, actorUserId: f.owner.id, studentId: f.pedro.id }, prisma);
+    expect((await getStudentCopy({ tenantId: f.tenant.id, studentId: f.pedro.id }, prisma))!.planName).toBe("Hipertrofia 8 semanas, ciclo 3");
   });
 });

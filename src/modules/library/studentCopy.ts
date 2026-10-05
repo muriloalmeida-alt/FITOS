@@ -214,3 +214,30 @@ export async function restoreStudentCopy(
   if (!plan || usedByOther > 0) throw new WorkoutError("NAO_ENCONTRADO", "Versão não encontrada.");
   await client.planAssignment.update({ where: { id: assignment.id }, data: { trainingPlanId: plan.id } });
 }
+
+/// Repetir o programa (EPIC-29, Início em fila): um novo ciclo da cópia
+/// atual, com a mesma prescrição, começando hoje. O ciclo anterior é
+/// encerrado como numa nova atribuição; o histórico continua nele.
+export async function repeatStudentProgram(input: { tenantId: string; actorUserId: string; studentId: string }, client: PrismaClient = prisma): Promise<{ planId: string }> {
+  const assignment = await client.planAssignment.findFirst({ where: { tenantId: input.tenantId, studentId: input.studentId, active: true }, include: { trainingPlan: true } });
+  if (!assignment) throw new WorkoutError("NAO_ENCONTRADO", "O aluno não tem programa ativo.");
+  const plan = assignment.trainingPlan;
+  const workouts = await client.workout.findMany({ where: { trainingPlanId: plan.id, tenantId: input.tenantId, status: "ATIVO" }, orderBy: { position: "asc" }, include: { workoutExercises: { orderBy: { position: "asc" } } } });
+  const cycle = /, ciclo (\d+)$/.exec(plan.name);
+  const name = cycle ? plan.name.replace(/, ciclo \d+$/, `, ciclo ${Number(cycle[1]) + 1}`) : `${plan.name}, ciclo 2`;
+  return client.$transaction(async (tx) => {
+    const now = new Date();
+    await tx.planAssignment.update({ where: { id: assignment.id }, data: { active: false, endedAt: now } });
+    const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name, durationWeeks: plan.durationWeeks } });
+    for (const [position, workout] of workouts.entries()) {
+      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position, suggestedDays: workout.suggestedDays } });
+      for (const item of workout.workoutExercises) {
+        await tx.workoutExercise.create({ data: { ...itemData(item), tenantId: input.tenantId, workoutId: created.id, position: item.position } as Prisma.WorkoutExerciseUncheckedCreateInput });
+      }
+    }
+    await tx.trainingPlan.update({ where: { id: next.id }, data: { isSnapshot: true } });
+    const created = await tx.planAssignment.create({ data: { tenantId: input.tenantId, studentId: input.studentId, trainingPlanId: next.id, active: true, assignedAt: now } });
+    await tx.auditEvent.create({ data: { tenantId: input.tenantId, actorUserId: input.actorUserId, action: "PLANO_ATRIBUIDO", entityType: "PlanAssignment", entityId: created.id } });
+    return { planId: next.id };
+  });
+}

@@ -423,6 +423,25 @@ export async function endChargeRecurrence(
   return client.chargeRecurrence.update({ where: { id: recurrence.id }, data: { status: "ENCERRADA" } });
 }
 
+/// Ajusta valor e dia da mensalidade direto no perfil (EPIC-29). Vale
+/// para as próximas competências; lançamentos já gerados ficam como estão.
+export async function updateChargeRecurrence(
+  input: { tenantId: string; recurrenceId: string; amountReais?: number; dueDayOfMonth?: number },
+  client: PrismaClient = prisma
+): Promise<ChargeRecurrence> {
+  const recurrence = await client.chargeRecurrence.findFirst({ where: { id: input.recurrenceId, tenantId: input.tenantId } });
+  if (!recurrence) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Recorrência não encontrada.");
+  }
+  if (recurrence.status === "ENCERRADA") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Esta cobrança recorrente já foi encerrada.");
+  }
+  const data: { amountCents?: number; dueDayOfMonth?: number } = {};
+  if (input.amountReais !== undefined) data.amountCents = centsFromReais(input.amountReais);
+  if (input.dueDayOfMonth !== undefined) data.dueDayOfMonth = normalizeDueDayOfMonth(input.dueDayOfMonth);
+  return client.chargeRecurrence.update({ where: { id: recurrence.id }, data });
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
 }
@@ -549,4 +568,37 @@ export async function createChargeWithOptionalRecurrence(
     });
     return { charge, recurrence };
   });
+}
+
+/// "Recebi" em um toque (EPIC-29): o valor cheio, hoje. Forma padrão PIX;
+/// o personal ajusta abrindo a cobrança se foi diferente.
+export async function receiveChargeInFull(input: { tenantId: string; actorUserId: string; chargeId: string; method?: string }, client: PrismaClient = prisma): Promise<StudentCharge> {
+  const charge = await client.studentCharge.findFirst({ where: { id: input.chargeId, tenantId: input.tenantId } });
+  if (!charge) throw new StudentChargeError("NAO_ENCONTRADO", "Cobrança não encontrada.");
+  return registerPayment({ tenantId: input.tenantId, actorUserId: input.actorUserId, chargeId: charge.id, amountReceivedReais: charge.amountCents / 100, paidAt: new Date(), method: input.method ?? "PIX" }, client);
+}
+
+/// Desfazer um pagamento registrado por engano: a cobrança volta a aberta
+/// (atrasada se já venceu).
+export async function undoChargePayment(input: { tenantId: string; actorUserId: string; chargeId: string }, client: PrismaClient = prisma): Promise<StudentCharge> {
+  const charge = await client.studentCharge.findFirst({ where: { id: input.chargeId, tenantId: input.tenantId }, include: { payment: true } });
+  if (!charge) throw new StudentChargeError("NAO_ENCONTRADO", "Cobrança não encontrada.");
+  if (charge.status !== "PAGO" || !charge.payment) throw new StudentChargeError("ESTADO_INVALIDO", "Esta cobrança não está paga.");
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  return client.$transaction(async (tx) => {
+    await tx.payment.delete({ where: { id: charge.payment!.id } });
+    const updated = await tx.studentCharge.update({ where: { id: charge.id }, data: { status: charge.dueDate < startOfToday ? "ATRASADO" : "PENDENTE" } });
+    await tx.auditEvent.create({ data: { tenantId: input.tenantId, actorUserId: input.actorUserId, action: "PAGAMENTO_DESFEITO", entityType: "StudentCharge", entityId: charge.id } });
+    return updated;
+  });
+}
+
+/// Mensalidades do mês se lançam sozinhas (EPIC-29): toda leitura do Início
+/// e do Financeiro garante as cobranças do mês corrente de cada
+/// recorrência ativa. Idempotente.
+export async function ensureCurrentMonthCharges(input: { tenantId: string; now?: Date }, client: PrismaClient = prisma): Promise<{ created: number }> {
+  const now = input.now ?? new Date();
+  const { created } = await generateMonthChargesForRecurrences({ tenantId: input.tenantId, referenceMonth: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) }, client);
+  return { created };
 }

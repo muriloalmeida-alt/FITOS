@@ -84,8 +84,9 @@ describe("getPersonalFeed (FIT-143, BK-05)", () => {
     const byName = Object.fromEntries(feed.items.map((item) => [item.studentName, item]));
     expect(byName.Bruno).toMatchObject({ actionLabel: "Registrar pagamento", href: `/painel/alunos/${bruno.id}?acao=receber`, amountCents: 18000 });
     expect(byName.Eva?.description).toBe("Hipertrofia termina em 3 dias");
-    expect(byName.Fábio).toMatchObject({ description: "Concluiu Treino A · 52 min · esforço puxado", perceivedEffort: 4, actionLabel: "Ver evolução" });
-    expect(byName.Gabi).toMatchObject({ description: "Última avaliação há 90 dias", href: `/painel/alunos/${gabi.id}?acao=avaliar` });
+    expect(byName.Fábio).toMatchObject({ description: "Concluiu Treino A · 52 min · esforço puxado", perceivedEffort: 4, actionLabel: "Ver o treino", href: `/painel/alunos/${byName.Fábio!.studentId}/treino` });
+    expect(byName.Gabi).toMatchObject({ description: "Última avaliação há 90 dias", href: `/painel/alunos/${gabi.id}/avaliacao` });
+    expect(byName.Bruno!.chargeIds).toHaveLength(1);
 
     const short = await getPersonalFeed({ tenantId: tenant.id, now, limit: 3 }, prisma);
     expect(short.items).toHaveLength(3);

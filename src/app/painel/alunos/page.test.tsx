@@ -69,7 +69,8 @@ describe("Alunos (FIT-144)", () => {
     const { default: Page } = await import("./page");
     render(<ToastProvider>{await Page()}</ToastProvider>);
 
-    await user.click(screen.getByRole("button", { name: /Convidar ou cadastrar/ }));
+    expect(screen.getByRole("link", { name: /Convidar aluno/ })).toHaveAttribute("href", "/painel/alunos/convite");
+    await user.click(screen.getByRole("button", { name: "Cadastrar eu mesmo" }));
     const sheet = screen.getByRole("dialog", { name: "Novo aluno" });
     await user.type(within(sheet).getByLabelText("Nome completo"), "Pedro Lima");
     await user.type(within(sheet).getByLabelText("E-mail"), "pedro@email.com");

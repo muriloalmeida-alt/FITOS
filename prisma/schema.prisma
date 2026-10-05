@@ -251,6 +251,9 @@ model Tenant {
   /// Quando a biblioteca inicial (programas, treinos e aeróbicos prontos)
   /// foi criada neste espaço; nunca recriada (EPIC-28).
   starterLibraryAt DateTime?
+  /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
+  /// própria conta de aluno neste espaço. Gerado no primeiro uso.
+  inviteCode       String?    @unique
 
   owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students              Student[]

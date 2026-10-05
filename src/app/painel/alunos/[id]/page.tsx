@@ -12,6 +12,8 @@ import { listActiveRecurrencesForTenant, listChargesForStudent } from "@/modules
 import { LogoutButton } from "../../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../../navigation";
 import { StudentProfile } from "./StudentProfile";
+import type { TimelineEntry } from "./profileTypes";
+import { formatCentsBRL } from "@/shared/lib/money";
 
 export const metadata: Metadata = {
   title: `Perfil do aluno — ${appName}`,
@@ -29,7 +31,9 @@ function relative(date: Date, now: Date): string {
   return `em ${dateFmt.format(date)}`;
 }
 
-type SheetParam = "assign" | "inactivate" | "end" | "assessment" | "pay" | "invite" | null;
+type SheetParam = "assign" | "inactivate" | "end" | "pay" | "invite" | null;
+
+const EFFORT_LABEL = ["", "leve", "ok", "puxado", "difícil", "no limite"];
 
 interface AlunoPerfilPageProps {
   params: Promise<{ id: string }>;
@@ -56,6 +60,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     notFound();
   }
   const sp = (await searchParams) ?? {};
+  if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
   const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences] = await Promise.all([
@@ -76,8 +81,31 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0];
   const recurrence = recurrences.find((item) => item.studentId === student.id) ?? null;
   // Ações que chegam do feed do Início (FIT-143) abrem direto a sheet certa.
-  const ACTION_SHEETS: Record<string, SheetParam> = { inativar: "inactivate", encerrar: "end", avaliar: "assessment", receber: open ? "pay" : null, convite: "invite" };
+  const ACTION_SHEETS: Record<string, SheetParam> = { inativar: "inactivate", encerrar: "end", receber: open ? "pay" : null, convite: "invite" };
   const initialSheet: SheetParam = sp.atribuir === "1" ? "assign" : sp.acao && Object.hasOwn(ACTION_SHEETS, sp.acao) ? (ACTION_SHEETS[sp.acao] ?? null) : null;
+
+  const fmt = (value: number) => String(Math.round(value * 10) / 10).replace(".", ",");
+  const timeline: (TimelineEntry & { at: number })[] = [
+    ...sessions.slice(0, 12).map((session) => ({
+      id: session.id,
+      kind: "treino" as const,
+      title: session.status === "ABANDONADA" ? `${session.workoutName} · não terminou` : `Fez ${session.workoutName}`,
+      meta: `${relative(session.startedAt, now)}${session.perceivedEffort ? ` · esforço ${EFFORT_LABEL[session.perceivedEffort]}` : ""}`,
+      at: session.startedAt.getTime(),
+    })),
+    ...assessments.map((assessment) => ({
+      id: assessment.id,
+      kind: "avaliacao" as const,
+      title: assessment.weightGrams !== null ? `Avaliação · ${fmt(assessment.weightGrams / 1000)} kg` : "Avaliação",
+      meta: dateFmt.format(assessment.recordedAt),
+      at: assessment.recordedAt.getTime(),
+    })),
+    ...charges.flatMap((charge) =>
+      charge.payment
+        ? [{ id: charge.id, kind: "pagamento" as const, title: `Pagou ${formatCentsBRL(charge.payment.amountCentsPaid)}`, meta: `${charge.description} · ${relative(charge.payment.paidAt, now)}`, at: charge.payment.paidAt.getTime() }]
+        : []
+    ),
+  ].sort((a, b) => b.at - a.at);
 
   return (
     <AppShell eyebrow="Perfil do aluno" title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
@@ -116,7 +144,8 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           measurements: assessment.measurements.map((m) => ({ type: m.type, valueCm: m.valueMillimeters / 10 })),
         }))}
         openCharge={open ? { id: open.id, description: open.description, amountCents: open.amountCents, status: open.status, dueLabel: shortFmt.format(open.dueDate), paidLabel: null } : null}
-        recurrence={recurrence ? { amountCents: recurrence.amountCents, day: recurrence.dueDayOfMonth } : null}
+        recurrence={recurrence ? { id: recurrence.id, amountCents: recurrence.amountCents, day: recurrence.dueDayOfMonth } : null}
+        timeline={timeline.map(({ at: _at, ...entry }) => entry)}
         initialSheet={initialSheet}
       />
     </AppShell>

@@ -182,3 +182,67 @@
   color: #c9d2dc;
   line-height: 1.6;
 }
+
+.inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+  padding: var(--fitos-space-4);
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  min-height: 52px;
+  padding: 6px 0;
+}
+
+.event + .event::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 4px;
+  height: 36px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--fitos-color-text-muted);
+}
+
+.dot_treino {
+  background-color: var(--fitos-orange-500);
+}
+
+.dot_pagamento {
+  background-color: #3ecf8e;
+}
+
+.eventBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eventTitle {
+  font-size: 14px;
+  font-weight: 600;
+}
