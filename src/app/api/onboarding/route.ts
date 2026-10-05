@@ -2,6 +2,7 @@ import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@
 import { authErrorResponse, requireIndividual } from "@/modules/tenancy/authContext";
 import { completeIndividualOnboarding, getIndividualOnboardingProfile, OnboardingError } from "@/modules/individual-onboarding/onboarding";
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
+import { createStarterPlanForIndividual } from "@/modules/individual-onboarding/starterPlan";
 
 const VALID_OBJECTIVES: IndividualObjective[] = [
   "GANHAR_MASSA",
@@ -75,7 +76,15 @@ export async function POST(request: Request) {
       actorUserId: ctx.userId,
     });
 
-    return Response.json(profile, { status: 201 });
+    // EPIC-30: as respostas viram o plano inicial (só num espaço vazio).
+    const starter = await createStarterPlanForIndividual({
+      tenantId: ctx.tenantId,
+      objective: body.objective,
+      availability: body.weeklyAvailability,
+      experience: body.experienceLevel,
+    });
+
+    return Response.json({ ...profile, starterWorkouts: starter.created }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;

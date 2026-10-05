@@ -3,6 +3,7 @@ import type { PrismaClient, WeeklyAvailability } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { WEEKDAYS, mondayFirstIndex } from "@/shared/lib/weekdays";
 import { estimateMinutes } from "@/modules/students/studentHome";
+import { suggestProgressions, type ProgressionSuggestion } from "@/modules/execution/progression";
 
 /// Início do FitOS Livre (FIT-156, L1 do protótipo). BK-16: "Hoje para
 /// você" é o treino com o dia de hoje nos dias sugeridos; sem nenhum, o
@@ -23,6 +24,8 @@ export interface IndividualHome {
   week: { done: boolean[]; doneCount: number; target: number };
   monthSessions: number;
   activeGoals: number;
+  /// EPIC-30: subir a carga onde já está fácil.
+  progressions: ProgressionSuggestion[];
 }
 
 export const AVAILABILITY_TARGET: Record<WeeklyAvailability, number> = {
@@ -70,12 +73,13 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
       week: { done: [false, false, false, false, false, false, false], doneCount: 0, target },
       monthSessions: 0,
       activeGoals: 0,
+      progressions: [],
     };
   }
 
   const start = weekStart(now);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [session, weekSessions, monthSessions, lastByWorkout, activeGoals] = await Promise.all([
+  const [session, weekSessions, monthSessions, lastByWorkout, activeGoals, progressions] = await Promise.all([
     client.workoutSession.findFirst({
       where: { tenantId: input.tenantId, studentId: self.id, status: "EM_ANDAMENTO" },
       include: { workout: { select: { name: true, _count: { select: { workoutExercises: true } } } }, results: { select: { workoutExerciseId: true } } },
@@ -84,6 +88,7 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
     client.workoutSession.count({ where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA", startedAt: { gte: monthStart } } }),
     client.workoutSession.groupBy({ by: ["workoutId"], where: { tenantId: input.tenantId, studentId: self.id, status: "CONCLUIDA" }, _max: { startedAt: true } }),
     client.goal.count({ where: { tenantId: input.tenantId, studentId: self.id, status: "EM_ANDAMENTO" } }),
+    suggestProgressions({ tenantId: input.tenantId, studentId: self.id }, client),
   ]);
 
   const done = [false, false, false, false, false, false, false];
@@ -109,5 +114,6 @@ export async function getIndividualHome(input: { tenantId: string; userId: strin
     week: { done, doneCount: done.filter(Boolean).length, target },
     monthSessions,
     activeGoals,
+    progressions,
   };
 }

@@ -250,15 +250,17 @@ export function LiveWorkout(props: LiveWorkoutProps) {
       writeJson(`${CLOCK_PREFIX}${sessionId}:relogio`, clock);
   }, [clock, sessionId, phase]);
 
-  // Valores da série atual: a última série feita deste exercício ou o prescrito.
+  // Valores da série atual (EPIC-30): a última série feita agora, senão a
+  // maior entre a prescrita e a da última vez (o aluno só confirma) e as
+  // repetições prescritas.
   const lastDone = item.doneSets[item.doneSets.length - 1];
   const seedKey = `${item.id}:${done}`;
   const [seededFor, setSeededFor] = useState<string | null>(null);
   if (seededFor !== seedKey) {
     setSeededFor(seedKey);
     setDraft({
-      loadKg: lastDone?.loadKg ?? item.loadKg ?? 0,
-      reps: lastDone?.reps ?? item.reps ?? 10,
+      loadKg: lastDone?.loadKg ?? Math.max(item.loadKg ?? 0, item.last?.loadKg ?? 0),
+      reps: lastDone?.reps ?? item.reps ?? item.last?.reps ?? 10,
     });
   }
 
@@ -1220,9 +1222,10 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           <span aria-hidden="true">✓</span>{" "}
           {cardio
             ? "Aeróbico feito"
-            : setNumber >= totalSets(item) && done < totalSets(item)
-              ? "Última série feita"
-              : "Série feita"}
+            : `Fiz ${timed ? `${Math.max(1, timer ? (item.durationSeconds ?? 0) - (timer.endsAt ? timerLeft : timer.remaining) : (item.durationSeconds ?? 0))} s` : draft.reps}${draft.loadKg > 0 ? ` × ${kg(draft.loadKg)} kg` : ""}`}
+          {!cardio && setNumber >= totalSets(item) && done < totalSets(item) ? (
+            <small className={styles.doneHint}>última série</small>
+          ) : null}
         </button>
         <button
           type="button"

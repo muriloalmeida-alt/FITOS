@@ -38,6 +38,8 @@ interface WorkoutItemCardProps {
   onChange: (patch: ItemPatch) => void;
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
+  /// EPIC-30: tocar na foto abre outros exercícios do mesmo grupo.
+  onSwap?: () => void;
 }
 
 /// Um exercício dentro do editor (FIT-146): séries, repetições ou tempo e
@@ -52,6 +54,7 @@ export function WorkoutItemCard({
   onChange,
   onMove,
   onRemove,
+  onSwap,
 }: WorkoutItemCardProps) {
   const [open, setOpen] = useState(false);
   const cardio = Boolean(item.intensity);
@@ -61,7 +64,14 @@ export function WorkoutItemCard({
   return (
     <li className={styles.card}>
       <div className={styles.head}>
-        {cardio ? (
+        {onSwap ? (
+          <button type="button" className={styles.swapThumb} onClick={onSwap} aria-label={`Trocar ${item.name}`}>
+            {cardio ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt="" width={56} height={56} className={styles.thumb} />}
+            <span className={styles.swapBadge} aria-hidden="true">
+              ⇄
+            </span>
+          </button>
+        ) : cardio ? (
           <CardioIcon size={56} />
         ) : (
           <ExerciseThumbnail

@@ -81,7 +81,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
-  it("aluno vê o personal vinculado, edita nome e e-mail em sheet e tem Termos, Privacidade e Sair (FIT-155)", async () => {
+  it("aluno vê o personal vinculado, edita nome e e-mail no lugar e tem Termos, Privacidade e Sair (FIT-155)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Pedro Lima", email: "pedro@example.test", role: "ALUNO" } });
     getAuthContext.mockResolvedValue({ authenticated: true, userId: "u2", role: "ALUNO", tenantId: "t1", studentId: "s1" });
     findStudentOrThrow.mockResolvedValue({ id: "s1", tenant: { name: "Studio Joana", owner: { name: "Joana Lima" }, personalProfile: { cref: "123456-G/SP" } } });
@@ -95,9 +95,9 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
     expect(screen.getAllByRole("button", { name: "Sair" }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Editar e-mail" }));
-    const dialog = screen.getByRole("dialog", { name: "E-mail de acesso" });
-    expect(within(dialog).getByLabelText("Senha atual")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Salvar" })).toBeDisabled();
+    const inline = screen.getByRole("group", { name: "E-mail de acesso" });
+    expect(within(inline).getByLabelText("Senha atual")).toBeInTheDocument();
+    expect(within(inline).getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("aluno autenticado sem vínculo ativo (studentId nulo) é redirecionado para /painel", async () => {
@@ -117,7 +117,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("Livre: respostas em chips numa sheet, assinatura com status, dados e nome do espaço (FIT-160)", async () => {
+  it("Livre: respostas em chips no lugar, assinatura com status, dados e nome do espaço (FIT-160)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
     getAuthContext.mockResolvedValue({ authenticated: true, userId: "u5", role: "INDIVIDUAL", tenantId: "t5", studentId: null });
     getIndividualOnboardingProfile.mockResolvedValue({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS" });
@@ -132,9 +132,9 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(screen.getAllByText("Espaço de Praticante").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Termos de uso" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Editar respostas" }));
-    const dialog = screen.getByRole("dialog", { name: "Editar respostas" });
-    expect(within(dialog).getByRole("radio", { name: "3 a 4 dias por semana" })).toHaveAttribute("aria-checked", "true");
-    expect(within(dialog).getByRole("radio", { name: "Avançado" })).toBeInTheDocument();
+    const answers = screen.getByRole("group", { name: "Suas respostas" });
+    expect(within(answers).getByRole("radio", { name: "3 a 4 dias por semana" })).toHaveAttribute("aria-checked", "true");
+    expect(within(answers).getByRole("radio", { name: "Avançado" })).toBeInTheDocument();
   });
 
   it("individual sem onboarding concluído é redirecionado para /onboarding", async () => {

@@ -12,6 +12,7 @@ const base: StudentHome = {
   week: { planned: ["SEGUNDA", "QUARTA", "SEXTA"], done: [true, false, false, false, false, false, false], doneCount: 1, target: 3 },
   upcoming: [{ dayLabel: "Amanhã", dayShort: "Ter", workoutName: "Treino B" }],
   lastAssessment: { dateIso: "2026-09-20T12:00:00.000Z", weightKg: 72.4, bodyFatPercent: 18.5 },
+  goal: null,
 };
 
 function renderHome(home: Partial<StudentHome> = {}) {
@@ -49,5 +50,18 @@ describe("AlunoHome (FIT-151)", () => {
     expect(screen.getByText(/Joana já foi avisado/)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Sua semana" })).not.toBeInTheDocument();
     expect(screen.getByText("Nenhuma avaliação ainda")).toBeInTheDocument();
+  });
+
+  it("pede o peso depois de duas semanas e mostra a meta (EPIC-30)", () => {
+    renderHome({ lastAssessment: { dateIso: "2026-09-01T12:00:00.000Z", weightKg: 72.4, bodyFatPercent: null }, goal: "Perder 2 kg até dezembro" });
+    expect(screen.getByText("Pesar hoje?")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pesar agora" })).toHaveAttribute("href", "/painel/pesar");
+    expect(screen.getByRole("link", { name: /Perder 2 kg até dezembro/ })).toHaveAttribute("href", "/painel/meta");
+  });
+
+  it("pesagem recente não pede de novo", () => {
+    renderHome({ lastAssessment: { dateIso: "2026-09-28T12:00:00.000Z", weightKg: 72.4, bodyFatPercent: null } });
+    expect(screen.queryByText("Pesar hoje?")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Escolher uma meta/ })).toHaveAttribute("href", "/painel/meta");
   });
 });

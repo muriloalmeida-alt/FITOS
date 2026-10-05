@@ -298,6 +298,7 @@ describe("PainelPage (FIT-012)", () => {
       week: { done: [false, false, false, false, false, false, false], doneCount: 0, target: 4 },
       monthSessions: 0,
       activeGoals: 0,
+      progressions: [],
     });
     const { default: PainelPage } = await import("./page");
 

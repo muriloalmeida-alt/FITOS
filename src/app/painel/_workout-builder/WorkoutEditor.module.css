@@ -140,3 +140,51 @@
     padding-bottom: var(--fitos-space-6);
   }
 }
+
+.swapMuted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile > span:first-child {
+  width: 100%;
+  height: 110px;
+  border-radius: 0;
+}
+
+.tileImage {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
+.tileName {
+  padding: 8px 10px 10px;
+  font-weight: 800;
+  font-size: 13px;
+}

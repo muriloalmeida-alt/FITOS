@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/shared/ui";
 import { OnboardingForm } from "./OnboardingForm";
 
 const push = vi.fn();
@@ -9,7 +10,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }
 const plans = [{ id: "livre", name: "FitOS Livre", description: null, priceCents: 1990, billingCycle: "MENSAL" as const, studentLimit: null, trialDays: 30 }];
 
 function renderForm(overrides: Partial<Parameters<typeof OnboardingForm>[0]> = {}) {
-  render(<OnboardingForm initialObjective={null} initialExperienceLevel={null} initialWeeklyAvailability={null} initialCpfCnpj={null} plans={plans} initialPlanId={null} {...overrides} />);
+  render(<ToastProvider><OnboardingForm initialObjective={null} initialExperienceLevel={null} initialWeeklyAvailability={null} initialCpfCnpj={null} plans={plans} initialPlanId={null} {...overrides} /></ToastProvider>);
 }
 
 describe("OnboardingForm do FitOS Livre (FIT-167)", () => {
@@ -18,31 +19,23 @@ describe("OnboardingForm do FitOS Livre (FIT-167)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("exige as respostas em cartões antes de avançar", async () => {
+  it("três toques: cada resposta já avança; Voltar mantém a escolha (EPIC-30)", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(await screen.findByText("Escolha um objetivo.")).toBeInTheDocument();
-    await user.click(screen.getByRole("radio", { name: "Ganhar massa muscular" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByText("Escolha sua experiência.")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Perder peso" }));
+    expect(screen.getByRole("heading", { name: "Quantos dias?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(screen.getByRole("radio", { name: "Perder peso" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("fluxo completo leva direto a Montar meu primeiro treino; Voltar mantém as respostas", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 201 }));
+  it("fluxo completo cria o plano e leva ao Início", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({}), { status: 201 }));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("radio", { name: "Perder peso" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(screen.getByRole("radio", { name: "Iniciante" }));
     await user.click(screen.getByRole("radio", { name: "3 a 4 dias por semana" }));
-    await user.click(screen.getByRole("button", { name: "Voltar" }));
-    expect(screen.getByRole("radio", { name: "Perder peso" })).toHaveAttribute("aria-checked", "true");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("radio", { name: "Iniciante" })).toHaveAttribute("aria-checked", "true");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("radio", { name: "Iniciante" }));
 
     expect(screen.getByText(/primeira cobrança é em .*depois dos 30 dias grátis/)).toBeInTheDocument();
     await user.type(screen.getByLabelText("CPF ou CNPJ"), "11144477735");
@@ -54,10 +47,8 @@ describe("OnboardingForm do FitOS Livre (FIT-167)", () => {
     await user.type(screen.getByLabelText("CEP"), "01001000");
     await user.type(screen.getByLabelText("Número do endereço"), "100");
     await user.type(screen.getByLabelText("Celular"), "11987654321");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-
-    await user.click(screen.getByRole("button", { name: "Montar meu primeiro treino" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/painel/meus-treinos/novo"));
+    await user.click(screen.getByRole("button", { name: "Criar meu plano" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/painel"));
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ objective: "PERDER_PESO", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS", planId: "livre", termsAccepted: true });
     expect(fetchMock.mock.calls[1]![0]).toBe("/api/tenancy/minha-assinatura/cartao");
   });

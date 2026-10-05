@@ -4,6 +4,7 @@ import type { StudentHome } from "@/modules/students/studentHome";
 import { weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
 import { ALUNO_NAV_ITEMS } from "./navigation";
+import { WeighPrompt } from "./WeighPrompt";
 import styles from "./AlunoHome.module.css";
 
 interface AlunoHomeProps {
@@ -79,6 +80,8 @@ export function AlunoHome({ displayName, personalName, greeting, dateLabel, home
   const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
   const today = new Date(todayIso);
   const assessment = home.lastAssessment;
+  const lastWeighDays = assessment ? Math.floor((today.getTime() - new Date(assessment.dateIso).getTime()) / 86_400_000) : null;
+  const weighDue = lastWeighDays === null || lastWeighDays >= 14;
   const assessmentParts = assessment
     ? [assessment.weightKg !== null ? `${assessment.weightKg.toLocaleString("pt-BR")} kg` : null, assessment.bodyFatPercent !== null ? `${assessment.bodyFatPercent.toLocaleString("pt-BR")}% gordura` : null].filter(Boolean)
     : [];
@@ -103,6 +106,15 @@ export function AlunoHome({ displayName, personalName, greeting, dateLabel, home
         </section>
       ) : null}
 
+      {weighDue ? <WeighPrompt lastLabel={assessment ? dateFmt.format(new Date(assessment.dateIso)) : null} todayKey={todayIso.slice(0, 10)} /> : null}
+
+      <ActionRow
+        href="/painel/meta"
+        title={home.goal ?? "Escolher uma meta"}
+        description={home.goal ? "Sua meta · trocar" : "Três sugestões feitas para você"}
+        trailing={<span aria-hidden="true">›</span>}
+      />
+
       {home.upcoming.length > 0 ? (
         <section className={styles.section} aria-labelledby="proximos">
           <h2 id="proximos" className={styles.sectionTitle}>
@@ -120,12 +132,12 @@ export function AlunoHome({ displayName, personalName, greeting, dateLabel, home
 
       <section className={styles.section} aria-labelledby="avaliacao">
         <h2 id="avaliacao" className={styles.sectionTitle}>
-          Última avaliação
+          Último peso
         </h2>
         <ActionRow
           href="/painel/progresso"
           title={assessment ? (assessmentParts.length > 0 ? assessmentParts.join(" · ") : "Avaliação registrada") : "Nenhuma avaliação ainda"}
-          description={assessment ? `${dateFmt.format(new Date(assessment.dateIso))} · ver sua evolução` : `${personalName} registra a sua na próxima avaliação.`}
+          description={assessment ? `${dateFmt.format(new Date(assessment.dateIso))} · ver sua evolução` : "Pese-se e acompanhe aqui."}
           trailing={<span aria-hidden="true">›</span>}
         />
       </section>

@@ -63,11 +63,7 @@ describe("Minha evolução do FitOS Livre (FIT-159)", () => {
   it("Corpo: registrar já com os últimos valores e excluir com confirmação", async () => {
     setup();
     await renderPage("corpo");
-    fireEvent.click(screen.getByRole("button", { name: /Registrar peso e gordura/ }));
-    const sheet = screen.getByRole("dialog", { name: "Registrar medidas" });
-    expect(within(sheet).getByText("70,5")).toBeInTheDocument();
-    expect(within(sheet).getByText("18")).toBeInTheDocument();
-    fireEvent.click(within(sheet).getByRole("button", { name: "Agora não" }));
+    expect(screen.getByRole("link", { name: /Pesar hoje/ })).toHaveAttribute("href", "/painel/pesar");
     fireEvent.click(screen.getByRole("button", { name: /Excluir registro de/ }));
     expect(screen.getByRole("dialog", { name: "Excluir este registro?" })).toBeInTheDocument();
   });
@@ -78,9 +74,6 @@ describe("Minha evolução do FitOS Livre (FIT-159)", () => {
     expect(screen.getByRole("button", { name: "Concluí" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abandonar Correr 5 km" })).toBeInTheDocument();
     expect(screen.getByText("Concluída")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Nova meta/ }));
-    const sheet = screen.getByRole("dialog", { name: "Nova meta" });
-    expect(within(sheet).getByRole("radio", { name: "3 meses" })).toBeInTheDocument();
-    expect(within(sheet).getByRole("button", { name: "Criar meta" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: /Nova meta/ })).toHaveAttribute("href", "/painel/meta");
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { IndividualHome as Data } from "@/modules/workouts/individualHome";
 import { IndividualHome } from "./IndividualHome";
 
@@ -14,6 +15,7 @@ const base: Data = {
   week: { done: [true, false, false, false, false, false, false], doneCount: 1, target: 4 },
   monthSessions: 7,
   activeGoals: 2,
+  progressions: [],
 };
 
 function renderHome(home: Partial<Data> = {}) {
@@ -48,5 +50,20 @@ describe("IndividualHome (FIT-156)", () => {
   it("primeiro acesso sem treinos: criar o primeiro", () => {
     renderHome({ today: null, workouts: [] });
     expect(screen.getByRole("link", { name: /Criar meu primeiro treino/ })).toHaveAttribute("href", "/painel/meus-treinos/novo");
+  });
+
+  it("sugere subir a carga e grava no item ao aceitar (EPIC-30)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}", { status: 200 }));
+    renderHome({ progressions: [{ workoutId: "w1", itemId: "i1", workoutName: "Superiores A", exerciseName: "Puxada alta", fromKg: 40, toKg: 42.5, reps: 12 }] });
+    expect(screen.getByText("Subir puxada alta para 42,5 kg?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Subir" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/meus-treinos/w1/itens/i1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ load: "42,5 kg" }) }));
+    fetchMock.mockRestore();
+  });
+
+  it("Manter esconde a sugestão", async () => {
+    renderHome({ progressions: [{ workoutId: "w1", itemId: "i9", workoutName: "Superiores A", exerciseName: "Remada", fromKg: 30, toKg: 32.5, reps: 10 }] });
+    await userEvent.click(screen.getByRole("button", { name: "Manter" }));
+    expect(screen.queryByText(/Subir remada/)).not.toBeInTheDocument();
   });
 });

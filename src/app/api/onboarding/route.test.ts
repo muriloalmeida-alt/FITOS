@@ -26,6 +26,9 @@ vi.mock("@/modules/individual-onboarding/onboarding", async () => {
   };
 });
 
+const createStarterPlanForIndividual = vi.fn(async () => ({ created: 2 }));
+vi.mock("@/modules/individual-onboarding/starterPlan", () => ({ createStarterPlanForIndividual: (...args: unknown[]) => createStarterPlanForIndividual(...(args as [])) }));
+
 vi.mock("@/modules/billing/subscriptions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
   return { ...actual, subscribeTenantToPlan: (...args: unknown[]) => subscribeTenantToPlan(...args) };
