@@ -38,6 +38,8 @@ interface PersonalHomeProps {
   students: { id: string; name: string }[];
   /// Painel de risco (EPIC-43): quantos alunos e quantos com risco alto.
   risk?: { total: number; alto: number };
+  /// Progressão (EPIC-44): alunos prontos para subir a carga.
+  progressionStudents?: number;
 }
 
 function firstName(name: string): string {
@@ -48,7 +50,7 @@ function firstName(name: string): string {
 /// levam às telas certas e a fila "Pede você agora" (uma decisão por vez,
 /// resolvida no lugar), mais o botão + para o resto. Tudo vem das
 /// consultas reais do tenant.
-export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, openCharges, students, risk }: PersonalHomeProps) {
+export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, openCharges, students, risk, progressionStudents = 0 }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
   const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
@@ -99,6 +101,14 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
               title={`${risk.total} ${risk.total === 1 ? "aluno pode estar indo embora" : "alunos podem estar indo embora"}`}
               description="Veja o porquê e aja com um toque."
               href="/painel/alunos/risco"
+            />
+          ) : null}
+          {progressionStudents > 0 ? (
+            <NextStepCard
+              eyebrow="Progressão"
+              title={`${progressionStudents} ${progressionStudents === 1 ? "aluno pronto" : "alunos prontos"} para subir a carga`}
+              description="Fizeram todas as repetições duas vezes seguidas, sem achar pesado."
+              href="/painel/alunos/progressao"
             />
           ) : null}
           <DecisionQueue items={feed.items} total={feed.total} />

@@ -5,6 +5,7 @@ import { workoutErrorResponse } from "../../../_workoutErrors";
 
 const str = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : null);
 const int = (value: unknown) => (typeof value === "number" && Number.isInteger(value) ? value : undefined);
+const num = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
 
 function parseEdit(body: Record<string, unknown> | null): CopyEdit | null {
   if (!body) return null;
@@ -13,7 +14,7 @@ function parseEdit(body: Record<string, unknown> | null): CopyEdit | null {
     case "swap":
       return str(body.itemId) && str(body.exerciseId) ? { kind: "swap", itemId: body.itemId as string, exerciseId: body.exerciseId as string } : null;
     case "update":
-      return str(body.itemId) ? { kind: "update", itemId: body.itemId as string, sets: int(body.sets), reps: int(body.reps), durationSeconds: int(body.durationSeconds), intensity } : null;
+      return str(body.itemId) ? { kind: "update", itemId: body.itemId as string, sets: int(body.sets), reps: int(body.reps), durationSeconds: int(body.durationSeconds), intensity, loadKg: num(body.loadKg) } : null;
     case "addItem":
       return str(body.workoutId) && str(body.exerciseId) ? { kind: "addItem", workoutId: body.workoutId as string, exerciseId: body.exerciseId as string } : null;
     case "removeItem":
