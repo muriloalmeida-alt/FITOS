@@ -38,14 +38,18 @@ describe("agenda de hoje no Início do personal (EPIC-48)", () => {
     );
     const items = within(screen.getByRole("list")).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
-      expect.stringMatching(/^07:00Ana CostaAcademia CentroFeitaFalta$/),
-      expect.stringMatching(/^09:00Bia Lima60 minFalta$/),
+      expect.stringMatching(/^07:00Ana CostaAcademia Centro$/),
+      expect.stringMatching(/^09:00Bia Lima60 min$/),
       expect.stringMatching(/^18:00Caio Reis60 minPróxima$/),
       expect.stringMatching(/^19:30Davi MeloAvulsa$/),
       expect.stringMatching(/^20:00Eva Nunes60 minDesmarcada$/),
     ]);
     expect(screen.getByRole("link", { name: "Ver semana →" })).toHaveAttribute("href", "/painel/agenda");
 
+    expect(within(items[0]!).getByRole("button", { name: "Falta" }).querySelector("svg")).not.toBeNull();
+    expect(within(items[2]!).queryByRole("button")).toBeNull();
+    expect(within(items[1]!).getByRole("img", { name: "Falta" })).toBeInTheDocument();
+    expect(within(items[1]!).queryByRole("button")).toBeNull();
     await userEvent.click(within(items[0]!).getByRole("button", { name: "Feita" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/agenda/ocorrencia", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ ref: "a", status: "FEITA" }) }));
     expect(refresh).toHaveBeenCalled();

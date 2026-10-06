@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Tag, useToast, type TagTone } from "@/shared/ui";
+import { Tag, useToast, type TagTone } from "@/shared/ui";
 import { formatTime } from "@/shared/lib/scheduleTime";
 import { requestJson } from "./_workout-builder/apiClient";
 import styles from "./PersonalHome.module.css";
@@ -77,16 +77,26 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
                   <strong>{item.studentName}</strong>
                   <span className={styles.agendaMeta}>{[item.extra ? "Avulsa" : null, item.location, item.note].filter(Boolean).join(" · ") || `${item.durationMinutes} min`}</span>
                 </span>
-                {tag ? (
+                {item.status === "FEITA" || item.status === "FALTA" ? (
+                  <span className={`${styles.checkButton} ${styles.checkMark} ${item.status === "FEITA" ? styles.checkDoneOn : styles.checkMissedOn}`} role="img" aria-label={item.status === "FEITA" ? "Feita" : "Falta"} title={item.status === "FEITA" ? "Feita" : "Falta"}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={item.status === "FEITA" ? "M5 12.5l4.5 4.5L19 7.5" : "M7 7l10 10M17 7L7 17"} />
+                    </svg>
+                  </span>
+                ) : tag ? (
                   <Tag tone={tag.tone}>{tag.label}</Tag>
                 ) : started ? (
                   <span className={styles.agendaActions}>
-                    <Button type="button" variant="quiet" disabled={busy !== null} onClick={() => void mark(item, "FEITA")}>
-                      Feita
-                    </Button>
-                    <Button type="button" variant="quiet" disabled={busy !== null} onClick={() => void mark(item, "FALTA")}>
-                      Falta
-                    </Button>
+                    <button type="button" className={`${styles.checkButton} ${styles.checkDone}`} aria-label="Feita" title="Feita" disabled={busy !== null} onClick={() => void mark(item, "FEITA")}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      </svg>
+                    </button>
+                    <button type="button" className={`${styles.checkButton} ${styles.checkMissed}`} aria-label="Falta" title="Falta" disabled={busy !== null} onClick={() => void mark(item, "FALTA")}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+                        <path d="M7 7l10 10M17 7L7 17" />
+                      </svg>
+                    </button>
                   </span>
                 ) : item === next ? (
                   <Tag tone="warn">Próxima</Tag>
