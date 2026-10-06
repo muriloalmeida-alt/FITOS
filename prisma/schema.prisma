@@ -391,6 +391,8 @@ model Tenant {
   subscriptionDueReminders SubscriptionDueReminder[]
   referralsMade            PersonalReferral[]        @relation("ReferralReferrer")
   referralReceived         PersonalReferral?         @relation("ReferralReferred")
+  scheduleSlots            ScheduleSlot[]
+  scheduleEvents           ScheduleEvent[]
 
   @@map("tenants")
 }
@@ -562,6 +564,8 @@ model Student {
   referredByStudentId String?
   referredBy          Student?           @relation("StudentReferral", fields: [referredByStudentId], references: [id], onDelete: SetNull)
   referrals           Student[]          @relation("StudentReferral")
+  scheduleSlots       ScheduleSlot[]
+  scheduleEvents      ScheduleEvent[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -1497,4 +1501,58 @@ model PersonalReferral {
 
   @@index([referrerTenantId])
   @@map("personal_referrals")
+}
+
+/// Horário fixo de um aluno (EPIC-48): toda semana, no dia e hora
+/// combinados (horário de Brasília, minutos desde 0h).
+model ScheduleSlot {
+  id              String    @id @default(cuid())
+  tenantId        String
+  studentId       String
+  weekday         Int
+  startMinutes    Int
+  durationMinutes Int       @default(60)
+  location        String?
+  /// Primeiro dia (AAAA-MM-DD) em que vale; antes disso não aparece.
+  startsOn        String
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  endedAt         DateTime?
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student         @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  events  ScheduleEvent[]
+
+  @@index([tenantId, active])
+  @@index([studentId, tenantId])
+  @@map("schedule_slots")
+}
+
+/// Uma aula num dia (EPIC-48): a situação de uma ocorrência do horário fixo
+/// (`slotId` + `originalDate`: feita, falta, desmarcada) ou uma aula avulsa
+/// / reposição (`slotId` nulo).
+model ScheduleEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  studentId       String
+  slotId          String?
+  originalDate    String?
+  date            String
+  startMinutes    Int
+  durationMinutes Int      @default(60)
+  /// AGENDADA, FEITA, FALTA ou DESMARCADA.
+  status          String   @default("AGENDADA")
+  note            String?
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student       @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  slot    ScheduleSlot? @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, originalDate])
+  @@index([tenantId, date])
+  @@index([studentId, tenantId, date])
+  @@map("schedule_events")
 }

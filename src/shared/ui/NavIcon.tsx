@@ -21,6 +21,7 @@ export type NavIconName =
   | "assinatura"
   | "config"
   | "mensagens"
+  | "agenda"
   | "novo";
 
 interface NavIconProps {
@@ -119,6 +120,13 @@ function NavIconGlyph({ name }: { name: NavIconName }) {
         <>
           <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />
           <path d="M8 10h8M8 13h5" />
+        </>
+      );
+    case "agenda":
+      return (
+        <>
+          <rect x="3.5" y="5" width="17" height="15" rx="2" />
+          <path d="M3.5 10h17M8 3v4M16 3v4M8 14h3" />
         </>
       );
     case "novo":

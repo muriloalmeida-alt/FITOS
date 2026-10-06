@@ -40,6 +40,8 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos", compact: true },
   // EPIC-39: chat com os alunos, por assunto.
   { key: "mensagens", label: "Mensagens", href: "/painel/mensagens", icon: "mensagens", compact: true },
+  // EPIC-48: horários fixos, faltas e remarcações.
+  { key: "agenda", label: "Agenda", href: "/painel/agenda", icon: "agenda" },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios", icon: "exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
   { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
@@ -60,6 +62,8 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao", compact: true },
   // EPIC-39: chat com o personal, por assunto.
   { key: "mensagens", label: "Mensagens", href: "/painel/mensagens", icon: "mensagens", compact: true },
+  // EPIC-48: as próximas aulas com o personal.
+  { key: "agenda", label: "Agenda", href: "/painel/agenda", icon: "agenda" },
   { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
 ];
 
