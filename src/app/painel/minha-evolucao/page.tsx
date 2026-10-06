@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell } from "@/shared/ui";
+import { ActionRow, AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requireIndividual } from "@/modules/tenancy/authContext";
 import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
@@ -45,6 +45,7 @@ export default async function MinhaEvolucaoPage({ searchParams }: { searchParams
 
   return (
     <AppShell eyebrow="Evolução" title="Minha evolução" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
+      <ActionRow href="/painel/relatorio" title="Relatório do mês" description="Treinos, cargas, corpo e fotos do mês" trailing={<span aria-hidden="true">›</span>} />
       <MinhaEvolucaoView
         tab={tab}
         overview={overview}

@@ -1,0 +1,113 @@
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.months {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  text-align: center;
+  font-size: 18px;
+}
+
+.months a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--fitos-orange-300);
+  font-size: 28px;
+  text-decoration: none;
+}
+
+.empty {
+  color: var(--fitos-color-text-muted);
+  text-align: center;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.stats dt {
+  order: 2;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stats dd {
+  order: 1;
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.stats span {
+  order: 3;
+  margin-top: 4px;
+  color: var(--fitos-orange-300);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.block h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.block ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.block li span {
+  color: var(--fitos-orange-300);
+}
+
+.photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photos figure {
+  margin: 0;
+}
+
+.photos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  object-fit: cover;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.photos figcaption {
+  margin-top: 4px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
