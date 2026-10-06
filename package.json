@@ -16,6 +16,7 @@
     "db:studio": "prisma studio",
     "catalog:import-curated": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-catalogo-curado.ts",
     "catalog:import-imagens-exercicios": "NODE_OPTIONS=--conditions=react-server tsx scripts/import-imagens-exercicios.ts",
+    "exercises:validate-media": "NODE_OPTIONS=--conditions=react-server tsx scripts/validar-midia-exercicios.ts",
     "planos:seed-comerciais": "NODE_OPTIONS=--conditions=react-server tsx scripts/seed-planos-comerciais.ts",
     "admin:garantir": "NODE_OPTIONS=--conditions=react-server tsx scripts/garantir-admin.ts",
     "push:chaves": "web-push generate-vapid-keys"
