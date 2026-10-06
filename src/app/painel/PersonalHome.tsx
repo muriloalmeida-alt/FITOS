@@ -40,6 +40,8 @@ interface PersonalHomeProps {
   risk?: { total: number; alto: number };
   /// Progressão (EPIC-44): alunos prontos para subir a carga.
   progressionStudents?: number;
+  /// Agenda de hoje (EPIC-48).
+  agendaToday?: { count: number; next: string | null } | null;
 }
 
 function firstName(name: string): string {
@@ -50,7 +52,7 @@ function firstName(name: string): string {
 /// levam às telas certas e a fila "Pede você agora" (uma decisão por vez,
 /// resolvida no lugar), mais o botão + para o resto. Tudo vem das
 /// consultas reais do tenant.
-export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, openCharges, students, risk, progressionStudents = 0 }: PersonalHomeProps) {
+export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, openCharges, students, risk, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
   const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
@@ -95,6 +97,14 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
         </section>
       ) : (
         <>
+          {agendaToday ? (
+            <NextStepCard
+              eyebrow="Agenda de hoje"
+              title={`${agendaToday.count} ${agendaToday.count === 1 ? "aula" : "aulas"}`}
+              description={agendaToday.next ? `Próxima: ${agendaToday.next}` : "Todas já passaram. Marque feita ou falta."}
+              href="/painel/agenda"
+            />
+          ) : null}
           {risk && risk.total > 0 ? (
             <NextStepCard
               eyebrow={risk.alto > 0 ? `${risk.alto} com risco alto` : "Atenção"}

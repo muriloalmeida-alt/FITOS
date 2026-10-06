@@ -10,6 +10,8 @@ import { ensureCurrentMonthCharges, getFinancialSummary } from "@/modules/studen
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
 import { getPersonalFeed } from "@/modules/students/personalFeed";
 import { riskCount } from "@/modules/students/riskPanel";
+import { listOccurrences, nextOccurrencesForStudent } from "@/modules/schedule/schedule";
+import { dayLabel, formatTime, localDate, localMinutes } from "@/shared/lib/scheduleTime";
 import { suggestCoachProgressions } from "@/modules/execution/progression";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
@@ -108,7 +110,7 @@ export default async function PainelPage() {
     // contagem de atrasadas vem depois, já com o status certo.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, openCharges, risk, progressions] = await Promise.all([
+    const [roster, feed, financialSummary, subscription, openCharges, risk, progressions, todayClasses] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
@@ -121,7 +123,10 @@ export default async function PainelPage() {
       }),
       riskCount(ctx.tenantId).catch(() => ({ total: 0, alto: 0 })),
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
+      listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
     ]);
+    const classes = todayClasses.filter((item) => item.status !== "DESMARCADA");
+    const upcoming = classes.find((item) => item.startMinutes + item.durationMinutes > localMinutes(now)) ?? null;
     const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
     return (
@@ -142,6 +147,7 @@ export default async function PainelPage() {
         openCharges={openCharges.map((charge) => ({ id: charge.id, studentName: charge.student.displayName, amountCents: charge.amountCents, overdue: charge.status === "ATRASADO" }))}
         students={roster.rows.map((row) => ({ id: row.id, name: row.displayName }))}
         risk={risk}
+        agendaToday={classes.length > 0 ? { count: classes.length, next: upcoming ? `${formatTime(upcoming.startMinutes)} com ${upcoming.studentName.trim().split(/\s+/)[0]}` : null } : null}
         progressionStudents={new Set(progressions.map((item) => item.studentId)).size}
       />
     );
@@ -170,14 +176,17 @@ export default async function PainelPage() {
   }
 
   const now = new Date();
-  const [student, home, openCharge, healthForm] = await Promise.all([
+  const [student, home, openCharge, healthForm, nextClasses] = await Promise.all([
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
     getStudentHome({ tenantId: ctx.tenantId, studentId: ctx.studentId, now }),
     // EPIC-38: mensalidade em aberto que o personal mandou pelo app.
     prisma.studentCharge.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId, status: { in: ["PENDENTE", "ATRASADO"] }, paymentUrl: { not: null } }, orderBy: { dueDate: "asc" } }),
     // EPIC-46: ficha de saúde ainda não respondida.
     prisma.healthForm.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId }, select: { id: true } }),
+    // EPIC-48: próxima aula na agenda.
+    nextOccurrencesForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId, now, days: 7, limit: 3 }).catch(() => []),
   ]);
+  const nextClass = nextClasses.find((item) => item.status === "AGENDADA") ?? null;
   return (
     <AlunoHome
       displayName={student.displayName}
@@ -187,6 +196,7 @@ export default async function PainelPage() {
       home={home}
       todayIso={now.toISOString()}
       healthPending={healthForm === null}
+      nextClass={nextClass ? `${dayLabel(nextClass.date)} às ${formatTime(nextClass.startMinutes)}` : null}
       payment={openCharge?.paymentUrl ? { description: openCharge.description, amountCents: openCharge.amountCents, dueIso: openCharge.dueDate.toISOString(), overdue: openCharge.dueDate < now, url: openCharge.paymentUrl } : null}
     />
   );
