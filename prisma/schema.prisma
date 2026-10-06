@@ -358,6 +358,8 @@ model Tenant {
   /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
   /// própria conta de aluno neste espaço. Gerado no primeiro uso.
   inviteCode            String?    @unique
+  /// Código de indicação do personal para outros personais (EPIC-47).
+  referralCode          String?    @unique
 
   owner                    User                      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students                 Student[]
@@ -387,6 +389,8 @@ model Tenant {
   chatAttachments          ChatAttachment[]
   healthForms              HealthForm[]
   subscriptionDueReminders SubscriptionDueReminder[]
+  referralsMade            PersonalReferral[]        @relation("ReferralReferrer")
+  referralReceived         PersonalReferral?         @relation("ReferralReferred")
 
   @@map("tenants")
 }
@@ -541,19 +545,23 @@ model Student {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user              User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  endedByUser       User?              @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
-  planAssignments   PlanAssignment[]
-  workoutSessions   WorkoutSession[]
-  assessments       Assessment[]
-  charges           StudentCharge[]
-  chargeRecurrences ChargeRecurrence[]
-  invitations       Invitation[]
-  goals             Goal[]
-  evolutionPhotos   EvolutionPhoto[]
-  chatTopics        ChatTopic[]
-  healthForm        HealthForm?
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  endedByUser         User?              @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
+  planAssignments     PlanAssignment[]
+  workoutSessions     WorkoutSession[]
+  assessments         Assessment[]
+  charges             StudentCharge[]
+  chargeRecurrences   ChargeRecurrence[]
+  invitations         Invitation[]
+  goals               Goal[]
+  evolutionPhotos     EvolutionPhoto[]
+  chatTopics          ChatTopic[]
+  healthForm          HealthForm?
+  /// Aluno que indicou este (EPIC-47), quando entrou pelo link com `?ref=`.
+  referredByStudentId String?
+  referredBy          Student?           @relation("StudentReferral", fields: [referredByStudentId], references: [id], onDelete: SetNull)
+  referrals           Student[]          @relation("StudentReferral")
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -1472,4 +1480,21 @@ model HealthForm {
 
   @@unique([studentId, tenantId])
   @@map("health_forms")
+}
+
+/// Indicação de personal para personal (EPIC-47): o indicado ganha 30 dias
+/// a mais de teste; quando o primeiro pagamento dele é confirmado, quem
+/// indicou ganha um mês (`rewardedAt`).
+model PersonalReferral {
+  id               String    @id @default(cuid())
+  referrerTenantId String
+  referredTenantId String    @unique
+  createdAt        DateTime  @default(now())
+  rewardedAt       DateTime?
+
+  referrer Tenant @relation("ReferralReferrer", fields: [referrerTenantId], references: [id], onDelete: Cascade)
+  referred Tenant @relation("ReferralReferred", fields: [referredTenantId], references: [id], onDelete: Cascade)
+
+  @@index([referrerTenantId])
+  @@map("personal_referrals")
 }

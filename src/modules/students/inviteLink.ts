@@ -8,6 +8,7 @@ import { generateInvitation } from "./invitations";
 import { applyLibraryItem } from "@/modules/library/library";
 import { createChargeRecurrence } from "@/modules/student-finance/charges";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
+import { sendToUser } from "@/modules/notifications/push";
 
 /// Link de convite do personal (EPIC-29): um código fixo por espaço
 /// (`/c/<código>`). Quem abre o link cria a própria conta de aluno, com o
@@ -70,7 +71,7 @@ export class InviteLinkError extends Error {
 /// devolve os cabeçalhos da sessão (cookie). Qualquer falha na ativação
 /// remove o aluno recém-criado.
 export async function joinByInviteLink(
-  input: { code: string; name: string; email: string; password: string },
+  input: { code: string; name: string; email: string; password: string; ref?: string | null },
   client: PrismaClient = prisma,
   authInstance?: Parameters<typeof activateStudentAccount>[1] extends infer O ? (O extends { authInstance?: infer A } ? A : never) : never
 ): Promise<{ studentId: string; headers: Headers }> {
@@ -84,6 +85,7 @@ export async function joinByInviteLink(
     const { rawToken } = await generateInvitation({ tenantId: link.tenantId, studentId: student.id, actorUserId: owner.ownerId }, client);
     const result = await activateStudentAccount({ token: rawToken, password: input.password }, { client, authInstance });
     await applyInviteDefaults({ tenantId: link.tenantId, studentId: student.id, actorUserId: owner.ownerId }, client);
+    if (input.ref) await recordStudentReferral({ tenantId: link.tenantId, studentId: student.id, referrerId: input.ref, ownerId: owner.ownerId, name: input.name }, client);
     return { studentId: student.id, headers: result.headers };
   } catch (error) {
     await client.invitation.deleteMany({ where: { studentId: student.id } }).catch(() => undefined);
@@ -154,5 +156,20 @@ export async function applyInviteDefaults(input: { tenantId: string; studentId: 
     } catch (error) {
       logEvent("warn", "convite.mensalidade_nao_criada", { tenantId: input.tenantId, ...describeError(error) });
     }
+  }
+}
+
+/// Indicação de aluno (EPIC-47): quem entrou pelo link compartilhado por
+/// outro aluno do mesmo espaço fica marcado como indicado por ele, e o
+/// personal recebe um aviso. Melhor esforço: nunca impede a entrada.
+async function recordStudentReferral(input: { tenantId: string; studentId: string; referrerId: string; ownerId: string; name: string }, client: PrismaClient) {
+  try {
+    const referrer = await client.student.findFirst({ where: { id: input.referrerId, tenantId: input.tenantId, status: "ATIVO" }, select: { id: true, displayName: true } });
+    if (!referrer || referrer.id === input.studentId) return;
+    await client.student.update({ where: { id: input.studentId }, data: { referredByStudentId: referrer.id } });
+    const first = (name: string) => name.trim().split(/\s+/)[0];
+    await sendToUser(input.ownerId, { title: `${first(input.name)} entrou pelo seu link`, body: `Indicação de ${first(referrer.displayName)}.`, url: `/painel/alunos/${input.studentId}`, tag: `indicacao-aluno-${input.studentId}` }, { client });
+  } catch (error) {
+    logEvent("error", "indicacao_aluno_falhou", { studentId: input.studentId, ...describeError(error) });
   }
 }

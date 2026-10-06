@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     return Response.json({ error: "VALIDACAO", message: "Informe nome, e-mail e senha." }, { status: 400 });
   }
   try {
-    const result = await joinByInviteLink({ code, name: body.name, email: body.email, password: body.password });
+    const result = await joinByInviteLink({ code, name: body.name, email: body.email, password: body.password, ref: typeof body.ref === "string" ? body.ref : null });
     const response = Response.json({ ok: true }, { status: 201 });
     for (const cookie of result.headers.getSetCookie()) response.headers.append("Set-Cookie", cookie);
     return response;

@@ -11,8 +11,11 @@ export const metadata: Metadata = { title: `Convite — ${appName}` };
 
 /// Entrar no espaço do personal pelo link (EPIC-29/33): quem convidou, a
 /// conta, o objetivo e o treino de hoje.
-export default async function JoinByLinkPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function JoinByLinkPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams?: Promise<{ ref?: string }> }) {
   const { code } = await params;
+  // EPIC-47: link compartilhado por um aluno (`?ref=<id do aluno>`).
+  const ref = (await searchParams)?.ref;
+  const referrerId = typeof ref === "string" && /^[a-z0-9]{10,40}$/.test(ref) ? ref : null;
   const link = await getInviteLink(code);
   if (!link) {
     return (
@@ -45,7 +48,7 @@ export default async function JoinByLinkPage({ params }: { params: Promise<{ cod
           <p className={styles.muted}>{[link.businessName, link.cref ? `CREF ${link.cref}` : null].filter(Boolean).join(" · ")}</p>
         </div>
       </div>
-      <JoinByLinkForm code={code} personalFirstName={first} businessName={link.businessName} />
+      <JoinByLinkForm code={code} personalFirstName={first} businessName={link.businessName} referrerId={referrerId} />
     </EntradaShell>
   );
 }

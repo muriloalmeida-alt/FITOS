@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareLinkButton } from "../_share/ShareLinkButton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionRow, Button, ChipGroup, FormAlert, Sheet, Stepper, Switch, TextField, useToast } from "@/shared/ui";
@@ -26,6 +27,8 @@ interface Props {
   hasPassword: boolean;
   /// Conta Asaas do personal para cobrar os alunos pelo app (EPIC-38).
   payments?: ReceivePaymentsProps;
+  /// Indique o FitOS (EPIC-47).
+  referral?: { code: string; invited: number; confirmed: number } | null;
 }
 
 type SheetKind = null | "prescription" | "program" | "fee" | "inactive" | "password" | "delete";
@@ -55,7 +58,7 @@ function lastActiveLabel(iso: string, now: number): string {
 /// Configurações do personal (EPIC-36): padrões de treino e de novo aluno,
 /// avisos escolhidos, segurança da conta e seus dados (baixar e excluir,
 /// EPIC-37). Cada ajuste salva na hora.
-export function ConfiguracoesView({ prescription, invite, programs, alerts: initialAlerts, devices, hasPassword, payments = { status: "NAO_ATIVADO", onboardingUrl: null, payoutPixKey: null, balanceCents: null, ownerName: "" } }: Props) {
+export function ConfiguracoesView({ prescription, invite, programs, alerts: initialAlerts, devices, hasPassword, referral = null, payments = { status: "NAO_ATIVADO", onboardingUrl: null, payoutPixKey: null, balanceCents: null, ownerName: "" } }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(null);
@@ -171,6 +174,21 @@ export function ConfiguracoesView({ prescription, invite, programs, alerts: init
 
       <h2 className={styles.cap}>Receber pelo app</h2>
       <ReceivePayments {...payments} />
+
+      {referral ? (
+        <>
+          <h2 className={styles.cap}>Indique o FitOS</h2>
+          <ul className={styles.list}>
+            <li>
+              <ActionRow
+                title="Indique outro personal"
+                description={`Ele ganha 30 dias a mais de teste; quando assinar, você ganha 1 mês grátis.${referral.invited ? ` Indicações: ${referral.invited}${referral.confirmed ? `, ${referral.confirmed} ${referral.confirmed === 1 ? "confirmada" : "confirmadas"}` : ""}.` : ""}`}
+                trailing={<ShareLinkButton path={`/i/${referral.code}`} text="Uso o FitOS para os treinos e as mensalidades dos meus alunos. Cria sua conta por aqui e ganha 30 dias a mais de teste:" />}
+              />
+            </li>
+          </ul>
+        </>
+      ) : null}
 
       <h2 className={styles.cap}>Avisos no celular</h2>
       <PushDeviceRow purpose="Ligue para receber neste celular os avisos que você escolher abaixo." />

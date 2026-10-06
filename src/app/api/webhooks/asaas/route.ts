@@ -1,3 +1,4 @@
+import { rewardReferrer } from "@/modules/billing/referrals";
 import { secretsMatch } from "@/shared/lib/secretCompare";
 import { parseAsaasWebhookPayload, reconcileAsaasPaymentEvent } from "@/modules/billing/asaasWebhook";
 
@@ -42,6 +43,11 @@ export async function POST(request: Request) {
 
   const result = await reconcileAsaasPaymentEvent(payload);
   console.log(`${LOG_PREFIX} evento=${payload.event} pagamento=${payload.payment.id} resultado=${result.outcome}`);
+
+  // EPIC-47: primeiro pagamento de um personal indicado → mês grátis para quem indicou.
+  if (result.tenantId && (result.outcome === "ATIVA_APLICADA" || result.outcome === "IGNORADO_SEM_MUDANCA") && ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_RECEIVED_IN_CASH"].includes(payload.event)) {
+    await rewardReferrer({ referredTenantId: result.tenantId }).catch((error) => console.error(`${LOG_PREFIX} indicação: ${error instanceof Error ? error.message : "erro"}`));
+  }
 
   return Response.json({ status: "recebido" });
 }
