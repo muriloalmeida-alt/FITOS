@@ -203,3 +203,62 @@
   background-color: rgba(255, 120, 71, 0.16);
   color: var(--fitos-orange-300);
 }
+
+/* Anexos (EPIC-40) */
+.withMedia {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.withMedia > span:not(.stamp) {
+  padding: 0 8px;
+}
+
+.withMedia .stamp {
+  padding: 0 8px 4px;
+}
+
+.media {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  max-height: 420px;
+  border-radius: 14px;
+  background-color: #000;
+  object-fit: contain;
+}
+
+.expired {
+  padding: 8px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: none;
+  color: var(--fitos-orange-300);
+  cursor: pointer;
+}
+
+.attach:disabled {
+  opacity: 0.5;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}

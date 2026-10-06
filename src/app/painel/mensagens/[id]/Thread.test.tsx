@@ -17,15 +17,16 @@ afterEach(() => {
 });
 
 const messages = [
-  { id: "m1", body: "Senti no ombro.", mine: true, createdAt: "2026-10-05T13:00:00.000Z" },
-  { id: "m2", body: "Abra menos os cotovelos.", mine: false, createdAt: "2026-10-06T14:30:00.000Z" },
+  { id: "m1", body: "Senti no ombro.", mine: true, createdAt: "2026-10-05T13:00:00.000Z", attachment: null },
+  { id: "m2", body: "Abra menos os cotovelos.", mine: false, createdAt: "2026-10-06T14:30:00.000Z", attachment: null },
 ];
+const media = (id: string, kind: "VIDEO" | "FOTO", expired = false) => ({ id, kind, durationSec: kind === "VIDEO" ? 12 : null, width: null, height: null, expired });
 
 describe("Thread (EPIC-39)", () => {
   it("mostra as mensagens por dia, minhas e do outro lado", () => {
     render(<Thread topicId="t1" resolved={false} backHref="/painel/mensagens" studentHref={null} messages={messages} />);
-    expect(screen.getByText("Senti no ombro.").className).toContain("mine");
-    expect(screen.getByText("Abra menos os cotovelos.").className).toContain("theirs");
+    expect(screen.getByText("Senti no ombro.").parentElement!.className).toContain("mine");
+    expect(screen.getByText("Abra menos os cotovelos.").parentElement!.className).toContain("theirs");
     expect(screen.getByText(/seg\.?, 5 de out/i)).toBeInTheDocument();
     expect(screen.getByText(/ter\.?, 6 de out/i)).toBeInTheDocument();
   });
@@ -47,5 +48,30 @@ describe("Thread (EPIC-39)", () => {
     expect(screen.getByRole("link", { name: "Ver aluno" })).toHaveAttribute("href", "/painel/alunos/s1");
     await userEvent.click(screen.getByRole("button", { name: "Reabrir" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/mensagens/t1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ resolved: false }) }));
+  });
+
+  it("vídeo e foto na conversa; anexo expirado vira aviso", () => {
+    const { container } = render(
+      <Thread
+        topicId="t1"
+        resolved={false}
+        backHref="/painel/mensagens"
+        studentHref={null}
+        messages={[
+          { id: "m3", body: "", mine: true, createdAt: "2026-10-06T14:31:00.000Z", attachment: media("a1", "VIDEO") },
+          { id: "m4", body: "Olha a pegada", mine: true, createdAt: "2026-10-06T14:32:00.000Z", attachment: media("a2", "FOTO") },
+          { id: "m5", body: "", mine: true, createdAt: "2026-10-06T14:33:00.000Z", attachment: media("a3", "VIDEO", true) },
+        ]}
+      />
+    );
+    expect(container.querySelector("video")).toHaveAttribute("src", "/api/mensagens/anexos/a1");
+    expect(screen.getByAltText("Foto enviada na conversa")).toHaveAttribute("src", "/api/mensagens/anexos/a2");
+    expect(screen.getByText("Vídeo expirado (mais de 90 dias)")).toBeInTheDocument();
+  });
+
+  it("dica de gravar a execução até o primeiro anexo", () => {
+    render(<Thread topicId="t1" resolved={false} backHref="/painel/mensagens" studentHref={null} messages={messages} attachHint="Grave a execução" />);
+    expect(screen.getByText("Grave a execução")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar vídeo ou foto" })).toBeEnabled();
   });
 });
