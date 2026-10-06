@@ -56,7 +56,7 @@ describe("baixar meus dados (EPIC-37)", () => {
     const { filename, zip } = await buildPersonalExport({ tenantId: tenant.id, now: new Date("2026-10-05T13:00:00Z") }, prisma);
     expect(filename).toBe("fitos-dados-2026-10-05.zip");
     const files = unzip(zip);
-    expect(Object.keys(files).sort()).toEqual(["LEIA-ME.txt", "alunos.csv", "avaliacoes.csv", "cobrancas.csv", "metas.csv", "programas-e-treinos.csv", "series-registradas.csv", "treinos-realizados.csv"]);
+    expect(Object.keys(files).sort()).toEqual(["LEIA-ME.txt", "alunos.csv", "avaliacoes.csv", "cobrancas.csv", "fichas-de-saude.csv", "metas.csv", "programas-e-treinos.csv", "series-registradas.csv", "treinos-realizados.csv"]);
     expect(files["LEIA-ME.txt"]).toContain(`Studio export ${run}`);
     expect(files["alunos.csv"]).toContain(`"Ana; Costa";ana-${run}@example.test;Ativo;Não;;Seg, Qui`);
     expect(files["alunos.csv"]).not.toContain("Pedro Outro");

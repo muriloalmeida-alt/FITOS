@@ -67,7 +67,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
   if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
-  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions, healthForm] = await Promise.all([
     getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
@@ -79,6 +79,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     listEvolutionPhotos({ tenantId: ctx.tenantId, studentId: student.id }),
     student.userId ? prisma.user.findUnique({ where: { id: student.userId }, select: { image: true } }) : null,
     student.status === "ATIVO" ? suggestCoachProgressions({ tenantId: ctx.tenantId, studentId: student.id }).catch(() => []) : [],
+    prisma.healthForm.findFirst({ where: { tenantId: ctx.tenantId, studentId: student.id }, select: { parqYes: true } }),
   ]);
   const accessStatus = deriveAccessStatus(student, invitation);
   const plan = assignment?.trainingPlan ?? null;
@@ -130,6 +131,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           objective: student.objective,
           image: studentUser?.image ?? null,
         }}
+        health={healthForm ? { parqYes: healthForm.parqYes } : null}
         photos={{ items: photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() })), consent: Boolean(student.photoConsentAt) }}
         access={{ status: accessStatus, daysLeft: accessStatus === "CONVITE_PENDENTE" && invitation ? daysUntil(invitation.expiresAt) : null }}
         program={
