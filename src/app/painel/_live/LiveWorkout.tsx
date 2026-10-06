@@ -17,6 +17,7 @@ import { shareWorkoutImage } from "./shareImage";
 import type { CardioIntensity } from "@/shared/lib/cardio";
 import { CardioRunner, cardioPosition } from "./CardioRunner";
 import { cardioPhases } from "@/shared/lib/cardio";
+import { AskCoach } from "./AskCoach";
 import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
 
@@ -73,6 +74,8 @@ export interface LiveWorkoutProps {
   progressHref: string;
   /// "Concluir" no resumo (padrão: `exitHref`). O Livre vai para Minha evolução.
   doneHref?: string;
+  /// "Perguntar ao personal" (EPIC-39): só o aluno com personal.
+  askCoach?: boolean;
 }
 
 interface Summary {
@@ -1162,9 +1165,12 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             <h1 className={styles.exerciseName}>{item.name}</h1>
             {item.plannedName ? <p className={styles.muted}>Hoje, no lugar de {item.plannedName}</p> : null}
             <p className={styles.muted}>{prescriptionLine(item)}</p>
-            <button type="button" className={styles.busyLink} onClick={() => void openBusy()}>
-              Aparelho ocupado?
-            </button>
+            <span className={styles.exerciseLinks}>
+              <button type="button" className={styles.busyLink} onClick={() => void openBusy()}>
+                Aparelho ocupado?
+              </button>
+              {props.askCoach && props.coachName ? <AskCoach exerciseId={item.performedExerciseId ?? item.exerciseId} exerciseName={item.name} coachName={props.coachName} /> : null}
+            </span>
           </div>
         </div>
         {item.notes ? (

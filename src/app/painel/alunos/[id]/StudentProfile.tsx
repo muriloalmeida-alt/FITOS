@@ -228,6 +228,11 @@ export function StudentProfile({ student, photos, access, program, programs, wee
         />
       ) : null}
       <ActionRow
+        title="Mensagens"
+        description="Conversas por assunto: exercício, treino, dor, agenda"
+        trailing={<Button href={`/painel/mensagens?aluno=${student.id}`} variant="quiet">Abrir</Button>}
+      />
+      <ActionRow
         title="Avaliação"
         description={last ? `Última em ${last.dateLabel} · ${summary(last)}` : "Nenhuma ainda"}
         trailing={active ? <Button href={`/painel/alunos/${student.id}/avaliacao`} variant="quiet">Avaliar</Button> : null}

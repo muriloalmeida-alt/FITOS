@@ -399,3 +399,20 @@
     border: 0;
   }
 }
+
+/* EPIC-39: ponto de mensagens não lidas. */
+.navIconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.navDot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--fitos-orange-500);
+  box-shadow: 0 0 0 2px var(--fitos-color-chrome);
+}

@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { subscriptionAccess } from "@/modules/billing/access";
 import { RememberAccount } from "./RememberAccount";
 import { SubscriptionGate } from "./SubscriptionGate";
+import { unreadTopicsCount } from "@/modules/messages/messages";
 
 /// Layout de `/painel/*` (AjustesTelas, 29/09/2026): só disponibiliza o nome
 /// real da sessão ao avatar do cabeçalho mobile do `AppShell`. Nenhuma
@@ -21,6 +22,8 @@ export default async function PainelLayout({ children }: { children: ReactNode }
       ? await prisma.tenant.findUnique({ where: { ownerId: session.user.id }, select: { saasSubscription: { include: { plan: { select: { priceCents: true } } } } } })
       : null;
   const access = subscriptionAccess(tenant?.saasSubscription ?? null, new Date());
+  // EPIC-39: ponto de "não lidas" no item Mensagens.
+  const unreadMessages = await unreadForSession(session?.user.id ?? null, role);
   const content =
     access.kind === "LIBERADO" ? children : (
       <SubscriptionGate state={{ kind: access.kind, dateIso: (access.kind === "CARENCIA" ? access.blockOn : access.since).toISOString() }} personal={role === "PERSONAL"}>
@@ -28,9 +31,22 @@ export default async function PainelLayout({ children }: { children: ReactNode }
       </SubscriptionGate>
     );
   return (
-    <AccountNameProvider name={session?.user.name ?? null} image={session?.user.image ?? null}>
+    <AccountNameProvider name={session?.user.name ?? null} image={session?.user.image ?? null} unreadMessages={unreadMessages}>
       <RememberAccount account={user ? { name: user.name, email: user.email, role } : null} />
       {content}
     </AccountNameProvider>
   );
+}
+
+async function unreadForSession(userId: string | null, role: string): Promise<number> {
+  if (!userId) return 0;
+  if (role === "PERSONAL") {
+    const tenant = await prisma.tenant.findUnique({ where: { ownerId: userId }, select: { id: true } });
+    return tenant ? unreadTopicsCount({ role: "PERSONAL", userId, tenantId: tenant.id }) : 0;
+  }
+  if (role === "ALUNO") {
+    const student = await prisma.student.findUnique({ where: { userId }, select: { id: true, tenantId: true, status: true } });
+    return student && student.status === "ATIVO" ? unreadTopicsCount({ role: "ALUNO", userId, tenantId: student.tenantId, studentId: student.id }) : 0;
+  }
+  return 0;
 }
