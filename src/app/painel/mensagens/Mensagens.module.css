@@ -262,3 +262,64 @@
   line-height: 1.5;
   text-align: center;
 }
+
+/* Respostas rápidas (EPIC-41) */
+.quickList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quickItem {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quickEdit {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  resize: vertical;
+}
+
+@media (max-width: 420px) {
+  .composer .attach {
+    width: 44px;
+  }
+}
+
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+  cursor: pointer;
+}
+
+.send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

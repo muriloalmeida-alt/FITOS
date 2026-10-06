@@ -75,3 +75,26 @@ describe("Thread (EPIC-39)", () => {
     expect(screen.getByRole("button", { name: "Enviar vídeo ou foto" })).toBeEnabled();
   });
 });
+
+describe("respostas rápidas no Thread (EPIC-41)", () => {
+  it("toque coloca no campo; editar salva a lista", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ replies: ["Boa!", "Suba 2 kg"] }), { status: 200 }));
+    render(<Thread topicId="t1" resolved={false} backHref="/painel/mensagens" studentHref={null} messages={[]} quickReplies={["Boa!"]} />);
+    await userEvent.type(screen.getByLabelText("Mensagem"), "Pedro,");
+    await userEvent.click(screen.getByRole("button", { name: "Respostas rápidas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Boa!" }));
+    expect(screen.getByLabelText("Mensagem")).toHaveValue("Pedro, Boa!");
+
+    await userEvent.click(screen.getByRole("button", { name: "Respostas rápidas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
+    await userEvent.type(screen.getByLabelText("Resposta 2"), "Suba 2 kg");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/mensagens/respostas-rapidas", expect.objectContaining({ method: "PUT", body: JSON.stringify({ replies: ["Boa!", "Suba 2 kg"] }) }));
+    expect(await screen.findByRole("button", { name: "Suba 2 kg" })).toBeInTheDocument();
+  });
+
+  it("aluno não tem respostas rápidas", () => {
+    render(<Thread topicId="t1" resolved={false} backHref="/painel/mensagens" studentHref={null} messages={[]} />);
+    expect(screen.queryByRole("button", { name: "Respostas rápidas" })).toBeNull();
+  });
+});

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, FormAlert } from "@/shared/ui";
 import { requestJson } from "../../_workout-builder/apiClient";
 import { resizeImage } from "@/shared/lib/resizeImage";
+import { QuickReplies } from "./QuickReplies";
 import styles from "../Mensagens.module.css";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   messages: { id: string; body: string; mine: boolean; createdAt: string; attachment: Attachment | null }[];
   /// Texto de ajuda do anexo (o aluno grava a execução).
   attachHint?: string;
+  /// Respostas rápidas (só o personal).
+  quickReplies?: string[];
 }
 
 export interface Attachment {
@@ -84,7 +87,7 @@ const hour = (iso: string) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit"
 /// sem recarregar (o push avisa quando o app está fechado).
 const POLL_MS = 8000;
 
-export function Thread({ topicId, resolved, backHref, studentHref, messages, attachHint }: Props) {
+export function Thread({ topicId, resolved, backHref, studentHref, messages, attachHint, quickReplies }: Props) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -223,12 +226,13 @@ export function Thread({ topicId, resolved, backHref, studentHref, messages, att
             <rect x="3" y="6" width="12" height="12" rx="2" />
           </svg>
         </button>
+        {quickReplies ? <QuickReplies replies={quickReplies} disabled={progress !== null} onPick={(text) => setBody((current) => (current.trim() ? `${current.trim()} ${text}` : text))} /> : null}
         <textarea
           aria-label="Mensagem"
           rows={1}
           maxLength={2000}
           value={body}
-          placeholder="Escreva uma mensagem"
+          placeholder="Mensagem"
           onChange={(event) => setBody(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && window.matchMedia?.("(min-width: 840px)").matches) {
@@ -237,9 +241,11 @@ export function Thread({ topicId, resolved, backHref, studentHref, messages, att
             }
           }}
         />
-        <Button type="submit" disabled={busy || !body.trim()}>
-          {busy ? "…" : "Enviar"}
-        </Button>
+        <button type="submit" className={styles.send} aria-label="Enviar" disabled={busy || !body.trim()}>
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </button>
       </form>
     </div>
   );
