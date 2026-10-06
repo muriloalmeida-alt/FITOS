@@ -18,6 +18,7 @@ import type { CardioIntensity } from "@/shared/lib/cardio";
 import { CardioRunner, cardioPosition } from "./CardioRunner";
 import { cardioPhases } from "@/shared/lib/cardio";
 import { AskCoach } from "./AskCoach";
+import { WorkoutComment } from "./WorkoutComment";
 import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
 
@@ -1033,6 +1034,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
               </button>
             ))}
           </div>
+          {props.askCoach && props.coachName && sessionId ? <WorkoutComment sessionId={sessionId} coachName={props.coachName} /> : null}
           <div className={styles.doneActions}>
             <Button
               type="button"

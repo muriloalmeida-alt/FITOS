@@ -870,6 +870,7 @@ model WorkoutSession {
 
   results    WorkoutSessionResult[]
   setResults WorkoutSetResult[]
+  chatTopic  ChatTopic?
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -1385,6 +1386,9 @@ model ChatTopic {
   exerciseId            String?
   /// Nome do exercício no momento da pergunta (o treino pode mudar depois).
   exerciseName          String?
+  /// Comentário depois do treino (EPIC-42): a sessão e o nome do treino.
+  workoutSessionId      String?   @unique
+  workoutName           String?
   resolvedAt            DateTime?
   lastMessageAt         DateTime  @default(now())
   lastStudentMessageAt  DateTime?
@@ -1393,9 +1397,10 @@ model ChatTopic {
   personalReadAt        DateTime?
   createdAt             DateTime  @default(now())
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student  Student       @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
-  messages ChatMessage[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student        Student         @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutSession WorkoutSession? @relation(fields: [workoutSessionId], references: [id], onDelete: SetNull)
+  messages       ChatMessage[]
 
   @@index([tenantId, lastMessageAt])
   @@index([studentId, tenantId])
