@@ -161,3 +161,127 @@
     padding: 18px;
   }
 }
+
+/* Agenda de hoje (EPIC-48) */
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionLink {
+  color: var(--fitos-orange-300);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agendaItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.agendaOff {
+  opacity: 0.55;
+}
+
+.agendaOff strong {
+  text-decoration: line-through;
+}
+
+.agendaTime {
+  min-width: 48px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.agendaWho {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.agendaWho strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agendaMeta {
+  overflow: hidden;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agendaActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* Feita / Falta como ícones (toque de 40 px). */
+.checkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.checkButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.checkButton:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.checkDone {
+  border: 1px solid rgba(120, 220, 160, 0.45);
+  background-color: rgba(120, 220, 160, 0.12);
+  color: #8ee6b0;
+}
+
+.checkMissed {
+  border: 1px solid rgba(255, 140, 130, 0.45);
+  background-color: rgba(255, 140, 130, 0.1);
+  color: #ffb4ab;
+}
+
+/* Situação já marcada: o mesmo ícone, preenchido. */
+.checkMark {
+  cursor: default;
+}
+
+.checkDoneOn {
+  background-color: #2f9e62;
+  color: #fff;
+}
+
+.checkMissedOn {
+  background-color: #c4473c;
+  color: #fff;
+}

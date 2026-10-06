@@ -125,8 +125,6 @@ export default async function PainelPage() {
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
       listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
     ]);
-    const classes = todayClasses.filter((item) => item.status !== "DESMARCADA");
-    const upcoming = classes.find((item) => item.startMinutes + item.durationMinutes > localMinutes(now)) ?? null;
     const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
     return (
@@ -147,7 +145,10 @@ export default async function PainelPage() {
         openCharges={openCharges.map((charge) => ({ id: charge.id, studentName: charge.student.displayName, amountCents: charge.amountCents, overdue: charge.status === "ATRASADO" }))}
         students={roster.rows.map((row) => ({ id: row.id, name: row.displayName }))}
         risk={risk}
-        agendaToday={classes.length > 0 ? { count: classes.length, next: upcoming ? `${formatTime(upcoming.startMinutes)} com ${upcoming.studentName.trim().split(/\s+/)[0]}` : null } : null}
+        agendaToday={{
+          classes: todayClasses.map((item) => ({ ref: item.ref, studentName: item.studentName, startMinutes: item.startMinutes, durationMinutes: item.durationMinutes, location: item.location, note: item.note, extra: item.extra, status: item.status })),
+          nowMinutes: localMinutes(now),
+        }}
         progressionStudents={new Set(progressions.map((item) => item.studentId)).size}
       />
     );
