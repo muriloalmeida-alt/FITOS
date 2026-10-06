@@ -68,6 +68,7 @@ export default async function ProgressoPage() {
         </Button>
       </div>
       {goal ? <ActionRow title={goal.description} description="Sua meta" /> : null}
+      <ActionRow href="/painel/relatorio" title="Relatório do mês" description="Treinos, cargas, corpo e fotos do mês" trailing={<span aria-hidden="true">›</span>} />
       {series.length > 0 ? (
         <EvolutionView series={series} measures={measures} />
       ) : (
