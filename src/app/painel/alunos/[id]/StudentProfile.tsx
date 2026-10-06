@@ -20,6 +20,8 @@ interface StudentProfileProps {
   student: ProfileStudent;
   /// Fotos da avaliação (EPIC-35).
   photos?: { items: EvolutionPhotoItem[]; consent: boolean };
+  /// Ficha de saúde (EPIC-46): `null` = não respondida; ausente = não mostra.
+  health?: { parqYes: number } | null;
   access: { status: AccessStatus; daysLeft: number | null };
   program: ProfileProgram | null;
   programs: ProgramChoice[];
@@ -57,7 +59,7 @@ function fmt(value: number) {
 /// cada ação numa sheet curta — atribuir/trocar/encerrar programa,
 /// avaliação já com os últimos valores, "Recebi" da mensalidade, convite,
 /// dados, inativar/reativar e encerrar vínculo.
-export function StudentProfile({ student, photos, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
+export function StudentProfile({ student, photos, health, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(initialSheet);
@@ -225,6 +227,17 @@ export function StudentProfile({ student, photos, access, program, programs, wee
             </>
           }
           trailing={<Button type="button" variant="quiet" onClick={() => setSheet("pay")}>Recebi</Button>}
+        />
+      ) : null}
+      {health !== undefined ? (
+        <ActionRow
+          title={
+            <>
+              Ficha de saúde {health === null ? <Tag tone="muted">Pendente</Tag> : health.parqYes > 0 ? <Tag tone="error">PAR-Q: {health.parqYes} sim</Tag> : <Tag tone="ok">Sem alerta</Tag>}
+            </>
+          }
+          description={health === null ? "Anamnese e PAR-Q ainda não respondidos" : "Anamnese e PAR-Q"}
+          trailing={<Button href={`/painel/alunos/${student.id}/saude`} variant="quiet">{health === null ? "Abrir" : "Ver"}</Button>}
         />
       ) : null}
       <ActionRow

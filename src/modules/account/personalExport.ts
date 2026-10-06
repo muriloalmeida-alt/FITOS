@@ -1,3 +1,4 @@
+import { PARQ_QUESTIONS, activityLabel, conditionLabel, type HealthAnswers } from "@/shared/lib/healthForm";
 import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
@@ -35,7 +36,7 @@ const MEASUREMENT: Record<string, string> = { CINTURA: "Cintura", QUADRIL: "Quad
 export async function buildPersonalExport(input: { tenantId: string; now?: Date }, client: PrismaClient = prisma): Promise<{ filename: string; zip: Uint8Array }> {
   const now = input.now ?? new Date();
   const { tenantId } = input;
-  const [tenant, students, plans, assignments, sessions, setResults, assessments, goals, charges] = await Promise.all([
+  const [tenant, students, plans, assignments, sessions, setResults, assessments, goals, charges, healthForms] = await Promise.all([
     client.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true, owner: { select: { name: true, email: true } } } }),
     client.student.findMany({ where: { tenantId }, orderBy: { displayName: "asc" } }),
     client.trainingPlan.findMany({
@@ -53,6 +54,7 @@ export async function buildPersonalExport(input: { tenantId: string; now?: Date 
     client.assessment.findMany({ where: { tenantId, deletedAt: null }, orderBy: { recordedAt: "asc" }, include: { student: { select: { displayName: true } }, measurements: true } }),
     client.goal.findMany({ where: { tenantId }, orderBy: { createdAt: "asc" }, include: { student: { select: { displayName: true } } } }),
     client.studentCharge.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" }, include: { student: { select: { displayName: true } }, payment: true } }),
+    client.healthForm.findMany({ where: { tenantId }, orderBy: { updatedAt: "asc" }, include: { student: { select: { displayName: true } } } }),
   ]);
 
   const studentsByPlan = new Map<string, string[]>();
@@ -129,6 +131,16 @@ export async function buildPersonalExport(input: { tenantId: string; now?: Date 
       content: toCsv(
         ["Aluno", "Descrição", "Vencimento", "Valor (R$)", "Situação", "Pago em", "Valor pago (R$)", "Forma de pagamento", "Motivo do cancelamento"],
         charges.map((charge) => [charge.student.displayName, charge.description, date(charge.dueDate), money(charge.amountCents), charge.payment ? "Paga" : label(charge.status), date(charge.payment?.paidAt), charge.payment ? money(charge.payment.amountCentsPaid) : "", charge.payment?.method, charge.cancelReason])
+      ),
+    },
+    {
+      name: "fichas-de-saude.csv",
+      content: toCsv(
+        ["Aluno", "Atualizada em", ...PARQ_QUESTIONS.map((question, index) => `PAR-Q ${index + 1}: ${question}`), "Condições", "Lesões ou cirurgias", "Remédios", "Dores", "Rotina", "Observações"],
+        healthForms.map((form) => {
+          const answers = form.answers as unknown as HealthAnswers;
+          return [form.student.displayName, date(form.updatedAt), ...PARQ_QUESTIONS.map((_, index) => (answers.parq?.[index] ? "Sim" : "Não")), (answers.conditions ?? []).map(conditionLabel).join(", "), answers.injuries, answers.medications, answers.pain, activityLabel(answers.activity ?? null), answers.notes];
+        })
       ),
     },
   ];

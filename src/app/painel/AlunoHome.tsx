@@ -19,6 +19,8 @@ interface AlunoHomeProps {
   todayIso: string;
   /// Mensalidade em aberto com link de pagamento (EPIC-38).
   payment?: { description: string; amountCents: number; dueIso: string; overdue: boolean; url: string } | null;
+  /// Ficha de saúde ainda não respondida (EPIC-46).
+  healthPending?: boolean;
 }
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" });
@@ -79,7 +81,7 @@ function Hero({ home, personalName }: { home: StudentHome; personalName: string 
 /// Início do Aluno (FIT-151, A1 do protótipo): o que fazer hoje com um
 /// toque (começar, continuar, descanso ou programa a caminho), ritmo da
 /// semana, próximos treinos e a última avaliação.
-export function AlunoHome({ displayName, personalName, greeting, dateLabel, home, todayIso, payment = null }: AlunoHomeProps) {
+export function AlunoHome({ displayName, personalName, greeting, dateLabel, home, todayIso, payment = null, healthPending = false }: AlunoHomeProps) {
   const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
   const today = new Date(todayIso);
   const assessment = home.lastAssessment;
@@ -100,6 +102,10 @@ export function AlunoHome({ displayName, personalName, greeting, dateLabel, home
           description={`${payment.description} · ${payment.overdue ? "venceu" : "vence"} em ${dateFmt.format(new Date(payment.dueIso))}. Pix, boleto ou cartão, direto para ${personalName.split(/\s+/)[0]}.`}
           href={payment.url}
         />
+      ) : null}
+
+      {healthPending ? (
+        <NextStepCard eyebrow="2 minutos" title="Responda sua ficha de saúde" description={`Para ${personalName.split(/\s+/)[0]} montar seu treino com segurança.`} href="/painel/saude" />
       ) : null}
 
       {home.program ? (

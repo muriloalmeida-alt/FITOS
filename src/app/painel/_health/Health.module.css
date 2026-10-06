@@ -1,0 +1,97 @@
+.form,
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.parq {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.parq p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.alert {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 99, 99, 0.4);
+  border-radius: 16px;
+  background-color: rgba(255, 99, 99, 0.08);
+}
+
+.alert p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.alert ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.list dt {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.list dd {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}

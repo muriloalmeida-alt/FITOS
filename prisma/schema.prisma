@@ -169,6 +169,7 @@ model User {
   personalAlerts       PersonalAlert[]
   chatMessages         ChatMessage[]
   uploadedPhotos       EvolutionPhoto[]      @relation("EvolutionPhotoUploader")
+  healthFormsFilled    HealthForm[]          @relation("HealthFormFiller")
 
   @@map("users")
 }
@@ -384,6 +385,7 @@ model Tenant {
   chatTopics               ChatTopic[]
   chatMessages             ChatMessage[]
   chatAttachments          ChatAttachment[]
+  healthForms              HealthForm[]
   subscriptionDueReminders SubscriptionDueReminder[]
 
   @@map("tenants")
@@ -551,6 +553,7 @@ model Student {
   goals             Goal[]
   evolutionPhotos   EvolutionPhoto[]
   chatTopics        ChatTopic[]
+  healthForm        HealthForm?
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -1447,4 +1450,26 @@ model ChatAttachment {
 
   @@index([createdAt])
   @@map("chat_attachments")
+}
+
+/// Ficha de saúde do aluno (EPIC-46): anamnese curta e PAR-Q. Uma por
+/// aluno (a resposta mais recente). Dado sensível: só o aluno e o
+/// personal do vínculo veem.
+model HealthForm {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String   @unique
+  answers        Json
+  /// Quantas respostas "sim" no PAR-Q (0 = liberado para começar).
+  parqYes        Int
+  filledByUserId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student  Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  filledBy User    @relation("HealthFormFiller", fields: [filledByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, tenantId])
+  @@map("health_forms")
 }

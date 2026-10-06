@@ -121,6 +121,9 @@ export function StudentProfileView({ name, image, email, coach, preferences }: S
           <PasskeyRow />
         </li>
         <li>
+          <ActionRow href="/painel/saude" title="Ficha de saúde" description="Anamnese e PAR-Q, só seu personal vê" trailing={<span aria-hidden="true">›</span>} />
+        </li>
+        <li>
           <ActionRow href="/termos-de-uso" title="Termos de uso" trailing={<span aria-hidden="true">›</span>} />
         </li>
         <li>

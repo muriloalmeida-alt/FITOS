@@ -47,6 +47,9 @@ vi.mock("@/shared/db/prisma", () => ({
       findMany: async () => [],
       findFirst: async () => null,
     },
+    healthForm: {
+      findFirst: async () => ({ id: "ficha" }),
+    },
   },
 }));
 
