@@ -6,6 +6,7 @@ import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
 import { getSubscriptionForTenant } from "@/modules/billing/subscriptions";
 import { listStudentRoster, type RosterFilter, type RosterRow } from "@/modules/students/roster";
+import { riskCount } from "@/modules/students/riskPanel";
 import { FilterLinks } from "../_workout-builder/FilterLinks";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
@@ -72,9 +73,10 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps = {})
   const filter = FILTERS.some((item) => item.key === sp.filtro) ? (sp.filtro as RosterFilter) : "ativos";
   const limit = Math.max(STEP, Math.min(500, Number(sp.limite) || STEP));
   const now = new Date();
-  const [roster, subscription] = await Promise.all([
+  const [roster, subscription, risk] = await Promise.all([
     listStudentRoster({ tenantId: ctx.tenantId, filter, search: sp.q, limit, now }),
     getSubscriptionForTenant(ctx.tenantId),
+    riskCount(ctx.tenantId),
   ]);
   const studentLimit = subscription?.plan.studentLimit ?? null;
   const active = roster.counts.ativos;
@@ -90,6 +92,18 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps = {})
       <div className={styles.next}>
         <InviteStudent startOpen={sp.novo === "1"} />
       </div>
+      {risk.total > 0 ? (
+        <ActionRow
+          href="/painel/alunos/risco"
+          title={
+            <>
+              {risk.total} {risk.total === 1 ? "aluno em risco" : "alunos em risco"} {risk.alto ? <Tag tone="error">{risk.alto} alto</Tag> : null}
+            </>
+          }
+          description="Parou de treinar, atrasou ou ficou sem resposta"
+          trailing={<span aria-hidden="true">›</span>}
+        />
+      ) : null}
       <RosterSearch />
       <FilterLinks label="Filtrar alunos" items={FILTERS.map((item) => ({ label: `${item.label} · ${roster.counts[item.key]}`, href: base({ filtro: item.key === "ativos" ? undefined : item.key }), active: item.key === filter }))} />
 

@@ -9,6 +9,7 @@ import { getIndividualHome } from "@/modules/workouts/individualHome";
 import { ensureCurrentMonthCharges, getFinancialSummary } from "@/modules/student-finance/charges";
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
 import { getPersonalFeed } from "@/modules/students/personalFeed";
+import { riskCount } from "@/modules/students/riskPanel";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
@@ -106,7 +107,7 @@ export default async function PainelPage() {
     // contagem de atrasadas vem depois, já com o status certo.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, openCharges] = await Promise.all([
+    const [roster, feed, financialSummary, subscription, openCharges, risk] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
@@ -117,6 +118,7 @@ export default async function PainelPage() {
         take: 50,
         select: { id: true, amountCents: true, status: true, student: { select: { displayName: true } } },
       }),
+      riskCount(ctx.tenantId).catch(() => ({ total: 0, alto: 0 })),
     ]);
     const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
@@ -137,6 +139,7 @@ export default async function PainelPage() {
         isNewSpace={roster.counts.todos === 0}
         openCharges={openCharges.map((charge) => ({ id: charge.id, studentName: charge.student.displayName, amountCents: charge.amountCents, overdue: charge.status === "ATRASADO" }))}
         students={roster.rows.map((row) => ({ id: row.id, name: row.displayName }))}
+        risk={risk}
       />
     );
   }

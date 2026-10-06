@@ -1,0 +1,98 @@
+.back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--fitos-orange-300);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.empty,
+.note {
+  margin: 8px 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.note {
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--fitos-color-on-surface);
+  text-decoration: none;
+}
+
+.who strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.primary {
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--fitos-color-on-surface);
+}
