@@ -815,3 +815,18 @@ button.control {
   line-height: 1.4;
   resize: vertical;
 }
+
+/* Comentário depois do treino (EPIC-42) */
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.commentSent {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}

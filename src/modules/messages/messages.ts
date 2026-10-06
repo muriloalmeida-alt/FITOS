@@ -45,8 +45,10 @@ function topicScope(viewer: ChatViewer) {
   return viewer.role === "ALUNO" ? { tenantId: viewer.tenantId, studentId: viewer.studentId } : { tenantId: viewer.tenantId };
 }
 
-export function topicTitle(topic: { category: string; exerciseName: string | null }): string {
-  return topic.category === "EXERCICIO" && topic.exerciseName ? topic.exerciseName : chatCategoryLabel(topic.category);
+export function topicTitle(topic: { category: string; exerciseName: string | null; workoutName?: string | null }): string {
+  if (topic.category === "EXERCICIO" && topic.exerciseName) return topic.exerciseName;
+  if (topic.category === "TREINO" && topic.workoutName) return `Como foi: ${topic.workoutName}`;
+  return chatCategoryLabel(topic.category);
 }
 
 export function attachmentLabel(kind: string): string {
@@ -134,7 +136,7 @@ export async function studentExercises(input: { tenantId: string; studentId: str
 
 type PushDeps = { client?: PrismaClient; sender?: Sender; config?: PushConfig | null };
 
-async function notify(topic: { id: string; category: string; exerciseName: string | null; tenantId: string; studentId: string }, fromStudent: boolean, body: string, deps: PushDeps) {
+async function notify(topic: { id: string; category: string; exerciseName: string | null; workoutName?: string | null; tenantId: string; studentId: string }, fromStudent: boolean, body: string, deps: PushDeps) {
   const client = deps.client ?? prisma;
   try {
     const student = await client.student.findUniqueOrThrow({ where: { id: topic.studentId }, select: { displayName: true, userId: true, tenant: { select: { ownerId: true, owner: { select: { name: true } } } } } });
@@ -305,4 +307,52 @@ export async function postMessage(viewer: ChatViewer, topicId: string, rawBody: 
 export async function setResolved(viewer: ChatViewer, topicId: string, resolved: boolean, client: PrismaClient = prisma): Promise<void> {
   const { count } = await client.chatTopic.updateMany({ where: { id: topicId, ...topicScope(viewer) }, data: { resolvedAt: resolved ? new Date() : null } });
   if (count === 0) throw new ChatError("NAO_ENCONTRADO", "Conversa não encontrada.");
+}
+
+const EFFORT_LABELS = ["Leve", "Tranquilo", "Moderado", "Puxado", "No limite"];
+
+/// Linha de contexto do comentário: esforço e tempo do treino.
+export function workoutContextLine(session: { perceivedEffort: number | null; activeSeconds: number | null }): string {
+  const parts: string[] = [];
+  if (session.perceivedEffort) parts.push(`Esforço ${session.perceivedEffort}/5 (${EFFORT_LABELS[session.perceivedEffort - 1]})`);
+  if (session.activeSeconds) parts.push(`${Math.max(1, Math.round(session.activeSeconds / 60))} min`);
+  return parts.join(" · ");
+}
+
+/// Comentário depois do treino (EPIC-42): vira um assunto "Treino" ligado
+/// à sessão concluída, com o esforço e o tempo na frente. Um assunto por
+/// sessão: comentar de novo responde no mesmo.
+export async function commentOnWorkout(viewer: ChatViewer, input: { sessionId: unknown; body: unknown }, deps: PushDeps = {}): Promise<{ id: string }> {
+  const client = deps.client ?? prisma;
+  if (viewer.role !== "ALUNO") throw new ChatError("VALIDACAO", "Só o aluno comenta o próprio treino.");
+  const text = cleanBody(input.body);
+  const session = typeof input.sessionId === "string"
+    ? await client.workoutSession.findFirst({
+        where: { id: input.sessionId, tenantId: viewer.tenantId, studentId: viewer.studentId, status: "CONCLUIDA" },
+        select: { id: true, perceivedEffort: true, activeSeconds: true, workout: { select: { name: true } }, chatTopic: { select: { id: true } } },
+      })
+    : null;
+  if (!session) throw new ChatError("NAO_ENCONTRADO", "Treino não encontrado.");
+  if (session.chatTopic) {
+    await postMessage(viewer, session.chatTopic.id, text, deps);
+    return { id: session.chatTopic.id };
+  }
+  const context = workoutContextLine(session);
+  const body = context ? `${context}\n${text}` : text;
+  const now = new Date();
+  const topic = await client.chatTopic.create({
+    data: {
+      tenantId: viewer.tenantId,
+      studentId: viewer.studentId,
+      category: "TREINO",
+      workoutSessionId: session.id,
+      workoutName: session.workout.name,
+      lastMessageAt: now,
+      lastStudentMessageAt: now,
+      studentReadAt: now,
+      messages: { create: { tenantId: viewer.tenantId, authorUserId: viewer.userId, fromStudent: true, body, createdAt: now } },
+    },
+  });
+  await notify(topic, true, body, deps);
+  return { id: topic.id };
 }
