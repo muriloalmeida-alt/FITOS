@@ -3,6 +3,7 @@ import { AppShell, NextStepCard } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import type { PersonalFeedItem } from "@/modules/students/personalFeed";
 import { DecisionQueue } from "./DecisionQueue";
+import { TodayAgenda, type TodayClass } from "./TodayAgenda";
 import { QuickActions, type QuickCharge } from "./QuickActions";
 import { LogoutButton } from "./LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "./navigation";
@@ -40,8 +41,9 @@ interface PersonalHomeProps {
   risk?: { total: number; alto: number };
   /// Progressão (EPIC-44): alunos prontos para subir a carga.
   progressionStudents?: number;
-  /// Agenda de hoje (EPIC-48).
-  agendaToday?: { count: number; next: string | null } | null;
+  /// Agenda de hoje (EPIC-48): as aulas do dia e a hora atual (minutos,
+  /// horário de Brasília).
+  agendaToday?: { classes: TodayClass[]; nowMinutes: number } | null;
 }
 
 function firstName(name: string): string {
@@ -97,14 +99,7 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
         </section>
       ) : (
         <>
-          {agendaToday ? (
-            <NextStepCard
-              eyebrow="Agenda de hoje"
-              title={`${agendaToday.count} ${agendaToday.count === 1 ? "aula" : "aulas"}`}
-              description={agendaToday.next ? `Próxima: ${agendaToday.next}` : "Todas já passaram. Marque feita ou falta."}
-              href="/painel/agenda"
-            />
-          ) : null}
+          {agendaToday ? <TodayAgenda classes={agendaToday.classes} nowMinutes={agendaToday.nowMinutes} /> : null}
           {risk && risk.total > 0 ? (
             <NextStepCard
               eyebrow={risk.alto > 0 ? `${risk.alto} com risco alto` : "Atenção"}
