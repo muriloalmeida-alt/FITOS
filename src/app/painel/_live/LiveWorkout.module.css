@@ -796,3 +796,22 @@ button.control {
   flex-shrink: 0;
   border-radius: 10px;
 }
+
+.exerciseLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.askField {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}

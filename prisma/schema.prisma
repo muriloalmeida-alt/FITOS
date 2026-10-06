@@ -167,6 +167,7 @@ model User {
   passkeys             Passkey[]
   avatar               UserAvatar?
   personalAlerts       PersonalAlert[]
+  chatMessages         ChatMessage[]
   uploadedPhotos       EvolutionPhoto[]      @relation("EvolutionPhotoUploader")
 
   @@map("users")
@@ -376,6 +377,8 @@ model Tenant {
   goals                    Goal[]
   evolutionPhotos          EvolutionPhoto[]
   paymentAccount           PaymentAccount?
+  chatTopics               ChatTopic[]
+  chatMessages             ChatMessage[]
   subscriptionDueReminders SubscriptionDueReminder[]
 
   @@map("tenants")
@@ -542,6 +545,7 @@ model Student {
   invitations       Invitation[]
   goals             Goal[]
   evolutionPhotos   EvolutionPhoto[]
+  chatTopics        ChatTopic[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -1363,4 +1367,49 @@ model PaymentAccount {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("payment_accounts")
+}
+
+/// Assunto do chat entre aluno e personal (EPIC-39): uma categoria
+/// (exercício, treino, dor, agenda, pagamento, outro), o exercício quando
+/// é sobre um, e a situação (aberto/resolvido). As mensagens ficam dentro.
+model ChatTopic {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  studentId             String
+  category              String
+  exerciseId            String?
+  /// Nome do exercício no momento da pergunta (o treino pode mudar depois).
+  exerciseName          String?
+  resolvedAt            DateTime?
+  lastMessageAt         DateTime  @default(now())
+  lastStudentMessageAt  DateTime?
+  lastPersonalMessageAt DateTime?
+  studentReadAt         DateTime?
+  personalReadAt        DateTime?
+  createdAt             DateTime  @default(now())
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student  Student       @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([tenantId, lastMessageAt])
+  @@index([studentId, tenantId])
+  @@map("chat_topics")
+}
+
+model ChatMessage {
+  id           String   @id @default(cuid())
+  tenantId     String
+  topicId      String
+  authorUserId String
+  fromStudent  Boolean
+  body         String
+  createdAt    DateTime @default(now())
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  topic  ChatTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author User      @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, createdAt])
+  @@map("chat_messages")
 }

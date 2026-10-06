@@ -37,7 +37,7 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
   ]);
   const coachName = student.tenant.owner.name;
-  const common = { coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso" };
+  const common = { coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
 
   if (inProgress) {
     const items = inProgress.workout.workoutExercises;

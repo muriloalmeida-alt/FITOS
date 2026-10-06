@@ -1,0 +1,205 @@
+.inbox,
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 8px 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.categoryIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+}
+
+.unreadTitle {
+  font-weight: 800;
+}
+
+.time {
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fitos-color-text-muted);
+}
+
+.field textarea,
+.composer textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.field textarea:focus-visible,
+.composer textarea:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 1px;
+}
+
+/* Conversa */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 140px;
+}
+
+.day {
+  align-self: center;
+  margin: 12px 0 4px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mine {
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.theirs {
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+}
+
+.stamp {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.composer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  z-index: 9;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: var(--fitos-color-chrome);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.composer textarea {
+  flex: 1;
+  max-height: 140px;
+  resize: none;
+}
+
+@media (min-width: 840px) {
+  .composer {
+    position: sticky;
+    bottom: 0;
+    left: auto;
+    right: auto;
+    border-radius: 16px;
+  }
+
+  .thread {
+    padding-bottom: 16px;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.back {
+  color: var(--fitos-orange-300);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Filtro por categoria: chips que rolam de lado no celular. */
+.filters {
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.filter {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.filter[aria-current="page"] {
+  border-color: var(--fitos-orange-500);
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}

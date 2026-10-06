@@ -11,13 +11,21 @@ import { createContext, useContext, type ReactNode } from "react";
 const AccountNameContext = createContext<string | null>(null);
 /// Foto de perfil da sessão (EPIC-35); nula = iniciais.
 const AccountImageContext = createContext<string | null>(null);
+/// Assuntos com mensagem não lida no chat (EPIC-39).
+const UnreadMessagesContext = createContext<number>(0);
 
-export function AccountNameProvider({ name, image = null, children }: { name: string | null; image?: string | null; children: ReactNode }) {
+export function AccountNameProvider({ name, image = null, unreadMessages = 0, children }: { name: string | null; image?: string | null; unreadMessages?: number; children: ReactNode }) {
   return (
     <AccountNameContext.Provider value={name}>
-      <AccountImageContext.Provider value={image}>{children}</AccountImageContext.Provider>
+      <AccountImageContext.Provider value={image}>
+        <UnreadMessagesContext.Provider value={unreadMessages}>{children}</UnreadMessagesContext.Provider>
+      </AccountImageContext.Provider>
     </AccountNameContext.Provider>
   );
+}
+
+export function useUnreadMessages(): number {
+  return useContext(UnreadMessagesContext);
 }
 
 export function useAccountName(): string | null {

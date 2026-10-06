@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { titleFit } from "@/shared/lib/titleFit";
 import Link from "next/link";
 import { initialsFromName } from "@/shared/lib/initials";
-import { useAccountImage, useAccountName } from "./AccountContext";
+import { useAccountImage, useAccountName, useUnreadMessages } from "./AccountContext";
 import { BrandLogo } from "./BrandLogo";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import styles from "./AppShell.module.css";
@@ -59,6 +59,7 @@ interface AppShellProps {
 const MAX_COMPACT_ITEMS = 4;
 
 function NavLink({ item, isActive, onNavigate }: { item: AppShellNavItem; isActive: boolean; onNavigate?: () => void }) {
+  const unread = useUnreadMessages();
   if (item.comingSoon || !item.href) {
     return (
       <span className={styles.navItemDisabled} aria-disabled="true">
@@ -76,7 +77,10 @@ function NavLink({ item, isActive, onNavigate }: { item: AppShellNavItem; isActi
       aria-current={isActive ? "page" : undefined}
       onClick={onNavigate}
     >
-      {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
+      <span className={styles.navIconWrap}>
+        {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
+        {item.key === "mensagens" && unread > 0 && !isActive ? <span className={styles.navDot} aria-label={`${unread} ${unread === 1 ? "conversa nova" : "conversas novas"}`} /> : null}
+      </span>
       <span className={styles.navLabel}>{item.label}</span>
     </Link>
   );
