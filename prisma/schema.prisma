@@ -350,6 +350,10 @@ model Tenant {
   defaultSets           Int?
   defaultReps           Int?
   defaultRestSeconds    Int?
+  /// Respostas rápidas do personal no chat (EPIC-41); até salvar a
+  /// primeira vez (`chatQuickRepliesSet`), valem as padrão.
+  chatQuickReplies      String[]   @default([])
+  chatQuickRepliesSet   Boolean    @default(false)
   /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
   /// própria conta de aluno neste espaço. Gerado no primeiro uso.
   inviteCode            String?    @unique
@@ -1407,9 +1411,9 @@ model ChatMessage {
   body         String
   createdAt    DateTime @default(now())
 
-  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  topic  ChatTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  author User      @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  topic      ChatTopic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author     User            @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
   attachment ChatAttachment?
 
   @@index([topicId, createdAt])

@@ -4,6 +4,7 @@ import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError } from "@/modules/tenancy/authContext";
 import { ChatError, getThread, requireChatViewer } from "@/modules/messages/messages";
+import { getQuickReplies } from "@/modules/messages/quickReplies";
 import { chatCategoryLabel } from "@/shared/lib/chatCategories";
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../../navigation";
@@ -29,6 +30,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
     throw error;
   }
   const personal = viewer.role === "PERSONAL";
+  const quickReplies = personal ? await getQuickReplies(viewer.tenantId) : undefined;
   const other = personal ? thread.studentName : thread.personalName;
 
   return (
@@ -46,6 +48,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
         backHref={personal ? `/painel/mensagens?aluno=${thread.studentId}` : "/painel/mensagens"}
         studentHref={personal ? `/painel/alunos/${thread.studentId}` : null}
         messages={thread.messages.map((message) => ({ ...message, createdAt: message.createdAt.toISOString() }))}
+        quickReplies={quickReplies}
         attachHint={!personal && thread.category === "EXERCICIO" ? `Grave a execução (até 30 s) pelo botão da câmera: ${thread.personalName.trim().split(/\s+/)[0]} assiste e corrige.` : undefined}
       />
     </AppShell>
