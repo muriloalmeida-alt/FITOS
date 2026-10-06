@@ -33,8 +33,9 @@ export async function requireChatViewer(): Promise<ChatViewer> {
 
 const MAX_BODY = 2000;
 
-function cleanBody(body: unknown): string {
+function cleanBody(body: unknown, optional = false): string {
   const text = typeof body === "string" ? body.trim() : "";
+  if (!text && optional) return "";
   if (!text) throw new ChatError("VALIDACAO", "Escreva a mensagem.");
   if (text.length > MAX_BODY) throw new ChatError("VALIDACAO", `A mensagem pode ter até ${MAX_BODY} caracteres.`);
   return text;
@@ -46,6 +47,15 @@ function topicScope(viewer: ChatViewer) {
 
 export function topicTitle(topic: { category: string; exerciseName: string | null }): string {
   return topic.category === "EXERCICIO" && topic.exerciseName ? topic.exerciseName : chatCategoryLabel(topic.category);
+}
+
+export function attachmentLabel(kind: string): string {
+  return kind === "VIDEO" ? "🎥 Vídeo" : "📷 Foto";
+}
+
+function messagePreview(message: { body: string; attachment: { kind: string } | null }): string {
+  if (!message.attachment) return message.body;
+  return message.body ? `${attachmentLabel(message.attachment.kind)} · ${message.body}` : attachmentLabel(message.attachment.kind);
 }
 
 export interface TopicSummary {
@@ -75,7 +85,7 @@ export async function listTopics(viewer: ChatViewer, filter: { category?: string
     take: 200,
     include: {
       student: { select: { displayName: true, user: { select: { image: true } } } },
-      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, fromStudent: true } },
+      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, fromStudent: true, attachment: { select: { kind: true } } } },
     },
   });
   const rows = topics.map((topic) => ({
@@ -85,7 +95,7 @@ export async function listTopics(viewer: ChatViewer, filter: { category?: string
     studentId: topic.studentId,
     studentName: topic.student.displayName,
     studentImage: topic.student.user?.image ?? null,
-    lastMessage: topic.messages[0]?.body ?? "",
+    lastMessage: topic.messages[0] ? messagePreview(topic.messages[0]) : "",
     lastFromMe: topic.messages[0] ? topic.messages[0].fromStudent === (viewer.role === "ALUNO") : false,
     lastMessageAt: topic.lastMessageAt,
     unread: isUnread(viewer, topic),
@@ -194,7 +204,16 @@ export interface TopicThread {
   studentName: string;
   personalName: string;
   resolved: boolean;
-  messages: { id: string; body: string; mine: boolean; createdAt: Date }[];
+  messages: { id: string; body: string; mine: boolean; createdAt: Date; attachment: ThreadAttachment | null }[];
+}
+
+export interface ThreadAttachment {
+  id: string;
+  kind: "VIDEO" | "FOTO";
+  durationSec: number | null;
+  width: number | null;
+  height: number | null;
+  expired: boolean;
 }
 
 /// Abre o assunto e marca como lido para quem está vendo.
@@ -203,7 +222,7 @@ export async function getThread(viewer: ChatViewer, topicId: string, client: Pri
     where: { id: topicId, ...topicScope(viewer) },
     include: {
       student: { select: { displayName: true, tenant: { select: { owner: { select: { name: true } } } } } },
-      messages: { orderBy: { createdAt: "asc" }, take: 500 },
+      messages: { orderBy: { createdAt: "asc" }, take: 500, include: { attachment: { select: { id: true, kind: true, durationSec: true, width: true, height: true, expiredAt: true } } } },
     },
   });
   if (!topic) throw new ChatError("NAO_ENCONTRADO", "Conversa não encontrada.");
@@ -217,26 +236,69 @@ export async function getThread(viewer: ChatViewer, topicId: string, client: Pri
     studentName: topic.student.displayName,
     personalName: topic.student.tenant.owner.name,
     resolved: topic.resolvedAt !== null,
-    messages: topic.messages.map((message) => ({ id: message.id, body: message.body, mine: message.fromStudent === mineIsStudent, createdAt: message.createdAt })),
+    messages: topic.messages.map((message) => ({
+      id: message.id,
+      body: message.body,
+      mine: message.fromStudent === mineIsStudent,
+      createdAt: message.createdAt,
+      attachment: message.attachment
+        ? { id: message.attachment.id, kind: message.attachment.kind === "VIDEO" ? "VIDEO" : "FOTO", durationSec: message.attachment.durationSec, width: message.attachment.width, height: message.attachment.height, expired: message.attachment.expiredAt !== null }
+        : null,
+    })),
   };
 }
 
-/// Responde no assunto. Uma mensagem nova reabre um assunto resolvido.
-export async function postMessage(viewer: ChatViewer, topicId: string, rawBody: unknown, deps: PushDeps = {}): Promise<{ id: string }> {
+export interface NewAttachment {
+  kind: "VIDEO" | "FOTO";
+  mimeType: string;
+  data: Uint8Array;
+  durationSec?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+
+/// Responde no assunto, com texto e/ou um anexo (vídeo ou foto). Uma
+/// mensagem nova reabre um assunto resolvido.
+export async function postMessage(viewer: ChatViewer, topicId: string, rawBody: unknown, deps: PushDeps = {}, attachment?: NewAttachment): Promise<{ id: string }> {
   const client = deps.client ?? prisma;
-  const body = cleanBody(rawBody);
+  const body = cleanBody(rawBody, Boolean(attachment));
   const topic = await client.chatTopic.findFirst({ where: { id: topicId, ...topicScope(viewer) } });
   if (!topic) throw new ChatError("NAO_ENCONTRADO", "Conversa não encontrada.");
   const now = new Date();
   const fromStudent = viewer.role === "ALUNO";
   const [message] = await client.$transaction([
-    client.chatMessage.create({ data: { tenantId: topic.tenantId, topicId: topic.id, authorUserId: viewer.userId, fromStudent, body, createdAt: now } }),
+    client.chatMessage.create({
+      data: {
+        tenantId: topic.tenantId,
+        topicId: topic.id,
+        authorUserId: viewer.userId,
+        fromStudent,
+        body,
+        createdAt: now,
+        ...(attachment
+          ? {
+              attachment: {
+                create: {
+                  tenantId: topic.tenantId,
+                  kind: attachment.kind,
+                  mimeType: attachment.mimeType,
+                  sizeBytes: attachment.data.length,
+                  durationSec: attachment.durationSec ?? null,
+                  width: attachment.width ?? null,
+                  height: attachment.height ?? null,
+                  data: Buffer.from(attachment.data),
+                },
+              },
+            }
+          : {}),
+      },
+    }),
     client.chatTopic.update({
       where: { id: topic.id },
       data: { lastMessageAt: now, resolvedAt: null, ...(fromStudent ? { lastStudentMessageAt: now, studentReadAt: now } : { lastPersonalMessageAt: now, personalReadAt: now }) },
     }),
   ]);
-  await notify(topic, fromStudent, body, deps);
+  await notify(topic, fromStudent, attachment ? messagePreview({ body, attachment }) : body, deps);
   return { id: message.id };
 }
 

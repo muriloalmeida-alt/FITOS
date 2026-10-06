@@ -46,6 +46,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
         backHref={personal ? `/painel/mensagens?aluno=${thread.studentId}` : "/painel/mensagens"}
         studentHref={personal ? `/painel/alunos/${thread.studentId}` : null}
         messages={thread.messages.map((message) => ({ ...message, createdAt: message.createdAt.toISOString() }))}
+        attachHint={!personal && thread.category === "EXERCICIO" ? `Grave a execução (até 30 s) pelo botão da câmera: ${thread.personalName.trim().split(/\s+/)[0]} assiste e corrige.` : undefined}
       />
     </AppShell>
   );

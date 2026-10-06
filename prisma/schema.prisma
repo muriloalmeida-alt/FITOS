@@ -379,6 +379,7 @@ model Tenant {
   paymentAccount           PaymentAccount?
   chatTopics               ChatTopic[]
   chatMessages             ChatMessage[]
+  chatAttachments          ChatAttachment[]
   subscriptionDueReminders SubscriptionDueReminder[]
 
   @@map("tenants")
@@ -1409,7 +1410,32 @@ model ChatMessage {
   tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   topic  ChatTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
   author User      @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  attachment ChatAttachment?
 
   @@index([topicId, createdAt])
   @@map("chat_messages")
+}
+
+/// Vídeo da execução ou foto anexada a uma mensagem (EPIC-40). Fica no
+/// banco, sem URL pública: toda leitura passa pela rota autenticada. O
+/// conteúdo é apagado depois de 90 dias (a mensagem fica, com o aviso).
+model ChatAttachment {
+  id          String    @id @default(cuid())
+  tenantId    String
+  messageId   String    @unique
+  kind        String
+  mimeType    String
+  sizeBytes   Int
+  durationSec Int?
+  width       Int?
+  height      Int?
+  data        Bytes?
+  expiredAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("chat_attachments")
 }

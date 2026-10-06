@@ -4,6 +4,7 @@ import { pushConfig } from "./push";
 import { runDueReminders } from "./reminders";
 import { runDueReminders as runBillingDueReminders } from "./billingReminders";
 import { runPersonalAlerts } from "./personalAlerts";
+import { expireOldAttachments } from "@/modules/messages/attachments";
 
 /// Agendador dos lembretes de treino (EPIC-31) e dos avisos de vencimento
 /// da assinatura (EPIC-34): roda dentro do próprio servidor, a
@@ -42,6 +43,13 @@ export function startReminderScheduler(): void {
       if (alerts.sent > 0) logEvent("info", "push.avisos_personal", { enviados: alerts.sent });
     } catch (error) {
       logEvent("error", "push.avisos_personal_falhou", describeError(error));
+    }
+    // EPIC-40: anexos do chat com mais de 90 dias perdem o conteúdo.
+    try {
+      const expired = await expireOldAttachments();
+      if (expired > 0) logEvent("info", "chat.anexos_expirados", { total: expired });
+    } catch (error) {
+      logEvent("error", "chat.anexos_expirar_falhou", describeError(error));
     }
   };
   const timer = setInterval(() => void tick(), INTERVAL_MS);
