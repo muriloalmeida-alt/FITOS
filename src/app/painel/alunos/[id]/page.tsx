@@ -1,3 +1,5 @@
+import { suggestCoachProgressions } from "@/modules/execution/progression";
+import { CoachProgressionList } from "../../_progression/CoachProgressionList";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/shared/ui";
@@ -65,7 +67,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
   if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
-  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions] = await Promise.all([
     getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
@@ -76,6 +78,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     listActiveRecurrencesForTenant({ tenantId: ctx.tenantId }),
     listEvolutionPhotos({ tenantId: ctx.tenantId, studentId: student.id }),
     student.userId ? prisma.user.findUnique({ where: { id: student.userId }, select: { image: true } }) : null,
+    student.status === "ATIVO" ? suggestCoachProgressions({ tenantId: ctx.tenantId, studentId: student.id }).catch(() => []) : [],
   ]);
   const accessStatus = deriveAccessStatus(student, invitation);
   const plan = assignment?.trainingPlan ?? null;
@@ -113,6 +116,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
 
   return (
     <AppShell eyebrow="Perfil do aluno" title={student.displayName} navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
+      <CoachProgressionList suggestions={progressions} showStudent={false} />
       <StudentProfile
         student={{
           id: student.id,

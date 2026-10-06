@@ -3,6 +3,7 @@ import type { CardioIntensity, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
 import { getTenantPrescription, type Prescription, WorkoutError } from "@/modules/workouts/workouts";
+import { formatLoadForStorage } from "@/shared/lib/load";
 import { CARDIO_INTENSITIES, CARDIO_MAX_SECONDS, CARDIO_MIN_SECONDS, DEFAULT_CARDIO, isCardioType } from "@/shared/lib/cardio";
 
 /// Cópia do aluno (EPIC-28, ADR-016). Atribuir cria uma cópia imutável
@@ -38,7 +39,7 @@ export interface StudentCopy {
 
 export type CopyEdit =
   | { kind: "swap"; itemId: string; exerciseId: string }
-  | { kind: "update"; itemId: string; sets?: number; reps?: number; durationSeconds?: number; intensity?: CardioIntensity }
+  | { kind: "update"; itemId: string; sets?: number; reps?: number; durationSeconds?: number; intensity?: CardioIntensity; loadKg?: number }
   | { kind: "addItem"; workoutId: string; exerciseId: string }
   | { kind: "removeItem"; itemId: string }
   | { kind: "addWorkout"; sourceWorkoutId: string };
@@ -103,6 +104,14 @@ function defaultsFor(exerciseId: string, cardio: boolean, prescription: Prescrip
     : { exerciseId, sets: prescription.sets, reps: prescription.reps, restSeconds: prescription.restSeconds };
 }
 
+const MAX_LOAD_KG = 1000;
+
+/// Carga em kg (0 = livre), arredondada a 0,5 kg, no formato guardado.
+function loadFor(kg: number): string | null {
+  if (!Number.isFinite(kg) || kg < 0 || kg > MAX_LOAD_KG) throw new WorkoutError("VALIDACAO", "Carga fora do intervalo permitido.");
+  return formatLoadForStorage(Math.round(kg * 2) / 2);
+}
+
 function intInRange(value: number | undefined, min: number, max: number, label: string): number | undefined {
   if (value === undefined) return undefined;
   if (!Number.isInteger(value) || value < min || value > max) throw new WorkoutError("VALIDACAO", `${label} fora do intervalo permitido.`);
@@ -154,6 +163,7 @@ export async function reviseStudentCopy(
         ...(edit.reps !== undefined ? { reps: intInRange(edit.reps, 1, MAX_REPS, "Repetições") } : {}),
         ...(edit.durationSeconds !== undefined ? { durationSeconds: intInRange(edit.durationSeconds, current.intensity ? CARDIO_MIN_SECONDS : 1, CARDIO_MAX_SECONDS, "Tempo") } : {}),
         ...(edit.intensity !== undefined ? { intensity: edit.intensity } : {}),
+        ...(edit.loadKg !== undefined ? { load: loadFor(edit.loadKg) } : {}),
       },
     };
   } else if (edit.kind === "removeItem") {
