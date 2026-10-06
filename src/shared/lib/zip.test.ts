@@ -15,9 +15,19 @@ describe("zip e csv da exportação", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "zip-"));
     const file = path.join(dir, "dados.zip");
     writeFileSync(file, createZip([{ name: "alunos.csv", content: "nome\r\nAna\r\n" }, { name: "avaliações.csv", content: "ok" }]));
-    expect(execFileSync("unzip", ["-l", file]).toString()).toMatch(/alunos\.csv[\s\S]*avaliações\.csv/);
-    execFileSync("unzip", ["-o", "-q", file, "-d", dir]);
+    // Integridade pelo próprio unzip (CRC e estrutura); o nome mostrado pelo
+    // unzip depende do idioma da máquina, então o nome acentuado é conferido
+    // direto no diretório central do ZIP, com a marca de UTF-8 (bit 11).
+    expect(execFileSync("unzip", ["-t", file]).toString()).toMatch(/No errors detected/);
+    execFileSync("unzip", ["-o", "-q", file, "alunos.csv", "-d", dir]);
     expect(readFileSync(path.join(dir, "alunos.csv"), "utf8")).toBe("nome\r\nAna\r\n");
+    const zip = readFileSync(file);
+    const names: string[] = [];
+    for (let at = zip.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])); at >= 0; at = zip.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]), at + 4)) {
+      expect(zip.readUInt16LE(at + 8) & 0x0800).toBe(0x0800);
+      names.push(zip.subarray(at + 46, at + 46 + zip.readUInt16LE(at + 28)).toString("utf8"));
+    }
+    expect(names).toEqual(["alunos.csv", "avaliações.csv"]);
   });
 
   it("csv com ponto e vírgula, BOM e aspas quando precisa", () => {
