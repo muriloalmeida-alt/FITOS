@@ -12,6 +12,7 @@ import { formatCentsBRL } from "@/shared/lib/money";
 import { currentReferenceMonth, referenceMonthLabel } from "@/shared/lib/referenceMonth";
 import { PersonalProfileView } from "./PersonalProfileView";
 import { StudentProfileView } from "./StudentProfileView";
+import { getOrCreateInviteCode } from "@/modules/students/inviteLink";
 import { LivreProfileView } from "./LivreProfileView";
 import { LogoutButton } from "../LogoutButton";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
@@ -114,13 +115,14 @@ export default async function PerfilPage() {
     redirect("/painel");
   }
 
-  const [student, settings, assignment] = await Promise.all([
+  const [student, settings, assignment, inviteCode] = await Promise.all([
     prisma.student.findUniqueOrThrow({
       where: { id: ctx.studentId },
       include: { tenant: { include: { owner: true, personalProfile: { select: { cref: true } } } } },
     }),
     prisma.notificationSettings.findUnique({ where: { userId: ctx.userId } }),
     prisma.planAssignment.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId, active: true }, select: { trainingPlan: { select: { workouts: { select: { suggestedDays: true } } } } } }),
+    getOrCreateInviteCode(ctx.tenantId).catch(() => null),
   ]);
 
   return (
@@ -136,6 +138,7 @@ export default async function PerfilPage() {
           planDays: [...new Set((assignment?.trainingPlan.workouts ?? []).flatMap((workout) => workout.suggestedDays))],
           coachFirst: student.tenant.owner.name.trim().split(/\s+/)[0] ?? null,
         }}
+        invitePath={inviteCode ? `/c/${inviteCode}?ref=${student.id}` : null}
       />
     </AppShell>
   );

@@ -67,7 +67,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
   if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
-  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions, healthForm] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions, healthForm, referral] = await Promise.all([
     getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
@@ -80,6 +80,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     student.userId ? prisma.user.findUnique({ where: { id: student.userId }, select: { image: true } }) : null,
     student.status === "ATIVO" ? suggestCoachProgressions({ tenantId: ctx.tenantId, studentId: student.id }).catch(() => []) : [],
     prisma.healthForm.findFirst({ where: { tenantId: ctx.tenantId, studentId: student.id }, select: { parqYes: true } }),
+    prisma.student.findUniqueOrThrow({ where: { id: student.id }, select: { referredBy: { select: { displayName: true } }, _count: { select: { referrals: true } } } }),
   ]);
   const accessStatus = deriveAccessStatus(student, invitation);
   const plan = assignment?.trainingPlan ?? null;
@@ -132,6 +133,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           image: studentUser?.image ?? null,
         }}
         health={healthForm ? { parqYes: healthForm.parqYes } : null}
+        referral={{ by: referral.referredBy?.displayName ?? null, count: referral._count.referrals }}
         photos={{ items: photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() })), consent: Boolean(student.photoConsentAt) }}
         access={{ status: accessStatus, daysLeft: accessStatus === "CONVITE_PENDENTE" && invitation ? daysUntil(invitation.expiresAt) : null }}
         program={

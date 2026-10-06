@@ -33,8 +33,9 @@ function caminhoFrom(params: { caminho?: string; modo?: string }): Caminho | nul
 /// Começar (EPIC-33, E2): "o que você quer fazer?", com o resultado de cada
 /// caminho. Personal: uma pergunta e a conta. Convite: código ou link.
 /// Livre: três toques, o plano e só então a conta.
-export default async function ComecarPage({ searchParams }: { searchParams?: Promise<{ caminho?: string; modo?: string }> } = {}) {
-  const caminho = caminhoFrom((await searchParams) ?? {});
+export default async function ComecarPage({ searchParams }: { searchParams?: Promise<{ caminho?: string; modo?: string; indicado?: string }> } = {}) {
+  const params = (await searchParams) ?? {};
+  const caminho = caminhoFrom(params);
 
   if (!caminho) {
     return (
@@ -75,6 +76,7 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
     const plans = await listActivePlansForAudience("PERSONAL");
     return (
       <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+        {params.indicado === "1" ? <p className={styles.muted}>Você veio por indicação: são 30 dias a mais de teste grátis.</p> : null}
         <PersonalComecar plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} />
         <p className={styles.muted}>
           Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>

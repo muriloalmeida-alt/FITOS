@@ -19,7 +19,7 @@ type Hero =
 /// Entrar pelo convite (EPIC-33, E5): conta (nome, e-mail, senha), o
 /// objetivo num toque e o treino de hoje — "Começar agora" sem passar por
 /// mais nenhuma tela. Lembrete de treino em um toque.
-export function JoinByLinkForm({ code, personalFirstName, businessName }: { code: string; personalFirstName: string; businessName: string }) {
+export function JoinByLinkForm({ code, personalFirstName, businessName, referrerId = null }: { code: string; personalFirstName: string; businessName: string; referrerId?: string | null }) {
   const router = useRouter();
   const push = usePush();
   const [step, setStep] = useState<"conta" | "objetivo" | "pronto">("conta");
@@ -45,7 +45,7 @@ export function JoinByLinkForm({ code, personalFirstName, businessName }: { code
     if (Object.keys(found).length > 0) return;
     setBusy(true);
     setFormError(null);
-    const response = await fetch(`/api/convite-link/${code}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), email: email.trim(), password }) });
+    const response = await fetch(`/api/convite-link/${code}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), email: email.trim(), password, ref: referrerId ?? undefined }) });
     setBusy(false);
     if (!response.ok) {
       const body = await response.json().catch(() => null);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ShareLinkButton } from "../_share/ShareLinkButton";
 import { ActionRow, Avatar, Button, FormAlert, TextField, useToast } from "@/shared/ui";
 import { requestJson } from "../_workout-builder/apiClient";
 import { LogoutButton } from "../LogoutButton";
@@ -18,11 +19,13 @@ interface StudentProfileViewProps {
   coach: { name: string; image: string | null; businessName: string; cref: string | null };
   /// Lembrete de treino e "Meus dias" (EPIC-31).
   preferences: Parameters<typeof TrainingPreferences>[0];
+  /// Indicação (EPIC-47): link do personal com o aluno como quem indicou.
+  invitePath?: string | null;
 }
 
 /// Perfil do Aluno (FIT-155, A5 do protótipo): quem é o personal, nome e
 /// e-mail editáveis no próprio lugar (EPIC-30), Termos, Privacidade e Sair.
-export function StudentProfileView({ name, image, email, coach, preferences }: StudentProfileViewProps) {
+export function StudentProfileView({ name, image, email, coach, preferences, invitePath = null }: StudentProfileViewProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<null | "name" | "email">(null);
@@ -72,6 +75,13 @@ export function StudentProfileView({ name, image, email, coach, preferences }: S
       <h2 className={styles.cap}>Seu personal</h2>
       <ActionRow leading={<Avatar name={coach.name} src={coach.image} />} title={coach.name} description={[coach.businessName, coach.cref ? `CREF ${coach.cref}` : null].filter(Boolean).join(" · ")} />
       <p className={styles.muted}>Mensalidade e programa são combinados direto com {coachFirst}. O FitOS não cobra você.</p>
+      {invitePath ? (
+        <ActionRow
+          title={`Indique um amigo para ${coachFirst}`}
+          description="Quem entrar pelo seu link aparece como sua indicação."
+          trailing={<ShareLinkButton path={invitePath} text={`Treino com ${coachFirst} pelo FitOS. Entra por aqui:`} />}
+        />
+      ) : null}
 
       <h2 className={styles.cap}>Seus dados</h2>
       <ul className={styles.list}>

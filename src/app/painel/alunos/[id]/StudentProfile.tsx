@@ -22,6 +22,8 @@ interface StudentProfileProps {
   photos?: { items: EvolutionPhotoItem[]; consent: boolean };
   /// Ficha de saúde (EPIC-46): `null` = não respondida; ausente = não mostra.
   health?: { parqYes: number } | null;
+  /// Indicações (EPIC-47): quem indicou este aluno e quantos ele indicou.
+  referral?: { by: string | null; count: number };
   access: { status: AccessStatus; daysLeft: number | null };
   program: ProfileProgram | null;
   programs: ProgramChoice[];
@@ -59,7 +61,7 @@ function fmt(value: number) {
 /// cada ação numa sheet curta — atribuir/trocar/encerrar programa,
 /// avaliação já com os últimos valores, "Recebi" da mensalidade, convite,
 /// dados, inativar/reativar e encerrar vínculo.
-export function StudentProfile({ student, photos, health, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
+export function StudentProfile({ student, photos, health, referral, access, program, programs, week, sessions, assessments, openCharge, recurrence, timeline, initialSheet }: StudentProfileProps) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetKind>(initialSheet);
@@ -227,6 +229,12 @@ export function StudentProfile({ student, photos, health, access, program, progr
             </>
           }
           trailing={<Button type="button" variant="quiet" onClick={() => setSheet("pay")}>Recebi</Button>}
+        />
+      ) : null}
+      {referral && (referral.by || referral.count > 0) ? (
+        <ActionRow
+          title="Indicações"
+          description={[referral.by ? `Indicado por ${referral.by}` : null, referral.count > 0 ? `Indicou ${referral.count} ${referral.count === 1 ? "aluno" : "alunos"}` : null].filter(Boolean).join(" · ")}
         />
       ) : null}
       {health !== undefined ? (

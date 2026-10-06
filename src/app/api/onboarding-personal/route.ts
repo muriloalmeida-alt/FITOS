@@ -3,6 +3,7 @@ import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContex
 import { completePersonalOnboarding, getPersonalOnboardingProfile, OnboardingError } from "@/modules/personal-onboarding/onboarding";
 import { listStudents } from "@/modules/students/students";
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
+import { REFERRAL_COOKIE, applyPersonalReferral, referralCodeFromCookie } from "@/modules/billing/referrals";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { suggestPlan } from "@/modules/billing/suggestPlan";
 import { prisma } from "@/shared/db/prisma";
@@ -73,9 +74,15 @@ export async function POST(request: Request) {
       await subscribeTenantToPlan({ tenantId: ctx.tenantId, tenantType: "PERSONAL", planId, actorUserId: ctx.userId });
     }
 
+    // EPIC-47: veio por indicação de outro personal → 30 dias a mais de teste.
+    const referralCode = referralCodeFromCookie(request.headers.get("cookie"));
+    if (referralCode) await applyPersonalReferral({ referredTenantId: ctx.tenantId, code: referralCode }).catch(() => false);
+
     const students = await listStudents({ tenantId: ctx.tenantId, pageSize: 1 });
     const redirectTo = students.total === 0 ? "/painel/primeiros-passos" : "/painel";
-    return Response.json({ redirectTo }, { status: 201 });
+    const response = Response.json({ redirectTo }, { status: 201 });
+    if (referralCode) response.headers.append("Set-Cookie", `${REFERRAL_COOKIE}=; Path=/; Max-Age=0`);
+    return response;
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;

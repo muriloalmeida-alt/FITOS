@@ -50,4 +50,20 @@ describe("link de convite (EPIC-29)", () => {
     expect(await getInviteLink(code, prisma)).toBeNull();
     await expect(joinByInviteLink({ code, name: "Ana", email: `ana-${run}@example.test`, password: "senha-forte-123" }, prisma, testAuth)).rejects.toMatchObject({ kind: "LINK_INVALIDO" });
   });
+
+  it("indicação de aluno (EPIC-47): quem entra com ?ref= de um aluno do espaço fica marcado", async () => {
+    const owner = await prisma.user.create({ data: { email: `dono-ref-${run}@example.test`, name: "Murilo", role: "PERSONAL" } });
+    const tenant = await prisma.tenant.create({ data: { ownerId: owner.id, name: `Studio ref ${run}` } });
+    const otherOwner = await prisma.user.create({ data: { email: `dono-ref2-${run}@example.test`, name: "Outro", role: "PERSONAL" } });
+    const other = await prisma.tenant.create({ data: { ownerId: otherOwner.id, name: `Studio ref2 ${run}` } });
+    const ana = await prisma.student.create({ data: { tenantId: tenant.id, email: `ana-ref-${run}@example.test`, displayName: "Ana Costa" } });
+    const stranger = await prisma.student.create({ data: { tenantId: other.id, email: `zed-ref-${run}@example.test`, displayName: "Zed" } });
+    const code = await getOrCreateInviteCode(tenant.id, prisma);
+
+    const joined = await joinByInviteLink({ code, name: "Bia Lima", email: `bia-ref-${run}@example.test`, password: "senha-forte-123", ref: ana.id }, prisma, testAuth);
+    expect((await prisma.student.findUniqueOrThrow({ where: { id: joined.studentId } })).referredByStudentId).toBe(ana.id);
+
+    const outsider = await joinByInviteLink({ code, name: "Caio", email: `caio-ref-${run}@example.test`, password: "senha-forte-123", ref: stranger.id }, prisma, testAuth);
+    expect((await prisma.student.findUniqueOrThrow({ where: { id: outsider.studentId } })).referredByStudentId).toBeNull();
+  });
 });

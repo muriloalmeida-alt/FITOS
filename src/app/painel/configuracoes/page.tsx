@@ -1,3 +1,4 @@
+import { getReferralSummary } from "@/modules/billing/referrals";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/shared/ui";
@@ -41,9 +42,10 @@ export default async function ConfiguracoesPage() {
     // Recebimento (EPIC-38): atualiza a verificação no Asaas antes de mostrar.
     refreshAccountStatus({ tenantId: ctx.tenantId }).then(() => getPaymentAccountSummary(ctx.tenantId)),
   ]);
-  const [balanceCents, owner] = await Promise.all([
+  const [balanceCents, owner, referral] = await Promise.all([
     payments.status === "NAO_ATIVADO" ? null : getBalanceCents(ctx.tenantId),
     prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { name: true } }),
+    getReferralSummary(ctx.tenantId).catch(() => null),
   ]);
 
   return (
@@ -55,6 +57,7 @@ export default async function ConfiguracoesPage() {
         alerts={alerts}
         devices={devices.map((device) => ({ id: device.id, label: device.label, lastActiveIso: device.lastActive.toISOString(), current: device.current }))}
         hasPassword={password !== null}
+        referral={referral}
         payments={{ ...payments, balanceCents, ownerName: owner.name }}
       />
     </AppShell>
