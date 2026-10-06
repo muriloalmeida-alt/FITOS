@@ -371,7 +371,7 @@ export function FinanceiroView({ monthKey, monthLabel, summary, charges, recurre
           setLink(null);
         }}
         title={linkFor ? `Cobrar ${linkFor.studentName.split(/\s+/)[0]}` : "Cobrar"}
-        description={linkFor ? `${linkFor.description} · ${formatCentsBRL(linkFor.amountCents)}. O aluno escolhe Pix, boleto ou cartão; quando ele pagar, a mensalidade se dá baixa sozinha.` : undefined}
+        description={linkFor ? `${linkFor.description} · ${formatCentsBRL(linkFor.amountCents)}. O aluno escolhe Pix, boleto ou cartão; quando ele pagar, a mensalidade se dá baixa sozinha. Taxa FitOS de 2%.` : undefined}
       >
         {linkFor && !link ? (
           !linkFor.hasCpf && !linkFor.paymentUrl ? (

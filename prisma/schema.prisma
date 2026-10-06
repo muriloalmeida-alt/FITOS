@@ -1334,20 +1334,31 @@ model PersonalAlert {
   @@map("personal_alerts")
 }
 
-/// Conta de recebimento do personal (EPIC-38): a conta Asaas dele, para
-/// cobrar os alunos pelo app. O dinheiro cai direto para o personal; o
-/// FitOS só guarda a chave (criptografada) e recebe o aviso de pagamento.
+/// Conta de recebimento do personal (EPIC-38): uma subconta Asaas criada
+/// pelo FitOS em nome dele, para cobrar os alunos pelo app. O dinheiro cai
+/// na subconta do personal (o FitOS fica com 2% por split); a chave da
+/// subconta fica criptografada e o aviso de pagamento dá a baixa.
 model PaymentAccount {
-  tenantId        String   @id
-  provider        String
+  tenantId         String    @id
+  provider         String
   /// "producao" ou "sandbox", pela chave.
-  environment     String
-  apiKeyEncrypted String
+  environment      String
+  apiKeyEncrypted  String
   /// Identifica a conta na URL do webhook; `webhookSecret` vai no cabeçalho.
-  webhookToken    String   @unique
-  webhookSecret   String
-  webhookId       String?
-  connectedAt     DateTime @default(now())
+  webhookToken     String    @unique
+  webhookSecret    String
+  webhookId        String?
+  connectedAt      DateTime  @default(now())
+  /// Subconta Asaas criada pelo FitOS (EPIC-38): id, carteira e situação da
+  /// verificação de identidade ("PENDENTE", "APROVADA", "RECUSADA").
+  asaasAccountId   String?
+  walletId         String?
+  status           String    @default("PENDENTE")
+  onboardingUrl    String?
+  statusCheckedAt  DateTime?
+  /// Chave Pix do personal para os saques.
+  payoutPixKey     String?
+  payoutPixKeyType String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

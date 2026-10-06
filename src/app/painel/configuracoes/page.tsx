@@ -11,6 +11,7 @@ import { getLibrary } from "@/modules/library/library";
 import { getTenantPrescription } from "@/modules/workouts/workouts";
 import { getAlertSettings } from "@/modules/notifications/personalAlerts";
 import { getPaymentAccountSummary } from "@/modules/student-finance/paymentAccount";
+import { getBalanceCents, refreshAccountStatus } from "@/modules/student-finance/asaasSubaccount";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
 import { ConfiguracoesView } from "./ConfiguracoesView";
@@ -37,7 +38,12 @@ export default async function ConfiguracoesPage() {
     getAlertSettings(ctx.userId),
     listDevices({ userId: ctx.userId, currentSessionId: session?.session.id ?? null }),
     prisma.account.findFirst({ where: { userId: ctx.userId, providerId: "credential", password: { not: null } }, select: { id: true } }),
-    getPaymentAccountSummary(ctx.tenantId),
+    // Recebimento (EPIC-38): atualiza a verificação no Asaas antes de mostrar.
+    refreshAccountStatus({ tenantId: ctx.tenantId }).then(() => getPaymentAccountSummary(ctx.tenantId)),
+  ]);
+  const [balanceCents, owner] = await Promise.all([
+    payments.status === "NAO_ATIVADO" ? null : getBalanceCents(ctx.tenantId),
+    prisma.user.findUniqueOrThrow({ where: { id: ctx.userId }, select: { name: true } }),
   ]);
 
   return (
@@ -49,7 +55,7 @@ export default async function ConfiguracoesPage() {
         alerts={alerts}
         devices={devices.map((device) => ({ id: device.id, label: device.label, lastActiveIso: device.lastActive.toISOString(), current: device.current }))}
         hasPassword={password !== null}
-        payments={payments}
+        payments={{ ...payments, balanceCents, ownerName: owner.name }}
       />
     </AppShell>
   );

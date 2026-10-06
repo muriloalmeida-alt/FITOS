@@ -74,7 +74,7 @@ export default async function FinanceiroPage({ searchParams }: FinanceiroPagePro
             paymentUrl: charge.paymentUrl,
             hasCpf: Boolean(charge.student.cpf),
           }))}
-        canChargeOnline={payments.connected}
+        canChargeOnline={payments.status !== "NAO_ATIVADO"}
         recurrences={recurrences.map((recurrence) => ({
           id: recurrence.id,
           studentId: recurrence.student.id,
