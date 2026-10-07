@@ -377,7 +377,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
             {swapOptions.map((option) => (
               <li key={option.id}>
                 <button type="button" className={styles.tile} onClick={() => void swapTo(option)}>
-                  {swapItem?.intensity ? <CardioIcon size={64} /> : <ExerciseThumbnail src={option.imageUrl} alt="" width={160} height={110} className={styles.tileImage} />}
+                  {swapItem?.intensity && !option.imageUrl ? <CardioIcon size={64} /> : <ExerciseThumbnail src={option.imageUrl} alt="" width={160} height={110} className={styles.tileImage} />}
                   <span className={styles.tileName}>{option.name}</span>
                 </button>
               </li>

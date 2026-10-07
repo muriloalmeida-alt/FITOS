@@ -54,7 +54,7 @@ export function ProgramWorkouts({ workouts }: { workouts: ProgramWorkoutView[] }
                   <ol className={styles.items} aria-label={`Exercícios de ${workout.name}`}>
                     {workout.items.map((item) => (
                       <li key={item.id} className={styles.item}>
-                        {item.intensity ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={56} height={56} className={styles.thumb} />}
+                        {item.intensity && !item.imageUrl ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={56} height={56} className={styles.thumb} />}
                         <span className={styles.itemText}>
                           <span className={styles.itemName}>{item.name}</span>
                           <span className={styles.muted}>{prescriptionLine(item)}</span>

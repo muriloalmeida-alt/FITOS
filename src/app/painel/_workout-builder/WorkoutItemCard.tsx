@@ -66,12 +66,12 @@ export function WorkoutItemCard({
       <div className={styles.head}>
         {onSwap ? (
           <button type="button" className={styles.swapThumb} onClick={onSwap} aria-label={`Trocar ${item.name}`}>
-            {cardio ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt="" width={56} height={56} className={styles.thumb} />}
+            {cardio && !item.imageUrl ? <CardioIcon size={56} /> : <ExerciseThumbnail src={item.imageUrl} alt="" width={56} height={56} className={styles.thumb} />}
             <span className={styles.swapBadge} aria-hidden="true">
               ⇄
             </span>
           </button>
-        ) : cardio ? (
+        ) : cardio && !item.imageUrl ? (
           <CardioIcon size={56} />
         ) : (
           <ExerciseThumbnail
