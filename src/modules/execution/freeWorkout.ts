@@ -3,6 +3,7 @@ import type { PrismaClient, Workout } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { WorkoutError, addWorkoutExercisesBatch, ensureDraftTrainingPlanForTenant } from "@/modules/workouts/workouts";
 import { evaluateWorkout, type QualitySet, type WorkoutQuality } from "@/shared/lib/workoutQuality";
+import { normalizeFocus, type Focus } from "@/shared/lib/workoutFocus";
 import { SessionError, discardEmptyFreeSession, getSessionForStudent, getInProgressSessionOwnedByStudentOrThrow, type WorkoutSessionWithDetails } from "./sessions";
 
 /// Treino avulso do FitOS Livre: começa vazio e o praticante informa cada
@@ -16,10 +17,11 @@ const MAX_NAME_LENGTH = 80;
 
 type Executor = { tenantId: string; studentId: string };
 
-/// Retoma o treino avulso em andamento ou começa um novo. Outra sessão em
+/// Retoma o treino avulso em andamento ou começa um novo com o foco
+/// escolhido (retomar mantém o foco de quando começou). Outra sessão em
 /// andamento (de um treino montado) é abandonada, como em
 /// `startOrResumeIndividualWorkoutSession`.
-export async function startOrResumeFreeWorkoutSession(input: Executor, client: PrismaClient = prisma): Promise<WorkoutSessionWithDetails> {
+export async function startOrResumeFreeWorkoutSession(input: Executor & { focus?: Focus[] }, client: PrismaClient = prisma): Promise<WorkoutSessionWithDetails> {
   const inProgress = await client.workoutSession.findFirst({
     where: { tenantId: input.tenantId, studentId: input.studentId, status: "EM_ANDAMENTO" },
     include: { workout: { select: { status: true } } },
@@ -37,7 +39,7 @@ export async function startOrResumeFreeWorkoutSession(input: Executor, client: P
     const workout = await tx.workout.create({
       data: { tenantId: input.tenantId, trainingPlanId: plan.id, name: FREE_WORKOUT_NAME, position: (max._max.position ?? -1) + 1, status: "AVULSO" },
     });
-    return tx.workoutSession.create({ data: { tenantId: input.tenantId, studentId: input.studentId, workoutId: workout.id } });
+    return tx.workoutSession.create({ data: { tenantId: input.tenantId, studentId: input.studentId, workoutId: workout.id, focus: normalizeFocus(input.focus ?? []) } });
   });
   return (await getSessionForStudent({ ...input, sessionId: created.id }, client))!;
 }
@@ -127,6 +129,7 @@ export async function getFreeWorkoutQuality(input: Executor & { sessionId: strin
   };
   return evaluateWorkout(
     week.filter((set) => set.workoutSessionId === session.id).map(toSet),
-    week.map(toSet)
+    week.map(toSet),
+    normalizeFocus(session.focus)
   );
 }

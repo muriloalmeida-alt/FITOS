@@ -116,4 +116,18 @@ describe("treino avulso (FitOS Livre)", () => {
     expect(quality.score).toBe(4);
     await expect(getFreeWorkoutQuality({ tenantId: scope.tenantId, studentId: "outro", sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
+  it("guarda o foco escolhido e a avaliação cobra o foco", async () => {
+    const { scope } = await setup("foco");
+    const supino = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Supino foco ${run}`, muscle: "Peitoral", type: "Pesos livres" } });
+    const session = await startOrResumeFreeWorkoutSession({ ...scope, focus: ["Costas", "Peitoral", "Inválido" as never] }, prisma);
+    expect(session.focus).toEqual(["Peitoral", "Costas"]);
+    const [item] = await addExercisesToFreeSession({ ...scope, sessionId: session.id, exerciseIds: [supino.id] }, prisma);
+    for (const setNumber of [1, 2, 3]) {
+      await recordWorkoutSet({ ...scope, sessionId: session.id, workoutExerciseId: item!.id, setNumber, reps: 10, durationSeconds: null, loadKg: 20, performedExerciseId: null }, prisma);
+    }
+    await completeWorkoutSession({ ...scope, sessionId: session.id }, prisma);
+    const quality = await getFreeWorkoutQuality({ ...scope, sessionId: session.id }, prisma);
+    expect(quality.missing[0]).toEqual({ area: "Costas", reason: "Você escolheu treinar: 0 de 3 séries." });
+    expect(quality.reasons[0]).toEqual({ ok: false, text: "Faltou do foco: Costas." });
+  });
 });

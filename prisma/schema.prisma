@@ -881,6 +881,9 @@ model WorkoutSession {
   /// pausas do cronômetro. Informado ao concluir; nunca maior que o tempo
   /// de relógio entre `startedAt` e `endedAt`.
   activeSeconds   Int?
+  /// Treino avulso (FitOS Livre): o que o praticante escolheu treinar
+  /// (regiões e grupos musculares, `src/shared/lib/workoutFocus.ts`).
+  focus           String[]             @default([])
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)

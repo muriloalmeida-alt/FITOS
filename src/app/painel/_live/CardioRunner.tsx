@@ -80,3 +80,39 @@ export function CardioRunner({ durationSeconds, intensity, elapsedSeconds, runni
     </section>
   );
 }
+
+interface FreeProps {
+  elapsedSeconds: number;
+  running: boolean;
+  onToggle: () => void;
+  /// Ajuste manual em segundos (−60/+60): esqueceu de iniciar ou de pausar.
+  onAdjust: (seconds: number) => void;
+}
+
+/// Aeróbico livre (treino avulso): cronômetro que conta para cima, sem
+/// etapas de aquecimento ou tiros. O praticante inicia, pausa e ajusta; o
+/// tempo feito é o que fica registrado.
+export function FreeCardio({ elapsedSeconds, running, onToggle, onAdjust }: FreeProps) {
+  return (
+    <section className={styles.runner} aria-label="Aeróbico">
+      <div className={styles.panel}>
+        <p className={styles.phase}>{running ? "Em andamento" : elapsedSeconds > 0 ? "Pausado" : "Tempo livre"}</p>
+        <p className={styles.clock} role="timer" aria-live="off">
+          {mmss(elapsedSeconds)}
+        </p>
+        <p className={styles.cue}>Você controla o tempo: inicie, pause e ajuste quando quiser.</p>
+        <div className={`${styles.actions} ${styles.actionsFree}`}>
+          <button type="button" className={styles.secondary} onClick={() => onAdjust(-60)} disabled={elapsedSeconds === 0} aria-label="Tirar 1 minuto">
+            −1 min
+          </button>
+          <button type="button" className={styles.primary} onClick={onToggle}>
+            {running ? "Pausar" : elapsedSeconds > 0 ? "Continuar" : "Iniciar"}
+          </button>
+          <button type="button" className={styles.secondary} onClick={() => onAdjust(60)} aria-label="Somar 1 minuto">
+            +1 min
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}

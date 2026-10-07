@@ -60,3 +60,9 @@
   font-size: 20px;
   font-weight: 800;
 }
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}

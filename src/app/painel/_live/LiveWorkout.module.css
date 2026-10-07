@@ -974,3 +974,20 @@ button.control {
 .fullRow {
   grid-column: 1 / -1;
 }
+
+.focusList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.focusList li {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+}

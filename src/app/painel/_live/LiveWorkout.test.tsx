@@ -157,10 +157,11 @@ describe("LiveWorkout (FIT-153)", () => {
     });
     render(
       <ToastProvider>
-        <LiveWorkout sessionId="sess9" workoutId="w9" workoutName="Treino avulso" startedAt={new Date().toISOString()} items={[]} coachName={null} apiBase="/api/minhas-sessoes" exitHref="/painel" progressHref="/painel/minha-evolucao" free={{ library }} />
+        <LiveWorkout sessionId="sess9" workoutId="w9" workoutName="Treino avulso" startedAt={new Date().toISOString()} items={[]} coachName={null} apiBase="/api/minhas-sessoes" exitHref="/painel" progressHref="/painel/minha-evolucao" free={{ library, focus: ["Costas", "Aeróbico"] }} />
       </ToastProvider>
     );
     expect(screen.getByRole("heading", { name: "O que você vai fazer agora?" })).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Seu foco hoje" })).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Costas", "Aeróbico"]);
     fireEvent.click(screen.getByRole("button", { name: "Encerrar treino" }));
     expect(screen.getByRole("button", { name: "Sair sem salvar" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Concluir/ })).not.toBeInTheDocument();
@@ -194,5 +195,32 @@ describe("LiveWorkout (FIT-153)", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith("/api/minhas-sessoes/sess9/salvar", expect.objectContaining({ body: JSON.stringify({ name: "Costas rápido" }) }));
     expect(screen.getByText("Salvo em Meus treinos. Dá para repetir outro dia.")).toBeInTheDocument();
+  });
+  it("treino avulso: aeróbico com tempo livre, sem etapas, e registra o tempo feito", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const bike: LiveItem = { ...squat, id: "we7", exerciseId: "ex7", name: "Bike ergométrica", sets: null, reps: null, durationSeconds: 1200, loadKg: null, load: null, intensity: "MODERADO" };
+    fetchMock.mockReturnValue(json({ setNumber: 1, personalRecord: false }, 201));
+    render(
+      <ToastProvider>
+        <LiveWorkout sessionId="sess7" workoutId="w7" workoutName="Treino avulso" startedAt={new Date().toISOString()} items={[bike]} coachName={null} apiBase="/api/minhas-sessoes" exitHref="/painel" progressHref="/painel/minha-evolucao" free={{ library: [] }} />
+      </ToastProvider>
+    );
+    expect(screen.getAllByText("Tempo livre")).toHaveLength(2);
+    expect(screen.queryByText(/Aquecimento/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Inicie o tempo/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Somar 1 minuto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Somar 1 minuto" }));
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
+    expect(screen.getByRole("timer")).toHaveTextContent("2:30");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Aeróbico feito · 2 min/ }));
+    });
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(body).toMatchObject({ workoutExerciseId: "we7", durationSeconds: 150, reps: null });
+    vi.useRealTimers();
   });
 });
