@@ -27,6 +27,11 @@ function buildExerciseImageRemotePatterns() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Versão gravada no build (commit do Railway): o app compara com a do
+  // servidor em "Atualizar versão".
+  env: {
+    NEXT_PUBLIC_APP_VERSION: (process.env.RAILWAY_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
+  },
   images: {
     remotePatterns: buildExerciseImageRemotePatterns(),
   },
