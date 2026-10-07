@@ -6,13 +6,15 @@ import { subscriptionAccess } from "@/modules/billing/access";
 import { RememberAccount } from "./RememberAccount";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { unreadTopicsCount } from "@/modules/messages/messages";
+import { NewVersionBanner } from "../_version/NewVersionBanner";
 
 /// Layout de `/painel/*` (AjustesTelas, 29/09/2026): só disponibiliza o nome
 /// real da sessão ao avatar do cabeçalho mobile do `AppShell`. Nenhuma
 /// decisão de autenticação/papel acontece aqui — cada página continua
 /// validando a sessão e o papel no servidor, exatamente como antes.
 /// EPIC-38: para o dono do espaço (personal ou Livre) com o teste grátis
-/// encerrado sem cartão, a faixa de carência ou o bloqueio.
+/// encerrado sem cartão, a faixa de carência ou o bloqueio. Aviso de
+/// versão nova do app em todas as telas do painel.
 export default async function PainelLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession();
   const user = session?.user as { name: string; email: string; role?: string } | undefined;
@@ -33,6 +35,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   return (
     <AccountNameProvider name={session?.user.name ?? null} image={session?.user.image ?? null} unreadMessages={unreadMessages}>
       <RememberAccount account={user ? { name: user.name, email: user.email, role } : null} />
+      <NewVersionBanner />
       {content}
     </AccountNameProvider>
   );
