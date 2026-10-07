@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { ToastProvider } from "@/shared/ui";
 
 const requireIndividual = vi.fn();
@@ -59,6 +59,22 @@ describe("Minha evolução do FitOS Livre (FIT-159)", () => {
     expect(screen.getByText("Abandonado")).toBeInTheDocument();
     expect(screen.getByText(/esforço puxado/)).toBeInTheDocument();
     expect(getTrainingOverviewForStudent).toHaveBeenCalledWith({ tenantId: "t1", studentId: "self" });
+  });
+
+  it("Treinos: excluir um treino realizado pede confirmação e chama a exclusão", async () => {
+    setup();
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetchMock);
+    await renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Excluir Inferiores B de/ }));
+    const dialog = screen.getByRole("dialog", { name: "Excluir este treino?" });
+    expect(within(dialog).getByText(/Inferiores B · .*Não dá para desfazer\./)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "Excluir treino" }));
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/minhas-sessoes/s2", expect.objectContaining({ method: "DELETE" }));
+    expect(await screen.findByText("Treino excluído")).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 
   it("Corpo: registrar já com os últimos valores e excluir com confirmação", async () => {
