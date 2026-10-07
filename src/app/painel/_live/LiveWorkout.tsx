@@ -13,6 +13,7 @@ import {
 import { requestJson } from "../_workout-builder/apiClient";
 import { ExerciseLibrary } from "../_workout-builder/ExerciseLibrary";
 import type { LibraryExercise } from "../_workout-builder/types";
+import type { WorkoutQuality } from "@/shared/lib/workoutQuality";
 import { prescriptionLine } from "@/shared/lib/prescription";
 import { formatClock } from "./clock";
 import { shareWorkoutImage } from "./shareImage";
@@ -247,6 +248,8 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   const [adding, setAdding] = useState(false);
   const [saveName, setSaveName] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  /// Treino avulso: avaliação mostrada antes do resumo.
+  const [quality, setQuality] = useState<WorkoutQuality | null>(null);
   const doneSetsCount = items.reduce((sum, entry) => sum + entry.doneSets.length, 0);
   const timed = isTimed(item);
   const cardio = item.intensity !== null && item.intensity !== undefined;
@@ -528,6 +531,10 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           }),
         },
       );
+      if (free) {
+        // Sem avaliação (falha de rede), segue direto para o resumo.
+        setQuality(await requestJson<WorkoutQuality>(`${props.apiBase}/${sessionId}/avaliacao`).catch(() => null));
+      }
       setSummary(result.summary);
       setRest(null);
       setSheet(null);
@@ -1057,6 +1064,81 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           </button>
         </div>
         {musicSheet}
+      </div>
+    );
+  }
+
+  if (phase === "done" && summary && quality) {
+    const top = quality.worked[0]?.sets ?? 1;
+    return (
+      <div className={styles.screen}>
+        <div className={styles.scroll}>
+          <p className={styles.eyebrow}>Avaliação do treino</p>
+          <div className={styles.scoreRow}>
+            <span className={styles.score} aria-label={`Nota ${quality.score} de 5`}>
+              {quality.score}
+              <small>/5</small>
+            </span>
+            <span>
+              <span className={styles.scoreDots} aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <span key={value} className={value <= quality.score ? `${styles.scoreDot} ${styles.scoreDotOn}` : styles.scoreDot} />
+                ))}
+              </span>
+              <h1 className={styles.title}>{quality.label}</h1>
+            </span>
+          </div>
+
+          <h2 className={styles.cap}>Mais exigidas</h2>
+          {quality.worked.length > 0 ? (
+            <ul className={styles.areas}>
+              {quality.worked.map((area) => (
+                <li key={area.area}>
+                  <span className={styles.areaHead}>
+                    <strong>{area.area}</strong>
+                    <span className={styles.muted}>{area.sets === 1 ? "1 série" : `${area.sets} séries`}</span>
+                  </span>
+                  <span className={styles.areaBar} aria-hidden="true">
+                    <span style={{ width: `${Math.max(8, (100 * area.sets) / top)}%` }} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.muted}>{quality.cardioMinutes > 0 ? `Aeróbico: ${quality.cardioMinutes} min.` : "Nenhuma série de força."}</p>
+          )}
+
+          <h2 className={styles.cap}>Ficaram devendo</h2>
+          {quality.missing.length > 0 ? (
+            <ul className={styles.owed}>
+              {quality.missing.map((entry) => (
+                <li key={entry.area}>
+                  <strong>{entry.area}</strong>
+                  <span className={styles.muted}>{entry.reason}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.muted}>Nada ficou devendo. Treino equilibrado.</p>
+          )}
+
+          <h2 className={styles.cap}>Por que essa nota</h2>
+          <ul className={styles.reasons}>
+            {quality.reasons.map((reason) => (
+              <li key={reason.text}>
+                <span className={reason.ok ? styles.reasonOk : styles.reasonWarn} aria-label={reason.ok ? "Contou a favor" : "Pesou contra"}>
+                  {reason.ok ? "✓" : "!"}
+                </span>
+                {reason.text}
+              </li>
+            ))}
+          </ul>
+          <div className={styles.doneActions}>
+            <Button type="button" block className={styles.fullRow} onClick={() => setQuality(null)}>
+              Ver resumo
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

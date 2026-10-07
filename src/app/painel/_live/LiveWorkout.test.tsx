@@ -152,6 +152,7 @@ describe("LiveWorkout (FIT-153)", () => {
       if (url.endsWith("/series")) return json({ setNumber: 1, personalRecord: false }, 201);
       if (url.endsWith("/concluir")) return json({ summary: { activeSeconds: 300, sets: 1, volumeKg: 0, records: [] } });
       if (url.endsWith("/salvar")) return json({ workoutId: "w9", name: "Costas rápido" });
+      if (url.endsWith("/avaliacao")) return json({ score: 2, label: "Deu para começar", worked: [{ area: "Costas", sets: 1 }], missing: [{ area: "Peitoral", reason: "Nenhuma série nos últimos 7 dias." }], reasons: [{ ok: false, text: "Só 1 série: volume baixo." }], cardioMinutes: 0 });
       return json({});
     });
     render(
@@ -180,6 +181,12 @@ describe("LiveWorkout (FIT-153)", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Concluir com o que fiz" }));
     });
+    expect(screen.getByText("Avaliação do treino")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nota 2 de 5")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Deu para começar" })).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma série nos últimos 7 dias.")).toBeInTheDocument();
+    expect(screen.getByText("Só 1 série: volume baixo.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver resumo" }));
     fireEvent.click(screen.getByRole("button", { name: "Salvar nos meus treinos" }));
     fireEvent.change(screen.getByLabelText("Nome do treino"), { target: { value: "Costas rápido" } });
     await act(async () => {
