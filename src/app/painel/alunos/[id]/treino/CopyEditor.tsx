@@ -127,7 +127,7 @@ export function CopyEditor({ studentId, studentFirstName, copy, cardioOptions }:
               return (
                 <li key={item.id} className={styles.item}>
                   <button type="button" className={styles.head} onClick={() => void openSwap(item)} aria-label={`Trocar ${item.name}`}>
-                    {item.isCardio ? <CardioIcon size={48} /> : <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={48} height={48} className={styles.thumb} />}
+                    {item.isCardio && !item.imageUrl ? <CardioIcon size={48} /> : <ExerciseThumbnail src={item.imageUrl} alt={item.imageAlt ?? item.name} width={48} height={48} className={styles.thumb} />}
                     <span className={styles.text}>
                       <span className={item.isCardio ? `${styles.group} ${styles.cardioGroup}` : styles.group}>{item.isCardio ? "Aeróbico" : (item.muscle ?? "Exercício")}</span>
                       <span className={styles.name}>{item.name}</span>
@@ -183,7 +183,7 @@ export function CopyEditor({ studentId, studentFirstName, copy, cardioOptions }:
             {options.map((option) => (
               <li key={option.id}>
                 <button type="button" className={styles.tile} onClick={() => void swapTo(option)} disabled={busy}>
-                  {swapItem?.isCardio ? <CardioIcon size={64} /> : <ExerciseThumbnail src={option.imageUrl} alt={option.imageAlt ?? option.name} width={160} height={110} className={styles.tileImage} />}
+                  {swapItem?.isCardio && !option.imageUrl ? <CardioIcon size={64} /> : <ExerciseThumbnail src={option.imageUrl} alt={option.imageAlt ?? option.name} width={160} height={110} className={styles.tileImage} />}
                   <span className={styles.tileName}>{option.name}</span>
                 </button>
               </li>

@@ -1147,7 +1147,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             onClick={() => setSheet("how")}
             aria-label={`Como fazer ${item.name}`}
           >
-            {cardio ? (
+            {cardio && !item.imageUrl ? (
               <CardioIcon size={118} />
             ) : (
               <ExerciseThumbnail

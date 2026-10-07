@@ -130,7 +130,7 @@ export function LibraryView({ tab, entries, students, preselectedStudentId = nul
           {list.map((entry) => (
             <li key={entry.id}>
               <button type="button" className={styles.card} onClick={() => setOpen(entry)}>
-                {entry.cardio || entry.thumbnails.length === 0 ? (
+                {entry.thumbnails.length === 0 ? (
                   <CardioIcon size={48} />
                 ) : (
                   <span className={styles.thumbs} aria-hidden="true">
