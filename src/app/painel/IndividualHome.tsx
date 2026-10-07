@@ -5,6 +5,7 @@ import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
 import { LogoutButton } from "./LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
 import { ProgressionCard } from "./ProgressionCard";
+import { FreeWorkoutButton } from "./meus-treinos/FreeWorkoutButton";
 import styles from "./IndividualHome.module.css";
 
 interface IndividualHomeProps {
@@ -20,7 +21,7 @@ interface IndividualHomeProps {
 const SESSION_HREF = "/painel/meus-treinos/sessao";
 
 /// Início do FitOS Livre (FIT-156, L1 do protótipo): "Hoje para você" com
-/// "Iniciar treino" (BK-16), semana contra a meta do perfil, seus treinos
+/// "Iniciar treino" (BK-16), "Treino avulso", semana contra a meta do perfil, seus treinos
 /// com "Iniciar", "+ Montar meu treino" e o resumo da evolução.
 export function IndividualHome({ name, greeting, dateLabel, home, todayIso, trialNotice = null }: IndividualHomeProps) {
   const firstName = name.trim().split(/\s+/)[0] ?? name;
@@ -61,6 +62,7 @@ export function IndividualHome({ name, greeting, dateLabel, home, todayIso, tria
       ) : (
         <NextStepCard eyebrow="Primeiro passo" title="Criar meu primeiro treino" description="Escolha os exercícios na biblioteca. Entram com 3 × 12." href="/painel/meus-treinos/novo" />
       )}
+      {home.inProgress ? null : <FreeWorkoutButton />}
       {!home.inProgress && home.missed ? (
         <NextStepCard
           eyebrow={`Ficou de ${home.missed.missedDay}`}

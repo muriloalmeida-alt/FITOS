@@ -11,6 +11,7 @@ import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
 import { toLiveItems } from "../../_live/liveItems";
+import { loadLibrary } from "../../_workout-builder/editorData";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,8 @@ export const metadata: Metadata = {
 
 /// Treino ao vivo do FitOS Livre (FIT-158): o mesmo componente do aluno
 /// (FIT-153), sem personal. Retoma a sessão em andamento; senão prepara o
-/// treino escolhido (`?treino=`). O fim leva a Minha evolução.
+/// treino escolhido (`?treino=`). O fim leva a Minha evolução. Treino
+/// avulso: a sessão já existe e os exercícios entram durante o treino.
 export default async function SessaoIndividualPage({ searchParams }: { searchParams?: Promise<{ treino?: string }> } = {}) {
   let ctx;
   try {
@@ -47,6 +49,7 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
         workoutName={inProgress.workout.name}
         startedAt={inProgress.startedAt.toISOString()}
         items={toLiveItems(items, inProgress.setResults, last)}
+        free={inProgress.workout.status === "AVULSO" ? { library: await loadLibrary(ctx.tenantId) } : undefined}
       />
     );
   }

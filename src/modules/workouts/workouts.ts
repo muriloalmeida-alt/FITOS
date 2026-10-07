@@ -1190,7 +1190,7 @@ export async function addWorkoutExercisesBatch(
 export interface WorkoutSummary {
   id: string;
   name: string;
-  status: Workout["status"];
+  status: "ATIVO" | "ARQUIVADO";
   suggestedDays: string[];
   exerciseCount: number;
   trainingPlanId: string;
@@ -1204,7 +1204,7 @@ export interface WorkoutSummary {
 /// dos três primeiros exercícios. Nunca inclui cópias atribuídas
 /// (snapshots). `status` filtra ativos (padrão) ou arquivados.
 export async function listWorkoutSummariesForTenant(
-  input: { tenantId: string; status?: Workout["status"] },
+  input: { tenantId: string; status?: "ATIVO" | "ARQUIVADO" },
   client: PrismaClient = prisma
 ): Promise<WorkoutSummary[]> {
   const workouts = await client.workout.findMany({
@@ -1223,7 +1223,7 @@ export async function listWorkoutSummariesForTenant(
   return workouts.map((workout) => ({
     id: workout.id,
     name: workout.name,
-    status: workout.status,
+    status: workout.status === "ARQUIVADO" ? "ARQUIVADO" : "ATIVO",
     suggestedDays: workout.suggestedDays,
     exerciseCount: workout._count.workoutExercises,
     trainingPlanId: workout.trainingPlanId,

@@ -830,3 +830,25 @@ button.control {
   color: var(--fitos-color-text-muted);
   font-size: 14px;
 }
+
+/* Treino avulso: salvar nos meus treinos */
+.saveRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saveRow .cap {
+  margin: 8px 0 0;
+}
+
+.saveInput {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+}
