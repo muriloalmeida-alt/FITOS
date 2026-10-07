@@ -10,7 +10,7 @@ import { createWorkout, addWorkoutExercise, listWorkoutSummariesForTenant } from
 import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
 import { abandonWorkoutSession, completeWorkoutSession, getInProgressSessionForStudent, SessionError, startOrResumeIndividualWorkoutSession } from "./sessions";
 import { recordWorkoutSet } from "./sets";
-import { addExercisesToFreeSession, saveFreeWorkout, startOrResumeFreeWorkoutSession } from "./freeWorkout";
+import { addExercisesToFreeSession, getFreeWorkoutQuality, saveFreeWorkout, startOrResumeFreeWorkoutSession } from "./freeWorkout";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -92,5 +92,28 @@ describe("treino avulso (FitOS Livre)", () => {
     const again = await startOrResumeIndividualWorkoutSession({ ...scope, workoutId: workout.id }, prisma);
     expect((await getInProgressSessionForStudent(scope, prisma))?.id).toBe(again.id);
     expect(await prisma.workout.findUnique({ where: { id: free.workoutId } })).toBeNull();
+  });
+  it("avaliação: áreas do treino, o que ficou devendo na semana e a nota", async () => {
+    const { scope } = await setup("nota");
+    const supino = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Supino nota ${run}`, muscle: "Peitoral", type: "Pesos livres" } });
+    const remada = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Remada nota ${run}`, muscle: "Costas", type: "Pesos livres" } });
+    const session = await startOrResumeFreeWorkoutSession(scope, prisma);
+    const items = await addExercisesToFreeSession({ ...scope, sessionId: session.id, exerciseIds: [supino.id, remada.id] }, prisma);
+    for (const item of items) {
+      for (const setNumber of [1, 2, 3]) {
+        await recordWorkoutSet({ ...scope, sessionId: session.id, workoutExerciseId: item.id, setNumber, reps: 10, durationSeconds: null, loadKg: 20, performedExerciseId: null }, prisma);
+      }
+    }
+    await expect(getFreeWorkoutQuality({ ...scope, sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+    await completeWorkoutSession({ ...scope, sessionId: session.id }, prisma);
+
+    const quality = await getFreeWorkoutQuality({ ...scope, sessionId: session.id }, prisma);
+    expect(quality.worked).toEqual([
+      { area: "Costas", sets: 3 },
+      { area: "Peitoral", sets: 3 },
+    ]);
+    expect(quality.missing.map((entry) => entry.area)).toEqual(["Ombros", "Quadríceps", "Posteriores de coxa"]);
+    expect(quality.score).toBe(4);
+    await expect(getFreeWorkoutQuality({ tenantId: scope.tenantId, studentId: "outro", sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
   });
 });

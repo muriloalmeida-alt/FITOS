@@ -2,6 +2,7 @@ import "server-only";
 import type { PrismaClient, Workout } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { WorkoutError, addWorkoutExercisesBatch, ensureDraftTrainingPlanForTenant } from "@/modules/workouts/workouts";
+import { evaluateWorkout, type QualitySet, type WorkoutQuality } from "@/shared/lib/workoutQuality";
 import { SessionError, discardEmptyFreeSession, getSessionForStudent, getInProgressSessionOwnedByStudentOrThrow, type WorkoutSessionWithDetails } from "./sessions";
 
 /// Treino avulso do FitOS Livre: começa vazio e o praticante informa cada
@@ -96,4 +97,36 @@ export async function saveFreeWorkout(input: Executor & { sessionId: string; nam
     }
     return tx.workout.update({ where: { id: session.workout.id }, data: { status: "ATIVO", name } });
   });
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/// Avaliação do treino avulso concluído: áreas mais exigidas, as que
+/// ficaram devendo (no treino e na semana) e a nota de 1 a 5.
+export async function getFreeWorkoutQuality(input: Executor & { sessionId: string; now?: Date }, client: PrismaClient = prisma): Promise<WorkoutQuality> {
+  const session = await client.workoutSession.findFirst({ where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId } });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Sessão não encontrada.");
+  if (session.status !== "CONCLUIDA") throw new SessionError("ESTADO_INVALIDO", "A avaliação sai quando o treino é concluído.");
+  const since = new Date((input.now ?? new Date()).getTime() - WEEK_MS);
+  const select = {
+    workoutSessionId: true,
+    durationSeconds: true,
+    workoutExercise: { select: { exerciseId: true, exercise: { select: { muscle: true, type: true } } } },
+    performedExercise: { select: { id: true, muscle: true, type: true } },
+  } as const;
+  const week = await client.workoutSetResult.findMany({
+    where: {
+      tenantId: input.tenantId,
+      workoutSession: { studentId: input.studentId, OR: [{ id: session.id }, { status: "CONCLUIDA", startedAt: { gte: since } }] },
+    },
+    select,
+  });
+  const toSet = (set: (typeof week)[number]): QualitySet => {
+    const exercise = set.performedExercise ?? set.workoutExercise.exercise;
+    return { muscle: exercise.muscle, type: exercise.type, durationSeconds: set.durationSeconds, exerciseId: set.performedExercise?.id ?? set.workoutExercise.exerciseId };
+  };
+  return evaluateWorkout(
+    week.filter((set) => set.workoutSessionId === session.id).map(toSet),
+    week.map(toSet)
+  );
 }

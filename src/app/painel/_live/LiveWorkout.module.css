@@ -852,3 +852,125 @@ button.control {
   font-family: var(--fitos-font-family);
   font-size: 16px;
 }
+
+/* Treino avulso: avaliação do treino */
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.score {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.score small {
+  margin-top: -18px;
+  color: var(--fitos-color-text-muted);
+  font-size: 15px;
+}
+
+.scoreDots {
+  display: flex;
+  gap: 6px;
+}
+
+.scoreDot {
+  width: 22px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.scoreDotOn {
+  background-color: var(--fitos-orange-500);
+}
+
+.areas,
+.owed,
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.areas li,
+.owed li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.areaHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.areaBar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.areaBar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--fitos-teal-300);
+}
+
+.owed li {
+  border-left: 4px solid var(--fitos-orange-500);
+}
+
+.reasons li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.reasonOk,
+.reasonWarn {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.reasonOk {
+  background-color: rgba(94, 234, 212, 0.16);
+  color: var(--fitos-teal-300);
+}
+
+.reasonWarn {
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}
+
+.fullRow {
+  grid-column: 1 / -1;
+}
