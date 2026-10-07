@@ -57,7 +57,7 @@ describe("CopyEditor (EPIC-28)", () => {
   });
 
   it("aeróbico com foto no catálogo mostra a foto, não o ícone", () => {
-    const withImage: StudentCopy = { ...copy, workouts: [{ ...copy.workouts[0], items: [item({ id: "i3", exerciseId: "c3", name: "Bike ergométrica", muscle: "Aeróbico", imageUrl: "https://cdn.test/bike-ergometrica.webp", imageAlt: "Bike ergométrica", isCardio: true, sets: null, reps: null, durationSeconds: 1200, intensity: "MODERADO" })] }] };
+    const withImage: StudentCopy = { ...copy, workouts: [{ ...copy.workouts[0]!, items: [item({ id: "i3", exerciseId: "c3", name: "Bike ergométrica", muscle: "Aeróbico", imageUrl: "https://cdn.test/bike-ergometrica.webp", imageAlt: "Bike ergométrica", isCardio: true, sets: null, reps: null, durationSeconds: 1200, intensity: "MODERADO" })] }] };
     render(
       <ToastProvider>
         <CopyEditor studentId="s1" studentFirstName="Pedro" copy={withImage} cardioOptions={[]} />
