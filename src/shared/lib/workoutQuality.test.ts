@@ -82,4 +82,9 @@ describe("evaluateWorkout (treino avulso)", () => {
     expect(result.reasons[0]).toEqual({ ok: true, text: "Foco cumprido: Aeróbico, Mobilidade." });
     expect(result.score).toBe(5);
   });
+  it("com foco em superiores não cobra grupos de fora do foco (glúteos, core)", () => {
+    const session = sets("Quadríceps", 3, "agachamento");
+    const result = evaluateWorkout(session, session, ["Superiores"]);
+    expect(result.missing).toEqual([{ area: "Superiores", reason: "Você escolheu treinar: 0 de 6 séries." }]);
+  });
 });

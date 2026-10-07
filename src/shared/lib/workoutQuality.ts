@@ -100,7 +100,9 @@ export function evaluateWorkout(session: QualitySet[], week: QualitySet[], focus
       reason: (counts.get(other) ?? 0) === 0 ? `${main} sem ${other.toLowerCase()}: ${why}.` : `Pouco perto de ${main.toLowerCase()}: ${why}.`,
     });
   }
-  for (const area of MAJOR) {
+  // Grupos parados na semana só entram sem foco: com foco, "ficaram
+  // devendo" fala apenas do que foi escolhido.
+  for (const area of focus.length > 0 ? [] : MAJOR) {
     if (missing.length >= 3) break;
     if ((weekCounts.get(area) ?? 0) === 0 && !missing.some((entry) => entry.area === area)) {
       missing.push({ area, reason: "Nenhuma série nos últimos 7 dias." });
