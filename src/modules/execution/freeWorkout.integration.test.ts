@@ -8,7 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { createWorkout, addWorkoutExercise, listWorkoutSummariesForTenant } from "@/modules/workouts/workouts";
 import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
-import { abandonWorkoutSession, completeWorkoutSession, getInProgressSessionForStudent, SessionError, startOrResumeIndividualWorkoutSession } from "./sessions";
+import { abandonWorkoutSession, completeWorkoutSession, deleteFinishedWorkoutSession, getInProgressSessionForStudent, SessionError, startOrResumeIndividualWorkoutSession } from "./sessions";
 import { recordWorkoutSet } from "./sets";
 import { addExercisesToFreeSession, getFreeWorkoutQuality, saveFreeWorkout, startOrResumeFreeWorkoutSession } from "./freeWorkout";
 
@@ -129,5 +129,27 @@ describe("treino avulso (FitOS Livre)", () => {
     const quality = await getFreeWorkoutQuality({ ...scope, sessionId: session.id }, prisma);
     expect(quality.missing[0]).toEqual({ area: "Costas", reason: "Você escolheu treinar: 0 de 3 séries." });
     expect(quality.reasons[0]).toEqual({ ok: false, text: "Faltou do foco: Costas." });
+  });
+  it("excluir treino realizado: some do histórico com as séries; avulso não salvo vai junto; em andamento e de outro aluno não", async () => {
+    const { scope, supino } = await setup("excluir");
+    const workout = await createWorkout({ tenantId: scope.tenantId, name: `Treino B ${run}` }, prisma);
+    const planned = await addWorkoutExercise({ tenantId: scope.tenantId, workoutId: workout.id, exerciseId: supino.id, sets: 3, reps: 10 }, prisma);
+    const session = await startOrResumeIndividualWorkoutSession({ ...scope, workoutId: workout.id }, prisma);
+    await recordWorkoutSet({ ...scope, sessionId: session.id, workoutExerciseId: planned.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 30, performedExerciseId: null }, prisma);
+    await expect(deleteFinishedWorkoutSession({ ...scope, sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+    await completeWorkoutSession({ ...scope, sessionId: session.id }, prisma);
+    await expect(deleteFinishedWorkoutSession({ tenantId: scope.tenantId, studentId: "outro", sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+
+    await deleteFinishedWorkoutSession({ ...scope, sessionId: session.id }, prisma);
+    expect(await prisma.workoutSession.findUnique({ where: { id: session.id } })).toBeNull();
+    expect(await prisma.workoutSetResult.count({ where: { workoutSessionId: session.id } })).toBe(0);
+    expect(await prisma.workout.findUnique({ where: { id: workout.id } })).not.toBeNull();
+
+    const free = await startOrResumeFreeWorkoutSession(scope, prisma);
+    const [item] = await addExercisesToFreeSession({ ...scope, sessionId: free.id, exerciseIds: [supino.id] }, prisma);
+    await recordWorkoutSet({ ...scope, sessionId: free.id, workoutExerciseId: item!.id, setNumber: 1, reps: 8, durationSeconds: null, loadKg: 20, performedExerciseId: null }, prisma);
+    await completeWorkoutSession({ ...scope, sessionId: free.id }, prisma);
+    await deleteFinishedWorkoutSession({ ...scope, sessionId: free.id }, prisma);
+    expect(await prisma.workout.findUnique({ where: { id: free.workoutId } })).toBeNull();
   });
 });

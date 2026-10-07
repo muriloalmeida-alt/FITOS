@@ -44,6 +44,8 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, photo
   const toast = useToast();
   const last = assessments[0] ?? null;
   const [sheet, setSheet] = useState<null | { remove: string }>(null);
+  /// Treino realizado a excluir (confirmação).
+  const [removeSession, setRemoveSession] = useState<null | { id: string; label: string }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const open = goals.filter((entry) => entry.status === "EM_ANDAMENTO");
@@ -56,6 +58,7 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, photo
       await action();
       toast.show(message);
       setSheet(null);
+      setRemoveSession(null);
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível salvar.");
@@ -115,6 +118,19 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, photo
                       </>
                     }
                     description={[dateFmt.format(new Date(session.dateIso)), session.effort ? `esforço ${EFFORT[session.effort]}` : null].filter(Boolean).join(" · ")}
+                    trailing={
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        aria-label={`Excluir ${session.workoutName} de ${dateFmt.format(new Date(session.dateIso))}`}
+                        onClick={() => {
+                          setError(null);
+                          setRemoveSession({ id: session.id, label: `${session.workoutName} · ${dateFmt.format(new Date(session.dateIso))}` });
+                        }}
+                      >
+                        Excluir
+                      </Button>
+                    }
                   />
                 </li>
               ))}
@@ -212,6 +228,25 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, photo
               Excluir
             </Button>
             <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
+              Voltar
+            </Button>
+          </>
+        }
+      >
+        {error ? <FormAlert>{error}</FormAlert> : null}
+      </Sheet>
+
+      <Sheet
+        open={removeSession !== null}
+        onClose={() => setRemoveSession(null)}
+        title="Excluir este treino?"
+        description={removeSession ? `${removeSession.label}. Ele sai do histórico, da evolução e dos recordes. Não dá para desfazer.` : undefined}
+        footer={
+          <>
+            <Button type="button" variant="danger" block disabled={busy} onClick={() => removeSession !== null && void run(() => requestJson(`/api/minhas-sessoes/${removeSession.id}`, { method: "DELETE" }), "Treino excluído")}>
+              Excluir treino
+            </Button>
+            <Button type="button" variant="quiet" block onClick={() => setRemoveSession(null)}>
               Voltar
             </Button>
           </>

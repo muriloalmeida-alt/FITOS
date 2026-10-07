@@ -329,3 +329,28 @@ export async function discardEmptyFreeSession(
   await tx.workout.delete({ where: { id: session.workoutId } });
   return true;
 }
+
+/// O praticante do FitOS Livre exclui um treino já realizado (concluído ou
+/// abandonado): a sessão sai do histórico, da evolução e dos recordes
+/// (séries e resultados vão junto). Treino avulso não salvo também é
+/// apagado, porque só existia para essa sessão. Sessão em andamento não é
+/// excluída por aqui: para ela existe "Abandonar".
+export async function deleteFinishedWorkoutSession(
+  input: { tenantId: string; studentId: string; sessionId: string },
+  client: PrismaClient = prisma
+): Promise<void> {
+  const session = await client.workoutSession.findFirst({
+    where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId },
+    include: { workout: { select: { id: true, status: true } } },
+  });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Treino não encontrado.");
+  if (session.status !== "CONCLUIDA" && session.status !== "ABANDONADA") {
+    throw new SessionError("ESTADO_INVALIDO", "Só um treino concluído ou abandonado pode ser excluído.");
+  }
+  await client.$transaction(async (tx) => {
+    await tx.workoutSession.delete({ where: { id: session.id } });
+    if (session.workout.status === "AVULSO" && (await tx.workoutSession.count({ where: { workoutId: session.workout.id } })) === 0) {
+      await tx.workout.delete({ where: { id: session.workout.id } });
+    }
+  });
+}
