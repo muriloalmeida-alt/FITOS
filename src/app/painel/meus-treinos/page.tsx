@@ -4,10 +4,13 @@ import { AppShell, EmptyStateAction, NextStepCard } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requireIndividual } from "@/modules/tenancy/authContext";
 import { listWorkoutSummariesForTenant } from "@/modules/workouts/workouts";
+import { getInProgressSessionForStudent } from "@/modules/execution/sessions";
+import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
 import { FilterLinks } from "../_workout-builder/FilterLinks";
 import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { WorkoutSummaryList } from "../_workout-builder/WorkoutSummaryList";
 import { LogoutButton } from "../LogoutButton";
+import { FreeWorkoutButton } from "./FreeWorkoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import styles from "../treinos/page.module.css";
 
@@ -30,9 +33,11 @@ export default async function MeusTreinosPage({ searchParams }: { searchParams?:
   }
 
   const archived = (await searchParams)?.arquivados === "1";
-  const [active, old] = await Promise.all([
+  const student = await ensureStudentForIndividual({ id: ctx.tenantId, ownerId: ctx.userId });
+  const [active, old, inProgress] = await Promise.all([
     listWorkoutSummariesForTenant({ tenantId: ctx.tenantId }),
     listWorkoutSummariesForTenant({ tenantId: ctx.tenantId, status: "ARQUIVADO" }),
+    getInProgressSessionForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
   ]);
   const shown = (archived ? old : active).map((workout) => ({ ...workout, trainingPlanName: null }));
 
@@ -41,6 +46,8 @@ export default async function MeusTreinosPage({ searchParams }: { searchParams?:
       <TrainingTabs active="treinos" area="livre" />
       <div className={styles.next}>
         <NextStepCard eyebrow="Próximo passo" title="Montar meu treino" description="Escolha os exercícios. Entram com 3 × 12 e 60 s." href="/painel/meus-treinos/novo" />
+        {/* Com um treino em andamento, começar o avulso o abandonaria. */}
+        {inProgress ? null : <FreeWorkoutButton />}
       </div>
       <FilterLinks
         label="Filtrar treinos"

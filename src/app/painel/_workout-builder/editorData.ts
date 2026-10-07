@@ -17,7 +17,8 @@ export async function loadPrograms(tenantId: string): Promise<ProgramOption[]> {
 /// Treino com os exercícios no formato do editor; `null` se não for do tenant.
 export async function loadEditorWorkout(tenantId: string, workoutId: string): Promise<EditorWorkout | null> {
   const workout = await getWorkoutForTenant({ tenantId, workoutId });
-  if (!workout) return null;
+  // Treino avulso (em execução ou não salvo) não abre no editor.
+  if (!workout || workout.status === "AVULSO") return null;
   const items = await listWorkoutExercisesForWorkout({ tenantId, workoutId });
   return {
     id: workout.id,

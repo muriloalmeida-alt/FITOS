@@ -144,4 +144,48 @@ describe("LiveWorkout (FIT-153)", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Completo · 40 min" }));
     expect(screen.getByText(/24 séries/)).toBeInTheDocument();
   });
+  it("treino avulso: começa vazio, inclui o exercício na hora e salva nos meus treinos", async () => {
+    const library = [{ id: "ex9", name: "Remada curvada", muscle: "Costas", imageUrl: null, imageAlt: null }];
+    const added: LiveItem = { ...squat, id: "we9", exerciseId: "ex9", name: "Remada curvada", sets: 3, reps: 12, loadKg: null, load: null };
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith("/exercicios")) return json({ items: [added] }, 201);
+      if (url.endsWith("/series")) return json({ setNumber: 1, personalRecord: false }, 201);
+      if (url.endsWith("/concluir")) return json({ summary: { activeSeconds: 300, sets: 1, volumeKg: 0, records: [] } });
+      if (url.endsWith("/salvar")) return json({ workoutId: "w9", name: "Costas rápido" });
+      return json({});
+    });
+    render(
+      <ToastProvider>
+        <LiveWorkout sessionId="sess9" workoutId="w9" workoutName="Treino avulso" startedAt={new Date().toISOString()} items={[]} coachName={null} apiBase="/api/minhas-sessoes" exitHref="/painel" progressHref="/painel/minha-evolucao" free={{ library }} />
+      </ToastProvider>
+    );
+    expect(screen.getByRole("heading", { name: "O que você vai fazer agora?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Encerrar treino" }));
+    expect(screen.getByRole("button", { name: "Sair sem salvar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Concluir/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Adicionar exercício" }));
+    fireEvent.click(screen.getByRole("button", { name: /Remada curvada/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Adicionar 1 exercício" }));
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/minhas-sessoes/sess9/exercicios", expect.objectContaining({ method: "POST", body: JSON.stringify({ exerciseIds: ["ex9"] }) }));
+    expect(screen.getByRole("heading", { level: 1, name: "Remada curvada" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aparelho ocupado?" })).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Fiz 12/ }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Encerrar treino" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Concluir com o que fiz" }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar nos meus treinos" }));
+    fireEvent.change(screen.getByLabelText("Nome do treino"), { target: { value: "Costas rápido" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/minhas-sessoes/sess9/salvar", expect.objectContaining({ body: JSON.stringify({ name: "Costas rápido" }) }));
+    expect(screen.getByText("Salvo em Meus treinos. Dá para repetir outro dia.")).toBeInTheDocument();
+  });
 });

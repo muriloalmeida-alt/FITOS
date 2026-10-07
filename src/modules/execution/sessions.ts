@@ -149,7 +149,7 @@ async function resumeOrCreateSession(
   }
 
   const created = await client.$transaction(async (tx) => {
-    if (inProgress) {
+    if (inProgress && !(await discardEmptyFreeSession(inProgress, tx))) {
       await tx.workoutSession.update({
         where: { id: inProgress.id },
         data: { status: "ABANDONADA", endedAt: new Date() },
@@ -265,6 +265,9 @@ export async function completeWorkoutSession(
   client: PrismaClient = prisma
 ): Promise<WorkoutSession> {
   const session = await getInProgressSessionOwnedByStudentOrThrow(input, client);
+  if ((await isFreeWorkout(session.workoutId, client)) && (await client.workoutSetResult.count({ where: { workoutSessionId: session.id } })) === 0) {
+    throw new SessionError("VALIDACAO", "Registre ao menos uma série para concluir.");
+  }
   const endedAt = new Date();
   return client.workoutSession.update({
     where: { id: session.id },
@@ -303,5 +306,26 @@ export async function abandonWorkoutSession(
   client: PrismaClient = prisma
 ): Promise<WorkoutSession> {
   const session = await getInProgressSessionOwnedByStudentOrThrow(input, client);
+  const discarded = await client.$transaction((tx) => discardEmptyFreeSession(session, tx));
+  if (discarded) return { ...session, status: "ABANDONADA", endedAt: new Date() };
   return client.workoutSession.update({ where: { id: session.id }, data: { status: "ABANDONADA", endedAt: new Date() } });
+}
+
+async function isFreeWorkout(workoutId: string, client: Pick<PrismaClient, "workout">): Promise<boolean> {
+  const workout = await client.workout.findUnique({ where: { id: workoutId }, select: { status: true } });
+  return workout?.status === "AVULSO";
+}
+
+/// Treino avulso (FitOS Livre) que termina sem nenhuma série não vira
+/// histórico: a sessão e o treino montado na hora são apagados. Devolve
+/// `true` quando apagou.
+export async function discardEmptyFreeSession(
+  session: { id: string; workoutId: string },
+  tx: Pick<PrismaClient, "workout" | "workoutSession" | "workoutSetResult">
+): Promise<boolean> {
+  if (!(await isFreeWorkout(session.workoutId, tx))) return false;
+  if ((await tx.workoutSetResult.count({ where: { workoutSessionId: session.id } })) > 0) return false;
+  await tx.workoutSession.delete({ where: { id: session.id } });
+  await tx.workout.delete({ where: { id: session.workoutId } });
+  return true;
 }

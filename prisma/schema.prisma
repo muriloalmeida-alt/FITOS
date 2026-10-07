@@ -87,9 +87,12 @@ enum WorkoutSessionStatus {
 
 /// Ciclo de vida do modelo de treino (FIT-030). Mesmo padrão de
 /// `ExerciseStatus` — arquivar nunca é exclusão física.
+/// `AVULSO` (treino avulso do FitOS Livre): montado durante a execução,
+/// fora das listas de treinos; "Salvar nos meus treinos" o torna ATIVO.
 enum WorkoutStatus {
   ATIVO
   ARQUIVADO
+  AVULSO
 }
 
 /// Ciclo de vida do plano semanal (FIT-030/FIT-032). Um `TrainingPlan` com

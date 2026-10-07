@@ -11,6 +11,8 @@ import {
   useToast,
 } from "@/shared/ui";
 import { requestJson } from "../_workout-builder/apiClient";
+import { ExerciseLibrary } from "../_workout-builder/ExerciseLibrary";
+import type { LibraryExercise } from "../_workout-builder/types";
 import { prescriptionLine } from "@/shared/lib/prescription";
 import { formatClock } from "./clock";
 import { shareWorkoutImage } from "./shareImage";
@@ -77,6 +79,9 @@ export interface LiveWorkoutProps {
   doneHref?: string;
   /// "Perguntar ao personal" (EPIC-39): só o aluno com personal.
   askCoach?: boolean;
+  /// Treino avulso (FitOS Livre): começa vazio e o praticante inclui os
+  /// exercícios da biblioteca durante o treino.
+  free?: { library: LibraryExercise[] };
 }
 
 interface Summary {
@@ -99,6 +104,26 @@ const MUSIC_APPS = [
   { name: "Apple Music", href: "https://music.apple.com" },
   { name: "YouTube Music", href: "https://music.youtube.com" },
 ];
+
+/// Lugar do exercício atual enquanto o treino avulso ainda está vazio.
+const NO_ITEM: LiveItem = {
+  id: "",
+  exerciseId: "",
+  name: "",
+  imageUrl: null,
+  imageAlt: null,
+  instructions: null,
+  sets: null,
+  reps: null,
+  durationSeconds: null,
+  loadKg: null,
+  load: null,
+  restSeconds: null,
+  notes: null,
+  intensity: null,
+  doneSets: [],
+  last: null,
+};
 
 interface Clock {
   accumulatedMs: number;
@@ -216,7 +241,13 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   const wakeRef = useRef<{ release: () => Promise<void> } | null>(null);
   const lastBeepRef = useRef<number>(-1);
 
-  const item = items[current]!;
+  const item = items[current] ?? NO_ITEM;
+  const free = props.free ?? null;
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [saveName, setSaveName] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const doneSetsCount = items.reduce((sum, entry) => sum + entry.doneSets.length, 0);
   const timed = isTimed(item);
   const cardio = item.intensity !== null && item.intensity !== undefined;
   const cardioElapsed = Math.floor(elapsed(cardioClock, now) / 1000);
@@ -701,6 +732,56 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     setTimer({ endsAt: Date.now() + remaining * 1000, remaining });
   }
 
+  function openLibrary() {
+    setSheet(null);
+    setLibraryOpen(true);
+  }
+
+  /// Treino avulso: inclui os exercícios escolhidos e já vai para o primeiro.
+  async function addExercises(exerciseIds: string[]) {
+    if (!sessionId || exerciseIds.length === 0) return;
+    setAdding(true);
+    try {
+      const result = await requestJson<{ items: LiveItem[] }>(`${props.apiBase}/${sessionId}/exercicios`, {
+        method: "POST",
+        body: JSON.stringify({ exerciseIds }),
+      });
+      const start = items.length;
+      setItems([...items, ...result.items]);
+      setOrder([...order, ...result.items.map((_, index) => start + index)]);
+      setCurrent(start);
+      setTimer(null);
+      setCardioClock({ accumulatedMs: 0, runningSince: null });
+      lastCardioPhaseRef.current = -1;
+      setLibraryOpen(false);
+      setSheet(null);
+      const first = result.items[0];
+      if (first) say(`${first.name}, ${totalSets(first)} séries.`);
+    } catch (cause) {
+      toast.show(cause instanceof Error ? cause.message : "Não foi possível incluir.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function saveWorkout() {
+    if (!sessionId) return;
+    setBusy(true);
+    try {
+      await requestJson(`${props.apiBase}/${sessionId}/salvar`, {
+        method: "POST",
+        body: JSON.stringify({ name: saveName ?? "" }),
+      });
+      setSaved(true);
+      setSaveName(null);
+      toast.show("Salvo em Meus treinos");
+    } catch (cause) {
+      toast.show(cause instanceof Error ? cause.message : "Não foi possível salvar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function rate(value: number) {
     setEffort(value);
     if (!sessionId) return;
@@ -1035,6 +1116,32 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             ))}
           </div>
           {props.askCoach && props.coachName && sessionId ? <WorkoutComment sessionId={sessionId} coachName={props.coachName} /> : null}
+          {free ? (
+            saved ? (
+              <p className={styles.muted}>Salvo em Meus treinos. Dá para repetir outro dia.</p>
+            ) : saveName === null ? (
+              <Button type="button" variant="outlined" block onClick={() => setSaveName("")}>
+                Salvar nos meus treinos
+              </Button>
+            ) : (
+              <div className={styles.saveRow}>
+                <label className={styles.cap} htmlFor="nome-treino-avulso">
+                  Nome do treino
+                </label>
+                <input
+                  id="nome-treino-avulso"
+                  className={styles.saveInput}
+                  value={saveName}
+                  maxLength={80}
+                  placeholder="Treino avulso"
+                  onChange={(event) => setSaveName(event.target.value)}
+                />
+                <Button type="button" variant="secondary" block disabled={busy} onClick={() => void saveWorkout()}>
+                  Salvar
+                </Button>
+              </div>
+            )
+          ) : null}
           <div className={styles.doneActions}>
             <Button
               type="button"
@@ -1062,6 +1169,105 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             Ver minha evolução →
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  const library = free && libraryOpen ? (
+    <ExerciseLibrary
+      exercises={free.library}
+      alreadyInWorkout={items.map((entry) => entry.exerciseId)}
+      onClose={() => setLibraryOpen(false)}
+      onAdd={addExercises}
+      adding={adding}
+      createExerciseHref={null}
+    />
+  ) : null;
+
+  const endSheet = (
+    <Sheet
+      open={sheet === "end"}
+      onClose={() => setSheet(null)}
+      title={free && doneSetsCount === 0 ? "Sair do treino avulso?" : allDone ? (free ? "Exercícios feitos!" : "Treino completo!") : "Encerrar o treino agora?"}
+      description={
+        free && doneSetsCount === 0
+          ? "Nenhuma série registrada; nada fica salvo."
+          : allDone
+            ? free
+              ? "Vai fazer mais algum? Inclua e siga treinando."
+              : "Todas as séries feitas."
+            : `${doneSetsCount} de ${totalPlannedSets} séries feitas. O que você fez fica salvo.`
+      }
+    >
+      <div className={styles.endActions}>
+        {free ? (
+          <Button type="button" variant="secondary" block onClick={openLibrary}>
+            + Adicionar exercício
+          </Button>
+        ) : null}
+        {free && doneSetsCount === 0 ? null : (
+          <button
+            type="button"
+            className={styles.startButton}
+            disabled={busy}
+            onClick={() => void finish()}
+          >
+            {allDone ? "Concluir treino" : "Concluir com o que fiz"}
+          </button>
+        )}
+        {allDone || (free && doneSetsCount === 0) ? null : (
+          <Button
+            type="button"
+            variant="secondary"
+            block
+            onClick={() => setSheet(null)}
+          >
+            Continuar treinando
+          </Button>
+        )}
+        {allDone && !(free && doneSetsCount === 0) ? null : (
+          <button
+            type="button"
+            className={styles.danger}
+            disabled={busy}
+            onClick={() => void abandon()}
+          >
+            {free && doneSetsCount === 0 ? "Sair sem salvar" : "Abandonar treino"}
+          </button>
+        )}
+      </div>
+    </Sheet>
+  );
+
+  if (free && items.length === 0) {
+    return (
+      <div className={styles.screen}>
+        <div className={styles.runTop}>
+          <button type="button" className={styles.iconButton} aria-label="Encerrar treino" onClick={() => setSheet("end")}>
+            ✕
+          </button>
+          <button
+            type="button"
+            className={paused ? `${styles.clock} ${styles.clockPaused}` : styles.clock}
+            onClick={togglePause}
+            aria-label={paused ? "Continuar cronômetro" : "Pausar cronômetro"}
+          >
+            <span aria-hidden="true">{paused ? "▶" : "❚❚"}</span> {formatClock(activeMs)}
+          </button>
+          <span className={styles.topRight} />
+        </div>
+        <div className={styles.scroll}>
+          <p className={styles.eyebrow}>Treino avulso</p>
+          <h1 className={styles.title}>O que você vai fazer agora?</h1>
+          <p className={styles.muted}>Escolha o exercício na hora, conforme o tempo e o aparelho livre. Depois inclua o próximo.</p>
+        </div>
+        <div className={styles.bar}>
+          <button type="button" className={styles.startButton} onClick={openLibrary}>
+            Escolher exercício
+          </button>
+        </div>
+        {endSheet}
+        {library}
       </div>
     );
   }
@@ -1168,9 +1374,15 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             {item.plannedName ? <p className={styles.muted}>Hoje, no lugar de {item.plannedName}</p> : null}
             <p className={styles.muted}>{prescriptionLine(item)}</p>
             <span className={styles.exerciseLinks}>
-              <button type="button" className={styles.busyLink} onClick={() => void openBusy()}>
-                Aparelho ocupado?
-              </button>
+              {free ? (
+                <button type="button" className={styles.busyLink} onClick={openLibrary}>
+                  + Adicionar exercício
+                </button>
+              ) : (
+                <button type="button" className={styles.busyLink} onClick={() => void openBusy()}>
+                  Aparelho ocupado?
+                </button>
+              )}
               {props.askCoach && props.coachName ? <AskCoach exerciseId={item.performedExerciseId ?? item.exerciseId} exerciseName={item.name} coachName={props.coachName} /> : null}
             </span>
           </div>
@@ -1536,55 +1748,21 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             );
           })}
         </ul>
+        {free ? (
+          <Button type="button" variant="secondary" block onClick={openLibrary}>
+            + Adicionar exercício
+          </Button>
+        ) : null}
         <Button type="button" variant="outlined" block onClick={skipCurrent}>
           Pular este exercício
         </Button>
       </Sheet>
 
-      <Sheet
-        open={sheet === "end"}
-        onClose={() => setSheet(null)}
-        title={allDone ? "Treino completo!" : "Encerrar o treino agora?"}
-        description={
-          allDone
-            ? "Todas as séries feitas."
-            : `${items.reduce((sum, entry) => sum + entry.doneSets.length, 0)} de ${totalPlannedSets} séries feitas. O que você fez fica salvo.`
-        }
-      >
-        <div className={styles.endActions}>
-          <button
-            type="button"
-            className={styles.startButton}
-            disabled={busy}
-            onClick={() => void finish()}
-          >
-            {allDone ? "Concluir treino" : "Concluir com o que fiz"}
-          </button>
-          {allDone ? null : (
-            <Button
-              type="button"
-              variant="secondary"
-              block
-              onClick={() => setSheet(null)}
-            >
-              Continuar treinando
-            </Button>
-          )}
-          {allDone ? null : (
-            <button
-              type="button"
-              className={styles.danger}
-              disabled={busy}
-              onClick={() => void abandon()}
-            >
-              Abandonar treino
-            </button>
-          )}
-        </div>
-      </Sheet>
+      {endSheet}
 
       {musicSheet}
       {busySheet}
+      {library}
     </div>
   );
 }
