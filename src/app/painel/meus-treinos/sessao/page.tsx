@@ -12,6 +12,7 @@ import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
 import { toLiveItems } from "../../_live/liveItems";
 import { loadLibrary } from "../../_workout-builder/editorData";
+import { normalizeFocus } from "@/shared/lib/workoutFocus";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -49,7 +50,7 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
         workoutName={inProgress.workout.name}
         startedAt={inProgress.startedAt.toISOString()}
         items={toLiveItems(items, inProgress.setResults, last)}
-        free={inProgress.workout.status === "AVULSO" ? { library: await loadLibrary(ctx.tenantId) } : undefined}
+        free={inProgress.workout.status === "AVULSO" ? { library: await loadLibrary(ctx.tenantId), focus: normalizeFocus(inProgress.focus) } : undefined}
       />
     );
   }

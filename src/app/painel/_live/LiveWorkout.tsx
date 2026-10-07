@@ -14,11 +14,12 @@ import { requestJson } from "../_workout-builder/apiClient";
 import { ExerciseLibrary } from "../_workout-builder/ExerciseLibrary";
 import type { LibraryExercise } from "../_workout-builder/types";
 import type { WorkoutQuality } from "@/shared/lib/workoutQuality";
+import { focusMuscles, type Focus } from "@/shared/lib/workoutFocus";
 import { prescriptionLine } from "@/shared/lib/prescription";
 import { formatClock } from "./clock";
 import { shareWorkoutImage } from "./shareImage";
 import type { CardioIntensity } from "@/shared/lib/cardio";
-import { CardioRunner, cardioPosition } from "./CardioRunner";
+import { CardioRunner, FreeCardio, cardioPosition } from "./CardioRunner";
 import { cardioPhases } from "@/shared/lib/cardio";
 import { AskCoach } from "./AskCoach";
 import { WorkoutComment } from "./WorkoutComment";
@@ -82,7 +83,7 @@ export interface LiveWorkoutProps {
   askCoach?: boolean;
   /// Treino avulso (FitOS Livre): começa vazio e o praticante inclui os
   /// exercícios da biblioteca durante o treino.
-  free?: { library: LibraryExercise[] };
+  free?: { library: LibraryExercise[]; focus?: Focus[] };
 }
 
 interface Summary {
@@ -404,6 +405,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   useEffect(() => {
     if (
       !cardio ||
+      props.free ||
       cardioClock.runningSince === null ||
       cardioPhaseIndex === lastCardioPhaseRef.current
     )
@@ -421,6 +423,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     );
   }, [
     cardio,
+    props.free,
     cardioClock.runningSince,
     cardioPhaseIndex,
     cardioElapsed,
@@ -435,6 +438,14 @@ export function LiveWorkout(props: LiveWorkoutProps) {
         ? { ...clock, runningSince: Date.now() }
         : { accumulatedMs: elapsed(clock, Date.now()), runningSince: null },
     );
+  }
+
+  /// Aeróbico livre: ajuste manual do tempo feito.
+  function adjustCardio(seconds: number) {
+    setCardioClock((clock) => ({
+      accumulatedMs: Math.max(0, elapsed(clock, Date.now()) + seconds * 1000),
+      runningSince: clock.runningSince === null ? null : Date.now(),
+    }));
   }
 
   function skipCardioPhase() {
@@ -583,10 +594,10 @@ export function LiveWorkout(props: LiveWorkoutProps) {
         )
       : Math.max(1, item.durationSeconds ?? 1);
     const loadKg = draft.loadKg > 0 ? draft.loadKg : null;
-    const cardioSeconds = Math.max(
-      60,
-      cardioElapsed > 0 ? cardioElapsed : (item.durationSeconds ?? 60),
-    );
+    // Aeróbico livre (treino avulso): vale o tempo que o praticante marcou.
+    const cardioSeconds = props.free
+      ? Math.max(60, cardioElapsed)
+      : Math.max(60, cardioElapsed > 0 ? cardioElapsed : (item.durationSeconds ?? 60));
     const entry: LiveSet = cardio
       ? { setNumber, reps: null, durationSeconds: cardioSeconds, loadKg: null }
       : timed
@@ -1263,6 +1274,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
       onAdd={addExercises}
       adding={adding}
       createExerciseHref={null}
+      focusMuscles={focusMuscles(free.focus ?? [])}
     />
   ) : null;
 
@@ -1342,6 +1354,16 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           <p className={styles.eyebrow}>Treino avulso</p>
           <h1 className={styles.title}>O que você vai fazer agora?</h1>
           <p className={styles.muted}>Escolha o exercício na hora, conforme o tempo e o aparelho livre. Depois inclua o próximo.</p>
+          {free.focus && free.focus.length > 0 ? (
+            <>
+              <p className={styles.cap}>Seu foco hoje</p>
+              <ul className={styles.focusList} aria-label="Seu foco hoje">
+                {free.focus.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </div>
         <div className={styles.bar}>
           <button type="button" className={styles.startButton} onClick={openLibrary}>
@@ -1454,7 +1476,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             </p>
             <h1 className={styles.exerciseName}>{item.name}</h1>
             {item.plannedName ? <p className={styles.muted}>Hoje, no lugar de {item.plannedName}</p> : null}
-            <p className={styles.muted}>{prescriptionLine(item)}</p>
+            <p className={styles.muted}>{free && cardio ? "Tempo livre" : prescriptionLine(item)}</p>
             <span className={styles.exerciseLinks}>
               {free ? (
                 <button type="button" className={styles.busyLink} onClick={openLibrary}>
@@ -1476,7 +1498,9 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           </p>
         ) : null}
 
-        {cardio ? (
+        {cardio && free ? (
+          <FreeCardio elapsedSeconds={cardioElapsed} running={cardioClock.runningSince !== null} onToggle={toggleCardio} onAdjust={adjustCardio} />
+        ) : cardio ? (
           <CardioRunner
             durationSeconds={item.durationSeconds ?? 0}
             intensity={item.intensity!}
@@ -1632,11 +1656,15 @@ export function LiveWorkout(props: LiveWorkoutProps) {
         <button
           type="button"
           className={styles.doneButton}
-          disabled={busy || allDone}
+          disabled={busy || allDone || (free !== null && cardio && cardioElapsed < 60)}
           onClick={() => void completeSet()}
         >
           <span aria-hidden="true">✓</span>{" "}
-          {cardio
+          {cardio && free
+            ? cardioElapsed < 60
+              ? "Inicie o tempo"
+              : `Aeróbico feito · ${Math.floor(cardioElapsed / 60)} min`
+            : cardio
             ? "Aeróbico feito"
             : `Fiz ${timed ? `${Math.max(1, timer ? (item.durationSeconds ?? 0) - (timer.endsAt ? timerLeft : timer.remaining) : (item.durationSeconds ?? 0))} s` : draft.reps}${draft.loadKg > 0 ? ` × ${kg(draft.loadKg)} kg` : ""}`}
           {!cardio && setNumber >= totalSets(item) && done < totalSets(item) ? (

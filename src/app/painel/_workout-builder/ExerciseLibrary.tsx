@@ -17,9 +17,12 @@ interface ExerciseLibraryProps {
   createExerciseHref?: string | null;
   /// Prescrição com que os exercícios entram (padrão do espaço, EPIC-36).
   prescription?: { sets: number; reps: number; restSeconds: number };
+  /// Treino avulso: músculos do foco escolhido; a biblioteca abre no filtro "Seu foco".
+  focusMuscles?: string[];
 }
 
 const ALL = "__todos__";
+const FOCUS = "__foco__";
 
 function normalize(text: string) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -28,9 +31,9 @@ function normalize(text: string) {
 /// Biblioteca em tela cheia (FIT-146): busca, filtro por músculo e seleção
 /// de vários exercícios de uma vez. "Adicionar N" usa a prescrição padrão
 /// (3 × 12, 60 s). Diálogo modal com Esc para fechar.
-export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, adding = false, createExerciseHref, prescription = { sets: 3, reps: 12, restSeconds: 60 } }: ExerciseLibraryProps) {
+export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, adding = false, createExerciseHref, prescription = { sets: 3, reps: 12, restSeconds: 60 }, focusMuscles = [] }: ExerciseLibraryProps) {
   const [query, setQuery] = useState("");
-  const [muscle, setMuscle] = useState<string>(ALL);
+  const [muscle, setMuscle] = useState<string>(focusMuscles.length > 0 ? FOCUS : ALL);
   const [selected, setSelected] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -58,8 +61,9 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
-    return exercises.filter((exercise) => (muscle === ALL || exercise.muscle === muscle) && (!q || normalize(exercise.name).includes(q)));
-  }, [exercises, muscle, query]);
+    const inFilter = (value: string | null) => muscle === ALL || (muscle === FOCUS ? value !== null && focusMuscles.includes(value) : value === muscle);
+    return exercises.filter((exercise) => inFilter(exercise.muscle) && (!q || normalize(exercise.name).includes(q)));
+  }, [exercises, muscle, query, focusMuscles]);
 
   function toggle(id: string) {
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -98,7 +102,7 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
             tone="light"
             value={muscle}
             onChange={setMuscle}
-            options={[{ value: ALL, label: "Todos" }, ...muscles.map((name) => ({ value: name, label: name }))]}
+            options={[...(focusMuscles.length > 0 ? [{ value: FOCUS, label: "Seu foco" }] : []), { value: ALL, label: "Todos" }, ...muscles.map((name) => ({ value: name, label: name }))]}
           />
         </div>
         {filtered.length === 0 ? <p className={styles.empty}>Nenhum exercício com esse nome ou filtro.</p> : null}

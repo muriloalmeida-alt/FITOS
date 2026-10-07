@@ -56,4 +56,30 @@ describe("evaluateWorkout (treino avulso)", () => {
     expect(result.score).toBe(4);
     expect(result.reasons[0]).toEqual({ ok: true, text: "25 min de aeróbico: bom volume." });
   });
+  it("com foco: cobra o que foi escolhido e só pesa o desequilíbrio dentro do foco", () => {
+    const session = sets("Peitoral", 12, "supino");
+    const onlyChest = evaluateWorkout(session, [...fullWeek, ...session], ["Peitoral"]);
+    expect(onlyChest.score).toBe(5);
+    expect(onlyChest.missing).toEqual([]);
+    expect(onlyChest.reasons[0]).toEqual({ ok: true, text: "Foco cumprido: Peitoral." });
+
+    const upper = evaluateWorkout(session, [...fullWeek, ...session], ["Superiores", "Aeróbico"]);
+    expect(upper.missing).toEqual([
+      { area: "Aeróbico", reason: "Você escolheu treinar: 0 de 10 min." },
+      { area: "Costas", reason: "Peitoral sem costas: puxar equilibra o empurrar do peito." },
+    ]);
+    expect(upper.reasons[0]).toEqual({ ok: false, text: "Faltou do foco: Aeróbico." });
+    expect(upper.score).toBe(3);
+  });
+
+  it("foco em aeróbico e mobilidade conta minutos e séries de mobilidade", () => {
+    const session: QualitySet[] = [
+      { muscle: "Aeróbico", type: "Aeróbico", durationSeconds: 1800, exerciseId: "bike" },
+      ...sets("Mobilidade global", 2, "along", "Alongamento e mobilidade"),
+    ];
+    const result = evaluateWorkout(session, [...fullWeek, ...session], ["Aeróbico", "Mobilidade"]);
+    expect(result.missing).toEqual([]);
+    expect(result.reasons[0]).toEqual({ ok: true, text: "Foco cumprido: Aeróbico, Mobilidade." });
+    expect(result.score).toBe(5);
+  });
 });

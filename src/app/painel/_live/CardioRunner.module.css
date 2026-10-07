@@ -145,3 +145,7 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+.actionsFree {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+}
