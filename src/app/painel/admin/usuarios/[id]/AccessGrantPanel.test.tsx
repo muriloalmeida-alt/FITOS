@@ -85,4 +85,23 @@ describe("AccessGrantPanel (renovação de gratuidade)", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/gratuidade/g1/revogar", expect.objectContaining({ body: JSON.stringify({ reason: "pedido do usuário" }) }));
     expect(router.refresh).toHaveBeenCalled();
   });
+
+  it("Asaas: mostra a nova data da cobrança, o processamento e a falha", () => {
+    const base = { days: 30, startsAt: "2026-11-01T03:00:00.000Z", lastDay: "2026-11-30", reasonCode: "RETENCAO", reasonText: null, revokeReason: null };
+    render(
+      <AccessGrantPanel
+        userId="u1"
+        current={current}
+        history={[
+          { ...base, id: "a", status: "AGENDADO", targetDueDate: "2026-12-01" },
+          { ...base, id: "b", status: "SINCRONIZANDO", targetDueDate: "2026-12-01" },
+          { ...base, id: "c", status: "FALHOU", targetDueDate: null, syncError: "fetch failed" },
+        ]}
+      />
+    );
+    expect(screen.getAllByText("Asaas: próxima cobrança em 01/12/2026")).toHaveLength(2);
+    expect(screen.getByText(/Aplicando no Asaas/)).toBeInTheDocument();
+    expect(screen.getByText(/Não aplicado no Asaas \(fetch failed\)/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Revogar" })).toHaveLength(1);
+  });
 });

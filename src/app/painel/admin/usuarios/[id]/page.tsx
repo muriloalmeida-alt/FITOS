@@ -10,7 +10,7 @@ import { ADMIN_NAV_ITEMS } from "../../../navigation";
 import { ROLE_LABELS, ROLE_TONES } from "../../roles";
 import { AdminUserActions } from "./AdminUserActions";
 import { AccessGrantPanel, type GrantCurrent } from "./AccessGrantPanel";
-import { listAccessGrants, previewAccessGrant } from "@/modules/billing/accessGrants";
+import { listAccessGrants, previewAccessGrant, reconcileSyncingGrants } from "@/modules/billing/accessGrants";
 import styles from "../../admin.module.css";
 
 export const metadata: Metadata = { title: `Usuário — ${appName}` };
@@ -39,6 +39,8 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
 
   const isOwnSpace = user.role === "PERSONAL" || user.role === "INDIVIDUAL";
   // Benefícios (feature 4): situação atual pela mesma prévia da concessão.
+  // Antes, conclui o que ficou pendente no Asaas para este usuário.
+  if (isOwnSpace) await reconcileSyncingGrants(undefined, undefined, { tenant: { ownerId: user.id } });
   const [grantPreview, grants] = isOwnSpace ? await Promise.all([previewAccessGrant({ userId: user.id, days: 30 }), listAccessGrants(user.id)]) : [null, []];
   const grantCurrent: GrantCurrent | null = grantPreview
     ? grantPreview.eligible
@@ -96,6 +98,8 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             reasonCode: grant.reasonCode,
             reasonText: grant.reasonText,
             revokeReason: grant.revokeReason,
+            targetDueDate: grant.targetDueDate,
+            syncError: grant.syncError,
           }))}
         />
       ) : null}
