@@ -248,3 +248,13 @@ export async function listAccessGrants(userId: string, client: PrismaClient = pr
     revokeReason: grant.revokeReason,
   }));
 }
+
+/// Gratuidade do administrador vista pelo próprio dono do espaço: do
+/// início do primeiro benefício ainda não encerrado até o fim do último.
+export async function getOwnFreeAccess(tenantId: string, client: PrismaClient = prisma, now = new Date()): Promise<{ startsAt: Date; endsAt: Date; lastDay: string } | null> {
+  const grants = await client.administrativeAccessGrant.findMany({ where: { tenantId, state: "ACTIVE", endsAt: { gt: now } }, select: { startsAt: true, endsAt: true } });
+  if (grants.length === 0) return null;
+  const startsAt = new Date(Math.min(...grants.map((grant) => grant.startsAt.getTime())));
+  const endsAt = new Date(Math.max(...grants.map((grant) => grant.endsAt.getTime())));
+  return { startsAt, endsAt, lastDay: lastIncludedDay(endsAt) };
+}

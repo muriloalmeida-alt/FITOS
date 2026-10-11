@@ -46,6 +46,9 @@ export interface CurrentSubscription {
   cycle: "MENSAL" | "ANUAL";
   state: SubscriptionState;
   trial: { daysLeft: number; totalDays: number; endsLabel: string } | null;
+  /// Gratuidade concedida pela equipe FitOS (não é um novo teste grátis).
+  /// `startsLabel` quando começa depois do teste ou de outro benefício.
+  benefit: { untilLabel: string; startsLabel: string | null; daysLeft: number } | null;
   nextChargeLabel: string | null;
   canceledLabel: string | null;
   card: { brand: string; last4: string } | null;
@@ -156,6 +159,16 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone, needs
               />
               <span>
                 {subscription.trial.daysLeft === 1 ? "Último dia" : `${subscription.trial.daysLeft} dias restantes`} · termina em {subscription.trial.endsLabel}
+              </span>
+            </div>
+          ) : null}
+          {subscription.benefit ? (
+            <div className={styles.benefit} role="status">
+              <strong>Benefício concedido: acesso gratuito até {subscription.benefit.untilLabel}</strong>
+              <span>
+                Concedido pela equipe FitOS.{" "}
+                {subscription.benefit.startsLabel ? `Começa em ${subscription.benefit.startsLabel}.` : `${subscription.benefit.daysLeft === 1 ? "Último dia" : `${subscription.benefit.daysLeft} dias restantes`}.`}{" "}
+                {subscription.state === "cancelada" ? "Sua assinatura continua cancelada: nada é cobrado depois." : "Depois dele, a cobrança volta na data abaixo."}
               </span>
             </div>
           ) : null}
