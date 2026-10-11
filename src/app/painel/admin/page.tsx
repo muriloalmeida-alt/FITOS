@@ -3,12 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActionRow, AppShell, Avatar, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { featureEnabled } from "@/shared/config/features";
 import { AuthError, requireAdmin } from "@/modules/tenancy/authContext";
 import { listUsersForAdmin } from "@/modules/admin/users";
 import { FilterLinks } from "../_workout-builder/FilterLinks";
 import { RosterSearch } from "../alunos/RosterSearch";
 import { LogoutButton } from "../LogoutButton";
-import { ADMIN_NAV_ITEMS } from "../navigation";
+import { adminNavItems } from "../navigation";
 import { ROLE_FILTERS, ROLE_LABELS, ROLE_TONES } from "./roles";
 import styles from "./admin.module.css";
 
@@ -40,7 +41,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   };
 
   return (
-    <AppShell eyebrow="Administração" title="Usuários" subtitle={`${result.total} ${result.total === 1 ? "conta" : "contas"}`} navItems={ADMIN_NAV_ITEMS} activeKey="usuarios" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Administração" title="Usuários" subtitle={`${result.total} ${result.total === 1 ? "conta" : "contas"}`} navItems={adminNavItems(featureEnabled("CUPONS"))} activeKey="usuarios" trailing={<LogoutButton />}>
       <RosterSearch />
       <FilterLinks label="Filtrar por papel" items={ROLE_FILTERS.map((item) => ({ label: item.label, href: href({ papel: item.key === "todos" ? undefined : item.key }), active: item.key === filter.key }))} />
 

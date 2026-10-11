@@ -147,4 +147,18 @@ describe("reconcileAsaasPaymentEvent (FIT-128, ADR-010 item c)", () => {
     const updated = await prisma.saasSubscription.findUnique({ where: { tenantId: tenant.id } });
     expect(updated?.status).toBe("ATIVA");
   });
+
+  it("guarda a cobrança no ledger: criada, paga (uma vez) e evento atrasado não desfaz o pagamento", async () => {
+    const { tenant, subscription } = await createTenantWithSubscription("ledger", { status: "ATIVA" });
+    const sub = subscription.externalSubscriptionId;
+    await reconcileAsaasPaymentEvent({ event: "PAYMENT_CREATED", payment: { id: "pay_l1", subscription: sub, customer: null, value: 49.9, dueDate: "2026-11-01" } }, prisma);
+    expect(await prisma.saasPayment.findUniqueOrThrow({ where: { externalPaymentId: "pay_l1" } })).toMatchObject({ tenantId: tenant.id, status: "PENDENTE", valueCents: 4990, paidAt: null });
+    await reconcileAsaasPaymentEvent({ event: "PAYMENT_RECEIVED", payment: { id: "pay_l1", subscription: sub, customer: null, paymentDate: "2026-11-01" } }, prisma);
+    await reconcileAsaasPaymentEvent({ event: "PAYMENT_RECEIVED", payment: { id: "pay_l1", subscription: sub, customer: null } }, prisma);
+    await reconcileAsaasPaymentEvent({ event: "PAYMENT_OVERDUE", payment: { id: "pay_l1", subscription: sub, customer: null } }, prisma);
+    const row = await prisma.saasPayment.findUniqueOrThrow({ where: { externalPaymentId: "pay_l1" } });
+    expect(row).toMatchObject({ status: "PAGO", valueCents: 4990, lastEvent: "PAYMENT_OVERDUE" });
+    expect(row.paidAt?.toISOString()).toBe("2026-11-01T15:00:00.000Z");
+    expect(await prisma.saasPayment.count({ where: { tenantId: tenant.id } })).toBe(1);
+  });
 });

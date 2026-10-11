@@ -15,6 +15,10 @@ export interface AsaasWebhookPayload {
     id: string;
     subscription: string | null;
     customer: string | null;
+    /// Ledger SaaS (feature 5, ADR-021): opcionais, só quando o Asaas manda.
+    value?: number | null;
+    dueDate?: string | null;
+    paymentDate?: string | null;
   };
 }
 
@@ -40,7 +44,9 @@ export function parseAsaasWebhookPayload(raw: unknown): AsaasWebhookPayload | nu
   const subscription = typeof paymentRecord.subscription === "string" ? paymentRecord.subscription : null;
   const customer = typeof paymentRecord.customer === "string" ? paymentRecord.customer : null;
 
-  return { event: body.event, payment: { id: paymentRecord.id, subscription, customer } };
+  const value = typeof paymentRecord.value === "number" && Number.isFinite(paymentRecord.value) ? paymentRecord.value : null;
+  const day = (field: unknown) => (typeof field === "string" && /^\d{4}-\d{2}-\d{2}/.test(field) ? field.slice(0, 10) : null);
+  return { event: body.event, payment: { id: paymentRecord.id, subscription, customer, value, dueDate: day(paymentRecord.dueDate), paymentDate: day(paymentRecord.paymentDate ?? paymentRecord.confirmedDate) } };
 }
 
 /// Eventos que significam "este pagamento foi liquidado" — a assinatura
@@ -57,6 +63,43 @@ const PAYMENT_SUCCESS_EVENTS = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED",
 /// qualquer evento não mapeado como "sem mudança de estado" é a escolha
 /// segura — nunca uma suposição sobre o que ainda não foi verificado.
 const PAYMENT_OVERDUE_EVENTS = new Set(["PAYMENT_OVERDUE"]);
+
+/// Estado da cobrança no ledger por evento. Pago nunca volta a pendente ou
+/// vencido por um evento atrasado (só estorno muda um pagamento).
+const LEDGER_STATUS: Record<string, string> = {
+  PAYMENT_CREATED: "PENDENTE",
+  PAYMENT_UPDATED: "PENDENTE",
+  PAYMENT_CONFIRMED: "PAGO",
+  PAYMENT_RECEIVED: "PAGO",
+  PAYMENT_RECEIVED_IN_CASH: "PAGO",
+  PAYMENT_OVERDUE: "VENCIDO",
+  PAYMENT_REFUNDED: "ESTORNADO",
+  PAYMENT_DELETED: "REMOVIDO",
+};
+
+/// Guarda a cobrança SaaS (feature 5, ADR-021): uma linha por `paymentId`,
+/// idempotente a reenvio e tolerante a desordem.
+export async function recordSaasPayment(payload: AsaasWebhookPayload, tenantId: string, status: string, client: PrismaClient = prisma): Promise<void> {
+  const { payment } = payload;
+  const valueCents = typeof payment.value === "number" ? Math.round(payment.value * 100) : null;
+  const dueDate = payment.dueDate ? new Date(`${payment.dueDate}T12:00:00-03:00`) : null;
+  const paid = status === "PAGO";
+  const paidAt = paid ? (payment.paymentDate ? new Date(`${payment.paymentDate}T12:00:00-03:00`) : new Date()) : null;
+  const existing = await client.saasPayment.findUnique({ where: { externalPaymentId: payment.id } });
+  const keep = existing?.status === "PAGO" && (status === "PENDENTE" || status === "VENCIDO");
+  const data = {
+    externalSubscriptionId: payment.subscription,
+    ...(valueCents !== null ? { valueCents } : {}),
+    ...(dueDate ? { dueDate } : {}),
+    lastEvent: payload.event,
+    ...(keep ? {} : { status, ...(paid ? { paidAt: existing?.paidAt ?? paidAt } : {}) }),
+  };
+  await client.saasPayment.upsert({
+    where: { externalPaymentId: payment.id },
+    create: { tenantId, externalPaymentId: payment.id, status, paidAt, lastEvent: payload.event, externalSubscriptionId: payment.subscription, valueCents, dueDate },
+    update: data,
+  });
+}
 
 export type ReconcileAsaasPaymentEventOutcome =
   | "ATIVA_APLICADA"
@@ -104,7 +147,8 @@ export async function reconcileAsaasPaymentEvent(
 ): Promise<ReconcileAsaasPaymentEventResult> {
   const isSuccess = PAYMENT_SUCCESS_EVENTS.has(payload.event);
   const isOverdue = PAYMENT_OVERDUE_EVENTS.has(payload.event);
-  if (!isSuccess && !isOverdue) {
+  const ledgerStatus = LEDGER_STATUS[payload.event];
+  if (!isSuccess && !isOverdue && !ledgerStatus) {
     return { outcome: "IGNORADO_EVENTO_NAO_TRATADO", tenantId: null };
   }
 
@@ -116,6 +160,12 @@ export async function reconcileAsaasPaymentEvent(
 
   if (!fallbackSubscription) {
     return { outcome: "IGNORADO_SEM_ASSINATURA_LOCAL", tenantId: null };
+  }
+
+  if (ledgerStatus) await recordSaasPayment(payload, fallbackSubscription.tenantId, ledgerStatus, client);
+  // Só o ledger: o estado da assinatura não muda por este evento.
+  if (!isSuccess && !isOverdue) {
+    return { outcome: "IGNORADO_EVENTO_NAO_TRATADO", tenantId: null };
   }
 
   if (fallbackSubscription.status === "CANCELADA") {

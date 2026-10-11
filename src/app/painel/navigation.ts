@@ -101,3 +101,8 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
 
 /// Administrador da plataforma: só a gestão de usuários.
 export const ADMIN_NAV_ITEMS: AppShellNavItem[] = [{ key: "usuarios", label: "Usuários", href: "/painel/admin", icon: "alunos", compact: true }];
+
+/// Com `FEATURE_CUPONS` ligada, a administração ganha "Cupons" (feature 5).
+export function adminNavItems(coupons: boolean): AppShellNavItem[] {
+  return coupons ? [...ADMIN_NAV_ITEMS, { key: "cupons", label: "Cupons", href: "/painel/admin/cupons", icon: "financeiro", compact: true }] : ADMIN_NAV_ITEMS;
+}

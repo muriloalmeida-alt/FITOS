@@ -387,6 +387,8 @@ model Tenant {
   saasSubscription         SaasSubscription?
   classRanking             ClassRanking?
   accessGrants             AdministrativeAccessGrant[]
+  saasPayments             SaasPayment[]
+  couponAudienceMembers    CouponAudienceMember[]
   auditEvents              AuditEvent[]
   invitations              Invitation[]
   individualProfile        IndividualProfile?
@@ -2015,4 +2017,125 @@ model WorkoutBlockResult {
 
   @@unique([sessionId, blockKey])
   @@map("workout_block_results")
+}
+
+/// Cobranças SaaS do FitOS vindas do webhook do Asaas (feature 5, ADR-021):
+/// o ledger que faltava para saber se a conta já pagou (segmento Novos) e
+/// quais ciclos um cupom cobriu. Uma linha por cobrança (`externalPaymentId`),
+/// atualizada a cada evento; nunca guarda dado do cartão nem do cliente.
+model SaasPayment {
+  id                     String    @id @default(cuid())
+  tenantId               String
+  externalPaymentId      String    @unique
+  externalSubscriptionId String?
+  valueCents             Int?
+  dueDate                DateTime?
+  /// Último estado conhecido: PENDENTE, PAGO, VENCIDO, ESTORNADO, REMOVIDO.
+  status                 String
+  paidAt                 DateTime?
+  lastEvent              String
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("saas_payments")
+}
+
+/// Cupons de desconto (feature 5, ADR-021). `Coupon` é a campanha (código
+/// único e estado); as regras ficam em `CouponVersion`, imutável depois do
+/// primeiro resgate (editar cria uma nova versão).
+enum CouponStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+  ARCHIVED
+}
+
+enum CouponKind {
+  PERCENT
+  FIXED_AMOUNT
+}
+
+model Coupon {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  name             String
+  status           CouponStatus @default(DRAFT)
+  currentVersionId String?      @unique
+  createdById      String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  currentVersion CouponVersion?  @relation("CouponCurrentVersion", fields: [currentVersionId], references: [id])
+  versions       CouponVersion[] @relation("CouponVersions")
+  audit          CouponAudit[]
+
+  @@map("coupons")
+}
+
+model CouponVersion {
+  id              String         @id @default(cuid())
+  couponId        String
+  version         Int
+  kind            CouponKind
+  /// PERCENT: basis points (1% = 100). FIXED_AMOUNT: centavos.
+  amount          Int
+  products        TenantType[]
+  /// NOVOS, ATIVOS, INATIVOS (OU) ou SELECIONADOS.
+  segments        String[]
+  planIds         String[]
+  cycles          BillingCycle[]
+  /// Janela de resgate (fim exclusivo); nulos = sem limite.
+  startsAt        DateTime?
+  endsAt          DateTime?
+  durationCycles  Int
+  maxRedemptions  Int?
+  perAccountLimit Int            @default(1)
+  budgetCents     Int?
+  stackable       Boolean        @default(false)
+  note            String?
+  createdById     String
+  createdAt       DateTime       @default(now())
+
+  coupon    Coupon                 @relation("CouponVersions", fields: [couponId], references: [id], onDelete: Cascade)
+  currentOf Coupon?                @relation("CouponCurrentVersion")
+  members   CouponAudienceMember[]
+
+  @@unique([couponId, version])
+  @@map("coupon_versions")
+}
+
+/// Contas selecionadas de uma versão (segmento SELECIONADOS).
+model CouponAudienceMember {
+  id           String   @id @default(cuid())
+  versionId    String
+  tenantId     String
+  selectedById String
+  createdAt    DateTime @default(now())
+
+  version CouponVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, tenantId])
+  @@index([tenantId])
+  @@map("coupon_audience_members")
+}
+
+/// Trilha das ações do administrador nas campanhas.
+model CouponAudit {
+  id         String   @id @default(cuid())
+  couponId   String
+  actorId    String
+  operation  String
+  before     Json?
+  after      Json?
+  occurredAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, occurredAt])
+  @@map("coupon_audit")
 }

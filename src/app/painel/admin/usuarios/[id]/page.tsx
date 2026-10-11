@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { featureEnabled } from "@/shared/config/features";
 import { AuthError, requireAdmin } from "@/modules/tenancy/authContext";
 import { AdminError, getUserForAdmin } from "@/modules/admin/users";
 import { LogoutButton } from "../../../LogoutButton";
-import { ADMIN_NAV_ITEMS } from "../../../navigation";
+import { adminNavItems } from "../../../navigation";
 import { ROLE_LABELS, ROLE_TONES } from "../../roles";
 import { AdminUserActions } from "./AdminUserActions";
 import { AccessGrantPanel, type GrantCurrent } from "./AccessGrantPanel";
@@ -66,7 +67,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
         : [];
 
   return (
-    <AppShell eyebrow="Administração" title={user.name} subtitle={user.email} navItems={ADMIN_NAV_ITEMS} activeKey="usuarios" trailing={<LogoutButton />}>
+    <AppShell eyebrow="Administração" title={user.name} subtitle={user.email} navItems={adminNavItems(featureEnabled("CUPONS"))} activeKey="usuarios" trailing={<LogoutButton />}>
       <Link href="/painel/admin" className={styles.back}>
         ← Usuários
       </Link>

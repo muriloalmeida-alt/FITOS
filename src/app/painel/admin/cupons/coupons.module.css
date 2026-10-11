@@ -1,0 +1,158 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 600px;
+}
+
+.eyebrow {
+  margin: 4px 0 0;
+  color: var(--fitos-orange-300);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.card strong {
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table caption {
+  margin-bottom: 6px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table th,
+.table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--fitos-color-outline);
+  text-align: left;
+}
+
+.table td:last-child {
+  text-align: right;
+}
+
+.picker,
+.picked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picker button {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--fitos-color-outline);
+  border-radius: 12px;
+  background: var(--fitos-color-surface-raised);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.picker button:disabled {
+  opacity: 0.5;
+}
+
+.picker span,
+.picked span {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.picked li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--fitos-color-surface-card);
+}
+
+.picked strong {
+  color: var(--fitos-color-on-surface);
+}
+
+.picked button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-text-muted);
+  font-size: 22px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.code {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+}
+
+.audit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
