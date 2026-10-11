@@ -10,12 +10,13 @@ import styles from "../treinos/PersonalWorkoutEditor.module.css";
 /// Editor de treino do FitOS Livre (FIT-157): o mesmo editor do Personal
 /// (FIT-146), sem programas nem atribuição. "Pronto" oferece "Começar
 /// agora".
-export function LivreWorkoutEditor({ initial, library }: { initial: EditorWorkout | null; library: LibraryExercise[] }) {
+export function LivreWorkoutEditor({ initial, library, blocksEnabled = false }: { initial: EditorWorkout | null; library: LibraryExercise[]; blocksEnabled?: boolean }) {
   const router = useRouter();
   const toast = useToast();
 
   return (
     <WorkoutEditor
+      blocksEnabled={blocksEnabled}
       api={LIVRE_WORKOUT_API}
       initial={initial}
       library={library}

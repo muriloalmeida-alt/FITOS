@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/shared/config/features";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
@@ -21,5 +22,5 @@ export default async function NovoMeuTreinoPage() {
     }
     throw error;
   }
-  return <LivreWorkoutEditor initial={null} library={await loadLibrary(ctx.tenantId)} />;
+  return <LivreWorkoutEditor blocksEnabled={featureEnabled("FUNCIONAL")} initial={null} library={await loadLibrary(ctx.tenantId)} />;
 }

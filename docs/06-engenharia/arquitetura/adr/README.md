@@ -23,3 +23,4 @@ Estados: `Proposto`, `Aceito`, `Substituído` ou `Rejeitado`.
 - `ADR-017-GRATUIDADE-ADMINISTRATIVA.md`
 - `ADR-018-BASE-SESSAO-EVIDENCIA-E-FLAGS.md`
 - `ADR-019-DESAFIOS-PONTUACAO.md`
+- `ADR-020-FUNCIONAL-BLOCOS.md`

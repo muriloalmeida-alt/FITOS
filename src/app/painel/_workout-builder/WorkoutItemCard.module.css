@@ -218,3 +218,13 @@
   font-size: 12px;
   font-weight: 800;
 }
+
+.blockPick {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.blockPick .mini {
+  flex-wrap: wrap;
+}

@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/shared/config/features";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
@@ -27,5 +28,5 @@ export default async function MeuTreinoPage({ params }: { params: Promise<{ id: 
   if (!workout) {
     notFound();
   }
-  return <LivreWorkoutEditor initial={workout} library={await loadLibrary(ctx.tenantId)} />;
+  return <LivreWorkoutEditor blocksEnabled={featureEnabled("FUNCIONAL")} initial={workout} library={await loadLibrary(ctx.tenantId)} />;
 }

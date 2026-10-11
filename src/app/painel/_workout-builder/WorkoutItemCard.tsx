@@ -14,6 +14,7 @@ import {
   formatLoadLabel,
   parseLoadKg,
 } from "@/shared/lib/load";
+import { BLOCK_LABEL, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
 import type { EditorItem } from "./types";
 import styles from "./WorkoutItemCard.module.css";
 
@@ -27,6 +28,9 @@ export type ItemPatch = Partial<
     | "restSeconds"
     | "notes"
     | "intensity"
+    | "blockKey"
+    | "targetDistanceMeters"
+    | "targetCalories"
   >
 >;
 
@@ -40,6 +44,9 @@ interface WorkoutItemCardProps {
   onRemove: () => void;
   /// EPIC-30: tocar na foto abre outros exercícios do mesmo grupo.
   onSwap?: () => void;
+  /// Funcional e CrossFit (com a flag): blocos do treino para escolher e
+  /// metas de distância e calorias.
+  blocks?: WorkoutBlock[];
 }
 
 /// Um exercício dentro do editor (FIT-146): séries, repetições ou tempo e
@@ -55,6 +62,7 @@ export function WorkoutItemCard({
   onMove,
   onRemove,
   onSwap,
+  blocks,
 }: WorkoutItemCardProps) {
   const [open, setOpen] = useState(false);
   const cardio = Boolean(item.intensity);
@@ -216,6 +224,31 @@ export function WorkoutItemCard({
           )}
         </div>
       )}
+
+      {blocks && blocks.length > 0 ? (
+        <div className={styles.blockPick}>
+          <span className={styles.label} id={`bloco-${item.id}`}>
+            Bloco
+          </span>
+          <div className={styles.mini} role="radiogroup" aria-labelledby={`bloco-${item.id}`}>
+            <button type="button" role="radio" aria-checked={!item.blockKey} className={!item.blockKey ? styles.miniOn : undefined} onClick={() => onChange({ blockKey: null })}>
+              Séries
+            </button>
+            {blocks.map((block) => (
+              <button key={block.key} type="button" role="radio" aria-checked={item.blockKey === block.key} className={item.blockKey === block.key ? styles.miniOn : undefined} onClick={() => onChange({ blockKey: block.key })}>
+                {block.name ?? BLOCK_LABEL[block.kind]}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {open && blocks && !cardio ? (
+        <div className={styles.moreGrid}>
+          <Stepper label="Distância" value={item.targetDistanceMeters ?? 0} step={10} min={0} max={5000} format={(v) => (v ? `${v} m` : "—")} onChange={(v) => onChange({ targetDistanceMeters: v > 0 ? v : null })} />
+          <Stepper label="Calorias" value={item.targetCalories ?? 0} step={5} min={0} max={500} format={(v) => (v ? `${v} cal` : "—")} onChange={(v) => onChange({ targetCalories: v > 0 ? v : null })} />
+        </div>
+      ) : null}
 
       {open && !cardio ? (
         <div className={styles.more}>
