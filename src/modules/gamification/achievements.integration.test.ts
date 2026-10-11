@@ -41,7 +41,7 @@ async function scored(ctx: Awaited<ReturnType<typeof setup>>, performedAt: strin
   const at = new Date(performedAt);
   const session = await prisma.workoutSession.create({ data: { ...ctx.scope, workoutId: ctx.workoutId, status: "CONCLUIDA", startedAt: at, endedAt: at } });
   return prisma.sessionScore.create({
-    data: { ...ctx.scope, sessionId: session.id, ruleVersion: 1, totalTenths, plannedItems, balancedTenths: Math.round(totalTenths / plannedItems), items: [], status, performedAt: at, photoDeadline: new Date(at.getTime() + 3 * 86_400_000) },
+    data: { ...ctx.scope, sessionId: session.id, ruleVersion: 1, totalTenths, plannedItems, balancedTenths: Math.round(totalTenths / plannedItems), items: [], status, releasedAt: status === "LIBERADO" ? at : null, performedAt: at, photoDeadline: new Date(at.getTime() + 3 * 86_400_000) },
   });
 }
 

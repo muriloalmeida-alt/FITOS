@@ -1,11 +1,13 @@
 import { authErrorResponse } from "@/modules/tenancy/authContext";
 import { SessionError, deleteFinishedWorkoutSession } from "@/modules/execution/sessions";
-import { individualExecutor } from "../../_execution/individualExecutor";
+import { requireSelfStudent } from "@/modules/tenancy/selfStudent";
 
-/// Exclui um treino já realizado do próprio praticante do FitOS Livre.
+/// Exclui um treino já realizado de quem treina, deixando a versão excluída
+/// na trilha. Livre: qualquer treino seu; aluno: só os que ele registrou.
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await deleteFinishedWorkoutSession({ ...(await individualExecutor()), sessionId: (await params).id });
+    const self = await requireSelfStudent();
+    await deleteFinishedWorkoutSession({ tenantId: self.tenantId, studentId: self.studentId, actorUserId: self.userId, onlyRetroactive: self.role === "ALUNO", sessionId: (await params).id });
     return new Response(null, { status: 204 });
   } catch (error) {
     const response = authErrorResponse(error);

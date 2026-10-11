@@ -5,6 +5,7 @@ import { featureEnabled } from "@/shared/config/features";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { parseLoadKg } from "@/shared/lib/load";
 import { isCardioType } from "@/shared/lib/cardio";
+import { consolidatesAt, isConsolidated, periodOf } from "@/shared/lib/medals";
 import { DEFAULT_CARDIO_REFERENCE_SECONDS, RULE_VERSION, balancedTenths, doneFor, itemPointsTenths, kindFor, type ScoredSet } from "@/shared/lib/scoring";
 
 /// FitOS Desafios (feature 3, ADR-019): pontuação de um treino concluído.
@@ -131,7 +132,8 @@ export async function scoreSession(sessionId: string, client: PrismaClient = pri
 
   const existing = await client.sessionScore.findUnique({ where: { sessionId } });
   if (existing) {
-    if (existing.totalTenths === totalTenths && existing.ruleVersion === RULE_VERSION) return existing;
+    // Treino editado (retroativo, parte 2): a data também conta.
+    if (existing.totalTenths === totalTenths && existing.ruleVersion === RULE_VERSION && existing.performedAt.getTime() === data.performedAt.getTime() && existing.photoDeadline.getTime() === data.photoDeadline.getTime()) return existing;
     return client.$transaction(async (tx) => {
       const updated = await tx.sessionScore.update({ where: { id: existing.id }, data });
       await tx.scoreEvent.create({ data: { sessionScoreId: existing.id, kind: "RECALCULADO", totalTenths, fromStatus: existing.status, toStatus: existing.status } });
@@ -163,6 +165,18 @@ export async function scoreSessionSafely(sessionId: string, client: PrismaClient
   }
 }
 
+/// Treino editado: recalcula pela diferença e, se já há foto no novo
+/// prazo, libera. Nunca derruba a edição.
+export async function rescoreSessionSafely(sessionId: string, client: PrismaClient = prisma, now = new Date()): Promise<void> {
+  if (!featureEnabled("GAMIFICACAO")) return;
+  try {
+    await scoreSession(sessionId, client, now);
+    if ((await client.workoutEvidencePhoto.count({ where: { sessionId } })) > 0) await releaseOnEvidence(sessionId, client, now);
+  } catch (error) {
+    logEvent("error", "desafios.recalculo_falhou", { sessionId, ...describeError(error) });
+  }
+}
+
 /// A foto chegou: libera os pontos pendentes se ainda está no prazo.
 export async function releaseOnEvidence(sessionId: string, client: PrismaClient = prisma, now = new Date()): Promise<SessionScoreStatus | null> {
   const score = await client.sessionScore.findUnique({ where: { sessionId } });
@@ -183,12 +197,31 @@ export async function revertOnEvidenceRemoved(sessionId: string, remaining: numb
   if (count > 0) await client.scoreEvent.create({ data: { sessionScoreId: score.id, kind: "ESTORNADO", totalTenths: score.totalTenths, fromStatus: score.status, toStatus: "PENDENTE_FOTO", reason: "Última foto removida" } });
 }
 
-export type SessionPoints = Pick<SessionScore, "totalTenths" | "balancedTenths" | "plannedItems" | "status" | "photoDeadline"> & { items: ScoredItem[] };
+export type SessionPoints = Pick<SessionScore, "totalTenths" | "balancedTenths" | "plannedItems" | "status" | "photoDeadline"> & {
+  items: ScoredItem[];
+  /// Se os pontos (ainda) contam na semana e no mês do treino: período
+  /// consolidado só leva o que foi liberado até a consolidação.
+  countsIn: { week: boolean; month: boolean };
+};
 
-export async function getSessionPoints(scope: { tenantId: string; studentId: string }, sessionId: string, client: PrismaClient = prisma): Promise<SessionPoints | null> {
+function countsInPeriod(type: "SEMANA" | "MES", score: { performedAt: Date; releasedAt: Date | null }, now: Date): boolean {
+  const period = periodOf(type, score.performedAt);
+  if (!isConsolidated(period, now)) return true;
+  return score.releasedAt !== null && score.releasedAt.getTime() <= consolidatesAt(period).getTime();
+}
+
+export async function getSessionPoints(scope: { tenantId: string; studentId: string }, sessionId: string, client: PrismaClient = prisma, now = new Date()): Promise<SessionPoints | null> {
   const score = await client.sessionScore.findFirst({ where: { sessionId, tenantId: scope.tenantId, studentId: scope.studentId } });
   if (!score) return null;
-  return { totalTenths: score.totalTenths, balancedTenths: score.balancedTenths, plannedItems: score.plannedItems, status: score.status, photoDeadline: score.photoDeadline, items: score.items as unknown as ScoredItem[] };
+  return {
+    totalTenths: score.totalTenths,
+    balancedTenths: score.balancedTenths,
+    plannedItems: score.plannedItems,
+    status: score.status,
+    photoDeadline: score.photoDeadline,
+    items: score.items as unknown as ScoredItem[],
+    countsIn: { week: countsInPeriod("SEMANA", score, now), month: countsInPeriod("MES", score, now) },
+  };
 }
 
 /// Prévia dos pontos de um treino ainda não salvo (retroativo, etapa de

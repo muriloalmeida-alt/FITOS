@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, FormAlert, WizardProgress } from "@/shared/ui";
 import { isCardioType } from "@/shared/lib/cardio";
 import { resizeImage } from "@/shared/lib/resizeImage";
@@ -65,20 +66,41 @@ function setsSummary(item: Item): string {
   return labels.every((label) => label === labels[0]) ? `${item.sets.length} × ${labels[0]}` : labels.join(" · ");
 }
 
+/// Registro existente para editar (feature 2, parte 2).
+export interface RetroEdit {
+  sessionId: string;
+  performedAtIso: string;
+  durationSeconds: number;
+  items: { exercise: LibraryExercise; sets: { reps: number | null; loadKg: number | null; durationSeconds: number | null }[] }[];
+}
+
+function editItem(item: RetroEdit["items"][number]): Item {
+  const cardio = isCardioType(item.exercise.type);
+  return {
+    exercise: item.exercise,
+    cardio,
+    sets: item.sets.map((set) => ({ reps: set.reps === null ? "" : String(set.reps), load: set.loadKg === null ? "" : String(set.loadKg).replace(".", ","), minutes: set.durationSeconds === null ? "" : String(Math.round(set.durationSeconds / 60)) })),
+  };
+}
+
 /// Registrar treino realizado (feature 2): mesma escolha de exercícios do
 /// treino avulso, sem cronômetro. Data e execução, duração total única,
 /// foto (opcional, sem ela não há pontos) e revisão. Cada etapa guarda os
 /// dados ao voltar; o envio final tem chave única (retry não duplica).
-export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: LibraryExercise[]; nowIso: string; pointsEnabled: boolean }) {
+/// Com `edit`, edita o registro (sem a etapa da foto: as fotos ficam no
+/// detalhe do treino) e volta para ele.
+export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { library: LibraryExercise[]; nowIso: string; pointsEnabled: boolean; edit?: RetroEdit }) {
+  const router = useRouter();
   const now = useMemo(() => new Date(nowIso), [nowIso]);
-  const initial = localParts(now);
+  const initial = localParts(edit ? new Date(edit.performedAtIso) : now);
+  const today = localParts(now);
   const [step, setStep] = useState(0);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<Item[]>(() => (edit ? edit.items.map(editItem) : []));
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [hours, setHours] = useState("0");
-  const [minutes, setMinutes] = useState("45");
+  const [hours, setHours] = useState(edit ? String(Math.floor(edit.durationSeconds / 3600)) : "0");
+  const [minutes, setMinutes] = useState(edit ? String(Math.floor((edit.durationSeconds % 3600) / 60)) : "45");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +144,10 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
   function next() {
     const problem = step === 0 ? validateExecution() : step === 1 && typeof duration === "string" ? duration : null;
     setError(problem);
-    if (!problem) setStep((current) => current + 1);
+    if (problem) return;
+    // Edição: da duração direto para a revisão (sem a etapa da foto).
+    if (edit && step === 1) void review();
+    else setStep((current) => current + 1);
   }
 
   async function choosePhoto(file: File | undefined) {
@@ -169,7 +194,27 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
     if (typeof body?.totalTenths === "number") setPreviewTenths(body.totalTenths);
   }
 
+  async function saveEdit() {
+    if (!edit || busy || typeof duration === "string") return;
+    setBusy(true);
+    setError(null);
+    const response = await fetch(`/api/minhas-sessoes/${edit.sessionId}/registro`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ performedAt: performedAt.toISOString(), durationSeconds: duration, exercises: payloadExercises() }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      const body = await response?.json().catch(() => null);
+      setError(body?.message ?? "Não foi possível salvar. Verifique a conexão e tente de novo.");
+      setBusy(false);
+      return;
+    }
+    router.push(`/painel/treinos-realizados/${edit.sessionId}`);
+    router.refresh();
+  }
+
   async function submit() {
+    if (edit) return saveEdit();
     if (busy || typeof duration === "string") return;
     setBusy(true);
     setError(null);
@@ -224,11 +269,11 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
           <p className={styles.ok}>{done.photoSaved ? "✓ Foto anexada" : pointsEnabled ? "Salvo sem pontuação." : "Salvo sem foto."}</p>
         )}
         {pointsEnabled ? <SessionPointsCard sessionId={done.sessionId} /> : null}
-        <Link href="/painel/minha-evolucao" className={styles.primaryLink}>
-          Ver no histórico
+        <Link href={`/painel/treinos-realizados/${done.sessionId}`} className={styles.primaryLink}>
+          Ver o treino
         </Link>
-        <Link href="/painel/meus-treinos" className={styles.secondaryLink}>
-          Voltar aos treinos
+        <Link href="/painel/treinos-realizados" className={styles.secondaryLink}>
+          Treinos realizados
         </Link>
       </section>
     );
@@ -236,9 +281,10 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
 
   return (
     <section className={styles.flow} aria-label="Registrar treino realizado">
-      <WizardProgress step={step + 1} totalSteps={STEPS.length} />
+      <WizardProgress step={edit && step === 3 ? 3 : step + 1} totalSteps={edit ? 3 : STEPS.length} />
       <p className={styles.eyebrow}>
-        {String(step + 1).padStart(2, "0")} / {STEPS[step]}
+        {String(edit && step === 3 ? 3 : step + 1).padStart(2, "0")} / {STEPS[step]}
+        {edit ? " · Editando o registro" : ""}
       </p>
 
       {step === 0 ? (
@@ -248,7 +294,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
           <div className={styles.when}>
             <label className={styles.field}>
               <span>Data</span>
-              <input type="date" value={date} min={minDate} max={initial.date} onChange={(event) => setDate(event.target.value)} />
+              <input type="date" value={date} min={minDate} max={today.date} onChange={(event) => setDate(event.target.value)} />
             </label>
             <label className={styles.field}>
               <span>Horário</span>
@@ -379,10 +425,10 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
               </span>
             </div>
           ))}
-          <p className={photo ? styles.ok : styles.muted}>{photo ? "✓ Foto anexada" : pointsEnabled ? "Adicione uma foto para receber os pontos." : "Sem foto."}</p>
+          {edit ? null : <p className={photo ? styles.ok : styles.muted}>{photo ? "✓ Foto anexada" : pointsEnabled ? "Adicione uma foto para receber os pontos." : "Sem foto."}</p>}
           {pointsEnabled && previewTenths !== null ? (
             <div className={styles.points}>
-              <span>{photo ? "Este treino renderá" : "Com foto, este treino renderia"}</span>
+              <span>{edit ? "Com a edição, este treino renderá" : photo ? "Este treino renderá" : "Com foto, este treino renderia"}</span>
               <strong>{formatPoints(previewTenths)} pontos</strong>
               <span className={styles.muted}>Liberação automática, sujeita a contestação.</span>
             </div>
@@ -395,7 +441,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
       <div className={styles.actions}>
         {step < 2 ? (
           <Button type="button" size="lg" block onClick={next}>
-            {step === 0 ? "Continuar" : "Continuar para foto"}
+            {step === 0 ? "Continuar" : edit ? "Revisar alterações" : "Continuar para foto"}
           </Button>
         ) : null}
         {step === 2 ? (
@@ -412,11 +458,11 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
         ) : null}
         {step === 3 ? (
           <Button type="button" size="lg" block onClick={() => void submit()} disabled={busy}>
-            {busy ? "Registrando…" : pointsEnabled && photo ? "Concluir e receber pontos" : "Concluir registro"}
+            {busy ? (edit ? "Salvando…" : "Registrando…") : edit ? "Salvar alterações" : pointsEnabled && photo ? "Concluir e receber pontos" : "Concluir registro"}
           </Button>
         ) : null}
         {step > 0 ? (
-          <Button type="button" variant="quiet" block onClick={() => setStep((current) => current - 1)} disabled={busy}>
+          <Button type="button" variant="quiet" block onClick={() => setStep((current) => (edit && current === 3 ? 1 : current - 1))} disabled={busy}>
             Voltar
           </Button>
         ) : null}

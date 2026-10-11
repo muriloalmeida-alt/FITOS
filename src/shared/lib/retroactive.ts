@@ -28,3 +28,13 @@ export function durationLabel(seconds: number): string {
   const minutes = totalMinutes % 60;
   return hours > 0 ? `${hours} h ${String(minutes).padStart(2, "0")} min` : `${minutes} min`;
 }
+
+/// Exercícios e séries vindos do corpo da requisição (registro e edição):
+/// só o formato; a validação é do servidor (`execution/retroactive`).
+export function parseRetroExercises(value: unknown): { exerciseId: string; sets: { reps: unknown; loadKg: unknown; durationSeconds: unknown }[] }[] {
+  const exercises = Array.isArray(value) ? (value as { exerciseId?: unknown; sets?: unknown }[]) : [];
+  return exercises.map((exercise) => ({
+    exerciseId: String(exercise?.exerciseId ?? ""),
+    sets: Array.isArray(exercise?.sets) ? (exercise.sets as Record<string, unknown>[]).map((set) => ({ reps: set?.reps ?? null, loadKg: set?.loadKg ?? null, durationSeconds: set?.durationSeconds ?? null })) : [],
+  }));
+}

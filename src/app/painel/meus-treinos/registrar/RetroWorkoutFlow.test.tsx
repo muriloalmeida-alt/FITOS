@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/shared/lib/resizeImage", () => ({ resizeImage: vi.fn(async () => ({ blob: new Blob(["x"], { type: "image/jpeg" }), width: 1200, height: 1600 })) }));
 
 import { RetroWorkoutFlow } from "./RetroWorkoutFlow";
@@ -121,5 +123,41 @@ describe("RetroWorkoutFlow (registrar treino realizado)", () => {
     expect(await screen.findByText("Salvo sem foto.")).toBeInTheDocument();
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).exercises).toEqual([{ exerciseId: "bike", sets: [{ durationSeconds: 1200 }] }]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("edição: começa com o registro, pula a foto, salva com PUT e volta ao detalhe", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(nowIso) });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/retroativo/previa")) return json({ totalTenths: 110, items: [] });
+      if (url.endsWith("/s9/registro")) return json({ sessionId: "s9" });
+      throw new Error(`inesperado: ${url}`);
+    });
+    render(
+      <RetroWorkoutFlow
+        library={library}
+        nowIso={nowIso}
+        pointsEnabled
+        edit={{ sessionId: "s9", performedAtIso: "2026-10-09T21:30:00.000Z", durationSeconds: 3000, items: [{ exercise: library[0]!, sets: [{ reps: 10, loadKg: 30, durationSeconds: null }] }] }}
+      />
+    );
+    expect(screen.getByLabelText("Data")).toHaveValue("2026-10-09");
+    expect(screen.getByLabelText("Horário")).toHaveValue("18:30");
+    expect(screen.getByLabelText("Carga da série 1 de Leg Press 45°")).toHaveValue("30");
+    await userEvent.clear(screen.getByLabelText("Carga da série 1 de Leg Press 45°"));
+    await userEvent.type(screen.getByLabelText("Carga da série 1 de Leg Press 45°"), "33");
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByLabelText("Minutos")).toHaveValue("50");
+    await userEvent.click(screen.getByRole("button", { name: "Revisar alterações" }));
+
+    expect(await screen.findByText("Com a edição, este treino renderá")).toBeInTheDocument();
+    expect(screen.queryByText("Adicione uma foto para receber os pontos.")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/registro"))!;
+    expect(call[1]).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ performedAt: "2026-10-09T21:30:00.000Z", durationSeconds: 3000, exercises: [{ exerciseId: "leg", sets: [{ reps: 10, loadKg: 33 }] }] });
+    expect(router.push).toHaveBeenCalledWith("/painel/treinos-realizados/s9");
+    vi.useRealTimers();
   });
 });

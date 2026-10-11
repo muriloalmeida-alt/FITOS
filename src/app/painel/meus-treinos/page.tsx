@@ -53,7 +53,7 @@ export default async function MeusTreinosPage({ searchParams }: { searchParams?:
         {inProgress ? null : <FreeWorkoutButton />}
         {/* Feature 2: treino que já aconteceu, sem cronômetro. */}
         {featureEnabled("RETROATIVO") ? (
-          <Link href="/painel/meus-treinos/registrar" className={buttonStyles.button}>
+          <Link href="/painel/treinos-realizados/registrar" className={buttonStyles.button}>
             <span className={buttonStyles.icon} aria-hidden="true">
               ✓
             </span>

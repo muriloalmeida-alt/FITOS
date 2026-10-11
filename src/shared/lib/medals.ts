@@ -42,6 +42,19 @@ export function previousPeriod(period: Period): Period {
   return periodOf(period.type, new Date(period.start.getTime() - 1));
 }
 
+/// Período encerrado consolida 24 h depois do fim (o prazo da foto do
+/// treino ao vivo). Depois disso o resultado fica congelado: treino
+/// registrado, editado ou excluído mais tarde não muda a medalha.
+export const CONSOLIDATION_HOURS = 24;
+
+export function consolidatesAt(period: Pick<Period, "end">): Date {
+  return new Date(period.end.getTime() + CONSOLIDATION_HOURS * 3_600_000);
+}
+
+export function isConsolidated(period: Pick<Period, "end">, now: Date): boolean {
+  return now.getTime() >= consolidatesAt(period).getTime();
+}
+
 /// Dias de treino previstos no período pelos "meus dias" do aluno; sem
 /// dias definidos, 3 por semana.
 export function plannedDays(period: Period, preferredDays: readonly string[]): number {
