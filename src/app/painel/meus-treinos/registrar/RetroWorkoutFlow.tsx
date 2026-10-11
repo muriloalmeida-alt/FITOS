@@ -1,0 +1,415 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Button, FormAlert, WizardProgress } from "@/shared/ui";
+import { isCardioType } from "@/shared/lib/cardio";
+import { resizeImage } from "@/shared/lib/resizeImage";
+import { RETRO_MAX_DAYS, durationLabel, durationSeconds, validatePerformedAt } from "@/shared/lib/retroactive";
+import { ExerciseLibrary } from "../../_workout-builder/ExerciseLibrary";
+import type { LibraryExercise } from "../../_workout-builder/types";
+import styles from "./RetroWorkoutFlow.module.css";
+
+interface SetRow {
+  reps: string;
+  load: string;
+  minutes: string;
+}
+
+interface Item {
+  exercise: LibraryExercise;
+  cardio: boolean;
+  sets: SetRow[];
+}
+
+interface Photo {
+  blob: Blob;
+  width: number;
+  height: number;
+  url: string;
+}
+
+const STEPS = ["Execução", "Duração", "Comprovação", "Revisão"] as const;
+const DAY_MS = 86_400_000;
+const SAO_PAULO_OFFSET_MS = -3 * 3_600_000;
+
+/// "AAAA-MM-DD" e "HH:MM" no horário de Brasília.
+function localParts(instant: Date) {
+  const iso = new Date(instant.getTime() + SAO_PAULO_OFFSET_MS).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+}
+
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" });
+const timeFmt = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+
+function number(value: string): number | null {
+  const parsed = Number(value.replace(",", "."));
+  return value.trim() === "" || !Number.isFinite(parsed) ? null : parsed;
+}
+
+function newItem(exercise: LibraryExercise): Item {
+  const cardio = isCardioType(exercise.type);
+  return { exercise, cardio, sets: cardio ? [{ reps: "", load: "", minutes: "20" }] : [1, 2, 3].map(() => ({ reps: "10", load: "", minutes: "" })) };
+}
+
+function volumeKg(item: Item): number {
+  return item.sets.reduce((sum, set) => sum + (number(set.reps) ?? 0) * (number(set.load) ?? 0), 0);
+}
+
+/// "3 × 10 × 30 kg" quando todas as séries são iguais; senão, a lista.
+function setsSummary(item: Item): string {
+  if (item.cardio) return `${item.sets.reduce((sum, set) => sum + (number(set.minutes) ?? 0), 0)} min`;
+  const labels = item.sets.map((set) => `${set.reps}${number(set.load) ? ` × ${number(set.load)} kg` : ""}`);
+  return labels.every((label) => label === labels[0]) ? `${item.sets.length} × ${labels[0]}` : labels.join(" · ");
+}
+
+/// Registrar treino realizado (feature 2): mesma escolha de exercícios do
+/// treino avulso, sem cronômetro. Data e execução, duração total única,
+/// foto (opcional, sem ela não há pontos) e revisão. Cada etapa guarda os
+/// dados ao voltar; o envio final tem chave única (retry não duplica).
+export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: LibraryExercise[]; nowIso: string; pointsEnabled: boolean }) {
+  const now = useMemo(() => new Date(nowIso), [nowIso]);
+  const initial = localParts(now);
+  const [step, setStep] = useState(0);
+  const [date, setDate] = useState(initial.date);
+  const [time, setTime] = useState(initial.time);
+  const [items, setItems] = useState<Item[]>([]);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [hours, setHours] = useState("0");
+  const [minutes, setMinutes] = useState("45");
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ sessionId: string; photoSaved: boolean; possibleDuplicate: boolean } | null>(null);
+  const operationKey = useRef<string>(crypto.randomUUID());
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const performedAt = new Date(`${date}T${time || "00:00"}:00-03:00`);
+  const minDate = localParts(new Date(now.getTime() - RETRO_MAX_DAYS * DAY_MS)).date;
+  const duration = durationSeconds(Number(hours || 0), Number(minutes || 0));
+
+  function updateSet(itemIndex: number, setIndex: number, patch: Partial<SetRow>) {
+    setItems((current) => current.map((item, i) => (i === itemIndex ? { ...item, sets: item.sets.map((set, j) => (j === setIndex ? { ...set, ...patch } : set)) } : item)));
+  }
+
+  function addSet(itemIndex: number) {
+    setItems((current) => current.map((item, i) => (i === itemIndex ? { ...item, sets: [...item.sets, { ...(item.sets.at(-1) ?? { reps: "10", load: "", minutes: "10" }) }] } : item)));
+  }
+
+  function removeSet(itemIndex: number, setIndex: number) {
+    setItems((current) => current.map((item, i) => (i === itemIndex ? { ...item, sets: item.sets.filter((_, j) => j !== setIndex) } : item)).filter((item) => item.sets.length > 0));
+  }
+
+  function validateExecution(): string | null {
+    const dateError = validatePerformedAt(performedAt, new Date());
+    if (dateError) return dateError;
+    if (items.length === 0) return "Adicione pelo menos um exercício.";
+    for (const item of items) {
+      for (const set of item.sets) {
+        if (item.cardio ? !((number(set.minutes) ?? 0) >= 1) : !((number(set.reps) ?? 0) >= 1)) {
+          return item.cardio ? `Informe os minutos de ${item.exercise.name}.` : `Informe as repetições de ${item.exercise.name}.`;
+        }
+        if ((number(set.load) ?? 0) < 0) return `Carga inválida em ${item.exercise.name}.`;
+      }
+    }
+    return null;
+  }
+
+  function next() {
+    const problem = step === 0 ? validateExecution() : step === 1 && typeof duration === "string" ? duration : null;
+    setError(problem);
+    if (!problem) setStep((current) => current + 1);
+  }
+
+  async function choosePhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const resized = await resizeImage(file, { max: 1600 });
+      if (photo) URL.revokeObjectURL(photo.url);
+      setPhoto({ ...resized, url: URL.createObjectURL(resized.blob) });
+    } catch {
+      setError("Não foi possível ler a foto. Tente outra.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function uploadPhoto(sessionId: string): Promise<boolean> {
+    if (!photo) return false;
+    const form = new FormData();
+    form.set("foto", photo.blob, "treino.jpg");
+    form.set("largura", String(photo.width));
+    form.set("altura", String(photo.height));
+    const response = await fetch(`/api/minhas-sessoes/${sessionId}/evidencias`, { method: "POST", body: form }).catch(() => null);
+    return Boolean(response?.ok);
+  }
+
+  async function submit() {
+    if (busy || typeof duration === "string") return;
+    setBusy(true);
+    setError(null);
+    const response = await fetch("/api/minhas-sessoes/retroativo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        operationKey: operationKey.current,
+        performedAt: performedAt.toISOString(),
+        durationSeconds: duration,
+        exercises: items.map((item) => ({
+          exerciseId: item.exercise.id,
+          sets: item.sets.map((set) =>
+            item.cardio ? { durationSeconds: Math.round((number(set.minutes) ?? 0) * 60) } : { reps: Math.round(number(set.reps) ?? 0), loadKg: number(set.load) }
+          ),
+        })),
+      }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      const body = await response?.json().catch(() => null);
+      setError(body?.message ?? "Não foi possível registrar. Verifique a conexão e tente de novo.");
+      setBusy(false);
+      return;
+    }
+    const result = (await response.json()) as { sessionId: string; possibleDuplicate: boolean };
+    const photoSaved = await uploadPhoto(result.sessionId);
+    setDone({ sessionId: result.sessionId, photoSaved, possibleDuplicate: result.possibleDuplicate });
+    setBusy(false);
+  }
+
+  async function retryPhoto() {
+    if (!done) return;
+    setBusy(true);
+    const photoSaved = await uploadPhoto(done.sessionId);
+    setDone({ ...done, photoSaved });
+    setBusy(false);
+  }
+
+  if (done) {
+    return (
+      <section className={styles.flow} aria-labelledby="registrado">
+        <h2 id="registrado" className={styles.title}>
+          Treino registrado
+        </h2>
+        <p className={styles.muted}>
+          {dateFmt.format(performedAt)} · {timeFmt.format(performedAt)} · {typeof duration === "number" ? durationLabel(duration) : ""}
+        </p>
+        {done.possibleDuplicate ? <FormAlert variant="info">Já existe um treino perto desse horário. Confira no histórico se não ficou repetido.</FormAlert> : null}
+        {photo && !done.photoSaved ? (
+          <>
+            <FormAlert variant="error">Treino salvo, mas a foto não foi enviada.{pointsEnabled ? " Sem foto, este treino não rende pontos." : ""}</FormAlert>
+            <Button type="button" size="lg" block onClick={() => void retryPhoto()} disabled={busy}>
+              {busy ? "Enviando…" : "Tentar enviar a foto de novo"}
+            </Button>
+          </>
+        ) : (
+          <p className={styles.ok}>{done.photoSaved ? "✓ Foto anexada" : pointsEnabled ? "Salvo sem pontuação." : "Salvo sem foto."}</p>
+        )}
+        <Link href="/painel/minha-evolucao" className={styles.primaryLink}>
+          Ver no histórico
+        </Link>
+        <Link href="/painel/meus-treinos" className={styles.secondaryLink}>
+          Voltar aos treinos
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.flow} aria-label="Registrar treino realizado">
+      <WizardProgress step={step + 1} totalSteps={STEPS.length} />
+      <p className={styles.eyebrow}>
+        {String(step + 1).padStart(2, "0")} / {STEPS[step]}
+      </p>
+
+      {step === 0 ? (
+        <>
+          <h2 className={styles.title}>Quando você treinou?</h2>
+          <p className={styles.muted}>Registro retroativo · até {RETRO_MAX_DAYS} dias</p>
+          <div className={styles.when}>
+            <label className={styles.field}>
+              <span>Data</span>
+              <input type="date" value={date} min={minDate} max={initial.date} onChange={(event) => setDate(event.target.value)} />
+            </label>
+            <label className={styles.field}>
+              <span>Horário</span>
+              <input type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+            </label>
+          </div>
+
+          <h2 className={styles.title}>O que você realizou?</h2>
+          {items.map((item, itemIndex) => (
+            <div key={item.exercise.id} className={styles.item}>
+              <h3>{item.exercise.name}</h3>
+              <table className={styles.sets}>
+                <thead>
+                  <tr>
+                    <th scope="col">Série</th>
+                    {item.cardio ? <th scope="col">Minutos</th> : (
+                      <>
+                        <th scope="col">Repetições</th>
+                        <th scope="col">Carga (kg)</th>
+                      </>
+                    )}
+                    <th scope="col">
+                      <span className={styles.hidden}>Remover</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {item.sets.map((set, setIndex) => (
+                    <tr key={setIndex}>
+                      <td>{setIndex + 1}</td>
+                      {item.cardio ? (
+                        <td>
+                          <input aria-label={`Minutos da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.minutes} onChange={(event) => updateSet(itemIndex, setIndex, { minutes: event.target.value })} />
+                        </td>
+                      ) : (
+                        <>
+                          <td>
+                            <input aria-label={`Repetições da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.reps} onChange={(event) => updateSet(itemIndex, setIndex, { reps: event.target.value })} />
+                          </td>
+                          <td>
+                            <input aria-label={`Carga da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="decimal" placeholder="—" value={set.load} onChange={(event) => updateSet(itemIndex, setIndex, { load: event.target.value })} />
+                          </td>
+                        </>
+                      )}
+                      <td>
+                        <button type="button" className={styles.remove} aria-label={`Remover série ${setIndex + 1} de ${item.exercise.name}`} onClick={() => removeSet(itemIndex, setIndex)}>
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button type="button" className={styles.link} onClick={() => addSet(itemIndex)}>
+                + Série
+              </button>
+            </div>
+          ))}
+          <button type="button" className={styles.link} onClick={() => setLibraryOpen(true)}>
+            + Adicionar exercício
+          </button>
+        </>
+      ) : null}
+
+      {step === 1 ? (
+        <>
+          <h2 className={styles.title}>Quanto tempo durou o treino inteiro?</h2>
+          <p className={styles.muted}>Informe o total, incluindo os intervalos. Não há cronômetro neste registro.</p>
+          <div className={styles.duration}>
+            <label>
+              <input aria-label="Horas" inputMode="numeric" value={hours} onChange={(event) => setHours(event.target.value.replace(/\D/g, "").slice(0, 2))} />
+              <span>horas</span>
+            </label>
+            <span className={styles.colon} aria-hidden="true">
+              :
+            </span>
+            <label>
+              <input aria-label="Minutos" inputMode="numeric" value={minutes} onChange={(event) => setMinutes(event.target.value.replace(/\D/g, "").slice(0, 2))} />
+              <span>minutos</span>
+            </label>
+          </div>
+          <p className={styles.muted}>Um único tempo para o treino. Séries e cargas ficam por exercício.</p>
+        </>
+      ) : null}
+
+      {step === 2 ? (
+        <>
+          <h2 className={styles.title}>Comprove seu treino</h2>
+          <p className={styles.muted}>
+            {pointsEnabled ? "A foto é obrigatória para receber pontos. Você pode salvar o treino sem pontuar." : "Uma foto do treino fica guardada com o registro. É opcional."}
+          </p>
+          <input ref={fileInput} type="file" accept="image/*" className={styles.hidden} aria-label="Foto do treino" onChange={(event) => void choosePhoto(event.target.files?.[0])} />
+          <button type="button" className={styles.photo} onClick={() => fileInput.current?.click()} disabled={photoBusy}>
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- prévia local (blob:) antes do envio
+              <img src={photo.url} alt="Foto escolhida para o treino" />
+            ) : (
+              <>
+                <strong>{photoBusy ? "Preparando…" : "Adicione uma foto"}</strong>
+                <span>Vinculada a este treino</span>
+              </>
+            )}
+          </button>
+          {photo ? (
+            <button type="button" className={styles.link} onClick={() => setPhoto(null)}>
+              Remover foto
+            </button>
+          ) : null}
+        </>
+      ) : null}
+
+      {step === 3 ? (
+        <>
+          <h2 className={styles.title}>Tudo certo para concluir?</h2>
+          <p className={styles.muted}>
+            {dateFmt.format(performedAt)} · {timeFmt.format(performedAt)}
+          </p>
+          <div className={styles.card}>
+            <span>Tempo total</span>
+            <strong>{typeof duration === "number" ? durationLabel(duration) : "—"}</strong>
+          </div>
+          {items.map((item) => (
+            <div key={item.exercise.id} className={styles.summary}>
+              <strong>{item.exercise.name}</strong>
+              <span>
+                {setsSummary(item)}
+                {!item.cardio && volumeKg(item) > 0 ? ` · Volume: ${volumeKg(item).toLocaleString("pt-BR")} kg` : ""}
+              </span>
+            </div>
+          ))}
+          <p className={photo ? styles.ok : styles.muted}>{photo ? "✓ Foto anexada" : pointsEnabled ? "Sem foto: nenhum ponto é liberado." : "Sem foto."}</p>
+        </>
+      ) : null}
+
+      {error ? <FormAlert variant="error">{error}</FormAlert> : null}
+
+      <div className={styles.actions}>
+        {step < 2 ? (
+          <Button type="button" size="lg" block onClick={next}>
+            {step === 0 ? "Continuar" : "Continuar para foto"}
+          </Button>
+        ) : null}
+        {step === 2 ? (
+          <>
+            <Button type="button" size="lg" block onClick={() => setStep(3)} disabled={photoBusy || !photo}>
+              Continuar
+            </Button>
+            {photo ? null : (
+              <Button type="button" variant="quiet" block onClick={() => setStep(3)}>
+                {pointsEnabled ? "Salvar sem pontuação" : "Continuar sem foto"}
+              </Button>
+            )}
+          </>
+        ) : null}
+        {step === 3 ? (
+          <Button type="button" size="lg" block onClick={() => void submit()} disabled={busy}>
+            {busy ? "Registrando…" : "Concluir registro"}
+          </Button>
+        ) : null}
+        {step > 0 ? (
+          <Button type="button" variant="quiet" block onClick={() => setStep((current) => current - 1)} disabled={busy}>
+            Voltar
+          </Button>
+        ) : null}
+      </div>
+
+      {libraryOpen ? (
+        <ExerciseLibrary
+          exercises={library}
+          alreadyInWorkout={items.map((item) => item.exercise.id)}
+          onClose={() => setLibraryOpen(false)}
+          onAdd={(ids) => {
+            const chosen = ids.map((id) => library.find((exercise) => exercise.id === id)).filter((exercise): exercise is LibraryExercise => Boolean(exercise));
+            setItems((current) => [...current, ...chosen.filter((exercise) => !current.some((item) => item.exercise.id === exercise.id)).map(newItem)]);
+            setLibraryOpen(false);
+          }}
+          createExerciseHref={null}
+        />
+      ) : null}
+    </section>
+  );
+}
