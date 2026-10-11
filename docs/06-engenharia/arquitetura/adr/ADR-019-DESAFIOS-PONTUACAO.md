@@ -74,3 +74,29 @@ O PDF "3-Gamificacao" confirma as fórmulas (volume de musculação, +1 por 10% 
    - abrir em até 48 h e decidir em até 48 h;
    - não se encerra por silêncio;
    - o treino do próprio moderador é revisado por outra pessoa.
+
+## Adendo: Amigos (Desafios 4/4, parte A)
+
+- **Grupo privado por convite** (`FriendGroup`, fora de tenant):
+  - reúne quem treina, inclusive alunos de personais diferentes e Livre;
+  - código de 8 caracteres sem 0/O e 1/I/L, para ditar sem confusão;
+  - limites: 50 pessoas por grupo e 10 grupos por pessoa.
+- **Membro** (`FriendGroupMember`): guarda o escopo de treino (`tenantId` + `studentId`) do momento em que entrou.
+  - **Sair** grava `leftAt`: os treinos param de contar e a pessoa perde a leitura do grupo. No placar da temporada, quem saiu aparece sinalizado com o que somou até sair.
+  - **Voltar** recomeça a contagem.
+  - **Organizador:** quem cria. Se sair, a organização passa para quem está há mais tempo.
+- **Temporada** (`FriendSeason`): 7, 14 ou 28 dias, uma de cada vez.
+  - O organizador começa a próxima quando a atual acaba.
+  - Conta só treino com pontos oficiais, feito dentro da temporada e depois da entrada.
+  - Temporada encerrada consolida como os períodos das medalhas: 24 h depois do fim, só o que foi liberado até lá.
+- **Modo:** escolhido na criação.
+  - `TOTAL`: soma dos pontos.
+  - `EQUILIBRADO`: média por exercício, 1 treino por dia, 3 melhores por semana (`rankSeason`).
+- **Antes de entrar**, o convite mostra o modo, a temporada e as regras. Os colegas veem só nome, foto do perfil e pontos.
+- **Rotas:**
+  - `POST /api/desafios/amigos` (criar);
+  - `/entrar` (pelo código);
+  - `/[id]/temporada`;
+  - `/[id]/sair`.
+  - Todas valem sempre sobre quem treina e dão 404 sem `FEATURE_GAMIFICACAO`.
+- **Contestação** (parte B) vem a seguir.

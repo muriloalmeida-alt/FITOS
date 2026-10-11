@@ -66,3 +66,60 @@ export function rankStudents(participants: string[], entries: RankingEntry[], pe
     return { ...row, position };
   });
 }
+
+/// Amigos (Desafios 4/4): grupos privados com temporada de 7, 14 ou 28 dias.
+export const SEASON_LENGTHS = [7, 14, 28] as const;
+export type SeasonLength = (typeof SEASON_LENGTHS)[number];
+export type FriendMode = "TOTAL" | "EQUILIBRADO";
+
+export function isSeasonLength(value: unknown): value is SeasonLength {
+  return typeof value === "number" && (SEASON_LENGTHS as readonly number[]).includes(value);
+}
+
+export function seasonWindow(startsAt: Date, lengthDays: SeasonLength): { startsAt: Date; endsAt: Date } {
+  return { startsAt, endsAt: new Date(startsAt.getTime() + lengthDays * 86_400_000) };
+}
+
+export interface SeasonMember {
+  memberId: string;
+  joinedAt: Date;
+  leftAt: Date | null;
+}
+
+export interface SeasonEntry {
+  memberId: string;
+  performedAt: Date;
+  totalTenths: number;
+  balancedTenths: number;
+  contested: boolean;
+}
+
+export interface SeasonRow {
+  memberId: string;
+  position: number;
+  pointsTenths: number;
+  counted: number;
+  contested: boolean;
+}
+
+/// Classificação da temporada. Conta o treino feito dentro dela, depois da
+/// entrada do membro e antes da saída. TOTAL soma os pontos; EQUILIBRADO
+/// usa a média por treino com 1 por dia e os 3 melhores por semana.
+export function rankSeason(mode: FriendMode, season: { startsAt: Date; endsAt: Date }, members: SeasonMember[], entries: SeasonEntry[]): SeasonRow[] {
+  const rows = members.map((member) => {
+    const from = Math.max(season.startsAt.getTime(), member.joinedAt.getTime());
+    const until = Math.min(season.endsAt.getTime(), member.leftAt?.getTime() ?? Infinity);
+    const mine = entries.filter((entry) => entry.memberId === member.memberId && entry.performedAt.getTime() >= from && entry.performedAt.getTime() < until);
+    if (mode === "TOTAL") {
+      return { memberId: member.memberId, pointsTenths: mine.reduce((sum, entry) => sum + entry.totalTenths, 0), counted: mine.length, contested: mine.some((entry) => entry.contested) };
+    }
+    const counted = countedEntries(mine.map((entry) => ({ studentId: entry.memberId, performedAt: entry.performedAt, balancedTenths: entry.balancedTenths, contested: entry.contested })));
+    return { memberId: member.memberId, pointsTenths: counted.reduce((sum, entry) => sum + entry.balancedTenths, 0), counted: counted.length, contested: counted.some((entry) => entry.contested) };
+  });
+  rows.sort((a, b) => b.pointsTenths - a.pointsTenths);
+  let position = 0;
+  return rows.map((row, index) => {
+    if (index === 0 || row.pointsTenths !== rows[index - 1]!.pointsTenths) position = index + 1;
+    return { ...row, position };
+  });
+}

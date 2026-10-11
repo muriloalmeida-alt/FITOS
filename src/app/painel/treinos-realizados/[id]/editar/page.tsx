@@ -7,7 +7,7 @@ import { getFinishedSessionForSelf } from "@/modules/execution/finishedSession";
 import { LogoutButton } from "../../../LogoutButton";
 import { loadLibrary } from "../../../_workout-builder/editorData";
 import { RetroWorkoutFlow } from "../../../meus-treinos/registrar/RetroWorkoutFlow";
-import { selfForPage } from "../../selfPage";
+import { selfForPage } from "../../../selfPage";
 
 export const metadata: Metadata = {
   title: `Editar treino registrado — ${appName}`,

@@ -10,6 +10,8 @@ import { getClassRanking, getClassRankingState, isParticipant, type RankingViewe
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
 import { AchievementsView } from "./AchievementsView";
+import { FriendGroupsPanel } from "./FriendGroupsPanel";
+import { listMyFriendGroups } from "@/modules/gamification/friendGroups";
 import { ClassRankingPanel, type RankingRowView } from "./ClassRankingPanel";
 
 export const metadata: Metadata = {
@@ -55,28 +57,36 @@ export default async function DesafiosPage({ searchParams }: { searchParams?: Pr
     throw error;
   }
   const navItems = self.role === "ALUNO" ? ALUNO_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS;
-  const turma = self.role === "ALUNO" && sp.aba === "turma";
+  const tab = sp.aba === "amigos" ? "amigos" : self.role === "ALUNO" && sp.aba === "turma" ? "turma" : "conquistas";
   let content;
-  if (turma) {
+  if (tab === "turma") {
     const scope = { tenantId: self.tenantId, studentId: self.studentId };
     const [state, joined] = await Promise.all([getClassRankingState(self.tenantId), isParticipant(scope)]);
     const rows = state.enabled && joined ? await rankingRows({ role: "ALUNO", ...scope }, period) : null;
     content = <ClassRankingPanel role="ALUNO" enabled={state.enabled} joined={joined} period={period} rows={rows} basePath="/painel/desafios?aba=turma" />;
+  } else if (tab === "amigos") {
+    const groups = await listMyFriendGroups(self);
+    content = (
+      <FriendGroupsPanel
+        nowIso={new Date().toISOString()}
+        groups={groups.map((group) => ({ ...group, season: group.season ? { ...group.season, startsAt: group.season.startsAt.toISOString(), endsAt: group.season.endsAt.toISOString() } : null }))}
+      />
+    );
   } else {
     content = <AchievementsView achievements={await getAchievements(self)} />;
   }
+  const titles = { conquistas: "Suas conquistas", turma: "Ranking da turma", amigos: "Amigos" } as const;
   return (
-    <AppShell eyebrow="Desafios" title={turma ? "Ranking da turma" : "Suas conquistas"} navItems={navItems} activeKey="progresso" trailing={<LogoutButton />}>
-      {self.role === "ALUNO" ? (
-        <SegmentedTabs
-          label="Desafios"
-          value={turma ? "turma" : "conquistas"}
-          items={[
-            { key: "conquistas", label: "Conquistas", href: "/painel/desafios" },
-            { key: "turma", label: "Turma", href: "/painel/desafios?aba=turma" },
-          ]}
-        />
-      ) : null}
+    <AppShell eyebrow="Desafios" title={titles[tab]} navItems={navItems} activeKey="progresso" trailing={<LogoutButton />}>
+      <SegmentedTabs
+        label="Desafios"
+        value={tab}
+        items={[
+          { key: "conquistas", label: "Conquistas", href: "/painel/desafios" },
+          ...(self.role === "ALUNO" ? [{ key: "turma", label: "Turma", href: "/painel/desafios?aba=turma" }] : []),
+          { key: "amigos", label: "Amigos", href: "/painel/desafios?aba=amigos" },
+        ]}
+      />
       {content}
     </AppShell>
   );

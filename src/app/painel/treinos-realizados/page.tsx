@@ -6,7 +6,7 @@ import { durationLabel } from "@/shared/lib/retroactive";
 import { sessionBadges } from "@/shared/lib/sessionBadges";
 import { listSessionHistoryForStudent } from "@/modules/execution/history";
 import { LogoutButton } from "../LogoutButton";
-import { selfForPage } from "./selfPage";
+import { selfForPage } from "../selfPage";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
