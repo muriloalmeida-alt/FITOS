@@ -6,7 +6,7 @@ import { featureEnabled } from "@/shared/config/features";
 import { LogoutButton } from "../../LogoutButton";
 import { loadLibrary } from "../../_workout-builder/editorData";
 import { RetroWorkoutFlow } from "../../meus-treinos/registrar/RetroWorkoutFlow";
-import { selfForPage } from "../selfPage";
+import { selfForPage } from "../../selfPage";
 
 export const metadata: Metadata = {
   title: `Registrar treino realizado — ${appName}`,

@@ -5,7 +5,7 @@ import { appName } from "@/shared/config/env";
 import { featureEnabled } from "@/shared/config/features";
 import { getFinishedSessionForSelf } from "@/modules/execution/finishedSession";
 import { LogoutButton } from "../../LogoutButton";
-import { selfForPage } from "../selfPage";
+import { selfForPage } from "../../selfPage";
 import { FinishedSessionView } from "./FinishedSessionView";
 
 export const metadata: Metadata = {

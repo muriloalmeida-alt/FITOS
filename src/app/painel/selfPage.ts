@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { AuthError } from "@/modules/tenancy/authContext";
 import { requireSelfStudent } from "@/modules/tenancy/selfStudent";
-import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
+import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "./navigation";
 
 /// Quem treina (aluno com vínculo ativo ou Livre), com o menu do papel.
 export async function selfForPage() {
