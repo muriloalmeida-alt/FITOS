@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { PHOTO_MAX_BYTES, PhotoError, detectImageMime, type PhotoViewer } from "@/modules/media/photos";
+import { releaseOnEvidence, revertOnEvidenceRemoved } from "@/modules/gamification/sessionScoring";
+import { describeError, logEvent } from "@/shared/lib/serverLog";
 
 /// Foto de evidência do treino (Fase 0, base do retroativo e da
 /// gamificação): até 3 por treino, só de quem treinou e só em treino em
@@ -35,14 +37,25 @@ export async function addSessionEvidence(
 ): Promise<{ evidence: EvidenceSummary; created: boolean }> {
   if (input.bytes.length === 0) throw new PhotoError("VALIDACAO", "Escolha uma foto.");
   if (input.bytes.length > PHOTO_MAX_BYTES) throw new PhotoError("VALIDACAO", "Foto grande demais. Tente outra.");
-  const mimeType = detectImageMime(input.bytes);
-  if (!mimeType) throw new PhotoError("VALIDACAO", "Use uma foto em JPG, PNG ou WebP.");
+  const detected = detectImageMime(input.bytes);
+  if (!detected) throw new PhotoError("VALIDACAO", "Use uma foto em JPG, PNG ou WebP.");
+  const mimeType: string = detected;
   const width = Math.round(input.width);
   const height = Math.round(input.height);
   if (!(width > 0 && width <= 4096 && height > 0 && height <= 4096)) throw new PhotoError("VALIDACAO", "Tamanho de foto inválido.");
   const sha256 = createHash("sha256").update(input.bytes).digest("hex");
 
   const existing = () => client.workoutEvidencePhoto.findUnique({ where: { sessionId_sha256: { sessionId: input.sessionId, sha256 } }, select: SUMMARY });
+  const saved = await saveEvidence();
+  // Desafios: a foto libera os pontos pendentes (falha aqui não perde a foto).
+  try {
+    await releaseOnEvidence(input.sessionId, client);
+  } catch (error) {
+    logEvent("error", "desafios.liberacao_falhou", { sessionId: input.sessionId, ...describeError(error) });
+  }
+  return saved;
+
+  async function saveEvidence(): Promise<{ evidence: EvidenceSummary; created: boolean }> {
   try {
     return await client.$transaction(async (tx) => {
       const session = await ownSession(input, input.sessionId, tx);
@@ -66,6 +79,7 @@ export async function addSessionEvidence(
       if (same) return { evidence: same, created: false };
     }
     throw error;
+  }
   }
 }
 
@@ -94,12 +108,19 @@ export async function getEvidenceForViewer(viewer: PhotoViewer, evidenceId: stri
 
 /// Só quem treinou exclui (o personal vê, mas não apaga a evidência).
 export async function deleteSessionEvidence(owner: Pick<Owner, "tenantId" | "studentId">, evidenceId: string, client: PrismaClient = prisma): Promise<{ sessionId: string; remaining: number }> {
-  return client.$transaction(async (tx) => {
+  const result = await client.$transaction(async (tx) => {
     const evidence = await tx.workoutEvidencePhoto.findFirst({ where: { id: evidenceId, tenantId: owner.tenantId, session: { studentId: owner.studentId } }, select: { id: true, sessionId: true } });
     if (!evidence) throw new PhotoError("NAO_ENCONTRADO", "Foto não encontrada.");
     await tx.workoutEvidencePhoto.delete({ where: { id: evidence.id } });
     return { sessionId: evidence.sessionId, remaining: await tx.workoutEvidencePhoto.count({ where: { sessionId: evidence.sessionId } }) };
   });
+  // Desafios: sem nenhuma foto, os pontos voltam a pendentes.
+  try {
+    await revertOnEvidenceRemoved(result.sessionId, result.remaining, client);
+  } catch (error) {
+    logEvent("error", "desafios.estorno_falhou", { sessionId: result.sessionId, ...describeError(error) });
+  }
+  return result;
 }
 
 /// Quando o treino aconteceu: no retroativo, a data informada; no

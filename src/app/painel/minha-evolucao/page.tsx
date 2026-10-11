@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { featureEnabled } from "@/shared/config/features";
 import { redirect } from "next/navigation";
 import { ActionRow, AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
@@ -46,6 +47,7 @@ export default async function MinhaEvolucaoPage({ searchParams }: { searchParams
   return (
     <AppShell eyebrow="Evolução" title="Minha evolução" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="progresso" trailing={<LogoutButton />}>
       <ActionRow href="/painel/relatorio" title="Relatório do mês" description="Treinos, cargas, corpo e fotos do mês" trailing={<span aria-hidden="true">›</span>} />
+      {featureEnabled("GAMIFICACAO") ? <ActionRow href="/painel/desafios" title="Desafios" description="Pontos, medalha da semana e do mês" trailing={<span aria-hidden="true">›</span>} /> : null}
       <MinhaEvolucaoView
         tab={tab}
         overview={overview}

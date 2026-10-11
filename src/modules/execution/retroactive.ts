@@ -6,6 +6,7 @@ import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
 import { isCardioType } from "@/shared/lib/cardio";
 import { validatePerformedAt } from "@/shared/lib/retroactive";
 import { SessionError } from "./sessions";
+import { scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { MAX_DURATION_SECONDS, MAX_LOAD_KG, MAX_REPS, MAX_SET_NUMBER, syncAggregate } from "./sets";
 
 /// Treino retroativo (feature 2, ADR-018): "Registrar treino realizado".
@@ -172,6 +173,8 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
     throw error;
   }
 
+  // Desafios (feature 3): pontua sem nunca impedir o registro.
+  await scoreSessionSafely(sessionId, client);
   const near = await client.workoutSession.count({
     where: {
       tenantId: input.tenantId,
