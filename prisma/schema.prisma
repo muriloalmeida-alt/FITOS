@@ -868,23 +868,34 @@ model PlanAssignment {
 /// único parcial (não representável no Prisma Schema — ver migration
 /// `20260920020000_add_workout_session_results`).
 model WorkoutSession {
-  id              String               @id @default(cuid())
-  tenantId        String
-  studentId       String
-  workoutId       String
-  status          WorkoutSessionStatus @default(EM_ANDAMENTO)
-  startedAt       DateTime             @default(now())
-  endedAt         DateTime?
+  id                      String               @id @default(cuid())
+  tenantId                String
+  studentId               String
+  workoutId               String
+  status                  WorkoutSessionStatus @default(EM_ANDAMENTO)
+  startedAt               DateTime             @default(now())
+  endedAt                 DateTime?
   /// BK-13 (EPIC-19/20): esforço percebido de 1 (leve) a 5 (no limite),
   /// informado ao concluir. CHECK no banco garante a faixa.
-  perceivedEffort Int?
+  perceivedEffort         Int?
   /// BK-14 (FIT-153): tempo ativo da sessão em segundos, descontando as
   /// pausas do cronômetro. Informado ao concluir; nunca maior que o tempo
   /// de relógio entre `startedAt` e `endedAt`.
-  activeSeconds   Int?
+  activeSeconds           Int?
   /// Treino avulso (FitOS Livre): o que o praticante escolheu treinar
   /// (regiões e grupos musculares, `src/shared/lib/workoutFocus.ts`).
-  focus           String[]             @default([])
+  focus                   String[]             @default([])
+  /// Base das novas features (Fase 0): LIVE = feito com o cronômetro;
+  /// RETROATIVO = registrado depois. `performedAt` é quando o treino
+  /// aconteceu (nulo no LIVE: vale `startedAt`); `recordedAt`, quando foi
+  /// registrado. `declaredDurationSeconds`: duração total informada no
+  /// retroativo (declaratória, sem cronômetro). `operationKey` evita
+  /// registro duplicado por retry ou clique repetido.
+  mode                    WorkoutSessionMode   @default(LIVE)
+  performedAt             DateTime?
+  recordedAt              DateTime             @default(now())
+  declaredDurationSeconds Int?
+  operationKey            String?              @unique
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -893,12 +904,43 @@ model WorkoutSession {
   results    WorkoutSessionResult[]
   setResults WorkoutSetResult[]
   chatTopic  ChatTopic?
+  evidences  WorkoutEvidencePhoto[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
   @@index([studentId, tenantId])
   @@index([workoutId, tenantId])
   @@map("workout_sessions")
+}
+
+enum WorkoutSessionMode {
+  LIVE
+  RETROATIVO
+}
+
+/// Foto de evidência do treino (Fase 0): pelo menos uma libera os pontos
+/// da gamificação. Mesmo padrão das fotos de evolução: reduzida no
+/// aparelho, guardada no banco, lida só por rota autenticada. É uma
+/// evidência enviada pelo cliente; não comprova sozinha carga, duração ou
+/// data. `sha256` impede a mesma foto duas vezes no mesmo treino.
+model WorkoutEvidencePhoto {
+  id           String   @id @default(cuid())
+  tenantId     String
+  sessionId    String
+  uploadedById String
+  mimeType     String
+  width        Int
+  height       Int
+  sizeBytes    Int
+  sha256       String
+  data         Bytes
+  createdAt    DateTime @default(now())
+
+  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([sessionId, sha256])
+  @@index([tenantId])
+  @@map("workout_evidence_photos")
 }
 
 /// Resultado executado de um item do treino, dentro de uma sessão
