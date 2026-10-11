@@ -933,11 +933,12 @@ model WorkoutSession {
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workout Workout @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
-  results    WorkoutSessionResult[]
-  setResults WorkoutSetResult[]
-  chatTopic  ChatTopic?
-  evidences  WorkoutEvidencePhoto[]
-  score      SessionScore?
+  results      WorkoutSessionResult[]
+  setResults   WorkoutSetResult[]
+  chatTopic    ChatTopic?
+  evidences    WorkoutEvidencePhoto[]
+  score        SessionScore?
+  blockResults WorkoutBlockResult[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -1976,4 +1977,35 @@ model ScoreContest {
   @@index([reviewerUserId, status])
   @@index([sessionScoreId])
   @@map("score_contests")
+}
+
+/// Funcional e CrossFit (feature 1, etapa 3): resultado de um bloco na
+/// execução ao vivo. O timer do bloco guarda instantes e pausas (sobrevive
+/// a recarregar a tela e a reconectar); o resultado é o que a pessoa
+/// confirma, nunca a prescrição. Em For Time, "concluído" guarda o tempo
+/// do bloco; "limite atingido" nunca vira tempo de conclusão.
+model WorkoutBlockResult {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  sessionId          String
+  blockKey           String
+  startedAt          DateTime?
+  pausedAt           DateTime?
+  pausedSeconds      Int       @default(0)
+  endedAt            DateTime?
+  /// CONCLUIDO, LIMITE_ATINGIDO ou PARCIAL.
+  outcome            String?
+  roundsCompleted    Int?
+  partialReps        Int?
+  intervalsCompleted Int?
+  /// Tempo do bloco (só For Time concluído, no modo ao vivo).
+  elapsedSeconds     Int?
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([sessionId, blockKey])
+  @@map("workout_block_results")
 }

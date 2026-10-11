@@ -1,6 +1,8 @@
 import { authErrorResponse } from "@/modules/tenancy/authContext";
 import { SessionError, completeWorkoutSession, rateWorkoutSession } from "@/modules/execution/sessions";
 import { getSessionSummary, recordWorkoutSet, removeWorkoutSet } from "@/modules/execution/sets";
+import { blockTimer, finishBlock, serializeBlockResult } from "@/modules/execution/blockResults";
+import { featureEnabled } from "@/shared/config/features";
 
 /// Handlers da execução por série (FIT-153 aluno, FIT-158 FitOS Livre).
 /// Cada rota só informa como achar o executor da sessão (aluno ou o
@@ -78,6 +80,32 @@ export async function completeHandler(resolve: ResolveExecutor, request: Request
     const session = await completeWorkoutSession({ ...executor, sessionId, activeSeconds });
     const summary = await getSessionSummary({ ...executor, sessionId });
     return Response.json({ ...session, summary });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+/// Funcional e CrossFit (etapa 3): timer do bloco (`action`: INICIAR,
+/// PAUSAR, RETOMAR) e resultado do bloco. 404 sem `FEATURE_FUNCIONAL`.
+export async function blockTimerHandler(resolve: ResolveExecutor, request: Request, sessionId: string, blockKey: string): Promise<Response> {
+  if (!featureEnabled("FUNCIONAL")) return Response.json({ error: "NAO_ENCONTRADO" }, { status: 404 });
+  try {
+    const executor = await resolve();
+    const body = (await request.json().catch(() => null)) as { action?: unknown } | null;
+    const action = body?.action;
+    if (action !== "INICIAR" && action !== "PAUSAR" && action !== "RETOMAR") return Response.json({ error: "VALIDACAO", message: "Ação inválida." }, { status: 400 });
+    return Response.json(serializeBlockResult(await blockTimer(executor, sessionId, blockKey, action)));
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function blockResultHandler(resolve: ResolveExecutor, request: Request, sessionId: string, blockKey: string): Promise<Response> {
+  if (!featureEnabled("FUNCIONAL")) return Response.json({ error: "NAO_ENCONTRADO" }, { status: 404 });
+  try {
+    const executor = await resolve();
+    const body = ((await request.json().catch(() => null)) as Record<string, unknown> | null) ?? {};
+    return Response.json(serializeBlockResult(await finishBlock(executor, sessionId, blockKey, { outcome: body.outcome, roundsCompleted: body.roundsCompleted, partialReps: body.partialReps, intervalsCompleted: body.intervalsCompleted, note: body.note })));
   } catch (error) {
     return errorResponse(error);
   }
