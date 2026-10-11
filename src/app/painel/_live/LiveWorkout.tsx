@@ -28,6 +28,8 @@ import { WorkoutComment } from "./WorkoutComment";
 import { SessionPointsCard } from "./SessionPointsCard";
 import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
+import { BlockPanel, type BlockResultView } from "./BlockPanel";
+import type { WorkoutBlock } from "@/shared/lib/workoutBlocks";
 
 export interface LiveSet {
   setNumber: number;
@@ -58,6 +60,8 @@ export interface LiveItem {
   notes: string | null;
   /// Aeróbico (EPIC-28): tempo e intensidade, uma "série" só.
   intensity: CardioIntensity | null;
+  /// Funcional e CrossFit (etapa 3): bloco do item, se houver.
+  blockKey?: string | null;
   doneSets: LiveSet[];
   /// BK-12: "Última vez".
   last: {
@@ -91,6 +95,10 @@ export interface LiveWorkoutProps {
   musicProvider?: MusicProvider | null;
   /// Desafios (feature 3) ligado: pontos e foto no resumo final.
   pointsEnabled?: boolean;
+  /// Funcional e CrossFit (etapa 3): blocos do treino e resultados já
+  /// registrados na sessão. Ausente com `FEATURE_FUNCIONAL` desligada.
+  blocks?: WorkoutBlock[];
+  blockResults?: BlockResultView[];
 }
 
 interface Summary {
@@ -246,6 +254,8 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   const lastBeepRef = useRef<number>(-1);
 
   const item = items[current] ?? NO_ITEM;
+  const [blockResults, setBlockResults] = useState<BlockResultView[]>(props.blockResults ?? []);
+  const currentBlock = item.blockKey ? (props.blocks?.find((block) => block.key === item.blockKey) ?? null) : null;
   const free = props.free ?? null;
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -1412,6 +1422,15 @@ export function LiveWorkout(props: LiveWorkoutProps) {
       <div className={styles.scroll}>
         {paused ? (
           <p className={styles.warn}>Pausado. Toque no tempo para continuar.</p>
+        ) : null}
+        {currentBlock && sessionId ? (
+          <BlockPanel
+            key={`${sessionId}-${currentBlock.key}`}
+            block={currentBlock}
+            initial={blockResults.find((result) => result.blockKey === currentBlock.key) ?? null}
+            endpoint={`${props.apiBase}/${sessionId}/blocos/${encodeURIComponent(currentBlock.key)}`}
+            onChange={(saved) => setBlockResults((all) => [...all.filter((result) => result.blockKey !== saved.blockKey), saved])}
+          />
         ) : null}
         <div className={styles.exercise}>
           <button

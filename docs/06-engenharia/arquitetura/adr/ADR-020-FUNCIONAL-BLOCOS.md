@@ -38,3 +38,22 @@ O PDF "1-CrossFit_Funcionais" pede catálogo com categorias, músculos secundár
   - blocos no retroativo, só com o resultado quantitativo;
   - pontuação por métrica, quando houver política aprovada para movimentos sem carga.
 - Treinos sem blocos não mudam em nada (coluna nula).
+
+## Adendo — etapa 3: execução ao vivo por bloco
+
+- **Modelo:** `WorkoutBlockResult`, uma linha por sessão e bloco (`@@unique([sessionId, blockKey])`).
+  - Guarda os instantes do timer: `startedAt`, `pausedAt`, `pausedSeconds` e `endedAt`. O servidor marca o tempo, e o cliente só pede INICIAR, PAUSAR ou RETOMAR.
+  - Guarda também o resultado: `outcome`, `roundsCompleted`, `partialReps`, `intervalsCompleted`, `elapsedSeconds` e `note`.
+- **Regras:**
+  - só há timer e resultado com a sessão EM_ANDAMENTO e um bloco que existe no treino;
+  - as ações do timer são idempotentes;
+  - uma pausa aberta no encerramento é descontada;
+  - reenviar o resultado corrige o registro e mantém o `endedAt` original.
+- **For Time:**
+  - "Concluído" grava o tempo medido;
+  - "Limite atingido" (só com limite definido) não grava tempo, e o banco garante isso com uma CHECK;
+  - "Parei antes" grava o round parcial.
+- **A meta não conta como feito.** O formulário de encerramento começa do zero. No EMOM, sugere os intervalos que o relógio já fechou.
+- **Rotas:** `PUT …/[id]/blocos/[key]` e `POST …/[id]/blocos/[key]/timer`, em `/api/workout-sessions` (aluno) e `/api/minhas-sessoes` (Livre). Respondem 404 sem `FEATURE_FUNCIONAL`.
+- **Tela:** o treino ao vivo mostra o painel do bloco acima do exercício atual quando o item pertence a um bloco. O painel tem formato, tempo restante (ou intervalo x de N), Iniciar, Pausar, Retomar, Encerrar bloco e Corrigir resultado.
+- **Fora desta etapa:** pontuação por bloco. Os pontos continuam pelas séries registradas.
