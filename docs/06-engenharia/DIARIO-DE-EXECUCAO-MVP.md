@@ -1338,3 +1338,17 @@ Mudanças:
 **Validação local**: `npm run typecheck`, `npm run lint` limpos. Suíte completa: 849/849 testes não-integração passando (202 arquivos não-integração), zero regressão. Os 352 "failed" que aparecem ao rodar `npm test` completo são exatamente os 28 arquivos `.integration.test.ts` do repositório — todos falham só por `Can't reach database server at localhost:5432` (sem Postgres neste sandbox, limitação de sempre, nenhum deles tocado por esta mudança); confirmado comparando a lista de arquivos que falharam contra `find src -name "*.integration.test.ts"` (28 = 28).
 
 **Pendência explícita**: sem captura real desta mudança — mesma limitação de sempre (rotas autenticadas, sem Postgres/Docker neste sandbox). Fica para Murilo confirmar em homologação depois do merge.
+
+### FIT-143 — Espaçamento entre rótulo e campo muito grande no mobile editorial
+
+Murilo mandou uma captura real de `hml-fitos.up.railway.app` (formulário "Adicionar exercício" do builder de treino do Livre) apontando espaço em branco excessivo entre cada rótulo ("Séries", "Repetições", "Duração (s)"...) e a linha do campo abaixo, pedindo revisão em toda a aplicação.
+
+**Causa raiz**: o tema mobile editorial (EPIC-18/FIT-138) trocou os campos de caixa preenchida para "linha" (sem fundo, só um traço inferior), mas manteve `min-height: 48px` e `padding: var(--fitos-space-2) 0` (8px) herdados do estilo de caixa do desktop — dimensionamento pensado para preencher uma caixa visível, não para um traço fino sobre um campo vazio. Como não há nada visível enchendo essa altura (sem fundo, sem borda superior), o resultado é ~52px de ar entre o texto do rótulo e o traço, por campo — em formulários com vários campos curtos (números de 1–2 dígitos) como este, o efeito acumulado é exatamente o que a captura mostra.
+
+**Correção, centralizada nos 3 componentes compartilhados que implementam esse estilo de campo** (nunca por página — closes todo "toda a aplicação" de uma vez, porque são os únicos lugares onde esse padrão existe): `TextField.module.css`, `SelectField.module.css`, `ExerciseAutocomplete.module.css`. No bloco `@media (max-width: 839px)` de cada um: `min-height: 48px` → `40px`, `padding` vertical `var(--fitos-space-2)` (8px) → `var(--fitos-space-1)` (4px). `ExerciseAutocomplete` não tinha `min-height` sobrescrito no mobile (herdava os 48px do desktop) — agora explicitado também. 40px ainda folgado acima do mínimo de toque de 24×24px CSS px do WCAG 2.2 (2.5.8, nível AA); o alvo de 44×44px é só a recomendação "enhanced" (2.5.5, AAA), e o campo continua clicável em toda a própria largura, não só na faixa de 40px.
+
+**Deliberadamente fora do escopo**: a `.textarea` de "Instruções" (`CadastrarExercicioForm`/`EditarExercicioForm`) mantém `min-height: 96px` — é multi-linha, o espaço extra é funcional, não um vazio acidental. Linhas divisórias de leitura (dados do aluno, resumo financeiro etc., que reusam a mesma borda inferior só por consistência visual) também não são "rótulo + campo" e não foram tocadas.
+
+**Testes**: nenhum arquivo de teste teria coberto isso (nenhum teste destes componentes asserta altura/padding computados — a suíte não testa CSS). `npm run typecheck`/`npm run lint`/`npm run build` limpos, sem alteração de markup, só CSS. Suíte completa validada na mesma branch sem regressão.
+
+**Pendência explícita**: sem captura real da correção — mesma limitação de sempre (Railway/Postgres fora deste sandbox). Fica para Murilo confirmar visualmente contra a mesma tela que reportou o problema.
