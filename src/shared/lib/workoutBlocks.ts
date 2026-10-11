@@ -110,7 +110,9 @@ function minutes(seconds: number): string {
 
 /// "AMRAP 10 min", "Circuito · 3 voltas", "EMOM 12 × 1 min", "For Time · limite 15 min".
 export function blockSummary(block: WorkoutBlock): string {
-  const head = block.name ? `${block.name} · ` : "";
+  // Nome igual ao formato ("EMOM", "amrap") não se repete.
+  const kindLabel = { CIRCUITO: "circuito", AMRAP: "amrap", EMOM: "emom", FOR_TIME: "for time" }[block.kind];
+  const head = block.name && block.name.trim().toLowerCase() !== kindLabel ? `${block.name} · ` : "";
   if (block.kind === "CIRCUITO") return `${head}Circuito · ${block.rounds} ${block.rounds === 1 ? "volta" : "voltas"}${block.restSeconds ? ` · ${block.restSeconds} s entre voltas` : ""}`;
   if (block.kind === "AMRAP") return `${head}AMRAP ${minutes(block.windowSeconds ?? 0)}`;
   if (block.kind === "EMOM") return `${head}EMOM ${block.intervals} × ${minutes(block.intervalSeconds ?? 60)}`;
@@ -123,4 +125,30 @@ export function groupByBlock<T extends { blockKey: string | null }>(items: T[], 
   const known = new Set(blocks.map((block) => block.key));
   const loose = items.filter((item) => !item.blockKey || !known.has(item.blockKey));
   return [...(loose.length ? [{ block: null, items: loose }] : []), ...blocks.map((block) => ({ block, items: items.filter((item) => item.blockKey === block.key) }))];
+}
+
+/// Timer do bloco: tempo corrido descontando as pausas (a pausa em
+/// andamento conta até `now`). Sem início, zero.
+export function blockElapsedSeconds(timer: { startedAt: Date | string | null; pausedAt: Date | string | null; pausedSeconds: number; endedAt: Date | string | null }, now: Date): number {
+  if (!timer.startedAt) return 0;
+  const start = new Date(timer.startedAt).getTime();
+  const end = timer.endedAt ? new Date(timer.endedAt).getTime() : timer.pausedAt ? new Date(timer.pausedAt).getTime() : now.getTime();
+  return Math.max(0, Math.floor((end - start) / 1000) - timer.pausedSeconds);
+}
+
+export const BLOCK_OUTCOMES = ["CONCLUIDO", "LIMITE_ATINGIDO", "PARCIAL"] as const;
+export type BlockOutcome = (typeof BLOCK_OUTCOMES)[number];
+
+/// "3 voltas + 8 reps", "12 de 14 intervalos", "Concluído em 9:42", "Limite atingido".
+export function blockResultSummary(block: WorkoutBlock, result: { outcome: string | null; roundsCompleted: number | null; partialReps: number | null; intervalsCompleted: number | null; elapsedSeconds: number | null }): string {
+  const rounds = result.roundsCompleted ?? 0;
+  const partial = result.partialReps ? ` + ${result.partialReps} reps` : "";
+  if (block.kind === "EMOM") return `${result.intervalsCompleted ?? 0} de ${block.intervals} intervalos`;
+  if (block.kind === "FOR_TIME") {
+    if (result.outcome === "CONCLUIDO" && result.elapsedSeconds) return `Concluído em ${Math.floor(result.elapsedSeconds / 60)}:${String(result.elapsedSeconds % 60).padStart(2, "0")}`;
+    if (result.outcome === "LIMITE_ATINGIDO") return `Limite atingido · ${rounds} ${rounds === 1 ? "round" : "rounds"}${partial}`;
+    return `Parcial · ${rounds} ${rounds === 1 ? "round" : "rounds"}${partial}`;
+  }
+  if (block.kind === "CIRCUITO") return `${rounds} de ${block.rounds} voltas${partial}`;
+  return `${rounds} ${rounds === 1 ? "volta" : "voltas"}${partial}`;
 }
