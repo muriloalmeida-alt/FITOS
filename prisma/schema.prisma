@@ -564,6 +564,7 @@ model Student {
   goals               Goal[]
   evolutionPhotos     EvolutionPhoto[]
   scoringReferences   ScoringReference[]
+  periodGoals         PeriodGoal[]
   chatTopics          ChatTopic[]
   healthForm          HealthForm?
   /// Aluno que indicou este (EPIC-47), quando entrou pelo link com `?ref=`.
@@ -1750,7 +1751,7 @@ enum SessionScoreStatus {
 /// Trilha auditável de cada mudança de pontuação (crédito, liberação,
 /// estorno, recálculo, decisão de contestação).
 model ScoreEvent {
-  id             String   @id @default(cuid())
+  id             String              @id @default(cuid())
   sessionScoreId String
   kind           String
   totalTenths    Int
@@ -1758,10 +1759,35 @@ model ScoreEvent {
   toStatus       SessionScoreStatus
   actorId        String?
   reason         String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime            @default(now())
 
   score SessionScore @relation(fields: [sessionScoreId], references: [id], onDelete: Cascade)
 
   @@index([sessionScoreId, createdAt])
   @@map("score_events")
+}
+
+/// Meta de pontos de um período (Desafios, ADR-019), congelada na primeira
+/// leitura do período: 10 × dias previstos × exercícios por treino. A
+/// medalha não é guardada: sai dos pontos oficiais contra esta meta, então
+/// um estorno revisa a medalha sozinho.
+model PeriodGoal {
+  id              String   @id @default(cuid())
+  tenantId        String
+  studentId       String
+  /// SEMANA ou MES.
+  periodType      String
+  /// "2026-10-05" (segunda) ou "2026-10".
+  periodKey       String
+  startsAt        DateTime
+  endsAt          DateTime
+  goalTenths      Int
+  plannedDays     Int
+  itemsPerWorkout Int
+  createdAt       DateTime @default(now())
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([studentId, periodType, periodKey])
+  @@map("period_goals")
 }
