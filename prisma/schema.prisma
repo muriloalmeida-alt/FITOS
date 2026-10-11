@@ -563,6 +563,7 @@ model Student {
   invitations         Invitation[]
   goals               Goal[]
   evolutionPhotos     EvolutionPhoto[]
+  scoringReferences   ScoringReference[]
   chatTopics          ChatTopic[]
   healthForm          HealthForm?
   /// Aluno que indicou este (EPIC-47), quando entrou pelo link com `?ref=`.
@@ -906,6 +907,7 @@ model WorkoutSession {
   setResults WorkoutSetResult[]
   chatTopic  ChatTopic?
   evidences  WorkoutEvidencePhoto[]
+  score      SessionScore?
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -1674,4 +1676,92 @@ model MusicPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("music_preferences")
+}
+
+/// FitOS Desafios (feature 3, ADR-019): referência individual de um
+/// exercício, congelada na primeira pontuação. VOLUME em gramas·repetição,
+/// REPETICOES em repetições, TEMPO em segundos. Mudança de programa cria
+/// versão nova (prospectiva): a anterior ganha `supersededAt`, nunca muda.
+model ScoringReference {
+  id           String               @id @default(cuid())
+  tenantId     String
+  studentId    String
+  exerciseId   String
+  kind         ScoringReferenceKind
+  value        Int
+  /// PRESCRICAO (programa), PRIMEIRA_EXECUCAO (sem carga prescrita ou
+  /// treino avulso) ou PADRAO (aeróbico sem tempo prescrito: 30 min).
+  source       String
+  version      Int                  @default(1)
+  createdAt    DateTime             @default(now())
+  supersededAt DateTime?
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([studentId, exerciseId, kind])
+  @@map("scoring_references")
+}
+
+enum ScoringReferenceKind {
+  VOLUME
+  REPETICOES
+  TEMPO
+}
+
+/// Pontuação de um treino concluído (uma por sessão; o diário pessoal é
+/// único, os rankings só leem). Pontos em décimos. Sem foto, os pontos
+/// ficam calculados mas fora do placar (PENDENTE_FOTO); a foto dentro do
+/// prazo libera automaticamente. Excluir o treino leva a pontuação junto.
+model SessionScore {
+  id             String             @id @default(cuid())
+  tenantId       String
+  studentId      String
+  sessionId      String             @unique
+  ruleVersion    Int
+  totalTenths    Int
+  plannedItems   Int
+  balancedTenths Int
+  /// Detalhe por item: exercício, medida, feito, referência, pontos.
+  items          Json
+  status         SessionScoreStatus @default(PENDENTE_FOTO)
+  /// Data da realização (`sessionPerformedAt`): períodos e rankings.
+  performedAt    DateTime
+  photoDeadline  DateTime
+  releasedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  events  ScoreEvent[]
+
+  @@unique([sessionId, tenantId])
+  @@index([tenantId, studentId, performedAt])
+  @@map("session_scores")
+}
+
+enum SessionScoreStatus {
+  PENDENTE_FOTO
+  LIBERADO
+  CONTESTADO
+  MANTIDO
+  ANULADO
+}
+
+/// Trilha auditável de cada mudança de pontuação (crédito, liberação,
+/// estorno, recálculo, decisão de contestação).
+model ScoreEvent {
+  id             String   @id @default(cuid())
+  sessionScoreId String
+  kind           String
+  totalTenths    Int
+  fromStatus     SessionScoreStatus?
+  toStatus       SessionScoreStatus
+  actorId        String?
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  score SessionScore @relation(fields: [sessionScoreId], references: [id], onDelete: Cascade)
+
+  @@index([sessionScoreId, createdAt])
+  @@map("score_events")
 }
