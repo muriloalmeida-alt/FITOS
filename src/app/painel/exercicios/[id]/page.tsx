@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { Button, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { difficultyLabel } from "@/shared/lib/difficulty";
+import { metricLabel } from "@/shared/lib/exerciseCatalog";
 import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { getCatalogExerciseForTenant, listCatalogFacets } from "@/modules/exercises/exercises";
 import { ExerciseDetailActions } from "./ExerciseDetailActions";
@@ -44,9 +45,11 @@ export default async function ExercicioPage({ params }: { params: Promise<{ id: 
     notFound();
   }
   const own = exercise.origin === "PERSONAL";
-  const facets = own ? await listCatalogFacets({ tenantId: ctx.tenantId }) : { muscles: [], types: [], difficulties: [] };
+  const facets = own ? await listCatalogFacets({ tenantId: ctx.tenantId }) : { muscles: [], types: [], difficulties: [], categories: [] };
   const steps = toSteps(exercise.instructions);
-  const tags = [exercise.muscle, exercise.equipments, exercise.type, difficultyLabel(exercise.difficulty)].filter((value): value is string => Boolean(value));
+  const secondaryMuscles = exercise.secondaryMuscles ?? [];
+  const aliases = exercise.aliases ?? [];
+  const tags = [...(exercise.categories ?? []), exercise.muscle, exercise.equipments, exercise.type, difficultyLabel(exercise.difficulty)].filter((value): value is string => Boolean(value));
 
   return (
     <div className={styles.page}>
@@ -73,6 +76,29 @@ export default async function ExercicioPage({ params }: { params: Promise<{ id: 
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {secondaryMuscles.length > 0 || exercise.metric || aliases.length > 0 ? (
+        <dl className={styles.facts}>
+          {secondaryMuscles.length > 0 ? (
+            <div>
+              <dt>Também trabalha</dt>
+              <dd>{secondaryMuscles.join(", ")}</dd>
+            </div>
+          ) : null}
+          {metricLabel(exercise.metric) ? (
+            <div>
+              <dt>Registro</dt>
+              <dd>{metricLabel(exercise.metric)}</dd>
+            </div>
+          ) : null}
+          {aliases.length > 0 ? (
+            <div>
+              <dt>Também chamado de</dt>
+              <dd>{aliases.join(", ")}</dd>
+            </div>
+          ) : null}
+        </dl>
       ) : null}
 
       <h2 className={styles.cap}>Como executar</h2>

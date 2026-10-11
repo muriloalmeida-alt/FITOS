@@ -63,6 +63,24 @@
   list-style: none;
 }
 
+.facts {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.facts dt {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+}
+
 .cap {
   margin: 26px 0 8px;
   font-size: 12px;
