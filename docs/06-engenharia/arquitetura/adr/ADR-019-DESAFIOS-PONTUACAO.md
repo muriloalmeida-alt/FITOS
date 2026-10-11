@@ -32,12 +32,23 @@ O PDF "3-Gamificacao" confirma as fórmulas (volume de musculação, +1 por 10% 
 5. **Trilha auditável** (`ScoreEvent`): calculado, liberado, estornado e recalculado, com status antes/depois. Excluir o treino leva a pontuação junto (cascata).
 6. **Tudo atrás de `FEATURE_GAMIFICACAO`.** Treinos anteriores à ligação não são pontuados retroativamente.
 
+## Metas e medalhas (etapa 3)
+
+- **Períodos:** semana de segunda a domingo e mês do calendário, em America/Sao_Paulo (`src/shared/lib/medals.ts`).
+- **Meta** = 10 × dias de treino previstos no período × exercícios por treino.
+  - **Dias:** os "meus dias" do aluno contados no período; sem dias definidos, 3 por semana.
+  - **Exercícios por treino:** a mediana dos treinos pontuados nos 28 dias antes do período; sem histórico, 5. Sem nada configurado, 150 por semana.
+- **Meta congelada** (`PeriodGoal`) na primeira vez que o período é lido. Mudar os dias depois não muda a meta do período.
+- **Medalha não é guardada.** Ela sai dos pontos oficiais (`LIBERADO`, `CONTESTADO`, `MANTIDO`) contra a meta congelada, então um estorno revisa a medalha sozinho e o resultado pode ser recalculado.
+  - **Faixas:** Bronze 50%, Prata 75%, Ouro 100%, Platina 110%.
+  - **Limiar:** arredondado para cima em pontos inteiros.
+  - **Uma medalha por período**, com upgrade. Badge não dá pontos.
+- **O diário pessoal soma todos os treinos liberados.** O limite de 3 treinos por semana é só do ranking.
+- **Tela `/painel/desafios`:** meta, medalha atual, "135/180 pontos · faltam 45 para Ouro", faixas e galeria (8 semanas e 6 meses encerrados, com pontos).
+
 ## Próximas etapas
 
-3. Metas e medalhas:
-   - meta = 10 × exercícios previstos, ou 150/semana sem plano;
-   - faixas: Bronze 50%, Prata 75%, Ouro 100%, Platina 110%;
-   - períodos: semana de segunda a domingo e mês do calendário, em America/Sao_Paulo.
+3. ~~Metas e medalhas~~ (acima).
 4. Ranking dos alunos: equilibrado, com os 3 melhores treinos por semana e no máximo 1 por dia.
 5. Amigos: grupos por convite, temporadas de 7, 14 ou 28 dias.
 6. Contestação:
