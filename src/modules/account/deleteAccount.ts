@@ -62,6 +62,7 @@ export async function eraseAccount(user: AccountToErase, client: PrismaClient = 
       await tx.workout.deleteMany({ where });
       await tx.trainingPlan.deleteMany({ where });
       await tx.exercise.deleteMany({ where });
+      await tx.adminBenefitAudit.deleteMany({ where });
       await tx.saasSubscription.deleteMany({ where });
       // O resto (alunos, avaliações, medidas, metas, convites, perfis,
       // auditoria) sai em cascata. As contas dos alunos ficam, sem vínculo.

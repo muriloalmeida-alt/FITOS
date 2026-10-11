@@ -22,4 +22,12 @@ describe("nextChargeDate (EPIC-34)", () => {
     expect(nextChargeDate({ ...base, plan: { ...plan, priceCents: 0 } }, new Date())).toBeNull();
     expect(nextChargeDate({ ...base, status: "CANCELADA" }, new Date())).toBeNull();
   });
+
+  it("gratuidade além do teste: a cobrança começa no fim dela e o ciclo segue dali", () => {
+    const freeUntil = new Date("2026-10-30T15:00:00Z");
+    expect(nextChargeDate(base, new Date("2026-10-05T03:00:00Z"), freeUntil)).toEqual(freeUntil);
+    expect(nextChargeDate(base, new Date("2026-11-05T03:00:00Z"), freeUntil)).toEqual(new Date("2026-11-30T15:00:00Z"));
+    // Gratuidade que termina antes do teste não muda nada.
+    expect(nextChargeDate(base, new Date("2026-09-01T00:00:00Z"), new Date("2026-09-05T00:00:00Z"))).toEqual(new Date("2026-09-14T12:00:00Z"));
+  });
 });

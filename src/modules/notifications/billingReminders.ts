@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { nextChargeDate } from "@/modules/billing/nextCharge";
+import { ACTIVE_GRANTS } from "@/modules/billing/accessGrants";
 import { sendToUser, type PushConfig, type PushPayload, type Sender } from "./push";
 import { localClock } from "./reminders";
 
@@ -53,13 +54,14 @@ export async function runDueReminders(options: { now?: Date; client?: PrismaClie
 
   const subscriptions = await client.saasSubscription.findMany({
     where: { status: "ATIVA", plan: { priceCents: { gt: 0 } }, tenant: { owner: { pushSubscriptions: { some: {} } } } },
-    include: { plan: true, tenant: { select: { ownerId: true } } },
+    include: { plan: true, tenant: { select: { ownerId: true } }, accessGrants: ACTIVE_GRANTS },
     take: 2000,
   });
 
   let sent = 0;
   for (const subscription of subscriptions) {
-    const due = nextChargeDate(subscription, clock.dayStart);
+    const freeUntil = subscription.accessGrants.reduce<Date | null>((end, grant) => (!end || grant.endsAt > end ? grant.endsAt : end), null);
+    const due = nextChargeDate(subscription, clock.dayStart, freeUntil);
     if (!due) continue;
     const dueOn = localClock(due).dateKey;
     const daysLeft = dayNumber(dueOn) - today;

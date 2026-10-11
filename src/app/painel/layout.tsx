@@ -3,6 +3,7 @@ import { getServerSession } from "@/modules/identity/session";
 import { AccountNameProvider } from "@/shared/ui/AccountContext";
 import { prisma } from "@/shared/db/prisma";
 import { subscriptionAccess } from "@/modules/billing/access";
+import { ACTIVE_GRANTS } from "@/modules/billing/accessGrants";
 import { RememberAccount } from "./RememberAccount";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { unreadTopicsCount } from "@/modules/messages/messages";
@@ -13,7 +14,8 @@ import { NewVersionBanner } from "../_version/NewVersionBanner";
 /// decisão de autenticação/papel acontece aqui — cada página continua
 /// validando a sessão e o papel no servidor, exatamente como antes.
 /// EPIC-38: para o dono do espaço (personal ou Livre) com o teste grátis
-/// encerrado sem cartão, a faixa de carência ou o bloqueio. Aviso de
+/// encerrado sem cartão (e sem gratuidade do administrador em vigor), a
+/// faixa de carência ou o bloqueio. Aviso de
 /// versão nova do app em todas as telas do painel.
 export default async function PainelLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession();
@@ -21,9 +23,9 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   const role = user?.role === "ALUNO" || user?.role === "INDIVIDUAL" || user?.role === "ADMIN" ? user.role : "PERSONAL";
   const tenant =
     session && (role === "PERSONAL" || role === "INDIVIDUAL")
-      ? await prisma.tenant.findUnique({ where: { ownerId: session.user.id }, select: { saasSubscription: { include: { plan: { select: { priceCents: true } } } } } })
+      ? await prisma.tenant.findUnique({ where: { ownerId: session.user.id }, select: { saasSubscription: { include: { plan: { select: { priceCents: true } }, accessGrants: ACTIVE_GRANTS } } } })
       : null;
-  const access = subscriptionAccess(tenant?.saasSubscription ?? null, new Date());
+  const access = subscriptionAccess(tenant?.saasSubscription ?? null, new Date(), tenant?.saasSubscription?.accessGrants ?? []);
   // EPIC-39: ponto de "não lidas" no item Mensagens.
   const unreadMessages = await unreadForSession(session?.user.id ?? null, role);
   const content =

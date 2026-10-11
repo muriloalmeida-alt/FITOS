@@ -365,7 +365,7 @@ model Tenant {
   /// Código de indicação do personal para outros personais (EPIC-47).
   referralCode          String?    @unique
 
-  owner                    User                      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  owner                    User                        @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   students                 Student[]
   exercises                Exercise[]
   trainingPlans            TrainingPlan[]
@@ -381,6 +381,7 @@ model Tenant {
   payments                 Payment[]
   chargeRecurrences        ChargeRecurrence[]
   saasSubscription         SaasSubscription?
+  accessGrants             AdministrativeAccessGrant[]
   auditEvents              AuditEvent[]
   invitations              Invitation[]
   individualProfile        IndividualProfile?
@@ -393,8 +394,8 @@ model Tenant {
   chatAttachments          ChatAttachment[]
   healthForms              HealthForm[]
   subscriptionDueReminders SubscriptionDueReminder[]
-  referralsMade            PersonalReferral[]        @relation("ReferralReferrer")
-  referralReceived         PersonalReferral?         @relation("ReferralReferred")
+  referralsMade            PersonalReferral[]          @relation("ReferralReferrer")
+  referralReceived         PersonalReferral?           @relation("ReferralReferred")
   scheduleSlots            ScheduleSlot[]
   scheduleEvents           ScheduleEvent[]
 
@@ -1286,8 +1287,65 @@ model SaasSubscription {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
 
+  accessGrants AdministrativeAccessGrant[]
+
   @@index([planId])
   @@map("saas_subscriptions")
+}
+
+/// Renovação de gratuidade (feature 4): o administrador concede dias de
+/// acesso gratuito a um personal ou FitOS Livre. Benefício separado do
+/// teste inicial: `trialEndsAt`/`trialUsedAt` nunca mudam. `endsAt` é
+/// exclusivo; vencer é derivado da data (sem job). SYNCING/FAILED ficam
+/// para o ajuste da cobrança no Asaas; só ACTIVE libera acesso.
+enum AccessGrantState {
+  ACTIVE
+  SYNCING
+  FAILED
+  REVOKED
+}
+
+model AdministrativeAccessGrant {
+  id             String           @id @default(cuid())
+  tenantId       String
+  subscriptionId String
+  /// Administrador que concedeu (sem FK: o histórico fica mesmo se a conta sair).
+  actorAdminId   String
+  days           Int
+  startsAt       DateTime
+  endsAt         DateTime
+  reasonCode     String
+  reasonText     String?
+  state          AccessGrantState @default(ACTIVE)
+  /// Chave idempotente do formulário: repetir o envio não soma dias.
+  operationKey   String           @unique
+  revokedAt      DateTime?
+  revokedById    String?
+  revokeReason   String?
+  createdAt      DateTime         @default(now())
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription SaasSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, state, endsAt])
+  @@index([subscriptionId])
+  @@map("administrative_access_grants")
+}
+
+/// Trilha de auditoria das ações de benefício do administrador.
+model AdminBenefitAudit {
+  id         String   @id @default(cuid())
+  actorId    String
+  tenantId   String
+  grantId    String
+  operation  String
+  before     Json?
+  after      Json?
+  reason     String
+  occurredAt DateTime @default(now())
+
+  @@index([tenantId, occurredAt])
+  @@map("admin_benefit_audits")
 }
 
 /// Evento de auditoria de alteração crítica. Nunca deve registrar senha,

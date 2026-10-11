@@ -6,7 +6,7 @@ export function adminErrorResponse(error: unknown): Response {
   const auth = authErrorResponse(error);
   if (auth) return auth;
   if (error instanceof AdminError) {
-    const status = error.kind === "NAO_ENCONTRADO" ? 404 : error.kind === "PROIBIDO" ? 403 : 400;
+    const status = error.kind === "NAO_ENCONTRADO" ? 404 : error.kind === "PROIBIDO" ? 403 : error.kind === "CONFLITO" ? 409 : 400;
     return Response.json({ error: error.kind, message: error.message }, { status });
   }
   throw error;

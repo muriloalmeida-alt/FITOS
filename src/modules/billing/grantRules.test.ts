@@ -1,0 +1,57 @@
+import { describe, expect, it } from "vitest";
+import { freeAccessUntil, grantEligibility, grantWindow, lastIncludedDay, validateGrantInput } from "./grantRules";
+
+const d = (iso: string) => new Date(iso);
+const now = d("2026-10-07T15:00:00Z");
+
+describe("janela da gratuidade (PDF 4, exemplos da seção 4.1)", () => {
+  it("teste até 20/10 + 30 dias: começa no fim do teste", () => {
+    const window = grantWindow(d("2026-10-20T15:00:00Z"), [], 30, now);
+    expect(window).toEqual({ startsAt: d("2026-10-20T15:00:00Z"), endsAt: d("2026-11-19T15:00:00Z") });
+    expect(lastIncludedDay(window.endsAt)).toBe("2026-11-19");
+  });
+
+  it("teste vencido e bloqueado: começa agora", () => {
+    expect(grantWindow(d("2026-09-01T15:00:00Z"), [], 15, now)).toEqual({ startsAt: now, endsAt: d("2026-10-22T15:00:00Z") });
+  });
+
+  it("benefício até 19/11 + 15 dias: estende até 04/12, sem somar dias sobrepostos", () => {
+    const previous = { startsAt: d("2026-10-20T15:00:00Z"), endsAt: d("2026-11-19T15:00:00Z") };
+    expect(grantWindow(null, [previous], 15, now).endsAt).toEqual(d("2026-12-04T15:00:00Z"));
+    expect(freeAccessUntil(d("2026-10-20T15:00:00Z"), [previous], now)).toEqual(previous.endsAt);
+  });
+
+  it("benefício já encerrado não empurra a base", () => {
+    expect(grantWindow(null, [{ startsAt: d("2026-08-01T00:00:00Z"), endsAt: d("2026-09-01T00:00:00Z") }], 7, now).startsAt).toEqual(now);
+  });
+
+  it("fim exclusivo à meia-noite local: o último dia é o anterior; virada de ano", () => {
+    expect(lastIncludedDay(d("2027-01-01T03:00:00Z"))).toBe("2026-12-31");
+    expect(lastIncludedDay(d("2027-01-01T03:00:01Z"))).toBe("2027-01-01");
+    expect(grantWindow(null, [], 60, d("2026-12-15T12:00:00Z")).endsAt).toEqual(d("2027-02-13T12:00:00Z"));
+  });
+});
+
+describe("validação e elegibilidade", () => {
+  it("dias de 1 a 365, motivo da lista, texto obrigatório só em Outro", () => {
+    expect(validateGrantInput({ days: 30, reasonCode: "SUPORTE", reasonText: "" })).toBeNull();
+    expect(validateGrantInput({ days: 0, reasonCode: "SUPORTE", reasonText: "" })).toMatch(/1 a 365/);
+    expect(validateGrantInput({ days: 366, reasonCode: "SUPORTE", reasonText: "" })).toMatch(/1 a 365/);
+    expect(validateGrantInput({ days: 1.5, reasonCode: "SUPORTE", reasonText: "" })).toMatch(/1 a 365/);
+    expect(validateGrantInput({ days: 7, reasonCode: "toString", reasonText: "" })).toBe("Escolha o motivo.");
+    expect(validateGrantInput({ days: 7, reasonCode: "OUTRO", reasonText: "  " })).toBe("Descreva o motivo.");
+    expect(validateGrantInput({ days: 7, reasonCode: "OUTRO", reasonText: "x".repeat(301) })).toMatch(/300/);
+  });
+
+  it("só personal/Livre com plano pago e sem cobrança no Asaas", () => {
+    const paid = { externalSubscriptionId: null, creditCardLast4: null, plan: { priceCents: 4990 } };
+    expect(grantEligibility("PERSONAL", paid, true)).toEqual({ ok: true });
+    expect(grantEligibility("INDIVIDUAL", paid, true)).toEqual({ ok: true });
+    expect(grantEligibility("ALUNO", paid, true)).toMatchObject({ ok: false, kind: "SEM_ESPACO" });
+    expect(grantEligibility("ADMIN", paid, true)).toMatchObject({ ok: false, kind: "SEM_ESPACO" });
+    expect(grantEligibility("PERSONAL", null, true)).toMatchObject({ ok: false, kind: "SEM_ASSINATURA" });
+    expect(grantEligibility("PERSONAL", { ...paid, plan: { priceCents: 0 } }, true)).toMatchObject({ ok: false, kind: "PLANO_GRATUITO" });
+    expect(grantEligibility("PERSONAL", { ...paid, externalSubscriptionId: "sub_1" }, true)).toMatchObject({ ok: false, kind: "COBRANCA_EXTERNA" });
+    expect(grantEligibility("PERSONAL", { ...paid, creditCardLast4: "4242" }, true)).toMatchObject({ ok: false, kind: "COBRANCA_EXTERNA" });
+  });
+});
