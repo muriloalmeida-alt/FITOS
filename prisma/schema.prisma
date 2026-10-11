@@ -399,6 +399,7 @@ model Tenant {
   referralReceived         PersonalReferral?           @relation("ReferralReferred")
   scheduleSlots            ScheduleSlot[]
   scheduleEvents           ScheduleEvent[]
+  workoutSessionRevisions  WorkoutSessionRevision[]
 
   @@map("tenants")
 }
@@ -640,18 +641,18 @@ model Invitation {
 /// `null` (múltiplas linhas com `externalId` nulo não colidem no índice
 /// único, pois o PostgreSQL trata cada `NULL` como distinto).
 model Exercise {
-  id           String         @id @default(cuid())
-  tenantId     String?
-  name         String
-  origin       ExerciseOrigin
-  status       ExerciseStatus @default(ATIVO)
-  externalId   String?
-  type         String?
-  muscle       String?
-  equipments   String?
-  difficulty   String?
-  instructions String?
-  safetyInfo   String?
+  id               String         @id @default(cuid())
+  tenantId         String?
+  name             String
+  origin           ExerciseOrigin
+  status           ExerciseStatus @default(ATIVO)
+  externalId       String?
+  type             String?
+  muscle           String?
+  equipments       String?
+  difficulty       String?
+  instructions     String?
+  safetyInfo       String?
   /// FIT-111: URL pública HTTPS da ilustração do exercício. Migrado para
   /// Cloudflare R2 (storage compatível com S3) — nunca uma URL assinada,
   /// nunca um caminho interno exposto (a regra de assets do pacote proíbe
@@ -664,21 +665,21 @@ model Exercise {
   /// `next/image` (a local não passa por `remotePatterns`, a do R2 passa).
   /// `imageAlt` é texto funcional do movimento (não o nome do arquivo
   /// original), escrito pelo manifesto de importação.
-  imageUrl     String?
-  imageAlt     String?
+  imageUrl         String?
+  imageAlt         String?
   /// Funcional e CrossFit (feature 1): categorias do catálogo ("Funcional",
   /// "CrossFit"), músculos secundários (o filtro por músculo também os
   /// considera), nomes alternativos (inglês, siglas) e a métrica de registro
   /// (`shared/lib/exerciseCatalog.ts`).
-  categories       String[] @default([])
-  secondaryMuscles String[] @default([])
-  aliases          String[] @default([])
+  categories       String[]       @default([])
+  secondaryMuscles String[]       @default([])
+  aliases          String[]       @default([])
   metric           String?
   /// Nome, aliases e músculos em minúsculas e sem acento, para a busca
   /// ignorar acento e caixa (`exerciseSearchText`).
   searchText       String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   tenant           Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutExercises WorkoutExercise[]
@@ -1785,7 +1786,7 @@ model ScoreEvent {
 /// medalha não é guardada: sai dos pontos oficiais contra esta meta, então
 /// um estorno revisa a medalha sozinho.
 model PeriodGoal {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   tenantId        String
   studentId       String
   /// SEMANA ou MES.
@@ -1797,7 +1798,12 @@ model PeriodGoal {
   goalTenths      Int
   plannedDays     Int
   itemsPerWorkout Int
-  createdAt       DateTime @default(now())
+  /// Resultado congelado do período encerrado (feature 2, parte 2): pontos
+  /// oficiais liberados até o fechamento. Editar ou excluir um treino
+  /// depois não muda medalha já consolidada.
+  finalTenths     Int?
+  finalizedAt     DateTime?
+  createdAt       DateTime  @default(now())
 
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
@@ -1834,4 +1840,28 @@ model ClassRankingParticipant {
 
   @@index([tenantId])
   @@map("class_ranking_participants")
+}
+
+/// Treino retroativo (feature 2, parte 2): trilha da versão anterior de um
+/// treino editado ou excluído pelo próprio praticante. Sem chave para a
+/// sessão, de propósito: a trilha sobrevive à exclusão.
+model WorkoutSessionRevision {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  studentId          String
+  sessionId          String
+  actorUserId        String
+  /// EDITADO ou EXCLUIDO.
+  action             String
+  /// Data, duração, exercícios e séries antes da mudança.
+  snapshot           Json
+  pointsTenthsBefore Int?
+  pointsStatusBefore String?
+  pointsTenthsAfter  Int?
+  createdAt          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, sessionId])
+  @@map("workout_session_revisions")
 }

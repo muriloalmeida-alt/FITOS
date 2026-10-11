@@ -4,9 +4,10 @@ import { prisma } from "@/shared/db/prisma";
 import { ensureDraftTrainingPlanForTenant } from "@/modules/workouts/workouts";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
 import { isCardioType } from "@/shared/lib/cardio";
-import { validatePerformedAt } from "@/shared/lib/retroactive";
+import { RETRO_MAX_DAYS, validatePerformedAt } from "@/shared/lib/retroactive";
+import { recordRevision, sessionSnapshot } from "./sessionRevisions";
 import { SessionError } from "./sessions";
-import { scoreSessionSafely } from "@/modules/gamification/sessionScoring";
+import { rescoreSessionSafely, scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { MAX_DURATION_SECONDS, MAX_LOAD_KG, MAX_REPS, MAX_SET_NUMBER, syncAggregate } from "./sets";
 
 /// Treino retroativo (feature 2, ADR-018): "Registrar treino realizado".
@@ -22,6 +23,8 @@ const MAX_EXERCISES = 30;
 const DAY_SECONDS = 86_400;
 /// Treino concluído perto do mesmo horário: avisa, sem bloquear.
 const DUPLICATE_WINDOW_MS = 30 * 60_000;
+/// Editar vale no mesmo prazo do registro.
+export const RETRO_EDIT_DAYS = RETRO_MAX_DAYS;
 
 export interface RetroSetInput {
   reps?: number | null;
@@ -63,34 +66,25 @@ function loadGrams(value: unknown): number | null {
   return Math.round(value * 1000);
 }
 
-export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, client: PrismaClient = prisma): Promise<RetroactiveResult> {
-  const now = input.now ?? new Date();
-  if (!/^[A-Za-z0-9-]{8,64}$/.test(input.operationKey)) throw new SessionError("VALIDACAO", "Operação inválida.");
+type ParsedItem = { exerciseId: string; cardio: boolean; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] };
 
-  const replay = async (): Promise<RetroactiveResult | null> => {
-    const existing = await client.workoutSession.findUnique({ where: { operationKey: input.operationKey }, select: { id: true, tenantId: true, studentId: true } });
-    if (!existing) return null;
-    if (existing.tenantId !== input.tenantId || existing.studentId !== input.studentId) throw new SessionError("VALIDACAO", "Operação inválida.");
-    return { sessionId: existing.id, replayed: true, possibleDuplicate: false };
-  };
-  const previous = await replay();
-  if (previous) return previous;
-
-  const dateError = validatePerformedAt(input.performedAt, now);
-  if (dateError) throw new SessionError("VALIDACAO", dateError);
-  if (!Number.isInteger(input.durationSeconds) || input.durationSeconds <= 0 || input.durationSeconds > DAY_SECONDS) {
+function validateDuration(durationSeconds: number) {
+  if (!Number.isInteger(durationSeconds) || durationSeconds <= 0 || durationSeconds > DAY_SECONDS) {
     throw new SessionError("VALIDACAO", "Informe quanto tempo durou o treino.");
   }
-  if (input.exercises.length === 0) throw new SessionError("VALIDACAO", "Adicione pelo menos um exercício.");
-  if (input.exercises.length > MAX_EXERCISES) throw new SessionError("VALIDACAO", `No máximo ${MAX_EXERCISES} exercícios por treino.`);
-  if (new Set(input.exercises.map((exercise) => exercise.exerciseId)).size !== input.exercises.length) {
+}
+
+/// Exercícios do catálogo visível e séries coerentes com o tipo.
+async function parseItems(tenantId: string, exercises: RetroExerciseInput[], client: PrismaClient): Promise<ParsedItem[]> {
+  if (exercises.length === 0) throw new SessionError("VALIDACAO", "Adicione pelo menos um exercício.");
+  if (exercises.length > MAX_EXERCISES) throw new SessionError("VALIDACAO", `No máximo ${MAX_EXERCISES} exercícios por treino.`);
+  if (new Set(exercises.map((exercise) => exercise.exerciseId)).size !== exercises.length) {
     throw new SessionError("VALIDACAO", "O mesmo exercício apareceu duas vezes. Junte as séries num só.");
   }
 
-  // Exercícios do catálogo visível e séries coerentes com o tipo.
-  const items: { exerciseId: string; cardio: boolean; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] }[] = [];
-  for (const exercise of input.exercises) {
-    const found = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: exercise.exerciseId }, client);
+  const items: ParsedItem[] = [];
+  for (const exercise of exercises) {
+    const found = await getCatalogExerciseForTenant({ tenantId, exerciseId: exercise.exerciseId }, client);
     if (!found || found.status !== "ATIVO") throw new SessionError("NAO_ENCONTRADO", "Exercício não encontrado no catálogo.");
     if (exercise.sets.length === 0) throw new SessionError("VALIDACAO", `Informe pelo menos uma série de ${found.name}.`);
     if (exercise.sets.length > MAX_SET_NUMBER) throw new SessionError("VALIDACAO", "Séries demais.");
@@ -108,6 +102,58 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
     });
     items.push({ exerciseId: found.id, cardio, sets });
   }
+  return items;
+}
+
+/// Grava os exercícios e as séries do registro (criação e edição).
+async function writeItems(tx: Prisma.TransactionClient, at: { tenantId: string; workoutId: string; sessionId: string; performedAt: Date }, items: ParsedItem[]) {
+  for (const [position, item] of items.entries()) {
+    const topReps = Math.max(0, ...item.sets.map((set) => set.reps ?? 0));
+    const created = await tx.workoutExercise.create({
+      data: {
+        tenantId: at.tenantId,
+        workoutId: at.workoutId,
+        exerciseId: item.exerciseId,
+        position,
+        sets: item.sets.length,
+        ...(item.cardio ? { durationSeconds: Math.max(...item.sets.map((set) => set.durationSeconds ?? 0)) } : topReps > 0 ? { reps: topReps } : {}),
+      },
+    });
+    await tx.workoutSetResult.createMany({
+      data: item.sets.map((set, index) => ({
+        tenantId: at.tenantId,
+        workoutSessionId: at.sessionId,
+        workoutExerciseId: created.id,
+        setNumber: index + 1,
+        reps: set.reps,
+        loadGrams: set.loadGrams,
+        durationSeconds: set.durationSeconds,
+        completedAt: at.performedAt,
+      })),
+    });
+    await syncAggregate({ tenantId: at.tenantId, sessionId: at.sessionId, workoutExerciseId: created.id }, tx);
+  }
+  // Recordes e "última vez" datam pelo dia do treino, não do registro.
+  await tx.workoutSessionResult.updateMany({ where: { workoutSessionId: at.sessionId, tenantId: at.tenantId }, data: { recordedAt: at.performedAt } });
+}
+
+export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, client: PrismaClient = prisma): Promise<RetroactiveResult> {
+  const now = input.now ?? new Date();
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(input.operationKey)) throw new SessionError("VALIDACAO", "Operação inválida.");
+
+  const replay = async (): Promise<RetroactiveResult | null> => {
+    const existing = await client.workoutSession.findUnique({ where: { operationKey: input.operationKey }, select: { id: true, tenantId: true, studentId: true } });
+    if (!existing) return null;
+    if (existing.tenantId !== input.tenantId || existing.studentId !== input.studentId) throw new SessionError("VALIDACAO", "Operação inválida.");
+    return { sessionId: existing.id, replayed: true, possibleDuplicate: false };
+  };
+  const previous = await replay();
+  if (previous) return previous;
+
+  const dateError = validatePerformedAt(input.performedAt, now);
+  if (dateError) throw new SessionError("VALIDACAO", dateError);
+  validateDuration(input.durationSeconds);
+  const items = await parseItems(input.tenantId, input.exercises, client);
 
   const plan = await ensureDraftTrainingPlanForTenant(input.tenantId, client);
   const performedAt = input.performedAt;
@@ -134,34 +180,7 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
           operationKey: input.operationKey,
         },
       });
-      for (const [position, item] of items.entries()) {
-        const topReps = Math.max(0, ...item.sets.map((set) => set.reps ?? 0));
-        const created = await tx.workoutExercise.create({
-          data: {
-            tenantId: input.tenantId,
-            workoutId: workout.id,
-            exerciseId: item.exerciseId,
-            position,
-            sets: item.sets.length,
-            ...(item.cardio ? { durationSeconds: Math.max(...item.sets.map((set) => set.durationSeconds ?? 0)) } : topReps > 0 ? { reps: topReps } : {}),
-          },
-        });
-        await tx.workoutSetResult.createMany({
-          data: item.sets.map((set, index) => ({
-            tenantId: input.tenantId,
-            workoutSessionId: session.id,
-            workoutExerciseId: created.id,
-            setNumber: index + 1,
-            reps: set.reps,
-            loadGrams: set.loadGrams,
-            durationSeconds: set.durationSeconds,
-            completedAt: performedAt,
-          })),
-        });
-        await syncAggregate({ tenantId: input.tenantId, sessionId: session.id, workoutExerciseId: created.id }, tx);
-      }
-      // Recordes e "última vez" datam pelo dia do treino, não do registro.
-      await tx.workoutSessionResult.updateMany({ where: { workoutSessionId: session.id, tenantId: input.tenantId }, data: { recordedAt: performedAt } });
+      await writeItems(tx, { tenantId: input.tenantId, workoutId: workout.id, sessionId: session.id, performedAt }, items);
       return session.id;
     });
   } catch (error) {
@@ -185,4 +204,60 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
     },
   });
   return { sessionId, replayed: false, possibleDuplicate: near > 0 };
+}
+
+export interface UpdateRetroactiveInput {
+  tenantId: string;
+  studentId: string;
+  actorUserId: string;
+  sessionId: string;
+  performedAt: Date;
+  durationSeconds: number;
+  exercises: RetroExerciseInput[];
+  now?: Date;
+}
+
+/// O registro ainda pode ser editado: retroativo concluído cuja data de
+/// realização está dentro do prazo de registro (7 dias).
+export function retroEditable(session: { mode: string; status: string; performedAt: Date | null; startedAt: Date }, now = new Date()): boolean {
+  return session.mode === "RETROATIVO" && session.status === "CONCLUIDA" && validatePerformedAt(session.performedAt ?? session.startedAt, now) === null;
+}
+
+/// Edita um treino registrado (data, duração, exercícios e séries) dentro
+/// do prazo. A versão anterior fica na trilha (`WorkoutSessionRevision`) e
+/// a pontuação é recalculada pela diferença (evento RECALCULADO), uma vez.
+/// Período já encerrado mantém o resultado congelado (`PeriodGoal`).
+export async function updateRetroactiveWorkout(input: UpdateRetroactiveInput, client: PrismaClient = prisma): Promise<{ sessionId: string }> {
+  const now = input.now ?? new Date();
+  const session = await client.workoutSession.findFirst({ where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId } });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Treino não encontrado.");
+  if (session.mode !== "RETROATIVO" || session.status !== "CONCLUIDA") throw new SessionError("ESTADO_INVALIDO", "Só um treino registrado pode ser editado.");
+  if (!retroEditable(session, now)) throw new SessionError("ESTADO_INVALIDO", `O prazo para editar este registro acabou (${RETRO_EDIT_DAYS} dias depois do treino).`);
+  const dateError = validatePerformedAt(input.performedAt, now);
+  if (dateError) throw new SessionError("VALIDACAO", dateError);
+  validateDuration(input.durationSeconds);
+  const items = await parseItems(input.tenantId, input.exercises, client);
+
+  const performedAt = input.performedAt;
+  const score = await client.sessionScore.findUnique({ where: { sessionId: session.id }, select: { totalTenths: true, status: true } });
+  const revision = await client.$transaction(async (tx) => {
+    const snapshot = await sessionSnapshot(tx, session);
+    const created = await recordRevision(tx, { tenantId: input.tenantId, studentId: input.studentId, sessionId: session.id, actorUserId: input.actorUserId, action: "EDITADO", snapshot, score });
+    // Séries e resultados primeiro (apontam para os exercícios do treino).
+    await tx.workoutSetResult.deleteMany({ where: { workoutSessionId: session.id, tenantId: input.tenantId } });
+    await tx.workoutSessionResult.deleteMany({ where: { workoutSessionId: session.id, tenantId: input.tenantId } });
+    await tx.workoutExercise.deleteMany({ where: { workoutId: session.workoutId, tenantId: input.tenantId } });
+    await tx.workoutSession.update({
+      where: { id: session.id },
+      data: { performedAt, startedAt: performedAt, endedAt: new Date(performedAt.getTime() + input.durationSeconds * 1000), declaredDurationSeconds: input.durationSeconds },
+    });
+    await writeItems(tx, { tenantId: input.tenantId, workoutId: session.workoutId, sessionId: session.id, performedAt }, items);
+    return created;
+  });
+
+  // Desafios: recalcula (e libera, se já há foto no prazo) sem impedir a edição.
+  await rescoreSessionSafely(session.id, client, now);
+  const after = await client.sessionScore.findUnique({ where: { sessionId: session.id }, select: { totalTenths: true } });
+  if (after) await client.workoutSessionRevision.update({ where: { id: revision.id }, data: { pointsTenthsAfter: after.totalTenths } });
+  return { sessionId: session.id };
 }

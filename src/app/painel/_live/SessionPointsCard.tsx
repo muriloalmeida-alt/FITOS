@@ -11,6 +11,7 @@ interface Points {
   status: "PENDENTE_FOTO" | "LIBERADO" | "CONTESTADO" | "MANTIDO" | "ANULADO";
   photoDeadline: string;
   items: { exerciseId: string; name: string; pointsTenths: number; source: string }[];
+  countsIn?: { week: boolean; month: boolean };
 }
 
 const deadlineFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
@@ -63,6 +64,9 @@ export function SessionPointsCard({ sessionId }: { sessionId: string }) {
   if (!points) return null;
   const pending = points.status === "PENDENTE_FOTO";
   const expired = pending && new Date(points.photoDeadline) < new Date();
+  // Treino registrado depois que o desafio fechou: fica no histórico, sem mudar o resultado.
+  const closed = points.countsIn ? !points.countsIn.week && !points.countsIn.month : false;
+  const weekClosed = points.countsIn ? !points.countsIn.week && points.countsIn.month : false;
 
   return (
     <section className={styles.card} aria-label="Pontos do treino">
@@ -70,6 +74,8 @@ export function SessionPointsCard({ sessionId }: { sessionId: string }) {
       <p className={styles.total}>
         <strong>{formatPoints(points.totalTenths)}</strong> pontos
       </p>
+      {closed ? <p className={styles.status}>Treino salvo no histórico. Este desafio já foi encerrado.</p> : null}
+      {weekClosed ? <p className={styles.status}>A semana deste treino já foi encerrada: os pontos contam no mês.</p> : null}
       <p className={styles.status}>
         {points.status === "LIBERADO" || points.status === "MANTIDO"
           ? "✓ Pontos liberados"
@@ -81,7 +87,7 @@ export function SessionPointsCard({ sessionId }: { sessionId: string }) {
                 ? "Prazo da foto encerrado: o treino fica no histórico, sem pontos."
                 : `Adicione uma foto até ${deadlineFmt.format(new Date(points.photoDeadline))} para receber os pontos.`}
       </p>
-      {pending && !expired ? (
+      {pending && !expired && !closed ? (
         <>
           <input ref={input} type="file" accept="image/*" className={styles.hidden} aria-label="Foto do treino" onChange={(event) => void sendPhoto(event.target.files?.[0])} />
           <button type="button" className={styles.photo} onClick={() => input.current?.click()} disabled={busy}>
