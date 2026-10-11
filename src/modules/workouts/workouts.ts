@@ -100,7 +100,17 @@ export async function ensureDraftTrainingPlanForTenant(tenantId: string, client:
   if (existing) {
     return existing;
   }
-  return client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  try {
+    return await client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  } catch (error) {
+    // Dois pedidos ao mesmo tempo (ex.: duplo clique no registro
+    // retroativo): o outro criou o rascunho primeiro, vale o dele.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const created = await client.trainingPlan.findFirst({ where: { tenantId, isDraftBucket: true } });
+      if (created) return created;
+    }
+    throw error;
+  }
 }
 
 export interface CreateWorkoutInput {
