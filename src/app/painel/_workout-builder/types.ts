@@ -51,6 +51,8 @@ export interface LibraryExercise {
   muscle: string | null;
   imageUrl: string | null;
   imageAlt: string | null;
+  /// Tipo do catálogo, quando a tela precisa ("Aeróbico" = por tempo).
+  type?: string | null;
 }
 
 export interface EditorItem {

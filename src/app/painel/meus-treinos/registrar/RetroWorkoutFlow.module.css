@@ -1,0 +1,276 @@
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 560px;
+}
+
+.eyebrow {
+  margin: 4px 0 0;
+  color: var(--fitos-orange-300);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.title {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ok {
+  margin: 0;
+  color: var(--fitos-color-success);
+  font-weight: 800;
+}
+
+.when {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field input,
+.sets input,
+.duration input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 16px;
+  font-weight: 700;
+  color-scheme: dark;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.item h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.sets {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+.sets th {
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.sets td:first-child {
+  width: 44px;
+  font-weight: 800;
+}
+
+.sets input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.sets td:last-child {
+  width: 44px;
+  text-align: right;
+}
+
+.remove {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--fitos-color-text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.link {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.duration {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 16px;
+  border-radius: 22px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.duration label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.duration input {
+  width: 96px;
+  min-height: 72px;
+  font-size: 44px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.colon {
+  color: var(--fitos-orange-300);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 72px;
+}
+
+.photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 220px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  border-radius: 22px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  cursor: pointer;
+}
+
+.photo span {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.photo img {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.card span {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.card strong {
+  font-size: 22px;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary span {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 18px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primaryLink {
+  background-color: var(--fitos-orange-500, #ff7847);
+  color: #0b0f14;
+}
+
+.secondaryLink {
+  color: var(--fitos-orange-300);
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.link:focus-visible,
+.remove:focus-visible,
+.photo:focus-visible,
+.primaryLink:focus-visible,
+.secondaryLink:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.points strong {
+  color: var(--fitos-orange-300);
+  font-size: 34px;
+  font-weight: 800;
+}
