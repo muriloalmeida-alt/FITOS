@@ -1,6 +1,7 @@
 import "server-only";
 import { listCatalogExercisesForPicker } from "@/modules/exercises/exercises";
 import { getWorkoutForTenant, listTrainingPlanSummariesForTenant, listWorkoutExercisesForWorkout } from "@/modules/workouts/workouts";
+import { readBlocks } from "@/shared/lib/workoutBlocks";
 import type { EditorWorkout, LibraryExercise, ProgramOption } from "./types";
 
 /// Dados do editor de treino (FIT-146): biblioteca visível ao tenant e,
@@ -25,6 +26,7 @@ export async function loadEditorWorkout(tenantId: string, workoutId: string): Pr
     name: workout.name,
     suggestedDays: workout.suggestedDays,
     status: workout.status,
+    blocks: readBlocks(workout.blocks),
     items: items.map((item) => ({
       id: item.id,
       exerciseId: item.exerciseId,
@@ -39,6 +41,9 @@ export async function loadEditorWorkout(tenantId: string, workoutId: string): Pr
       restSeconds: item.restSeconds,
       notes: item.notes,
       intensity: item.intensity,
+      blockKey: item.blockKey,
+      targetDistanceMeters: item.targetDistanceMeters,
+      targetCalories: item.targetCalories,
     })),
   };
 }

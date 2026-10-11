@@ -15,6 +15,8 @@ interface PersonalWorkoutEditorProps {
   /// Programa que pediu este treino ("Montar um treino novo" na semana).
   returnToProgramId?: string | null;
   prescription?: { sets: number; reps: number; restSeconds: number };
+  /// Funcional e CrossFit (`FEATURE_FUNCIONAL`).
+  blocksEnabled?: boolean;
 }
 
 async function addToProgram(programId: string, workoutId: string) {
@@ -26,7 +28,7 @@ async function addToProgram(programId: string, workoutId: string) {
 
 /// Editor de treino do Personal (FIT-146). "Pronto" pergunta o próximo
 /// passo: colocar num programa (existente ou novo) ou voltar aos treinos.
-export function PersonalWorkoutEditor({ initial, library, programs, returnToProgramId, prescription }: PersonalWorkoutEditorProps) {
+export function PersonalWorkoutEditor({ initial, library, programs, returnToProgramId, prescription, blocksEnabled = false }: PersonalWorkoutEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const [choosing, setChoosing] = useState(false);
@@ -63,6 +65,7 @@ export function PersonalWorkoutEditor({ initial, library, programs, returnToProg
 
   return (
     <WorkoutEditor
+      blocksEnabled={blocksEnabled}
       api={PERSONAL_WORKOUT_API}
       initial={initial}
       library={library}

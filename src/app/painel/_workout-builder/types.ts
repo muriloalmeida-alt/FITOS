@@ -1,3 +1,4 @@
+import type { WorkoutBlock } from "@/shared/lib/workoutBlocks";
 import type { CardioIntensity } from "@/shared/lib/cardio";
 
 /// Endpoints do editor de treino. O mesmo editor serve o Personal
@@ -74,6 +75,10 @@ export interface EditorItem {
   notes: string | null;
   /// Aeróbico (EPIC-28): tempo em `durationSeconds`, sem séries.
   intensity: CardioIntensity | null;
+  /// Funcional e CrossFit: bloco do treino e metas por métrica.
+  blockKey?: string | null;
+  targetDistanceMeters?: number | null;
+  targetCalories?: number | null;
 }
 
 export interface EditorWorkout {
@@ -82,6 +87,8 @@ export interface EditorWorkout {
   suggestedDays: string[];
   status: "ATIVO" | "ARQUIVADO";
   items: EditorItem[];
+  /// Funcional e CrossFit: blocos do treino (vazio = séries tradicionais).
+  blocks?: WorkoutBlock[];
 }
 
 export interface ProgramOption {

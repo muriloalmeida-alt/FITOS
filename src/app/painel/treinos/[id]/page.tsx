@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/shared/config/features";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { appName } from "@/shared/config/env";
@@ -36,5 +37,5 @@ export default async function TreinoPage({ params, searchParams }: TreinoPagePro
   const programa = (await searchParams)?.programa ?? null;
   const [library, programs, prescription] = await Promise.all([loadLibrary(ctx.tenantId), loadPrograms(ctx.tenantId), getTenantPrescription(ctx.tenantId)]);
 
-  return <PersonalWorkoutEditor initial={workout} library={library} programs={programs} returnToProgramId={programa} prescription={prescription} />;
+  return <PersonalWorkoutEditor blocksEnabled={featureEnabled("FUNCIONAL")} initial={workout} library={library} programs={programs} returnToProgramId={programa} prescription={prescription} />;
 }

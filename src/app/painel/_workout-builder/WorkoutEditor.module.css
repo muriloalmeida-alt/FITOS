@@ -188,3 +188,35 @@
   font-weight: 800;
   font-size: 13px;
 }
+
+.blocksHint {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.blocks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.block {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--fitos-color-outline-variant);
+  border-radius: 14px;
+  background: var(--fitos-color-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.block span {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
