@@ -11,6 +11,7 @@ const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
 
+vi.mock("@/modules/preferences/music", () => ({ getMusicPreference: async () => null }));
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requireIndividual: (...args: unknown[]) => requireIndividual(...args) };

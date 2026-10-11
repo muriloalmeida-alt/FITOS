@@ -91,13 +91,19 @@ describe("LiveWorkout (FIT-153)", () => {
     expect(screen.getByRole("link", { name: "Concluir" })).toHaveAttribute("href", "/painel");
   });
 
-  it("preparação começa a sessão e música abre os atalhos dos apps", async () => {
+  it("preparação começa a sessão e música abre o serviço em um toque, guardando a preferência", async () => {
     fetchMock.mockReturnValue(json({ id: "sess9", startedAt: new Date().toISOString() }, 201));
+    const open = vi.fn(() => ({ opener: {} }) as unknown as Window);
+    vi.stubGlobal("open", open);
     renderLive([squat], null);
-    fireEvent.click(screen.getByRole("button", { name: /Música/ }));
-    expect(screen.getByRole("link", { name: "Spotify" })).toHaveAttribute("href", "https://open.spotify.com");
-    expect(screen.getByRole("link", { name: "YouTube Music" })).toHaveAttribute("target", "_blank");
-    fireEvent.click(screen.getByRole("button", { name: "Voltar ao treino" }));
+    expect(screen.queryByRole("button", { name: /YouTube/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Spotify" }));
+    expect(open).toHaveBeenCalledWith("https://open.spotify.com/", "_blank");
+    expect(fetchMock).toHaveBeenCalledWith("/api/preferencias/musica", expect.objectContaining({ method: "PUT", body: JSON.stringify({ provider: "spotify" }) }));
+    expect(screen.getByRole("button", { name: "Abrir Spotify" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Trocar" }));
+    expect(screen.getByRole("button", { name: "Apple Music" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Começar treino" }));
     });
@@ -222,5 +228,18 @@ describe("LiveWorkout (FIT-153)", () => {
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
     expect(body).toMatchObject({ workoutExerciseId: "we7", durationSeconds: 150, reps: null });
     vi.useRealTimers();
+  });
+  it("música no treino: ícone abre o preferido; sem preferência mostra a escolha; falha aparece inline", () => {
+    const open = vi.fn(() => null);
+    vi.stubGlobal("open", open);
+    render(
+      <ToastProvider>
+        <LiveWorkout sessionId="sess1" workoutId="w1" workoutName="Treino A" startedAt={new Date().toISOString()} items={[squat]} coachName={null} apiBase="/api/minhas-sessoes" exitHref="/painel" progressHref="/painel/minha-evolucao" musicProvider="apple_music" />
+      </ToastProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Abrir Apple Music" }));
+    expect(open).toHaveBeenCalledWith("https://music.apple.com/", "_blank");
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível abrir.");
+    expect(screen.getByRole("button", { name: "Tentar novamente" })).toBeInTheDocument();
   });
 });

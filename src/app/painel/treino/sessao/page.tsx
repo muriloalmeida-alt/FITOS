@@ -10,6 +10,7 @@ import { getActivePlanAssignmentForStudent, getTodayScheduleForStudent } from "@
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
+import { getMusicPreference } from "@/modules/preferences/music";
 import { toLiveItems } from "../../_live/liveItems";
 import styles from "./page.module.css";
 
@@ -37,7 +38,8 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
   ]);
   const coachName = student.tenant.owner.name;
-  const common = { coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
+  const musicProvider = await getMusicPreference(ctx.userId);
+  const common = { musicProvider, coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
 
   if (inProgress) {
     const items = inProgress.workout.workoutExercises;
