@@ -24,4 +24,13 @@ describe("fim do teste grátis sem cartão (EPIC-38)", () => {
     expect(["/painel/assinatura", "/painel/perfil", "/painel/configuracoes", "/painel/assinatura/cartao"].every(allowedWhenBlocked)).toBe(true);
     expect(["/painel", "/painel/alunos", "/painel/treinos", "/painel/perfilx"].some(allowedWhenBlocked)).toBe(false);
   });
+
+  it("gratuidade do administrador libera enquanto vale; a carência conta do fim dela", () => {
+    const grant = { startsAt: new Date("2026-10-09T12:00:00Z"), endsAt: new Date("2026-10-24T12:00:00Z") };
+    expect(subscriptionAccess(sub(), now, [grant]).kind).toBe("LIBERADO");
+    expect(subscriptionAccess(sub(), new Date("2026-10-25T12:00:00Z"), [grant])).toEqual({ kind: "CARENCIA", blockOn: new Date("2026-10-27T12:00:00Z") });
+    expect(subscriptionAccess(sub(), new Date("2026-10-27T12:00:00Z"), [grant]).kind).toBe("BLOQUEADO");
+    // Agendada para depois: não libera antes de começar.
+    expect(subscriptionAccess(sub(), now, [{ startsAt: new Date("2026-10-20T12:00:00Z"), endsAt: new Date("2026-11-20T12:00:00Z") }]).kind).toBe("CARENCIA");
+  });
 });

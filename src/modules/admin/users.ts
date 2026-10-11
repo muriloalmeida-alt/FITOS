@@ -12,7 +12,7 @@ import { describeError, logEvent } from "@/shared/lib/serverLog";
 
 export class AdminError extends Error {
   constructor(
-    public readonly kind: "NAO_ENCONTRADO" | "PROIBIDO" | "VALIDACAO",
+    public readonly kind: "NAO_ENCONTRADO" | "PROIBIDO" | "VALIDACAO" | "CONFLITO",
     message: string
   ) {
     super(message);
