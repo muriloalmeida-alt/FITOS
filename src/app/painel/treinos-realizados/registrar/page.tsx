@@ -19,7 +19,7 @@ export default async function RegistrarTreinoRealizadoPage() {
   const self = await selfForPage();
   return (
     <AppShell eyebrow="Treino" title="Registrar treino realizado" navItems={self.navItems} activeKey={self.role === "ALUNO" ? "progresso" : "treinos"} trailing={<LogoutButton />}>
-      <RetroWorkoutFlow library={await loadLibrary(self.tenantId)} nowIso={new Date().toISOString()} pointsEnabled={featureEnabled("GAMIFICACAO")} />
+      <RetroWorkoutFlow library={await loadLibrary(self.tenantId)} nowIso={new Date().toISOString()} pointsEnabled={featureEnabled("GAMIFICACAO")} blocksEnabled={featureEnabled("FUNCIONAL")} />
     </AppShell>
   );
 }

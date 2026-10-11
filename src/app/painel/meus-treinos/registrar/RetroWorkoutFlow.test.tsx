@@ -160,4 +160,36 @@ describe("RetroWorkoutFlow (registrar treino realizado)", () => {
     expect(router.push).toHaveBeenCalledWith("/painel/treinos-realizados/s9");
     vi.useRealTimers();
   });
+
+  it("blocos (Funcional): exercício no bloco sem séries, resultado obrigatório e enviado com o registro", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(nowIso) });
+    const fetchMock = routes(json({ sessionId: "s9", replayed: false, possibleDuplicate: false }, 201), []);
+    render(<RetroWorkoutFlow library={library} nowIso={nowIso} pointsEnabled={false} blocksEnabled />);
+    await addLegPress();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Adicionar bloco" }));
+    await userEvent.click(screen.getByRole("radio", { name: "AMRAP" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar bloco" }));
+    await userEvent.click(screen.getByRole("radio", { name: "AMRAP 10 min" }));
+    expect(screen.getByText("Conta pelo resultado do bloco.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Carga da série 1 de Leg Press 45°")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByText("Informe o resultado do bloco AMRAP 10 min.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Informar resultado" }));
+    for (let i = 0; i < 5; i++) await userEvent.click(screen.getByRole("button", { name: "Aumentar rounds completos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar resultado" }));
+    expect(screen.getByText("5 voltas")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar para foto" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar sem foto" }));
+    await userEvent.click(screen.getByRole("button", { name: "Concluir registro" }));
+
+    const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/retroativo"))!;
+    const body = JSON.parse(String(call[1]!.body));
+    expect(body.exercises).toEqual([{ exerciseId: "leg", blockKey: expect.any(String), sets: [] }]);
+    expect(body.blocks).toEqual([{ block: expect.objectContaining({ kind: "AMRAP", windowSeconds: 600, key: body.exercises[0].blockKey }), result: expect.objectContaining({ outcome: "PARCIAL", roundsCompleted: 5 }) }]);
+    vi.useRealTimers();
+  });
 });

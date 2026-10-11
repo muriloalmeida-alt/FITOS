@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, FormAlert, WizardProgress } from "@/shared/ui";
+import { Button, ChipGroup, FormAlert, Sheet, WizardProgress } from "@/shared/ui";
 import { isCardioType } from "@/shared/lib/cardio";
 import { resizeImage } from "@/shared/lib/resizeImage";
 import { RETRO_MAX_DAYS, durationLabel, durationSeconds, validatePerformedAt } from "@/shared/lib/retroactive";
@@ -11,6 +11,10 @@ import { ExerciseLibrary } from "../../_workout-builder/ExerciseLibrary";
 import type { LibraryExercise } from "../../_workout-builder/types";
 import { formatPoints } from "@/shared/lib/scoring";
 import { SessionPointsCard } from "../../_live/SessionPointsCard";
+import { blockResultSummary, blockSummary, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
+import { BlockSheet } from "../../_workout-builder/BlockSheet";
+import { BlockResultForm, emptyResultDraft, resultPayload, type BlockResultDraft } from "../../_live/BlockResultForm";
+import { draftFrom, type BlockResultView } from "../../_live/BlockPanel";
 import styles from "./RetroWorkoutFlow.module.css";
 
 interface SetRow {
@@ -23,6 +27,20 @@ interface Item {
   exercise: LibraryExercise;
   cardio: boolean;
   sets: SetRow[];
+  /// Funcional e CrossFit: dentro de um bloco, conta pelo resultado dele.
+  blockKey: string | null;
+}
+
+/// Bloco feito e o resultado declarado (`draft` nulo: ainda não informado).
+interface RetroBlock {
+  block: WorkoutBlock;
+  draft: BlockResultDraft | null;
+}
+
+/// O rascunho no formato do resumo ("5 voltas + 8 reps").
+function draftSummary(block: WorkoutBlock, draft: BlockResultDraft): string {
+  const payload = resultPayload(block, draft, true);
+  return blockResultSummary(block, { outcome: payload.outcome, roundsCompleted: payload.roundsCompleted, partialReps: payload.partialReps, intervalsCompleted: payload.intervalsCompleted, elapsedSeconds: payload.elapsedSeconds ?? null });
 }
 
 interface Photo {
@@ -52,7 +70,7 @@ function number(value: string): number | null {
 
 function newItem(exercise: LibraryExercise): Item {
   const cardio = isCardioType(exercise.type);
-  return { exercise, cardio, sets: cardio ? [{ reps: "", load: "", minutes: "20" }] : [1, 2, 3].map(() => ({ reps: "10", load: "", minutes: "" })) };
+  return { exercise, cardio, blockKey: null, sets: cardio ? [{ reps: "", load: "", minutes: "20" }] : [1, 2, 3].map(() => ({ reps: "10", load: "", minutes: "" })) };
 }
 
 function volumeKg(item: Item): number {
@@ -71,7 +89,8 @@ export interface RetroEdit {
   sessionId: string;
   performedAtIso: string;
   durationSeconds: number;
-  items: { exercise: LibraryExercise; sets: { reps: number | null; loadKg: number | null; durationSeconds: number | null }[] }[];
+  items: { exercise: LibraryExercise; blockKey?: string | null; sets: { reps: number | null; loadKg: number | null; durationSeconds: number | null }[] }[];
+  blocks?: { block: WorkoutBlock; result: BlockResultView }[];
 }
 
 function editItem(item: RetroEdit["items"][number]): Item {
@@ -79,7 +98,8 @@ function editItem(item: RetroEdit["items"][number]): Item {
   return {
     exercise: item.exercise,
     cardio,
-    sets: item.sets.map((set) => ({ reps: set.reps === null ? "" : String(set.reps), load: set.loadKg === null ? "" : String(set.loadKg).replace(".", ","), minutes: set.durationSeconds === null ? "" : String(Math.round(set.durationSeconds / 60)) })),
+    blockKey: item.blockKey ?? null,
+    sets: item.blockKey && item.sets.length === 0 ? newItem(item.exercise).sets : item.sets.map((set) => ({ reps: set.reps === null ? "" : String(set.reps), load: set.loadKg === null ? "" : String(set.loadKg).replace(".", ","), minutes: set.durationSeconds === null ? "" : String(Math.round(set.durationSeconds / 60)) })),
   };
 }
 
@@ -89,7 +109,9 @@ function editItem(item: RetroEdit["items"][number]): Item {
 /// dados ao voltar; o envio final tem chave única (retry não duplica).
 /// Com `edit`, edita o registro (sem a etapa da foto: as fotos ficam no
 /// detalhe do treino) e volta para ele.
-export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { library: LibraryExercise[]; nowIso: string; pointsEnabled: boolean; edit?: RetroEdit }) {
+/// Com `blocksEnabled` (FEATURE_FUNCIONAL), blocos com o resultado
+/// quantitativo (voltas, round parcial, intervalos, tempo do For Time).
+export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit, blocksEnabled = false }: { library: LibraryExercise[]; nowIso: string; pointsEnabled: boolean; edit?: RetroEdit; blocksEnabled?: boolean }) {
   const router = useRouter();
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const initial = localParts(edit ? new Date(edit.performedAtIso) : now);
@@ -99,6 +121,9 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
   const [time, setTime] = useState(initial.time);
   const [items, setItems] = useState<Item[]>(() => (edit ? edit.items.map(editItem) : []));
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [blocks, setBlocks] = useState<RetroBlock[]>(() => (edit?.blocks ?? []).map(({ block, result }) => ({ block, draft: draftFrom(block, result) })));
+  /// Bloco aberto: formato (`config`, `null` = novo) ou resultado.
+  const [blockSheet, setBlockSheet] = useState<{ kind: "config"; block: WorkoutBlock | null } | { kind: "result"; key: string; draft: BlockResultDraft } | null>(null);
   const [hours, setHours] = useState(edit ? String(Math.floor(edit.durationSeconds / 3600)) : "0");
   const [minutes, setMinutes] = useState(edit ? String(Math.floor((edit.durationSeconds % 3600) / 60)) : "45");
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -110,6 +135,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
   const operationKey = useRef<string>(crypto.randomUUID());
   const fileInput = useRef<HTMLInputElement>(null);
 
+  const resultBlock = blockSheet?.kind === "result" ? (blocks.find((entry) => entry.block.key === blockSheet.key)?.block ?? null) : null;
   const performedAt = new Date(`${date}T${time || "00:00"}:00-03:00`);
   const minDate = localParts(new Date(now.getTime() - RETRO_MAX_DAYS * DAY_MS)).date;
   const duration = durationSeconds(Number(hours || 0), Number(minutes || 0));
@@ -126,11 +152,37 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
     setItems((current) => current.map((item, i) => (i === itemIndex ? { ...item, sets: item.sets.filter((_, j) => j !== setIndex) } : item)).filter((item) => item.sets.length > 0));
   }
 
+  function setItemBlock(itemIndex: number, blockKey: string | null) {
+    setItems((current) => current.map((item, i) => (i === itemIndex ? { ...item, blockKey } : item)));
+  }
+
+  function saveBlockConfig(block: WorkoutBlock) {
+    setBlocks((current) => (current.some((entry) => entry.block.key === block.key) ? current.map((entry) => (entry.block.key === block.key ? { block, draft: entry.block.kind === block.kind ? entry.draft : null } : entry)) : [...current, { block, draft: null }]));
+    setBlockSheet(null);
+  }
+
+  function saveBlockResult(key: string, draft: BlockResultDraft) {
+    setBlocks((current) => current.map((entry) => (entry.block.key === key ? { ...entry, draft } : entry)));
+    setBlockSheet(null);
+  }
+
+  function removeBlock(key: string) {
+    setBlocks((current) => current.filter((entry) => entry.block.key !== key));
+    setItems((current) => current.map((item) => (item.blockKey === key ? { ...item, blockKey: null } : item)));
+    setBlockSheet(null);
+  }
+
   function validateExecution(): string | null {
     const dateError = validatePerformedAt(performedAt, new Date());
     if (dateError) return dateError;
     if (items.length === 0) return "Adicione pelo menos um exercício.";
+    for (const { block, draft } of blocks) {
+      if (!items.some((item) => item.blockKey === block.key)) return `Inclua pelo menos um exercício no bloco ${blockSummary(block)}.`;
+      if (!draft) return `Informe o resultado do bloco ${blockSummary(block)}.`;
+      if (block.kind === "FOR_TIME" && draft.outcome === "CONCLUIDO" && draft.minutes * 60 + draft.seconds <= 0) return `Informe em quanto tempo você concluiu o ${blockSummary(block)}.`;
+    }
     for (const item of items) {
+      if (item.blockKey) continue;
       for (const set of item.sets) {
         if (item.cardio ? !((number(set.minutes) ?? 0) >= 1) : !((number(set.reps) ?? 0) >= 1)) {
           return item.cardio ? `Informe os minutos de ${item.exercise.name}.` : `Informe as repetições de ${item.exercise.name}.`;
@@ -178,10 +230,15 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
   function payloadExercises() {
     return items.map((item) => ({
       exerciseId: item.exercise.id,
-      sets: item.sets.map((set) =>
+      ...(item.blockKey ? { blockKey: item.blockKey } : {}),
+      sets: item.blockKey ? [] : item.sets.map((set) =>
         item.cardio ? { durationSeconds: Math.round((number(set.minutes) ?? 0) * 60) } : { reps: Math.round(number(set.reps) ?? 0), loadKg: number(set.load) }
       ),
     }));
+  }
+
+  function payloadBlocks() {
+    return blocks.map(({ block, draft }) => ({ block, result: resultPayload(block, draft ?? emptyResultDraft(block), true) }));
   }
 
   /// Revisão: com os Desafios ligados, a prévia dos pontos (só calcula).
@@ -201,7 +258,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
     const response = await fetch(`/api/minhas-sessoes/${edit.sessionId}/registro`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ performedAt: performedAt.toISOString(), durationSeconds: duration, exercises: payloadExercises() }),
+      body: JSON.stringify({ performedAt: performedAt.toISOString(), durationSeconds: duration, exercises: payloadExercises(), ...(blocksEnabled ? { blocks: payloadBlocks() } : {}) }),
     }).catch(() => null);
     if (!response?.ok) {
       const body = await response?.json().catch(() => null);
@@ -226,6 +283,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
         performedAt: performedAt.toISOString(),
         durationSeconds: duration,
         exercises: payloadExercises(),
+        ...(blocksEnabled ? { blocks: payloadBlocks() } : {}),
       }),
     }).catch(() => null);
     if (!response?.ok) {
@@ -306,56 +364,92 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
           {items.map((item, itemIndex) => (
             <div key={item.exercise.id} className={styles.item}>
               <h3>{item.exercise.name}</h3>
-              <table className={styles.sets}>
-                <thead>
-                  <tr>
-                    <th scope="col">Série</th>
-                    {item.cardio ? <th scope="col">Minutos</th> : (
-                      <>
-                        <th scope="col">Repetições</th>
-                        <th scope="col">Carga (kg)</th>
-                      </>
-                    )}
-                    <th scope="col">
-                      <span className={styles.hidden}>Remover</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.sets.map((set, setIndex) => (
-                    <tr key={setIndex}>
-                      <td>{setIndex + 1}</td>
-                      {item.cardio ? (
-                        <td>
-                          <input aria-label={`Minutos da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.minutes} onChange={(event) => updateSet(itemIndex, setIndex, { minutes: event.target.value })} />
-                        </td>
-                      ) : (
-                        <>
+              {blocks.length ? (
+                <ChipGroup
+                  label={`Bloco de ${item.exercise.name}`}
+                  value={item.blockKey ?? ""}
+                  onChange={(value) => setItemBlock(itemIndex, value || null)}
+                  options={[{ value: "", label: "Séries" }, ...blocks.map(({ block }) => ({ value: block.key, label: blockSummary(block) }))]}
+                />
+              ) : null}
+              {item.blockKey ? <p className={styles.muted}>Conta pelo resultado do bloco.</p> : null}
+              {item.blockKey ? null : (
+                <>
+                  <table className={styles.sets}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Série</th>
+                        {item.cardio ? <th scope="col">Minutos</th> : (
+                          <>
+                            <th scope="col">Repetições</th>
+                            <th scope="col">Carga (kg)</th>
+                          </>
+                        )}
+                        <th scope="col">
+                          <span className={styles.hidden}>Remover</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.sets.map((set, setIndex) => (
+                        <tr key={setIndex}>
+                          <td>{setIndex + 1}</td>
+                          {item.cardio ? (
+                            <td>
+                              <input aria-label={`Minutos da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.minutes} onChange={(event) => updateSet(itemIndex, setIndex, { minutes: event.target.value })} />
+                            </td>
+                          ) : (
+                            <>
+                              <td>
+                                <input aria-label={`Repetições da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.reps} onChange={(event) => updateSet(itemIndex, setIndex, { reps: event.target.value })} />
+                              </td>
+                              <td>
+                                <input aria-label={`Carga da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="decimal" placeholder="—" value={set.load} onChange={(event) => updateSet(itemIndex, setIndex, { load: event.target.value })} />
+                              </td>
+                            </>
+                          )}
                           <td>
-                            <input aria-label={`Repetições da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="numeric" value={set.reps} onChange={(event) => updateSet(itemIndex, setIndex, { reps: event.target.value })} />
+                            <button type="button" className={styles.remove} aria-label={`Remover série ${setIndex + 1} de ${item.exercise.name}`} onClick={() => removeSet(itemIndex, setIndex)}>
+                              ×
+                            </button>
                           </td>
-                          <td>
-                            <input aria-label={`Carga da série ${setIndex + 1} de ${item.exercise.name}`} inputMode="decimal" placeholder="—" value={set.load} onChange={(event) => updateSet(itemIndex, setIndex, { load: event.target.value })} />
-                          </td>
-                        </>
-                      )}
-                      <td>
-                        <button type="button" className={styles.remove} aria-label={`Remover série ${setIndex + 1} de ${item.exercise.name}`} onClick={() => removeSet(itemIndex, setIndex)}>
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button type="button" className={styles.link} onClick={() => addSet(itemIndex)}>
-                + Série
-              </button>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <button type="button" className={styles.link} onClick={() => addSet(itemIndex)}>
+                    + Série
+                  </button>
+                </>
+              )}
             </div>
           ))}
           <button type="button" className={styles.link} onClick={() => setLibraryOpen(true)}>
             + Adicionar exercício
           </button>
+          {blocksEnabled ? (
+            <>
+              <h2 className={styles.title}>Blocos</h2>
+              <p className={styles.muted}>Circuito, AMRAP, EMOM ou For Time: informe o formato e o resultado. Os exercícios do bloco não precisam de séries.</p>
+              {blocks.map(({ block, draft }) => (
+                <div key={block.key} className={styles.item}>
+                  <h3>{blockSummary(block)}</h3>
+                  <p className={draft ? styles.ok : styles.muted}>{draft ? draftSummary(block, draft) : "Resultado ainda não informado."}</p>
+                  <div className={styles.blockActions}>
+                    <button type="button" className={styles.link} onClick={() => setBlockSheet({ kind: "result", key: block.key, draft: draft ?? emptyResultDraft(block) })}>
+                      {draft ? "Corrigir resultado" : "Informar resultado"}
+                    </button>
+                    <button type="button" className={styles.link} onClick={() => setBlockSheet({ kind: "config", block })}>
+                      Editar bloco
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className={styles.link} onClick={() => setBlockSheet({ kind: "config", block: null })}>
+                + Adicionar bloco
+              </button>
+            </>
+          ) : null}
         </>
       ) : null}
 
@@ -416,7 +510,15 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
             <span>Tempo total</span>
             <strong>{typeof duration === "number" ? durationLabel(duration) : "—"}</strong>
           </div>
-          {items.map((item) => (
+          {blocks.map(({ block, draft }) => (
+            <div key={block.key} className={styles.summary}>
+              <strong>{blockSummary(block)}</strong>
+              <span>
+                {draft ? draftSummary(block, draft) : "—"} · {items.filter((item) => item.blockKey === block.key).map((item) => item.exercise.name).join(", ")}
+              </span>
+            </div>
+          ))}
+          {items.filter((item) => !item.blockKey).map((item) => (
             <div key={item.exercise.id} className={styles.summary}>
               <strong>{item.exercise.name}</strong>
               <span>
@@ -468,6 +570,24 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit }: { lib
         ) : null}
       </div>
 
+      {blockSheet?.kind === "config" ? (
+        <BlockSheet initial={blockSheet.block} onClose={() => setBlockSheet(null)} onSave={saveBlockConfig} onRemove={blockSheet.block ? () => removeBlock(blockSheet.block!.key) : undefined} />
+      ) : null}
+      {blockSheet?.kind === "result" ? (
+        <Sheet
+          open
+          onClose={() => setBlockSheet(null)}
+          title="Resultado do bloco"
+          description="Informe o que você realmente fez. A meta não conta como feito."
+          footer={
+            <Button type="button" block onClick={() => saveBlockResult(blockSheet.key, blockSheet.draft)}>
+              Salvar resultado
+            </Button>
+          }
+        >
+          {resultBlock ? <BlockResultForm block={resultBlock} value={blockSheet.draft} onChange={(draft) => setBlockSheet({ kind: "result", key: blockSheet.key, draft })} declareTime /> : null}
+        </Sheet>
+      ) : null}
       {libraryOpen ? (
         <ExerciseLibrary
           exercises={library}
