@@ -46,10 +46,29 @@ O PDF "3-Gamificacao" confirma as fórmulas (volume de musculação, +1 por 10% 
 - **O diário pessoal soma todos os treinos liberados.** O limite de 3 treinos por semana é só do ranking.
 - **Tela `/painel/desafios`:** meta, medalha atual, "135/180 pontos · faltam 45 para Ouro", faixas e galeria (8 semanas e 6 meses encerrados, com pontos).
 
+## Ranking da turma (etapa 4)
+
+- **Ligado pelo personal** (`ClassRanking`). Ligar começa uma temporada nova (`activatedAt`); desligar só esconde, sem apagar nada.
+- **Adesão voluntária do aluno** (`ClassRankingParticipant`):
+  - entrar mostra as regras antes;
+  - sair grava `leftAt`; voltar recomeça a contagem;
+  - só alunos com vínculo ativo, e quem encerra o vínculo some da lista.
+- **Conta só treino oficial** feito depois da ativação e da adesão: nada é importado retroativamente.
+- **Modo equilibrado** (`src/shared/lib/ranking.ts`):
+  - cada treino vale `balancedTenths`;
+  - no máximo 1 por dia (o melhor) e os 3 melhores da semana;
+  - o mês soma as semanas;
+  - empates dividem a posição.
+- **Visibilidade:** o personal e os alunos que aderiram.
+  - Colegas veem nome, foto e pontos.
+  - O personal vê também os treinos na conta e a contestação.
+  - Nunca cargas, programa, saúde ou foto de evidência.
+- **Telas:** aba "Turma" em Desafios (aluno) e "Ranking da turma" para o personal (link em Alunos).
+
 ## Próximas etapas
 
 3. ~~Metas e medalhas~~ (acima).
-4. Ranking dos alunos: equilibrado, com os 3 melhores treinos por semana e no máximo 1 por dia.
+4. ~~Ranking dos alunos~~ (acima).
 5. Amigos: grupos por convite, temporadas de 7, 14 ou 28 dias.
 6. Contestação:
    - abrir em até 48 h e decidir em até 48 h;

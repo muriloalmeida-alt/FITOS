@@ -381,6 +381,7 @@ model Tenant {
   payments                 Payment[]
   chargeRecurrences        ChargeRecurrence[]
   saasSubscription         SaasSubscription?
+  classRanking             ClassRanking?
   accessGrants             AdministrativeAccessGrant[]
   auditEvents              AuditEvent[]
   invitations              Invitation[]
@@ -552,9 +553,9 @@ model Student {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user                User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  endedByUser         User?              @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
+  tenant              Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                User?                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  endedByUser         User?                     @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
   planAssignments     PlanAssignment[]
   workoutSessions     WorkoutSession[]
   assessments         Assessment[]
@@ -565,12 +566,13 @@ model Student {
   evolutionPhotos     EvolutionPhoto[]
   scoringReferences   ScoringReference[]
   periodGoals         PeriodGoal[]
+  rankingEntries      ClassRankingParticipant[]
   chatTopics          ChatTopic[]
   healthForm          HealthForm?
   /// Aluno que indicou este (EPIC-47), quando entrou pelo link com `?ref=`.
   referredByStudentId String?
-  referredBy          Student?           @relation("StudentReferral", fields: [referredByStudentId], references: [id], onDelete: SetNull)
-  referrals           Student[]          @relation("StudentReferral")
+  referredBy          Student?                  @relation("StudentReferral", fields: [referredByStudentId], references: [id], onDelete: SetNull)
+  referrals           Student[]                 @relation("StudentReferral")
   scheduleSlots       ScheduleSlot[]
   scheduleEvents      ScheduleEvent[]
 
@@ -1790,4 +1792,35 @@ model PeriodGoal {
 
   @@unique([studentId, periodType, periodKey])
   @@map("period_goals")
+}
+
+/// Ranking da turma do personal (Desafios, ADR-019). Ligado pelo personal;
+/// `activatedAt` marca o início: treinos anteriores não entram. Desligar
+/// guarda a data e não apaga nada.
+model ClassRanking {
+  tenantId      String    @id
+  enabled       Boolean   @default(false)
+  activatedAt   DateTime?
+  deactivatedAt DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("class_rankings")
+}
+
+/// Adesão voluntária do aluno ao ranking da turma. Conta só treino feito
+/// depois de `joinedAt` (e da ativação). Sair grava `leftAt`; voltar
+/// recomeça a contagem.
+model ClassRankingParticipant {
+  id        String    @id @default(cuid())
+  tenantId  String
+  studentId String    @unique
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("class_ranking_participants")
 }
