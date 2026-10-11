@@ -9,14 +9,16 @@ import { LogoutButton } from "../../../LogoutButton";
 import { ADMIN_NAV_ITEMS } from "../../../navigation";
 import { ROLE_LABELS, ROLE_TONES } from "../../roles";
 import { AdminUserActions } from "./AdminUserActions";
+import { AccessGrantPanel, type GrantCurrent } from "./AccessGrantPanel";
+import { listAccessGrants, previewAccessGrant } from "@/modules/billing/accessGrants";
 import styles from "../../admin.module.css";
 
 export const metadata: Metadata = { title: `Usuário — ${appName}` };
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" });
 
-/// Um usuário na administração: o que ele tem na plataforma, nova senha e
-/// exclusão com tudo o que é dele.
+/// Um usuário na administração: o que ele tem na plataforma, gratuidade
+/// (personal e Livre), nova senha e exclusão com tudo o que é dele.
 export default async function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
   let ctx;
   try {
@@ -36,6 +38,13 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
   }
 
   const isOwnSpace = user.role === "PERSONAL" || user.role === "INDIVIDUAL";
+  // Benefícios (feature 4): situação atual pela mesma prévia da concessão.
+  const [grantPreview, grants] = isOwnSpace ? await Promise.all([previewAccessGrant({ userId: user.id, days: 30 }), listAccessGrants(user.id)]) : [null, []];
+  const grantCurrent: GrantCurrent | null = grantPreview
+    ? grantPreview.eligible
+      ? { eligible: true, audience: grantPreview.audience, planName: grantPreview.planName, access: grantPreview.access, freeUntil: grantPreview.freeUntil?.toISOString() ?? null }
+      : { eligible: false, message: grantPreview.message }
+    : null;
   const facts: { label: string; value: string | number }[] = [
     ...(user.role === "PERSONAL" ? [{ label: "Alunos", value: user.counts.students }] : []),
     ...(isOwnSpace ? [{ label: "Programas", value: user.counts.trainingPlans }] : []),
@@ -73,6 +82,22 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             </div>
           ))}
         </dl>
+      ) : null}
+      {grantCurrent ? (
+        <AccessGrantPanel
+          userId={user.id}
+          current={grantCurrent}
+          history={grants.map((grant) => ({
+            id: grant.id,
+            days: grant.days,
+            startsAt: grant.startsAt.toISOString(),
+            lastDay: grant.lastDay,
+            status: grant.status,
+            reasonCode: grant.reasonCode,
+            reasonText: grant.reasonText,
+            revokeReason: grant.revokeReason,
+          }))}
+        />
       ) : null}
       <AdminUserActions
         user={{ id: user.id, email: user.email, name: user.name, hasPassword: user.hasPassword }}

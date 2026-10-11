@@ -7,6 +7,7 @@ const getSubscriptionForTenant = vi.fn();
 const listActivePlansForAudience = vi.fn();
 const countStudents = vi.fn();
 const findProfile = vi.fn();
+const getOwnFreeAccess = vi.fn();
 const redirect = vi.fn((_url: string) => {
   throw new Error("NEXT_REDIRECT");
 });
@@ -16,6 +17,7 @@ vi.mock("@/modules/tenancy/authContext", async () => {
   return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
 vi.mock("@/modules/billing/subscriptions", () => ({ getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) }));
+vi.mock("@/modules/billing/accessGrants", () => ({ getOwnFreeAccess: (...args: unknown[]) => getOwnFreeAccess(...args) }));
 vi.mock("@/modules/billing/plans", () => ({ listActivePlansForAudience: (...args: unknown[]) => listActivePlansForAudience(...args) }));
 vi.mock("@/shared/db/prisma", () => ({
   prisma: {
@@ -37,6 +39,7 @@ function asPersonal(subscription: Record<string, unknown> | null, activeStudents
   countStudents.mockResolvedValue(activeStudents);
   findProfile.mockResolvedValue({ phone: "11987654321" });
   getSubscriptionForTenant.mockResolvedValue(subscription);
+  getOwnFreeAccess.mockResolvedValue(null);
 }
 
 const base = { planId: "p2", plan: pro, status: "ATIVA", trialEndsAt: null, canceledAt: null, createdAt: new Date(2026, 0, 10), creditCardLast4: "4242", creditCardBrand: "VISA" };
@@ -121,5 +124,18 @@ describe("AssinaturaPage (FIT-150)", () => {
     const { default: AssinaturaPage } = await import("./page");
     await expect(AssinaturaPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/entrar");
+  });
+
+  it("gratuidade da equipe FitOS: aviso com o último dia e a cobrança depois dela", async () => {
+    asPersonal({ ...base, creditCardLast4: null, trialEndsAt: new Date(Date.now() - 20 * 86_400_000) });
+    const endsAt = new Date(Date.now() + 10 * 86_400_000);
+    getOwnFreeAccess.mockResolvedValue({ startsAt: new Date(Date.now() - 86_400_000), endsAt, lastDay: "2026-12-04" });
+    await renderPage();
+
+    expect(screen.getByText("Benefício concedido: acesso gratuito até 4 de dezembro")).toBeInTheDocument();
+    expect(screen.getByText(/Concedido pela equipe FitOS\. 10 dias restantes\./)).toBeInTheDocument();
+    expect(screen.queryByText("Teste grátis")).not.toBeInTheDocument();
+    const day = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }).format(endsAt);
+    expect(screen.getByText(new RegExp(`Próxima cobrança: ${day} ·`))).toBeInTheDocument();
   });
 });

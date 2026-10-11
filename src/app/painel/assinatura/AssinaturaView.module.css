@@ -39,6 +39,21 @@
   font-weight: 600;
 }
 
+.benefit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 138, 61, 0.12);
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+}
+
+.benefit span {
+  color: var(--fitos-color-text-muted);
+}
+
 .line {
   margin: 0;
   color: var(--fitos-color-text-muted);

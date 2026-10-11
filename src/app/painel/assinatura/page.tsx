@@ -7,6 +7,7 @@ import { nextChargeDate } from "@/modules/billing/nextCharge";
 import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
+import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { AssinaturaView, type CurrentSubscription, type SubscriptionState } from "./AssinaturaView";
@@ -26,9 +27,9 @@ function stateOf(subscription: SaasSubscriptionWithPlan, now: Date): Subscriptio
 
 /// Próxima cobrança: ver `nextChargeDate` (compartilhada com os avisos de
 /// vencimento, EPIC-34). Depois do instante atual, como antes.
-function nextCharge(subscription: SaasSubscriptionWithPlan, state: SubscriptionState, now: Date): Date | null {
+function nextCharge(subscription: SaasSubscriptionWithPlan, state: SubscriptionState, now: Date, freeUntil: Date | null): Date | null {
   if (state === "cancelada") return null;
-  return nextChargeDate(subscription, new Date(now.getTime() + 1));
+  return nextChargeDate(subscription, new Date(now.getTime() + 1), freeUntil);
 }
 
 /// Assinatura FitOS (FIT-150, P8 do protótipo) — do Personal e do FitOS
@@ -47,20 +48,21 @@ export default async function AssinaturaPage() {
   }
 
   const isPersonal = ctx.role === "PERSONAL";
-  const [subscription, plans, activeStudents, profile] = await Promise.all([
+  const [subscription, plans, activeStudents, profile, freeAccess] = await Promise.all([
     getSubscriptionForTenant(ctx.tenantId),
     listActivePlansForAudience(ctx.tenantType),
     isPersonal ? prisma.student.count({ where: { tenantId: ctx.tenantId, status: "ATIVO" } }) : Promise.resolve(0),
     isPersonal
       ? prisma.personalProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { phone: true, cpfCnpj: true } })
       : prisma.individualProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { cpfCnpj: true } }).then((found) => (found ? { phone: null, cpfCnpj: found.cpfCnpj } : null)),
+    getOwnFreeAccess(ctx.tenantId),
   ]);
   const now = new Date();
 
   let current: CurrentSubscription | null = null;
   if (subscription) {
     const state = stateOf(subscription, now);
-    const charge = nextCharge(subscription, state, now);
+    const charge = nextCharge(subscription, state, now, freeAccess?.endsAt ?? null);
     const totalTrialDays = subscription.plan.trialDays ?? 30;
     current = {
       planId: subscription.planId,
@@ -77,6 +79,13 @@ export default async function AssinaturaPage() {
             }
           : null,
       nextChargeLabel: charge ? `${dateLabel.format(charge)} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subscription.plan.priceCents / 100)}` : null,
+      benefit: freeAccess
+        ? {
+            untilLabel: dateLabel.format(new Date(`${freeAccess.lastDay}T12:00:00-03:00`)),
+            startsLabel: freeAccess.startsAt > now ? dateLabel.format(freeAccess.startsAt) : null,
+            daysLeft: Math.max(1, Math.ceil((freeAccess.endsAt.getTime() - now.getTime()) / DAY)),
+          }
+        : null,
       canceledLabel: state === "cancelada" && subscription.canceledAt ? dateLabel.format(subscription.canceledAt) : null,
       card: subscription.creditCardLast4 ? { brand: subscription.creditCardBrand ?? "Cartão", last4: subscription.creditCardLast4 } : null,
       needsCard: subscription.plan.priceCents > 0 && state !== "cancelada",
