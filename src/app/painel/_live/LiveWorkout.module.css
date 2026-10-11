@@ -169,27 +169,11 @@
 .option:focus-visible,
 .step:focus-visible,
 .iconButton:focus-visible,
-.clock:focus-visible,
-.music:focus-visible {
+.clock:focus-visible {
   outline: 3px solid var(--fitos-orange-300);
   outline-offset: 2px;
 }
 
-.music {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 52px;
-  border: 0;
-  border-radius: 16px;
-  background-color: var(--fitos-color-surface-card);
-  color: var(--fitos-color-on-surface);
-  font-family: var(--fitos-font-family);
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-}
 
 .topRight {
   display: flex;
@@ -603,27 +587,7 @@ button.control {
   font-weight: 800;
 }
 
-.musicGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
-}
 
-.musicApp {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64px;
-  padding: 0 6px;
-  border-radius: 16px;
-  background-color: var(--fitos-color-surface-raised);
-  color: var(--fitos-color-on-surface);
-  font-size: 14px;
-  font-weight: 800;
-  text-align: center;
-  text-decoration: none;
-}
 
 .endActions {
   display: flex;
