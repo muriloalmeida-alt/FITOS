@@ -176,6 +176,8 @@ model User {
   musicPreference      MusicPreference?
   friendGroupsOwned    FriendGroup[]         @relation("FriendGroupOwner")
   friendGroupMembers   FriendGroupMember[]
+  contestsOpened       ScoreContest[]        @relation("ContestOpenedBy")
+  contestsToReview     ScoreContest[]        @relation("ContestReviewer")
 
   @@map("users")
 }
@@ -1749,8 +1751,9 @@ model SessionScore {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
-  events  ScoreEvent[]
+  session  WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  events   ScoreEvent[]
+  contests ScoreContest[]
 
   @@unique([sessionId, tenantId])
   @@index([tenantId, studentId, performedAt])
@@ -1925,4 +1928,42 @@ model FriendSeason {
 
   @@index([groupId, startsAt])
   @@map("friend_seasons")
+}
+
+/// Contestação de pontos (Desafios 4/4, parte B). Quem participa contesta
+/// um treino de outra pessoa pelo resumo mínimo; o revisor (organizador do
+/// grupo de amigos ou o personal da turma) mantém ou anula com
+/// justificativa. Os pontos continuam valendo até a decisão. Uma contestação
+/// aberta por treino; o autor pode recorrer uma vez de uma anulação.
+model ScoreContest {
+  id              String             @id @default(cuid())
+  sessionScoreId  String
+  /// Treino contestado (para a foto ficar visível ao revisor).
+  sessionId       String
+  /// AMIGOS ou TURMA.
+  context         String
+  friendGroupId   String?
+  /// Espaço da turma (contexto TURMA).
+  classTenantId   String?
+  openedByUserId  String
+  reviewerUserId  String
+  reason          String
+  /// ABERTA, MANTIDO ou ANULADO.
+  status          String             @default("ABERTA")
+  /// Situação dos pontos antes de abrir (volta a ela se nada mudar).
+  previousStatus  SessionScoreStatus
+  decision        String?
+  decidedByUserId String?
+  decidedAt       DateTime?
+  /// Recurso do autor contra uma anulação.
+  isAppeal        Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+
+  score    SessionScore @relation(fields: [sessionScoreId], references: [id], onDelete: Cascade)
+  openedBy User         @relation("ContestOpenedBy", fields: [openedByUserId], references: [id], onDelete: Cascade)
+  reviewer User         @relation("ContestReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@index([reviewerUserId, status])
+  @@index([sessionScoreId])
+  @@map("score_contests")
 }

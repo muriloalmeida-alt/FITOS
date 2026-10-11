@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { Avatar, Button, FormAlert, Switch } from "@/shared/ui";
 import { formatPoints } from "@/shared/lib/scoring";
 import styles from "./ClassRankingPanel.module.css";
+import friendStyles from "./FriendGroups.module.css";
+import { ContestSheet, type WorkoutForContest } from "./ContestSheet";
+import { ReviewQueue, type ReviewCaseView } from "./ReviewQueue";
 
 export interface RankingRowView {
   studentId: string;
@@ -27,6 +30,10 @@ interface Props {
   /// `null` quando não pode ver (desligado ou sem adesão).
   rows: RankingRowView[] | null;
   basePath: string;
+  /// Aluno: treinos dos colegas (resumo mínimo) para contestar.
+  workouts?: Record<string, WorkoutForContest[]>;
+  /// Personal: contestações para analisar.
+  reviewCases?: ReviewCaseView[];
 }
 
 const RULES = [
@@ -38,7 +45,8 @@ const RULES = [
 
 /// Ranking da turma (Desafios): o personal liga/desliga e acompanha; o
 /// aluno entra por vontade própria, vê a turma e pode sair quando quiser.
-export function ClassRankingPanel({ role, enabled, joined, period, rows, basePath }: Props) {
+export function ClassRankingPanel({ role, enabled, joined, period, rows, basePath, workouts = {}, reviewCases = [] }: Props) {
+  const [inspect, setInspect] = useState<{ studentId: string; name: string } | null>(null);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +102,7 @@ export function ClassRankingPanel({ role, enabled, joined, period, rows, basePat
   return (
     <section className={styles.panel} aria-label="Ranking da turma">
       {toggle}
+      <ReviewQueue cases={reviewCases} />
       <nav className={styles.periods} aria-label="Período">
         <Link href={`${basePath}&periodo=semana`} aria-current={period === "semana" ? "page" : undefined}>
           Semana
@@ -122,6 +131,11 @@ export function ClassRankingPanel({ role, enabled, joined, period, rows, basePat
                 ) : null}
               </span>
               <span className={styles.points}>{formatPoints(row.pointsTenths)}</span>
+              {role === "ALUNO" && !row.isMe && workouts[row.studentId] ? (
+                <button type="button" className={friendStyles.rowAction} onClick={() => setInspect({ studentId: row.studentId, name: row.name })} aria-label={`Ver treinos de ${row.name}`}>
+                  Treinos
+                </button>
+              ) : null}
             </li>
           ))}
         </ol>
@@ -130,6 +144,7 @@ export function ClassRankingPanel({ role, enabled, joined, period, rows, basePat
       )}
       <p className={styles.muted}>Modo equilibrado: média por exercício, 3 melhores treinos da semana, 1 por dia.</p>
       {error ? <FormAlert variant="error">{error}</FormAlert> : null}
+      {inspect ? <ContestSheet open onClose={() => setInspect(null)} name={inspect.name} workouts={workouts[inspect.studentId] ?? []} target={{ context: "TURMA" }} /> : null}
       {role === "ALUNO" ? (
         <Button type="button" variant="quiet" block disabled={busy} onClick={() => void call("/api/desafios/turma/participar", { method: "DELETE" })}>
           Sair do ranking

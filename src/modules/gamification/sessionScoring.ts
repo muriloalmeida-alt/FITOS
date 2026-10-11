@@ -198,6 +198,8 @@ export async function revertOnEvidenceRemoved(sessionId: string, remaining: numb
 }
 
 export type SessionPoints = Pick<SessionScore, "totalTenths" | "balancedTenths" | "plannedItems" | "status" | "photoDeadline"> & {
+  /// Para o recurso de uma contestação.
+  scoreId: string;
   items: ScoredItem[];
   /// Se os pontos (ainda) contam na semana e no mês do treino: período
   /// consolidado só leva o que foi liberado até a consolidação.
@@ -214,6 +216,7 @@ export async function getSessionPoints(scope: { tenantId: string; studentId: str
   const score = await client.sessionScore.findFirst({ where: { sessionId, tenantId: scope.tenantId, studentId: scope.studentId } });
   if (!score) return null;
   return {
+    scoreId: score.id,
     totalTenths: score.totalTenths,
     balancedTenths: score.balancedTenths,
     plannedItems: score.plannedItems,

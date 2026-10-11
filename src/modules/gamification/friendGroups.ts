@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { consolidatesAt } from "@/shared/lib/medals";
 import { isSeasonLength, rankSeason, seasonWindow, type FriendMode, type SeasonLength } from "@/shared/lib/ranking";
 import { OFFICIAL_STATUSES } from "./sessionScoring";
+import { workoutsForContest, type ContestableWorkout } from "./scoreContests";
 
 /// Amigos (Desafios 4/4, ADR-019): grupo privado por convite entre quem
 /// treina (aluno de qualquer personal e Livre), com temporadas de 7, 14 ou
@@ -209,6 +210,8 @@ export interface FriendGroupSummary {
   members: number;
   season: { lengthDays: number; startsAt: Date; endsAt: Date; running: boolean } | null;
   myPosition: number | null;
+  /// Contestações deste grupo esperando a sua análise.
+  pendingReviews: number;
 }
 
 export async function listMyFriendGroups(self: Pick<FriendSelf, "userId">, client: PrismaClient = prisma, now = new Date()): Promise<FriendGroupSummary[]> {
@@ -223,7 +226,24 @@ export async function listMyFriendGroups(self: Pick<FriendSelf, "userId">, clien
       members: view.members,
       season: view.season,
       myPosition: view.rows.find((row) => row.isMe)?.position ?? null,
+      pendingReviews: await client.scoreContest.count({ where: { friendGroupId: groupId, reviewerUserId: self.userId, status: "ABERTA" } }),
     });
+  }
+  return result;
+}
+
+/// Treinos de cada colega na temporada (data e pontos), para contestar pelo
+/// resumo mínimo. Nunca os do próprio membro.
+export async function friendMemberWorkouts(self: Pick<FriendSelf, "userId">, groupId: string, client: PrismaClient = prisma, now = new Date()): Promise<Map<string, ContestableWorkout[]>> {
+  await activeMembership(self, groupId, client);
+  const season = await client.friendSeason.findFirst({ where: { groupId }, orderBy: { startsAt: "desc" } });
+  const result = new Map<string, ContestableWorkout[]>();
+  if (!season) return result;
+  const members = await client.friendGroupMember.findMany({ where: { groupId, userId: { not: self.userId }, OR: [{ leftAt: null }, { leftAt: { gt: season.startsAt } }] } });
+  for (const member of members) {
+    const from = new Date(Math.max(season.startsAt.getTime(), member.joinedAt.getTime()));
+    const until = new Date(Math.min(season.endsAt.getTime(), member.leftAt?.getTime() ?? Infinity));
+    if (from < until) result.set(member.id, await workoutsForContest(member, { from, until }, client, now));
   }
   return result;
 }

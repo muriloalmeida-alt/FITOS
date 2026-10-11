@@ -71,3 +71,15 @@
   font-size: 24px;
   letter-spacing: 0.12em;
 }
+
+.rowAction {
+  flex-shrink: 0;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
