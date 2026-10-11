@@ -1305,23 +1305,30 @@ enum AccessGrantState {
 }
 
 model AdministrativeAccessGrant {
-  id             String           @id @default(cuid())
-  tenantId       String
-  subscriptionId String
+  id              String           @id @default(cuid())
+  tenantId        String
+  subscriptionId  String
   /// Administrador que concedeu (sem FK: o histórico fica mesmo se a conta sair).
-  actorAdminId   String
-  days           Int
-  startsAt       DateTime
-  endsAt         DateTime
-  reasonCode     String
-  reasonText     String?
-  state          AccessGrantState @default(ACTIVE)
+  actorAdminId    String
+  days            Int
+  startsAt        DateTime
+  endsAt          DateTime
+  reasonCode      String
+  reasonText      String?
+  state           AccessGrantState @default(ACTIVE)
   /// Chave idempotente do formulário: repetir o envio não soma dias.
-  operationKey   String           @unique
-  revokedAt      DateTime?
-  revokedById    String?
-  revokeReason   String?
-  createdAt      DateTime         @default(now())
+  operationKey    String           @unique
+  revokedAt       DateTime?
+  revokedById     String?
+  revokeReason    String?
+  /// Cobrança no Asaas (AAAA-MM-DD): próxima cobrança antes e a pedida.
+  /// SYNCING até o Asaas confirmar `targetDueDate`; reconciliação refaz.
+  previousDueDate String?
+  targetDueDate   String?
+  syncAttempts    Int              @default(0)
+  syncError       String?
+  syncedAt        DateTime?
+  createdAt       DateTime         @default(now())
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   subscription SaasSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)

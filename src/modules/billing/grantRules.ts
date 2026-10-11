@@ -61,11 +61,10 @@ export function freeAccessUntil(trialEndsAt: Date | null, grants: GrantWindow[],
 }
 
 /// Janela da nova concessão: base = max(agora, fim do teste futuro, fim do
-/// benefício anterior). Período pago confirmado entra quando a cobrança
-/// externa for integrada; até lá, conta com cobrança no provedor não é
-/// elegível (ver `grantEligibility`).
-export function grantWindow(trialEndsAt: Date | null, grants: GrantWindow[], days: number, now: Date): GrantWindow {
-  const startsAt = freeAccessUntil(trialEndsAt, grants, now) ?? now;
+/// benefício anterior, fim do período pago confirmado no Asaas).
+export function grantWindow(trialEndsAt: Date | null, grants: GrantWindow[], days: number, now: Date, paidThrough: Date | null = null): GrantWindow {
+  const free = freeAccessUntil(trialEndsAt, grants, now) ?? now;
+  const startsAt = paidThrough && paidThrough > free ? paidThrough : free;
   return { startsAt, endsAt: new Date(startsAt.getTime() + days * DAY_MS) };
 }
 
@@ -75,22 +74,26 @@ export function lastIncludedDay(endsAt: Date): string {
   return new Date(endsAt.getTime() - 1 + SAO_PAULO_OFFSET_MS).toISOString().slice(0, 10);
 }
 
-export type GrantBlock = "SEM_ESPACO" | "SEM_ASSINATURA" | "PLANO_GRATUITO" | "COBRANCA_EXTERNA";
+export type GrantBlock = "SEM_ESPACO" | "SEM_ASSINATURA" | "PLANO_GRATUITO" | "COBRANCA_EXTERNA" | "COBRANCA_EMITIDA" | "ASAAS_INDISPONIVEL" | "EM_SINCRONIZACAO";
 
 /// Quem pode receber: dono de espaço PERSONAL ou INDIVIDUAL (FitOS Livre)
 /// com assinatura de plano pago. Conta com assinatura no Asaas só recebe
-/// depois do ajuste da próxima cobrança (`nextDueDate`), para não prometer
-/// gratuidade com cobrança ainda programada.
+/// com o ajuste da próxima cobrança ligado (`asaasEnabled`), para não
+/// prometer gratuidade com cobrança ainda programada. Assinatura cancelada
+/// recebe só o acesso: nada a ajustar no Asaas.
 export function grantEligibility(
   role: string,
-  subscription: { externalSubscriptionId: string | null; creditCardLast4: string | null; plan: { priceCents: number } } | null,
-  hasTenant: boolean
-): { ok: true } | { ok: false; kind: GrantBlock; message: string } {
+  subscription: { status: string; externalSubscriptionId: string | null; creditCardLast4: string | null; plan: { priceCents: number } } | null,
+  hasTenant: boolean,
+  asaasEnabled = false
+): { ok: true; external: boolean } | { ok: false; kind: GrantBlock; message: string } {
   if ((role !== "PERSONAL" && role !== "INDIVIDUAL") || !hasTenant) {
     return { ok: false, kind: "SEM_ESPACO", message: "Só personal e FitOS Livre com espaço criado recebem gratuidade." };
   }
   if (!subscription) return { ok: false, kind: "SEM_ASSINATURA", message: "Sem assinatura: o usuário precisa escolher um plano antes." };
   if (subscription.plan.priceCents <= 0) return { ok: false, kind: "PLANO_GRATUITO", message: "O plano atual já é gratuito." };
+  if (subscription.status === "CANCELADA") return { ok: true, external: false };
+  if (subscription.externalSubscriptionId && asaasEnabled) return { ok: true, external: true };
   if (subscription.externalSubscriptionId || subscription.creditCardLast4) {
     return {
       ok: false,
@@ -98,5 +101,77 @@ export function grantEligibility(
       message: "Assinatura com cobrança no Asaas: a gratuidade fica disponível quando o ajuste da próxima cobrança estiver ligado.",
     };
   }
-  return { ok: true };
+  return { ok: true, external: false };
+}
+
+// ── Cobrança no Asaas (fatia 3) ────────────────────────────────────────
+
+const PAID_STATUSES = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);
+const OPEN_STATUSES = new Set(["PENDING", "OVERDUE"]);
+
+export interface ExternalPayment {
+  id: string;
+  status: string;
+  /// AAAA-MM-DD.
+  dueDate: string;
+  value: number;
+}
+
+/// Data local (AAAA-MM-DD) de um instante.
+export function localDay(instant: Date): string {
+  return new Date(instant.getTime() + SAO_PAULO_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/// Meia-noite local de um dia AAAA-MM-DD.
+function localMidnight(day: string): Date {
+  return new Date(`${day}T00:00:00-03:00`);
+}
+
+function addMonths(day: string, months: number): string {
+  const [year, month, date] = day.split("-").map(Number) as [number, number, number];
+  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  // Fim de mês: 31/01 + 1 mês = 28 ou 29/02, nunca 03/03.
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(date, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+/// Fim do serviço já pago: cada cobrança paga cobre um ciclo a partir do
+/// vencimento. `null` sem pagamento confirmado.
+export function paidThroughFromPayments(payments: ExternalPayment[], cycle: "MONTHLY" | "YEARLY"): Date | null {
+  let end: string | null = null;
+  for (const payment of payments) {
+    if (!PAID_STATUSES.has(payment.status)) continue;
+    const covered = addMonths(payment.dueDate, cycle === "YEARLY" ? 12 : 1);
+    if (!end || covered > end) end = covered;
+  }
+  return end ? localMidnight(end) : null;
+}
+
+export interface ExternalBillingPlan {
+  /// Próxima cobrança ainda não gerada, hoje e depois da concessão.
+  currentDueDate: string;
+  targetDueDate: string;
+  /// O Asaas precisa mudar (`false` quando a próxima cobrança já é depois).
+  needsChange: boolean;
+  /// Cobranças em aberto com vencimento dentro da janela: bloqueiam.
+  openInWindow: ExternalPayment[];
+  /// Atrasos anteriores à janela: só informados, continuam devidos.
+  oldDebts: ExternalPayment[];
+}
+
+/// O que muda na cobrança do Asaas para a janela gratuita: a próxima
+/// cobrança passa para o dia em que o benefício termina (nunca antecipa).
+export function externalBillingPlan(window: GrantWindow, currentDueDate: string, payments: ExternalPayment[]): ExternalBillingPlan {
+  const startDay = localDay(window.startsAt);
+  const lastDay = lastIncludedDay(window.endsAt);
+  const targetDueDate = localDay(window.endsAt);
+  const open = payments.filter((payment) => OPEN_STATUSES.has(payment.status));
+  return {
+    currentDueDate,
+    targetDueDate: currentDueDate > targetDueDate ? currentDueDate : targetDueDate,
+    needsChange: currentDueDate < targetDueDate,
+    openInWindow: open.filter((payment) => payment.dueDate >= startDay && payment.dueDate <= lastDay),
+    oldDebts: open.filter((payment) => payment.status === "OVERDUE" && payment.dueDate < startDay),
+  };
 }

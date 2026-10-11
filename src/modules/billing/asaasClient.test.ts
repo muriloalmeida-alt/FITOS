@@ -6,7 +6,10 @@ import {
   createAsaasCustomer,
   createAsaasSubscription,
   findAsaasCustomerByCpfCnpj,
+  getAsaasSubscription,
   listAsaasCustomers,
+  listAsaasSubscriptionPayments,
+  setAsaasSubscriptionNextDueDate,
   tokenizeAsaasCreditCard,
   updateAsaasSubscription,
 } from "./asaasClient";
@@ -323,6 +326,27 @@ describe("cancelAsaasSubscription", () => {
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
       expect.objectContaining({ method: "DELETE" })
+    );
+  });
+});
+
+describe("gratuidade do administrador (feature 4)", () => {
+  it("lê a assinatura e as cobranças, ignorando as excluídas", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { id: "sub_1", status: "ACTIVE", nextDueDate: "2026-11-01", cycle: "MONTHLY" }))
+      .mockResolvedValueOnce(jsonResponse(200, { object: "list", hasMore: false, totalCount: 2, limit: 100, offset: 0, data: [{ id: "p1", status: "PENDING", dueDate: "2026-11-01", value: 19.9 }, { id: "p2", status: "PENDING", dueDate: "2026-10-01", value: 19.9, deleted: true }] }));
+    expect(await getAsaasSubscription({ apiKey: FAKE_KEY, fetchImpl }, "sub_1")).toMatchObject({ nextDueDate: "2026-11-01" });
+    expect((await listAsaasSubscriptionPayments({ apiKey: FAKE_KEY, fetchImpl }, "sub_1")).map((payment) => payment.id)).toEqual(["p1"]);
+    expect(fetchImpl).toHaveBeenLastCalledWith("https://api-sandbox.asaas.com/v3/subscriptions/sub_1/payments?limit=100", expect.anything());
+  });
+
+  it("adia a próxima cobrança sem mexer nas cobranças já emitidas", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { id: "sub_1", status: "ACTIVE", nextDueDate: "2026-12-01", cycle: "MONTHLY" }));
+    await setAsaasSubscriptionNextDueDate({ apiKey: FAKE_KEY, fetchImpl }, "sub_1", "2026-12-01");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api-sandbox.asaas.com/v3/subscriptions/sub_1",
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ nextDueDate: "2026-12-01", updatePendingPayments: false }) })
     );
   });
 });
