@@ -190,3 +190,29 @@ export async function getSessionPoints(scope: { tenantId: string; studentId: str
   if (!score) return null;
   return { totalTenths: score.totalTenths, balancedTenths: score.balancedTenths, plannedItems: score.plannedItems, status: score.status, photoDeadline: score.photoDeadline, items: score.items as unknown as ScoredItem[] };
 }
+
+/// Prévia dos pontos de um treino ainda não salvo (retroativo, etapa de
+/// revisão): mesmas regras, lendo as referências sem criar nenhuma. Sem
+/// referência, a primeira execução vira a referência (10 pontos), como
+/// fará a pontuação de verdade num treino avulso.
+export async function previewPoints(
+  scope: { tenantId: string; studentId: string },
+  exercises: { exerciseId: string; sets: ScoredSet[] }[],
+  client: PrismaClient = prisma
+): Promise<{ totalTenths: number; items: { exerciseId: string; pointsTenths: number }[] }> {
+  const found = await client.exercise.findMany({ where: { id: { in: exercises.map((exercise) => exercise.exerciseId) } }, select: { id: true, type: true } });
+  const types = new Map(found.map((exercise) => [exercise.id, exercise.type]));
+  const items: { exerciseId: string; pointsTenths: number }[] = [];
+  for (const exercise of exercises) {
+    const kind = kindFor(isCardioType(types.get(exercise.exerciseId)), exercise.sets);
+    const done = doneFor(kind, exercise.sets);
+    if (done <= 0) {
+      items.push({ exerciseId: exercise.exerciseId, pointsTenths: 0 });
+      continue;
+    }
+    const active = await client.scoringReference.findFirst({ where: { studentId: scope.studentId, exerciseId: exercise.exerciseId, kind, supersededAt: null }, select: { value: true } });
+    const reference = active?.value ?? (kind === "TEMPO" ? DEFAULT_CARDIO_REFERENCE_SECONDS : done);
+    items.push({ exerciseId: exercise.exerciseId, pointsTenths: itemPointsTenths(kind, done, reference) });
+  }
+  return { totalTenths: items.reduce((sum, item) => sum + item.pointsTenths, 0), items };
+}
