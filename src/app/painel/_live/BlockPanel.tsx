@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, ChipGroup, FormAlert, Sheet, Stepper } from "@/shared/ui";
+import { Button, FormAlert, Sheet } from "@/shared/ui";
 import { blockElapsedSeconds, blockResultSummary, blockSummary, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
+import { BlockResultForm, emptyResultDraft, resultPayload, type BlockOutcomeChoice, type BlockResultDraft } from "./BlockResultForm";
 import styles from "./BlockPanel.module.css";
 
 export interface BlockResultView {
@@ -19,6 +20,22 @@ export interface BlockResultView {
   note: string | null;
 }
 
+/// Rascunho do formulário a partir do resultado salvo (corrigir).
+export function draftFrom(block: WorkoutBlock, saved: BlockResultView | null): BlockResultDraft {
+  const empty = emptyResultDraft(block);
+  if (!saved?.endedAt) return empty;
+  const elapsed = saved.elapsedSeconds ?? 0;
+  return {
+    outcome: (saved.outcome as BlockOutcomeChoice | null) ?? empty.outcome,
+    rounds: saved.roundsCompleted ?? 0,
+    partial: saved.partialReps ?? 0,
+    intervals: saved.intervalsCompleted ?? 0,
+    note: saved.note ?? "",
+    minutes: Math.floor(elapsed / 60),
+    seconds: elapsed % 60,
+  };
+}
+
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
@@ -32,11 +49,7 @@ export function BlockPanel({ block, initial, endpoint, onChange }: { block: Work
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
-  const [outcome, setOutcome] = useState<"CONCLUIDO" | "LIMITE_ATINGIDO" | "PARCIAL">(block.kind === "FOR_TIME" ? "CONCLUIDO" : "PARCIAL");
-  const [rounds, setRounds] = useState(initial?.roundsCompleted ?? 0);
-  const [partial, setPartial] = useState(initial?.partialReps ?? 0);
-  const [intervals, setIntervals] = useState(initial?.intervalsCompleted ?? 0);
-  const [note, setNote] = useState(initial?.note ?? "");
+  const [draft, setDraft] = useState<BlockResultDraft>(() => draftFrom(block, initial));
 
   const running = Boolean(result?.startedAt && !result.pausedAt && !result.endedAt);
   useEffect(() => {
@@ -69,12 +82,12 @@ export function BlockPanel({ block, initial, endpoint, onChange }: { block: Work
   /// A meta não vira "feito": no EMOM sugere os intervalos que o relógio
   /// já fechou; o resto começa do zero até o praticante informar.
   function openFinish() {
-    if (block.kind === "EMOM" && !result?.endedAt) setIntervals(Math.min(block.intervals ?? 0, Math.floor(elapsed / (block.intervalSeconds ?? 60))));
+    if (block.kind === "EMOM" && !result?.endedAt) setDraft((current) => ({ ...current, intervals: Math.min(block.intervals ?? 0, Math.floor(elapsed / (block.intervalSeconds ?? 60))) }));
     setFinishing(true);
   }
 
   async function finish() {
-    const saved = await send("PUT", endpoint, { outcome, roundsCompleted: block.kind === "EMOM" ? null : rounds, partialReps: block.kind === "EMOM" || block.kind === "CIRCUITO" ? null : partial || null, intervalsCompleted: block.kind === "EMOM" ? intervals : null, note });
+    const saved = await send("PUT", endpoint, resultPayload(block, draft));
     if (saved) setFinishing(false);
   }
 
@@ -132,33 +145,7 @@ export function BlockPanel({ block, initial, endpoint, onChange }: { block: Work
             </Button>
           }
         >
-          <div className={styles.form}>
-            {block.kind === "FOR_TIME" ? (
-              <ChipGroup
-                label="Como terminou"
-                showLabel
-                tone="accent"
-                value={outcome}
-                onChange={(value) => setOutcome(value as typeof outcome)}
-                options={[
-                  { value: "CONCLUIDO", label: "Concluído" },
-                  ...(block.timeCapSeconds ? [{ value: "LIMITE_ATINGIDO", label: "Limite atingido" }] : []),
-                  { value: "PARCIAL", label: "Parei antes" },
-                ]}
-              />
-            ) : null}
-            {block.kind === "FOR_TIME" && outcome === "CONCLUIDO" ? <p className={styles.muted}>Tempo do bloco: {clock(elapsed)} (pelo timer).</p> : null}
-            {block.kind === "EMOM" ? (
-              <Stepper label="Intervalos concluídos" value={intervals} step={1} min={0} max={block.intervals ?? 60} onChange={setIntervals} />
-            ) : (
-              <Stepper label={block.kind === "CIRCUITO" ? "Voltas completas" : "Rounds completos"} value={rounds} step={1} min={0} max={500} onChange={setRounds} />
-            )}
-            {block.kind === "AMRAP" || (block.kind === "FOR_TIME" && outcome !== "CONCLUIDO") ? <Stepper label="Reps da volta incompleta" value={partial} step={1} min={0} max={500} onChange={setPartial} /> : null}
-            <label className={styles.field}>
-              <span>Nota (opcional)</span>
-              <input value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} placeholder="Ex.: escalei o pull-up" />
-            </label>
-          </div>
+          <BlockResultForm block={block} value={draft} onChange={setDraft} timerLabel={clock(elapsed)} />
         </Sheet>
       ) : null}
     </section>

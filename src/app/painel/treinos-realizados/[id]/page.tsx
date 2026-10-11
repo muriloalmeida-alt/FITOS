@@ -29,6 +29,7 @@ export default async function TreinoRealizadoPage({ params }: { params: Promise<
           recordedAtIso: detail.recordedAt.toISOString(),
           durationSeconds: detail.durationSeconds,
           exercises: detail.exercises,
+          blocks: detail.blocks,
           evidenceIds: detail.evidenceIds,
         }}
         canEdit={detail.editable && featureEnabled("RETROATIVO")}

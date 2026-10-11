@@ -23,6 +23,7 @@ export default async function EditarTreinoRealizadoPage({ params }: { params: Pr
   if (!detail) notFound();
   if (!detail.editable) redirect(`/painel/treinos-realizados/${id}`);
   const library = await loadLibrary(self.tenantId);
+  const funcional = featureEnabled("FUNCIONAL");
   const byId = new Map(library.map((exercise) => [exercise.id, exercise]));
   return (
     <AppShell eyebrow="Treino" title="Editar treino registrado" navItems={self.navItems} activeKey="progresso" trailing={<LogoutButton />}>
@@ -30,11 +31,13 @@ export default async function EditarTreinoRealizadoPage({ params }: { params: Pr
         library={library}
         nowIso={new Date().toISOString()}
         pointsEnabled={featureEnabled("GAMIFICACAO")}
+        blocksEnabled={funcional}
         edit={{
           sessionId: detail.id,
           performedAtIso: detail.performedAt.toISOString(),
           durationSeconds: detail.durationSeconds ?? 45 * 60,
-          items: detail.exercises.map((item) => ({ exercise: byId.get(item.exerciseId) ?? { id: item.exerciseId, name: item.name, muscle: null, imageUrl: null, imageAlt: null, type: item.type }, sets: item.sets })),
+          items: detail.exercises.map((item) => ({ exercise: byId.get(item.exerciseId) ?? { id: item.exerciseId, name: item.name, muscle: null, imageUrl: null, imageAlt: null, type: item.type }, blockKey: funcional ? item.blockKey : null, sets: item.sets })),
+          blocks: funcional ? detail.blocks : undefined,
         }}
       />
     </AppShell>

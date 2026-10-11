@@ -38,6 +38,11 @@
   color: var(--fitos-color-text-muted);
 }
 
+.exercises .blockResult {
+  color: var(--fitos-color-primary);
+  font-weight: 700;
+}
+
 .cap {
   margin: 16px 0 0;
   font-size: 12px;

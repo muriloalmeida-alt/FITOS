@@ -274,3 +274,9 @@
   font-size: 34px;
   font-weight: 800;
 }
+
+.blockActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

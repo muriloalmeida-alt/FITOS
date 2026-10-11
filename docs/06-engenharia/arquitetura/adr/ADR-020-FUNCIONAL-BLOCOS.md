@@ -57,3 +57,21 @@ O PDF "1-CrossFit_Funcionais" pede catálogo com categorias, músculos secundár
 - **Rotas:** `PUT …/[id]/blocos/[key]` e `POST …/[id]/blocos/[key]/timer`, em `/api/workout-sessions` (aluno) e `/api/minhas-sessoes` (Livre). Respondem 404 sem `FEATURE_FUNCIONAL`.
 - **Tela:** o treino ao vivo mostra o painel do bloco acima do exercício atual quando o item pertence a um bloco. O painel tem formato, tempo restante (ou intervalo x de N), Iniciar, Pausar, Retomar, Encerrar bloco e Corrigir resultado.
 - **Fora desta etapa:** pontuação por bloco. Os pontos continuam pelas séries registradas.
+
+## Adendo — etapa 4: blocos no treino retroativo
+
+- **Registro:** com `FEATURE_FUNCIONAL`, "Registrar treino realizado" aceita blocos. Cada um leva o formato (o mesmo `parseBlock` do editor) e o resultado declarado: voltas, round parcial, intervalos, "como terminou" e o tempo do For Time concluído.
+- **Exercícios do bloco:** o exercício recebe o `blockKey` do bloco e não precisa de séries, porque conta pelo resultado do bloco.
+- **Validação:**
+  - cada bloco precisa de pelo menos um exercício;
+  - chave desconhecida é recusada;
+  - For Time "Concluído" exige o tempo declarado;
+  - "Limite atingido" nunca grava tempo.
+- **Validação compartilhada:** `parseBlockOutcome` vale para o ao vivo e para o retroativo.
+- **Gravação:**
+  - `workout.blocks` e `WorkoutBlockResult` (sem `startedAt`, com `endedAt` no fim declarado do treino), na mesma transação do registro;
+  - editar apaga e regrava blocos e resultados;
+  - a trilha (`WorkoutSessionRevision.snapshot`) guarda os blocos, os resultados e o `blockKey` de antes.
+- **Detalhe do treino realizado:** ao vivo ou retroativo, mostra cada bloco com o resultado ("Concluído em 9:42", "5 voltas + 8 reps") e os exercícios dele.
+- **Flag desligada:** as rotas ignoram `blocks` e `blockKey`, e o registro volta a exigir séries em todos os exercícios.
+- **Pontuação:** continua pelas séries. Exercícios só de bloco ainda não pontuam, até haver política aprovada por métrica.

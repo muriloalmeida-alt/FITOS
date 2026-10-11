@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button, FormAlert, Sheet, Tag } from "@/shared/ui";
 import { resizeImage } from "@/shared/lib/resizeImage";
 import { durationLabel } from "@/shared/lib/retroactive";
+import { blockResultSummary, blockSummary, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
+import type { BlockResultView } from "../../_live/BlockPanel";
 import { SessionPointsCard } from "../../_live/SessionPointsCard";
 import styles from "./FinishedSessionView.module.css";
 
@@ -15,7 +17,8 @@ interface Props {
     performedAtIso: string;
     recordedAtIso: string;
     durationSeconds: number | null;
-    exercises: { exerciseId: string; name: string; cardio: boolean; sets: { reps: number | null; loadKg: number | null; durationSeconds: number | null }[] }[];
+    blocks?: { block: WorkoutBlock; result: BlockResultView }[];
+    exercises: { exerciseId: string; name: string; cardio: boolean; blockKey?: string | null; sets: { reps: number | null; loadKg: number | null; durationSeconds: number | null }[] }[];
     evidenceIds: string[];
   };
   canEdit: boolean;
@@ -37,6 +40,7 @@ function setLabel(set: Props["session"]["exercises"][number]["sets"][number], ca
 /// pontos dos Desafios e as ações do registro (editar no prazo, excluir).
 export function FinishedSessionView({ session, canEdit, canDelete, pointsEnabled }: Props) {
   const router = useRouter();
+  const loose = session.exercises.filter((exercise) => !exercise.blockKey);
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,14 +103,33 @@ export function FinishedSessionView({ session, canEdit, canDelete, pointsEnabled
         {[session.durationSeconds ? `Tempo total: ${durationLabel(session.durationSeconds)}` : null, session.mode === "RETROATIVO" ? `registrado em ${shortFmt.format(new Date(session.recordedAtIso))}` : null].filter(Boolean).join(" · ")}
       </p>
 
-      <ul className={styles.exercises} aria-label="Exercícios">
-        {session.exercises.map((exercise) => (
-          <li key={exercise.exerciseId}>
-            <strong>{exercise.name}</strong>
-            <span>{exercise.sets.map((set) => setLabel(set, exercise.cardio)).join(" · ")}</span>
-          </li>
-        ))}
-      </ul>
+      {session.blocks?.length ? (
+        <ul className={styles.exercises} aria-label="Blocos">
+          {session.blocks.map(({ block, result }) => (
+            <li key={block.key}>
+              <strong>{blockSummary(block)}</strong>
+              <span className={styles.blockResult}>{blockResultSummary(block, result)}</span>
+              <span>
+                {session.exercises
+                  .filter((exercise) => exercise.blockKey === block.key)
+                  .map((exercise) => exercise.name)
+                  .join(" · ")}
+              </span>
+              {result.note ? <span>{result.note}</span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {loose.length ? (
+        <ul className={styles.exercises} aria-label="Exercícios">
+          {loose.map((exercise) => (
+            <li key={exercise.exerciseId}>
+              <strong>{exercise.name}</strong>
+              <span>{exercise.sets.map((set) => setLabel(set, exercise.cardio)).join(" · ")}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <h2 className={styles.cap}>Fotos do treino</h2>
       {photos.length === 0 ? <p className={styles.muted}>{pointsEnabled ? "Sem foto, o treino fica salvo sem pontuação. Adicione uma foto para receber os pontos." : "Nenhuma foto."}</p> : null}

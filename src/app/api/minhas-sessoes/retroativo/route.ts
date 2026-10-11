@@ -2,7 +2,7 @@ import { authErrorResponse } from "@/modules/tenancy/authContext";
 import { requireSelfStudent } from "@/modules/tenancy/selfStudent";
 import { SessionError } from "@/modules/execution/sessions";
 import { recordRetroactiveWorkout, type RetroExerciseInput } from "@/modules/execution/retroactive";
-import { parseRetroExercises } from "@/shared/lib/retroactive";
+import { parseRetroBlocksBody, parseRetroExercises } from "@/shared/lib/retroactive";
 
 import { featureEnabled } from "@/shared/config/features";
 
@@ -19,7 +19,9 @@ export async function POST(request: Request) {
       operationKey: typeof body?.operationKey === "string" ? body.operationKey : "",
       performedAt: new Date(typeof body?.performedAt === "string" ? body.performedAt : NaN),
       durationSeconds: typeof body?.durationSeconds === "number" ? body.durationSeconds : 0,
-      exercises: parseRetroExercises(body?.exercises) as RetroExerciseInput[],
+      // Funcional e CrossFit (etapa 4): blocos só com a flag ligada.
+      exercises: parseRetroExercises(body?.exercises, featureEnabled("FUNCIONAL")) as RetroExerciseInput[],
+      blocks: featureEnabled("FUNCIONAL") ? parseRetroBlocksBody(body?.blocks) : undefined,
     });
     return Response.json(result, { status: result.replayed ? 200 : 201 });
   } catch (error) {
