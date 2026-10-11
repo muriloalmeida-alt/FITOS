@@ -1,6 +1,7 @@
 import "server-only";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { workoutsForContest, type ContestableWorkout } from "./scoreContests";
 import { periodOf, type PeriodType } from "@/shared/lib/medals";
 import { rankStudents, type RankingEntry } from "@/shared/lib/ranking";
 import { OFFICIAL_STATUSES } from "./sessionScoring";
@@ -111,4 +112,19 @@ export async function getClassRanking(viewer: RankingViewer, type: PeriodType, c
     isMe: viewer.role === "ALUNO" && viewer.studentId === row.studentId,
   }));
   return { startsAt: period.start, endsAt: period.end, rows };
+}
+
+/// Aluno que participa: treinos dos colegas no período (data e pontos),
+/// para contestar pelo resumo mínimo.
+export async function classMemberWorkouts(viewer: { tenantId: string; studentId: string }, type: PeriodType, client: PrismaClient = prisma, now = new Date()): Promise<Map<string, ContestableWorkout[]>> {
+  const result = new Map<string, ContestableWorkout[]>();
+  const state = await getClassRankingState(viewer.tenantId, client);
+  if (!state.enabled || !state.activatedAt || !(await isParticipant(viewer, client))) return result;
+  const period = periodOf(type, now);
+  const participants = await client.classRankingParticipant.findMany({ where: { tenantId: viewer.tenantId, leftAt: null, studentId: { not: viewer.studentId }, student: { status: "ATIVO" } } });
+  for (const participant of participants) {
+    const from = new Date(Math.max(period.start.getTime(), participant.joinedAt.getTime(), state.activatedAt.getTime()));
+    if (from < period.end) result.set(participant.studentId, await workoutsForContest({ tenantId: viewer.tenantId, studentId: participant.studentId }, { from, until: period.end }, client, now));
+  }
+  return result;
 }

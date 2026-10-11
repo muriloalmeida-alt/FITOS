@@ -7,6 +7,8 @@ import { formatPoints } from "@/shared/lib/scoring";
 import { MODE_HELP, MODE_LABEL, seasonLabel } from "./friendTexts";
 import ranking from "./ClassRankingPanel.module.css";
 import styles from "./FriendGroups.module.css";
+import { ContestSheet, type WorkoutForContest } from "./ContestSheet";
+import { ReviewQueue, type ReviewCaseView } from "./ReviewQueue";
 
 export interface FriendGroupData {
   id: string;
@@ -21,7 +23,8 @@ export interface FriendGroupData {
 
 /// Um grupo de amigos: placar da temporada, convite, nova temporada
 /// (organizador) e sair.
-export function FriendGroupView({ group, nowIso }: { group: FriendGroupData; nowIso: string }) {
+export function FriendGroupView({ group, nowIso, workouts = {}, reviewCases = [] }: { group: FriendGroupData; nowIso: string; workouts?: Record<string, WorkoutForContest[]>; reviewCases?: ReviewCaseView[] }) {
+  const [inspect, setInspect] = useState<{ memberId: string; name: string } | null>(null);
   const router = useRouter();
   const [length, setLength] = useState(String(group.season?.lengthDays ?? 14));
   const [busy, setBusy] = useState(false);
@@ -61,6 +64,7 @@ export function FriendGroupView({ group, nowIso }: { group: FriendGroupData; now
         {MODE_LABEL[group.mode]} · {group.members} {group.members === 1 ? "pessoa" : "pessoas"}
       </p>
       <p className={styles.season}>{seasonLabel(group.season, nowIso)}</p>
+      <ReviewQueue cases={reviewCases} />
 
       {group.rows.length > 0 ? (
         <ol className={ranking.list} aria-label="Placar da temporada">
@@ -76,6 +80,11 @@ export function FriendGroupView({ group, nowIso }: { group: FriendGroupData; now
                 {row.left || row.contested ? <span className={ranking.muted}>{[row.left ? "saiu do grupo" : null, row.contested ? "em contestação" : null].filter(Boolean).join(" · ")}</span> : null}
               </span>
               <span className={ranking.points}>{formatPoints(row.pointsTenths)}</span>
+              {!row.isMe && workouts[row.memberId] ? (
+                <button type="button" className={styles.rowAction} onClick={() => setInspect({ memberId: row.memberId, name: row.name })} aria-label={`Ver treinos de ${row.name}`}>
+                  Treinos
+                </button>
+              ) : null}
             </li>
           ))}
         </ol>
@@ -102,6 +111,8 @@ export function FriendGroupView({ group, nowIso }: { group: FriendGroupData; now
       ) : null}
 
       {error ? <FormAlert variant="error">{error}</FormAlert> : null}
+
+      {inspect ? <ContestSheet open onClose={() => setInspect(null)} name={inspect.name} workouts={workouts[inspect.memberId] ?? []} target={{ context: "AMIGOS", groupId: group.id }} /> : null}
 
       <Button type="button" variant="quiet" block onClick={() => setConfirmLeave(true)} disabled={busy}>
         Sair do grupo

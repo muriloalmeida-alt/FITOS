@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ requireSelfStudent: vi.fn(), resolvePhotoViewer: vi.fn(), getEvidenceForViewer: vi.fn(), deleteSessionEvidence: vi.fn(), addSessionEvidence: vi.fn(), listSessionEvidence: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireSelfStudent: vi.fn(), resolvePhotoViewer: vi.fn(), getEvidenceForViewer: vi.fn(), deleteSessionEvidence: vi.fn(), addSessionEvidence: vi.fn(), listSessionEvidence: vi.fn(), evidenceForReviewer: vi.fn(), requireSession: vi.fn() }));
+
+vi.mock("@/modules/gamification/scoreContests", () => ({ evidenceForReviewer: mocks.evidenceForReviewer }));
+vi.mock("@/modules/tenancy/authContext", async () => ({ ...(await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext")), requireSession: mocks.requireSession }));
 
 vi.mock("@/modules/tenancy/selfStudent", () => ({ requireSelfStudent: mocks.requireSelfStudent }));
 vi.mock("@/modules/media/photoAccess", async () => {
@@ -25,6 +28,8 @@ const self = { userId: "u1", role: "INDIVIDUAL", tenantId: "t1", studentId: "s1"
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireSelfStudent.mockResolvedValue(self);
+  mocks.requireSession.mockResolvedValue({ userId: "u9" });
+  mocks.evidenceForReviewer.mockResolvedValue(null);
 });
 
 describe("evidência do treino (rotas)", () => {
@@ -37,6 +42,17 @@ describe("evidência do treino (rotas)", () => {
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     mocks.getEvidenceForViewer.mockResolvedValueOnce(null);
     expect((await GET(new Request("http://x"), { params })).status).toBe(404);
+    expect(mocks.evidenceForReviewer).toHaveBeenCalledWith({ userId: "u9" }, "e1");
+  });
+
+  it("revisor de contestação aberta vê a foto de outro espaço; sem sessão, 401", async () => {
+    mocks.resolvePhotoViewer.mockResolvedValue({ role: "INDIVIDUAL", tenantId: "outro" });
+    mocks.getEvidenceForViewer.mockResolvedValueOnce(null);
+    mocks.evidenceForReviewer.mockResolvedValueOnce({ mimeType: "image/jpeg", data: Buffer.from([0xff, 0xd8, 0xff]) });
+    expect((await GET(new Request("http://x"), { params })).status).toBe(200);
+    mocks.resolvePhotoViewer.mockRejectedValueOnce(new AuthError("UNAUTHENTICATED", "Entre."));
+    mocks.requireSession.mockRejectedValueOnce(new AuthError("UNAUTHENTICATED", "Entre."));
+    expect((await GET(new Request("http://x"), { params })).status).toBe(401);
   });
 
   it("envio e exclusão só por quem treinou: personal recebe 403", async () => {

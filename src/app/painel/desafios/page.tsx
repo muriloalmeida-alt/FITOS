@@ -6,7 +6,9 @@ import { featureEnabled } from "@/shared/config/features";
 import { AuthError, requireSession } from "@/modules/tenancy/authContext";
 import { requireSelfStudent } from "@/modules/tenancy/selfStudent";
 import { getAchievements } from "@/modules/gamification/achievements";
-import { getClassRanking, getClassRankingState, isParticipant, type RankingViewer } from "@/modules/gamification/classRanking";
+import { classMemberWorkouts, getClassRanking, getClassRankingState, isParticipant, type RankingViewer } from "@/modules/gamification/classRanking";
+import { listReviewQueue } from "@/modules/gamification/scoreContests";
+import { reviewCasesView, workoutsView } from "./contestData";
 import { LogoutButton } from "../LogoutButton";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
 import { AchievementsView } from "./AchievementsView";
@@ -44,7 +46,7 @@ export default async function DesafiosPage({ searchParams }: { searchParams?: Pr
     const rows = state.enabled ? await rankingRows({ role: "PERSONAL", tenantId: ctx.tenantId }, period) : null;
     return (
       <AppShell eyebrow="Desafios" title="Ranking da turma" navItems={PERSONAL_NAV_ITEMS} activeKey="alunos" trailing={<LogoutButton />}>
-        <ClassRankingPanel role="PERSONAL" enabled={state.enabled} joined={false} period={period} rows={rows} basePath="/painel/desafios?aba=turma" />
+        <ClassRankingPanel role="PERSONAL" enabled={state.enabled} joined={false} period={period} rows={rows} basePath="/painel/desafios?aba=turma" reviewCases={reviewCasesView(await listReviewQueue({ userId: ctx.userId }, { context: "TURMA" }))} />
       </AppShell>
     );
   }
@@ -63,7 +65,8 @@ export default async function DesafiosPage({ searchParams }: { searchParams?: Pr
     const scope = { tenantId: self.tenantId, studentId: self.studentId };
     const [state, joined] = await Promise.all([getClassRankingState(self.tenantId), isParticipant(scope)]);
     const rows = state.enabled && joined ? await rankingRows({ role: "ALUNO", ...scope }, period) : null;
-    content = <ClassRankingPanel role="ALUNO" enabled={state.enabled} joined={joined} period={period} rows={rows} basePath="/painel/desafios?aba=turma" />;
+    const workouts = rows ? workoutsView(await classMemberWorkouts(scope, period === "mes" ? "MES" : "SEMANA")) : {};
+    content = <ClassRankingPanel role="ALUNO" enabled={state.enabled} joined={joined} period={period} rows={rows} basePath="/painel/desafios?aba=turma" workouts={workouts} />;
   } else if (tab === "amigos") {
     const groups = await listMyFriendGroups(self);
     content = (

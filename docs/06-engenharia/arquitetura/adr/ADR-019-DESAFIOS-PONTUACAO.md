@@ -100,3 +100,33 @@ O PDF "3-Gamificacao" confirma as fórmulas (volume de musculação, +1 por 10% 
   - `/[id]/sair`.
   - Todas valem sempre sobre quem treina e dão 404 sem `FEATURE_GAMIFICACAO`.
 - **Contestação** (parte B) vem a seguir.
+
+## Adendo: Contestação (Desafios 4/4, parte B)
+
+- **Quem contesta:** quem participa, sobre treino de outra pessoa, pelo resumo mínimo (data e pontos).
+  - No grupo de amigos: membro ativo, sobre treino de outro membro que conta numa temporada do grupo.
+  - Na turma: aluno que aderiu, sobre colega que também aderiu.
+  - Prazo: até 24 h depois da liberação dos pontos.
+- **Revisor** (`ScoreContest.reviewerUserId`):
+  - na turma, o personal;
+  - no grupo, o organizador;
+  - se o treino ou a contestação for do organizador, revisa quem está há mais tempo no grupo e não é parte do caso;
+  - sem ninguém assim, o caso não abre ("precisa de mais alguém").
+- **Pontos durante o caso:** ficam `CONTESTADO` e continuam valendo, sinalizados no placar. Caso aberto não se encerra sozinho.
+- **Decisão:** manter ou anular, sempre com justificativa.
+  - Manter vira `MANTIDO`; anular vira `ANULADO` e sai do placar e das medalhas abertas.
+  - Período já consolidado não muda.
+  - Cada passo fica em `ScoreEvent` (quem fez e por quê).
+- **Sem duplicar** (índices parciais):
+  - uma contestação aberta por treino;
+  - o mesmo participante não contesta o mesmo treino duas vezes;
+  - treino mantido não volta a ser contestado.
+- **Recurso:** o autor recorre uma vez de uma anulação, em até 48 h. Vai para alguém fora do caso (autor, quem contestou, quem decidiu); sem ninguém assim, volta para quem decidiu reexaminar.
+- **Privacidade:**
+  - A foto do treino contestado fica visível só para o autor e para o revisor do caso aberto, inclusive de outro espaço (`evidenceForReviewer`).
+  - O autor vê a situação e a decisão, nunca quem contestou.
+- **Rotas:**
+  - `POST /api/desafios/contestacoes`;
+  - `/[id]/decisao`;
+  - `/recurso`.
+  - 404 sem `FEATURE_GAMIFICACAO`.

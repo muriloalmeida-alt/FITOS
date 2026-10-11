@@ -13,6 +13,7 @@ export interface FriendGroupItem {
   members: number;
   season: { lengthDays: number; startsAt: string; endsAt: string; running: boolean } | null;
   myPosition: number | null;
+  pendingReviews?: number;
 }
 
 /// Amigos (Desafios 4/4): seus grupos, criar um grupo e entrar por código.
@@ -48,7 +49,7 @@ export function FriendGroupsPanel({ groups, nowIso }: { groups: FriendGroupItem[
               <ActionRow
                 href={`/painel/desafios/amigos/${group.id}`}
                 title={group.name}
-                description={[`${group.members} ${group.members === 1 ? "pessoa" : "pessoas"}`, MODE_LABEL[group.mode], seasonLabel(group.season, nowIso)].join(" · ")}
+                description={[`${group.members} ${group.members === 1 ? "pessoa" : "pessoas"}`, MODE_LABEL[group.mode], seasonLabel(group.season, nowIso), group.pendingReviews ? `${group.pendingReviews} para analisar` : null].filter(Boolean).join(" · ")}
                 trailing={group.myPosition ? <strong>{group.myPosition}º</strong> : <span aria-hidden="true">›</span>}
               />
             </li>
