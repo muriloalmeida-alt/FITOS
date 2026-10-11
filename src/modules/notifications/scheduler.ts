@@ -5,6 +5,7 @@ import { runDueReminders } from "./reminders";
 import { runDueReminders as runBillingDueReminders } from "./billingReminders";
 import { runPersonalAlerts } from "./personalAlerts";
 import { expireOldAttachments } from "@/modules/messages/attachments";
+import { reconcileSyncingGrants } from "@/modules/billing/accessGrants";
 
 /// Agendador dos lembretes de treino (EPIC-31) e dos avisos de vencimento
 /// da assinatura (EPIC-34): roda dentro do próprio servidor, a
@@ -50,6 +51,13 @@ export function startReminderScheduler(): void {
       if (expired > 0) logEvent("info", "chat.anexos_expirados", { total: expired });
     } catch (error) {
       logEvent("error", "chat.anexos_expirar_falhou", describeError(error));
+    }
+    // Gratuidade do administrador presa em SYNCING (timeout no Asaas).
+    try {
+      const pending = await reconcileSyncingGrants();
+      if (pending > 0) logEvent("info", "gratuidade.reconciliacao", { pendentes: pending });
+    } catch (error) {
+      logEvent("error", "gratuidade.reconciliacao_falhou", describeError(error));
     }
   };
   const timer = setInterval(() => void tick(), INTERVAL_MS);
