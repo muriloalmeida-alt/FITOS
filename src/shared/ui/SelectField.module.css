@@ -52,7 +52,8 @@
   }
 
   .select {
-    padding: var(--fitos-space-2) 0;
+    min-height: 40px;
+    padding: var(--fitos-space-1) 0;
     border: none;
     border-bottom: 1px solid var(--fitos-color-outline);
     border-radius: 0;

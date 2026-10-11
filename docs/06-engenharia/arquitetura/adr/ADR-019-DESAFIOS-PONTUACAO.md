@@ -130,3 +130,25 @@ O PDF "3-Gamificacao" confirma as fórmulas (volume de musculação, +1 por 10% 
   - `/[id]/decisao`;
   - `/recurso`.
   - 404 sem `FEATURE_GAMIFICACAO`.
+
+## Adendo — regra 2: isometria e blocos (Funcional e CrossFit)
+
+Aprovado pelo produto em 11/10/2026. `RULE_VERSION` passa a 2.
+
+- **Isometria:** um item que não é aeróbico, sem repetições nem carga e só com tempo (ex.: prancha).
+  - Vale 1 ponto por 30 s registrados, proporcional, com uma casa decimal.
+  - Teto de 20 pontos por exercício.
+  - Não usa referência.
+- **Bloco com resultado registrado** (Circuito, AMRAP, EMOM ou For Time, ao vivo ou retroativo):
+  - Vale 1 ponto por minuto realmente feito, proporcional, com teto de 30 pontos por bloco.
+  - Minutos feitos, por formato:
+    - EMOM: intervalos feitos × duração do intervalo;
+    - AMRAP: a janela, se houve rounds ou reps (ao vivo, o tempo do timer se parou antes);
+    - For Time concluído: o tempo, medido ou declarado;
+    - For Time no limite: o limite;
+    - For Time interrompido ou Circuito: o tempo do timer, o que dá 0 no retroativo, que não tem timer.
+  - Os exercícios do bloco não pontuam de novo pelas séries. Um bloco sem resultado mantém a regra 1, pelas séries.
+- **Calorias e distância:** não têm pontos próprios por enquanto.
+- **Regras que não mudam:** foto, prazo, liberação automática e contestação.
+- **Recálculo:** pontuações já gravadas só mudam quando o treino é recalculado (edição), com evento RECALCULADO. Não há recálculo em massa.
+- **Prévia do retroativo:** usa as mesmas funções puras (`blockSecondsDone`, `blockPointsTenths`, `isometricPointsTenths`).

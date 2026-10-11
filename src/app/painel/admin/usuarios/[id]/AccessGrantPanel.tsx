@@ -17,6 +17,9 @@ export interface GrantRow {
   reasonCode: string;
   reasonText: string | null;
   revokeReason: string | null;
+  /// Próxima cobrança no Asaas adiada para (AAAA-MM-DD).
+  targetDueDate?: string | null;
+  syncError?: string | null;
 }
 
 /// Situação atual vinda da prévia do servidor (ou o motivo de não poder).
@@ -229,6 +232,9 @@ export function AccessGrantPanel({ userId, current, history }: { userId: string;
                 {grant.reasonText ? `: ${grant.reasonText}` : ""}
                 {grant.revokeReason ? ` · revogado: ${grant.revokeReason}` : ""}
               </span>
+              {grant.targetDueDate ? <span className={styles.muted}>Asaas: próxima cobrança em {localDay(grant.targetDueDate)}{grant.status === "REVOGADO" ? " (não volta sozinha: ajuste no Asaas se precisar)" : ""}</span> : null}
+              {grant.status === "SINCRONIZANDO" ? <span className={styles.muted}>Aplicando no Asaas. O acesso muda quando o Asaas confirmar.</span> : null}
+              {grant.status === "FALHOU" ? <span className={styles.muted}>Não aplicado no Asaas{grant.syncError ? ` (${grant.syncError})` : ""}. Confira a próxima cobrança no Asaas antes de conceder de novo.</span> : null}
               {grant.status === "AGENDADO" || grant.status === "EM_VIGOR" ? (
                 revoking === grant.id ? (
                   <div className={styles.revoke}>

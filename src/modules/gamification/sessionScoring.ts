@@ -6,7 +6,8 @@ import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { parseLoadKg } from "@/shared/lib/load";
 import { isCardioType } from "@/shared/lib/cardio";
 import { consolidatesAt, isConsolidated, periodOf } from "@/shared/lib/medals";
-import { DEFAULT_CARDIO_REFERENCE_SECONDS, RULE_VERSION, balancedTenths, doneFor, itemPointsTenths, kindFor, type ScoredSet } from "@/shared/lib/scoring";
+import { DEFAULT_CARDIO_REFERENCE_SECONDS, RULE_VERSION, balancedTenths, blockPointsTenths, blockSecondsDone, doneFor, isIsometric, isometricPointsTenths, itemPointsTenths, kindFor, type ScoredBlockResult, type ScoredSet } from "@/shared/lib/scoring";
+import { blockElapsedSeconds, blockSummary, readBlocks, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
 
 /// FitOS Desafios (feature 3, ADR-019): pontuação de um treino concluído.
 /// O servidor calcula a partir das séries registradas (nunca pontos
@@ -22,9 +23,11 @@ export const RETRO_PHOTO_DAYS = 7;
 export const OFFICIAL_STATUSES: SessionScoreStatus[] = ["LIBERADO", "CONTESTADO", "MANTIDO"];
 
 export interface ScoredItem {
+  /// Bloco (regra 2): `bloco:<chave>`.
   exerciseId: string;
   name: string;
-  kind: ScoringReferenceKind;
+  /// ISOMETRIA e BLOCO (regra 2) não usam referência.
+  kind: ScoringReferenceKind | "ISOMETRIA" | "BLOCO";
   done: number;
   reference: number;
   /// De onde veio a referência (programa, primeira execução ou padrão).
@@ -66,6 +69,24 @@ async function referenceFor(
   }
 }
 
+/// Blocos com resultado (regra 2): um item por bloco, pelos minutos feitos.
+/// Devolve também as chaves desses blocos, cujos exercícios não pontuam
+/// de novo pelas séries.
+export function scoreBlocks(
+  blocks: WorkoutBlock[],
+  results: (ScoredBlockResult & { blockKey: string; endedAt?: Date | null; startedAt?: Date | null; pausedSeconds?: number })[]
+): { items: ScoredItem[]; keys: Set<string> } {
+  const items: ScoredItem[] = [];
+  for (const block of blocks) {
+    const result = results.find((entry) => entry.blockKey === block.key && entry.outcome !== null);
+    if (!result) continue;
+    const measured = result.startedAt && result.endedAt ? blockElapsedSeconds({ startedAt: result.startedAt.toISOString(), pausedAt: null, pausedSeconds: result.pausedSeconds ?? 0, endedAt: result.endedAt.toISOString() }, result.endedAt) : 0;
+    const seconds = blockSecondsDone(block, result, measured);
+    items.push({ exerciseId: `bloco:${block.key}`, name: blockSummary(block), kind: "BLOCO", done: seconds, reference: 0, source: "BLOCO", pointsTenths: blockPointsTenths(seconds) });
+  }
+  return { items, keys: new Set(items.map((item) => item.exerciseId.slice("bloco:".length))) };
+}
+
 function prescribedFor(kind: ScoringReferenceKind, item: { sets: number | null; reps: number | null; load: string | null; durationSeconds: number | null }): number | null {
   if (kind === "TEMPO") return item.durationSeconds;
   if (!item.sets || !item.reps) return null;
@@ -79,7 +100,8 @@ export async function scoreSession(sessionId: string, client: PrismaClient = pri
   const session = await client.workoutSession.findUnique({
     where: { id: sessionId },
     include: {
-      workout: { select: { status: true } },
+      workout: { select: { status: true, blocks: true } },
+      blockResults: true,
       setResults: { select: { workoutExerciseId: true, reps: true, loadGrams: true, durationSeconds: true, performedExerciseId: true } },
       _count: { select: { evidences: true } },
     },
@@ -94,13 +116,21 @@ export async function scoreSession(sessionId: string, client: PrismaClient = pri
   const swapIds = [...new Set(session.setResults.map((set) => set.performedExerciseId).filter((id): id is string => Boolean(id)))];
   const swaps = new Map((await client.exercise.findMany({ where: { id: { in: swapIds } }, select: { id: true, name: true, type: true } })).map((exercise) => [exercise.id, exercise]));
 
+  const blocks = scoreBlocks(readBlocks(session.workout.blocks), session.blockResults);
   const scored: ScoredItem[] = [];
   for (const item of items) {
+    if (item.blockKey && blocks.keys.has(item.blockKey)) continue;
     const sets: ScoredSet[] = session.setResults.filter((set) => set.workoutExerciseId === item.id);
     // "Aparelho ocupado": pontua pelo exercício feito no lugar do prescrito.
     const swapId = session.setResults.find((set) => set.workoutExerciseId === item.id && set.performedExerciseId)?.performedExerciseId ?? null;
     const exercise = (swapId && swaps.get(swapId)) || item.exercise;
-    const kind = kindFor(isCardioType(exercise.type), sets);
+    const cardio = isCardioType(exercise.type);
+    if (isIsometric(cardio, sets)) {
+      const seconds = sets.reduce((sum, set) => sum + (set.durationSeconds ?? 0), 0);
+      scored.push({ exerciseId: exercise.id, name: exercise.name, kind: "ISOMETRIA", done: seconds, reference: 0, source: "ISOMETRIA", pointsTenths: isometricPointsTenths(seconds) });
+      continue;
+    }
+    const kind = kindFor(cardio, sets);
     const done = doneFor(kind, sets);
     if (sets.length === 0 || done <= 0) {
       scored.push({ exerciseId: exercise.id, name: exercise.name, kind, done: 0, reference: 0, source: "SEM_EXECUCAO", pointsTenths: 0 });
@@ -117,6 +147,7 @@ export async function scoreSession(sessionId: string, client: PrismaClient = pri
     scored.push({ exerciseId: exercise.id, name: exercise.name, kind, done, reference: reference?.value ?? 0, source: reference?.source ?? "SEM_REFERENCIA", pointsTenths: reference ? itemPointsTenths(kind, done, reference.value) : 0 });
   }
 
+  scored.push(...blocks.items);
   const totalTenths = scored.reduce((sum, item) => sum + item.pointsTenths, 0);
   // Avulso/retroativo: previstos são os que entraram no treino.
   const plannedItems = scored.length;
@@ -233,14 +264,23 @@ export async function getSessionPoints(scope: { tenantId: string; studentId: str
 /// fará a pontuação de verdade num treino avulso.
 export async function previewPoints(
   scope: { tenantId: string; studentId: string },
-  exercises: { exerciseId: string; sets: ScoredSet[] }[],
-  client: PrismaClient = prisma
+  exercises: { exerciseId: string; sets: ScoredSet[]; blockKey?: string | null }[],
+  client: PrismaClient = prisma,
+  /// Blocos do registro com o resultado declarado (regra 2).
+  blocksInput: { block: WorkoutBlock; result: ScoredBlockResult }[] = []
 ): Promise<{ totalTenths: number; items: { exerciseId: string; pointsTenths: number }[] }> {
+  const blocks = scoreBlocks(blocksInput.map((entry) => entry.block), blocksInput.map((entry) => ({ ...entry.result, blockKey: entry.block.key })));
   const found = await client.exercise.findMany({ where: { id: { in: exercises.map((exercise) => exercise.exerciseId) } }, select: { id: true, type: true } });
   const types = new Map(found.map((exercise) => [exercise.id, exercise.type]));
   const items: { exerciseId: string; pointsTenths: number }[] = [];
   for (const exercise of exercises) {
-    const kind = kindFor(isCardioType(types.get(exercise.exerciseId)), exercise.sets);
+    if (exercise.blockKey && blocks.keys.has(exercise.blockKey)) continue;
+    const cardio = isCardioType(types.get(exercise.exerciseId));
+    if (isIsometric(cardio, exercise.sets)) {
+      items.push({ exerciseId: exercise.exerciseId, pointsTenths: isometricPointsTenths(exercise.sets.reduce((sum, set) => sum + (set.durationSeconds ?? 0), 0)) });
+      continue;
+    }
+    const kind = kindFor(cardio, exercise.sets);
     const done = doneFor(kind, exercise.sets);
     if (done <= 0) {
       items.push({ exerciseId: exercise.exerciseId, pointsTenths: 0 });
@@ -250,5 +290,6 @@ export async function previewPoints(
     const reference = active?.value ?? (kind === "TEMPO" ? DEFAULT_CARDIO_REFERENCE_SECONDS : done);
     items.push({ exerciseId: exercise.exerciseId, pointsTenths: itemPointsTenths(kind, done, reference) });
   }
+  items.push(...blocks.items.map((item) => ({ exerciseId: item.exerciseId, pointsTenths: item.pointsTenths })));
   return { totalTenths: items.reduce((sum, item) => sum + item.pointsTenths, 0), items };
 }

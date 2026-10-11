@@ -10,7 +10,9 @@ import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIn
 import { completeWorkoutSession, startOrResumeIndividualWorkoutSession } from "@/modules/execution/sessions";
 import { recordWorkoutSet } from "@/modules/execution/sets";
 import { addSessionEvidence, deleteSessionEvidence } from "@/modules/execution/evidence";
-import { getSessionPoints, releaseOnEvidence, scoreSession } from "./sessionScoring";
+import { blockTimer, finishBlock } from "@/modules/execution/blockResults";
+import { recordRetroactiveWorkout } from "@/modules/execution/retroactive";
+import { getSessionPoints, previewPoints, releaseOnEvidence, scoreSession } from "./sessionScoring";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -116,5 +118,48 @@ describe("pontuação do treino", () => {
     const other = await setup();
     const unscored = await train(other, [30, 30, 30], [12], null);
     expect(await getSessionPoints(other.scope, unscored.id, prisma)).toBeNull();
+  });
+
+  it("regra 2: isometria por tempo (1 ponto a cada 30 s) e bloco ao vivo pelos minutos medidos, sem pontuar de novo os exercícios do bloco", async () => {
+    vi.stubEnv("FEATURE_GAMIFICACAO", "on");
+    const ctx = await setup();
+    const plank = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Prancha ${run}`, type: "Peso corporal" } });
+    const plankItem = await prisma.workoutExercise.create({ data: { tenantId: ctx.scope.tenantId, workoutId: ctx.workout.id, exerciseId: plank.id, position: 3, sets: 3, durationSeconds: 60 } });
+    // Flexão dentro de um AMRAP de 12 min.
+    await prisma.workout.update({ where: { id: ctx.workout.id }, data: { blocks: [{ key: "wod", kind: "AMRAP", name: null, rounds: null, windowSeconds: 720, intervals: null, intervalSeconds: null, timeCapSeconds: null, restSeconds: null }] } });
+    await prisma.workoutExercise.update({ where: { id: ctx.items[1]!.id }, data: { blockKey: "wod" } });
+
+    const session = await startOrResumeIndividualWorkoutSession({ ...ctx.scope, workoutId: ctx.workout.id }, prisma);
+    for (const set of [1, 2, 3]) await recordWorkoutSet({ ...ctx.scope, sessionId: session.id, workoutExerciseId: plankItem.id, setNumber: set, reps: null, durationSeconds: 60, loadKg: null }, prisma);
+    await recordWorkoutSet({ ...ctx.scope, sessionId: session.id, workoutExerciseId: ctx.items[1]!.id, setNumber: 1, reps: 50, durationSeconds: null, loadKg: null }, prisma);
+    const start = new Date("2026-10-11T10:00:00Z");
+    await blockTimer(ctx.scope, session.id, "wod", "INICIAR", prisma, start);
+    await finishBlock(ctx.scope, session.id, "wod", { outcome: "PARCIAL", roundsCompleted: 6, partialReps: 4 }, prisma, new Date(start.getTime() + 720_000));
+    await completeWorkoutSession({ ...ctx.scope, sessionId: session.id, activeSeconds: 1500 }, prisma);
+
+    const points = await getSessionPoints(ctx.scope, session.id, prisma);
+    const byKind = Object.fromEntries(points!.items.map((item) => [item.kind === "BLOCO" || item.kind === "ISOMETRIA" ? item.kind : item.exerciseId, item.pointsTenths]));
+    expect(byKind).toMatchObject({ ISOMETRIA: 60, BLOCO: 120 });
+    // A flexão (no bloco) não aparece como item próprio.
+    expect(points!.items.some((item) => item.exerciseId === ctx.push.id)).toBe(false);
+  });
+
+  it("regra 2: retroativo com bloco pontua pelos minutos declarados, e a prévia bate", async () => {
+    vi.stubEnv("FEATURE_GAMIFICACAO", "on");
+    const ctx = await setup();
+    const now = new Date();
+    const forTime = { key: "ft", kind: "FOR_TIME", rounds: 3, timeCapSeconds: 900 };
+    const result = await recordRetroactiveWorkout(
+      { ...ctx.scope, operationKey: `pts-${run}-${++counter}`, performedAt: new Date(now.getTime() - 86_400_000), durationSeconds: 1800, now, exercises: [{ exerciseId: ctx.push.id, blockKey: "ft", sets: [] }], blocks: [{ block: forTime, result: { outcome: "CONCLUIDO", elapsedSeconds: 580 } }] },
+      prisma
+    );
+    const points = await getSessionPoints(ctx.scope, result.sessionId, prisma);
+    expect(points).toMatchObject({ totalTenths: 96, plannedItems: 1 });
+    expect(points!.items[0]).toMatchObject({ exerciseId: "bloco:ft", kind: "BLOCO", done: 580 });
+
+    const preview = await previewPoints(ctx.scope, [{ exerciseId: ctx.push.id, blockKey: "ft", sets: [] }], prisma, [
+      { block: { key: "ft", kind: "FOR_TIME", name: null, rounds: 3, windowSeconds: null, intervals: null, intervalSeconds: null, timeCapSeconds: 900, restSeconds: null }, result: { outcome: "CONCLUIDO", roundsCompleted: null, partialReps: null, intervalsCompleted: null, elapsedSeconds: 580 } },
+    ]);
+    expect(preview.totalTenths).toBe(96);
   });
 });

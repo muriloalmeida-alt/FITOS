@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { AdminError } from "@/modules/admin/users";
 import { subscriptionAccess } from "./access";
-import { grantAccess, listAccessGrants, previewAccessGrant, revokeAccessGrant } from "./accessGrants";
+import { grantAccess, listAccessGrants, previewAccessGrant, reconcileSyncingGrants, revokeAccessGrant, type GrantDeps } from "./accessGrants";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -133,5 +133,112 @@ describe("gratuidade concedida pelo administrador", () => {
     expect(row).toMatchObject({ status: "REVOGADO", revokeReason: `engano ${run}` });
     // Nova concessão depois da revogação começa agora, não no fim da revogada.
     expect((await grant(user.id, 7)).grant.startsAt).toEqual(now);
+  });
+});
+
+/// Asaas de mentira: assinatura, cobranças e o PUT de `nextDueDate`.
+function fakeAsaas(initial: { nextDueDate: string; payments?: { id: string; status: string; dueDate: string; value: number }[]; status?: string }) {
+  const state = { ...initial, payments: initial.payments ?? [], status: initial.status ?? "ACTIVE", puts: [] as unknown[], failNextPut: null as null | "rede" | "timeout_aplicado", failGets: false };
+  const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+    const path = String(url).replace(/^.*\/v3/, "");
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+    if (init?.method === "PUT") {
+      const body = JSON.parse(String(init.body));
+      state.puts.push(body);
+      const failure = state.failNextPut;
+      state.failNextPut = null;
+      if (failure === "rede") throw new TypeError("fetch failed");
+      state.nextDueDate = body.nextDueDate;
+      if (failure === "timeout_aplicado") throw new TypeError("fetch failed");
+      return json({ id: "sub_x", status: state.status, nextDueDate: state.nextDueDate, cycle: "MONTHLY" });
+    }
+    if (state.failGets) throw new TypeError("fetch failed");
+    if (path.includes("/payments")) return json({ object: "list", hasMore: false, totalCount: state.payments.length, limit: 100, offset: 0, data: state.payments });
+    return json({ id: "sub_x", status: state.status, nextDueDate: state.nextDueDate, cycle: "MONTHLY" });
+  }) as typeof fetch;
+  const deps: GrantDeps = { apiKey: "chave-teste", fetchImpl, asaasEnabled: true };
+  return { state, deps };
+}
+
+describe("gratuidade com cobrança no Asaas (fatia 3)", () => {
+  async function asaasOwner() {
+    return owner({ externalSubscriptionId: `sub_${run}_${counter}`, trialEndsAt: new Date("2026-09-01T15:00:00Z") });
+  }
+  async function confirm(userId: string, days: number, deps: GrantDeps) {
+    const preview = await previewAccessGrant({ userId, days }, prisma, now, deps);
+    if (!preview.eligible) throw new Error(preview.message);
+    return grantAccess({ adminUserId: admin, userId, days, reasonCode: "RETENCAO", reasonText: run, operationKey: key(), revision: preview.revision }, prisma, now, deps);
+  }
+
+  it("pago até 01/11: janela começa no fim do período pago e a próxima cobrança vai para o fim do benefício", async () => {
+    const user = await asaasOwner();
+    const asaas = fakeAsaas({ nextDueDate: "2026-11-01", payments: [{ id: "pay_1", status: "CONFIRMED", dueDate: "2026-10-01", value: 19.9 }] });
+    const preview = await previewAccessGrant({ userId: user.id, days: 30 }, prisma, now, asaas.deps);
+    expect(preview).toMatchObject({ eligible: true, startsAt: new Date("2026-11-01T03:00:00Z"), lastDay: "2026-11-30", external: { currentDueDate: "2026-11-01", targetDueDate: "2026-12-01", needsChange: true } });
+    if (!preview.eligible) throw new Error();
+    expect(preview.billing).toMatch(/passa de 01\/11\/2026 para 01\/12\/2026/);
+
+    const { grant } = await confirm(user.id, 30, asaas.deps);
+    expect(grant.state).toBe("ACTIVE");
+    expect(asaas.state.puts).toEqual([{ nextDueDate: "2026-12-01", updatePendingPayments: false }]);
+    const [row] = await listAccessGrants(user.id, prisma, now);
+    expect(row).toMatchObject({ status: "AGENDADO", targetDueDate: "2026-12-01" });
+    expect(await prisma.adminBenefitAudit.count({ where: { grantId: grant.id, operation: "SINCRONIZADO" } })).toBe(1);
+  });
+
+  it("cobrança já emitida dentro da janela bloqueia sem mudar nada; atraso antigo só é informado", async () => {
+    const user = await asaasOwner();
+    const asaas = fakeAsaas({ nextDueDate: "2026-11-07", payments: [{ id: "pay_2", status: "PENDING", dueDate: "2026-10-07", value: 19.9 }] });
+    const preview = await previewAccessGrant({ userId: user.id, days: 30 }, prisma, now, asaas.deps);
+    expect(preview).toMatchObject({ eligible: false, kind: "COBRANCA_EMITIDA" });
+    if (preview.eligible) throw new Error();
+    expect(preview.message).toMatch(/07\/10\/2026/);
+    expect(asaas.state.puts).toEqual([]);
+
+    asaas.state.payments = [{ id: "pay_3", status: "OVERDUE", dueDate: "2026-09-07", value: 19.9 }];
+    const ok = await previewAccessGrant({ userId: user.id, days: 30 }, prisma, now, asaas.deps);
+    if (!ok.eligible) throw new Error(ok.message);
+    expect(ok.billing).toMatch(/Em atraso, continua devido: 07\/09\/2026/);
+  });
+
+  it("timeout depois de aplicar: fica SYNCING e a reconciliação confere no Asaas sem repetir o PUT", async () => {
+    const user = await asaasOwner();
+    const asaas = fakeAsaas({ nextDueDate: "2026-10-08" });
+    asaas.state.failNextPut = "timeout_aplicado";
+    const { grant } = await confirm(user.id, 15, asaas.deps);
+    expect(grant.state).toBe("SYNCING");
+    // Enquanto sincroniza: não libera acesso, não aceita outra concessão nem revogação.
+    const sub = await prisma.saasSubscription.findFirstOrThrow({ where: { tenant: { ownerId: user.id } }, include: { plan: true, accessGrants: { where: { state: "ACTIVE" } } } });
+    expect(subscriptionAccess(sub, now, sub.accessGrants).kind).toBe("BLOQUEADO");
+    expect(await previewAccessGrant({ userId: user.id, days: 7 }, prisma, now, asaas.deps)).toMatchObject({ eligible: false, kind: "EM_SINCRONIZACAO" });
+    await expect(revokeAccessGrant({ adminUserId: admin, grantId: grant.id, reason: `x ${run}` }, prisma, now)).rejects.toMatchObject({ kind: "CONFLITO" });
+
+    expect(await reconcileSyncingGrants(prisma, asaas.deps, { id: grant.id })).toBe(1);
+    expect(asaas.state.puts).toHaveLength(1);
+    expect((await prisma.administrativeAccessGrant.findUniqueOrThrow({ where: { id: grant.id } })).state).toBe("ACTIVE");
+  });
+
+  it("falha de rede: tenta de novo na reconciliação e, depois de 3 tentativas, FAILED sem tirar acesso existente", async () => {
+    const user = await asaasOwner();
+    const asaas = fakeAsaas({ nextDueDate: "2026-10-08" });
+    asaas.state.failNextPut = "rede";
+    const { grant } = await confirm(user.id, 15, asaas.deps);
+    expect(grant.state).toBe("SYNCING");
+    asaas.state.failGets = true;
+    await reconcileSyncingGrants(prisma, asaas.deps, { id: grant.id });
+    await reconcileSyncingGrants(prisma, asaas.deps, { id: grant.id });
+    const failed = await prisma.administrativeAccessGrant.findUniqueOrThrow({ where: { id: grant.id } });
+    expect(failed).toMatchObject({ state: "FAILED", syncAttempts: 3 });
+    const [row] = await listAccessGrants(user.id, prisma, now);
+    expect(row).toMatchObject({ status: "FALHOU" });
+    expect(row!.syncError).toBeTruthy();
+  });
+
+  it("Asaas fora do ar na prévia: avisa e não deixa conceder; com o ajuste desligado, segue bloqueado", async () => {
+    const user = await asaasOwner();
+    const asaas = fakeAsaas({ nextDueDate: "2026-10-08" });
+    asaas.state.failGets = true;
+    expect(await previewAccessGrant({ userId: user.id, days: 7 }, prisma, now, asaas.deps)).toMatchObject({ eligible: false, kind: "ASAAS_INDISPONIVEL" });
+    expect(await previewAccessGrant({ userId: user.id, days: 7 }, prisma, now, { ...asaas.deps, asaasEnabled: false })).toMatchObject({ eligible: false, kind: "COBRANCA_EXTERNA" });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freeAccessUntil, grantEligibility, grantWindow, lastIncludedDay, validateGrantInput } from "./grantRules";
+import { externalBillingPlan, freeAccessUntil, grantEligibility, grantWindow, lastIncludedDay, paidThroughFromPayments, validateGrantInput } from "./grantRules";
 
 const d = (iso: string) => new Date(iso);
 const now = d("2026-10-07T15:00:00Z");
@@ -43,15 +43,51 @@ describe("validação e elegibilidade", () => {
     expect(validateGrantInput({ days: 7, reasonCode: "OUTRO", reasonText: "x".repeat(301) })).toMatch(/300/);
   });
 
-  it("só personal/Livre com plano pago e sem cobrança no Asaas", () => {
-    const paid = { externalSubscriptionId: null, creditCardLast4: null, plan: { priceCents: 4990 } };
-    expect(grantEligibility("PERSONAL", paid, true)).toEqual({ ok: true });
-    expect(grantEligibility("INDIVIDUAL", paid, true)).toEqual({ ok: true });
+  it("só personal/Livre com plano pago; Asaas só com o ajuste ligado; cancelada só acesso", () => {
+    const paid = { status: "ATIVA", externalSubscriptionId: null, creditCardLast4: null, plan: { priceCents: 4990 } };
+    expect(grantEligibility("PERSONAL", paid, true)).toEqual({ ok: true, external: false });
+    expect(grantEligibility("INDIVIDUAL", paid, true)).toEqual({ ok: true, external: false });
     expect(grantEligibility("ALUNO", paid, true)).toMatchObject({ ok: false, kind: "SEM_ESPACO" });
     expect(grantEligibility("ADMIN", paid, true)).toMatchObject({ ok: false, kind: "SEM_ESPACO" });
     expect(grantEligibility("PERSONAL", null, true)).toMatchObject({ ok: false, kind: "SEM_ASSINATURA" });
     expect(grantEligibility("PERSONAL", { ...paid, plan: { priceCents: 0 } }, true)).toMatchObject({ ok: false, kind: "PLANO_GRATUITO" });
     expect(grantEligibility("PERSONAL", { ...paid, externalSubscriptionId: "sub_1" }, true)).toMatchObject({ ok: false, kind: "COBRANCA_EXTERNA" });
     expect(grantEligibility("PERSONAL", { ...paid, creditCardLast4: "4242" }, true)).toMatchObject({ ok: false, kind: "COBRANCA_EXTERNA" });
+    expect(grantEligibility("PERSONAL", { ...paid, externalSubscriptionId: "sub_1" }, true, true)).toEqual({ ok: true, external: true });
+    expect(grantEligibility("PERSONAL", { ...paid, status: "CANCELADA", externalSubscriptionId: "sub_1" }, true)).toEqual({ ok: true, external: false });
+  });
+});
+
+describe("cobrança no Asaas (fatia 3)", () => {
+  const pay = (dueDate: string, status: string, id = dueDate) => ({ id, dueDate, status, value: 49.9 });
+
+  it("período pago: cada cobrança paga cobre um ciclo; fim de mês não pula mês", () => {
+    expect(paidThroughFromPayments([pay("2026-10-01", "CONFIRMED"), pay("2026-09-01", "RECEIVED")], "MONTHLY")).toEqual(d("2026-11-01T03:00:00Z"));
+    expect(paidThroughFromPayments([pay("2026-01-31", "RECEIVED")], "MONTHLY")).toEqual(d("2026-02-28T03:00:00Z"));
+    expect(paidThroughFromPayments([pay("2026-03-10", "RECEIVED")], "YEARLY")).toEqual(d("2027-03-10T03:00:00Z"));
+    expect(paidThroughFromPayments([pay("2026-10-01", "PENDING")], "MONTHLY")).toBeNull();
+  });
+
+  it("pago até 01/11 + 30 dias: janela 01/11 a 01/12 e cobrança adiada para 01/12 (exemplo do PDF)", () => {
+    const paidThrough = paidThroughFromPayments([pay("2026-10-01", "CONFIRMED")], "MONTHLY");
+    const window = grantWindow(null, [], 30, now, paidThrough);
+    expect(window).toEqual({ startsAt: d("2026-11-01T03:00:00Z"), endsAt: d("2026-12-01T03:00:00Z") });
+    expect(lastIncludedDay(window.endsAt)).toBe("2026-11-30");
+    expect(externalBillingPlan(window, "2026-11-01", [pay("2026-10-01", "CONFIRMED")])).toMatchObject({
+      currentDueDate: "2026-11-01",
+      targetDueDate: "2026-12-01",
+      needsChange: true,
+      openInWindow: [],
+      oldDebts: [],
+    });
+  });
+
+  it("cobrança já emitida dentro da janela bloqueia; atraso antigo só aparece; nunca antecipa", () => {
+    const window = { startsAt: d("2026-11-01T03:00:00Z"), endsAt: d("2026-12-01T03:00:00Z") };
+    const plan = externalBillingPlan(window, "2026-12-01", [pay("2026-11-01", "PENDING"), pay("2026-09-01", "OVERDUE"), pay("2026-12-01", "PENDING")]);
+    expect(plan.openInWindow.map((payment) => payment.dueDate)).toEqual(["2026-11-01"]);
+    expect(plan.oldDebts.map((payment) => payment.dueDate)).toEqual(["2026-09-01"]);
+    expect(plan.needsChange).toBe(false);
+    expect(externalBillingPlan(window, "2027-01-15", []).targetDueDate).toBe("2027-01-15");
   });
 });

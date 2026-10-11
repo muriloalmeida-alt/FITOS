@@ -246,7 +246,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled, edit, blocksE
     setStep(3);
     setPreviewTenths(null);
     if (!pointsEnabled) return;
-    const response = await fetch("/api/minhas-sessoes/retroativo/previa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ exercises: payloadExercises() }) }).catch(() => null);
+    const response = await fetch("/api/minhas-sessoes/retroativo/previa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ exercises: payloadExercises(), ...(blocksEnabled ? { blocks: payloadBlocks() } : {}) }) }).catch(() => null);
     const body = response?.ok ? ((await response.json().catch(() => null)) as { totalTenths?: number } | null) : null;
     if (typeof body?.totalTenths === "number") setPreviewTenths(body.totalTenths);
   }

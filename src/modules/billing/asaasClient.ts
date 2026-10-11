@@ -250,6 +250,47 @@ export async function updateAsaasSubscription(
   });
 }
 
+/// Estado da assinatura no Asaas, para a gratuidade do administrador
+/// (feature 4): `nextDueDate` é a próxima cobrança ainda não gerada.
+export interface AsaasSubscriptionState {
+  id: string;
+  status: string;
+  nextDueDate: string;
+  cycle: AsaasBillingCycle;
+  deleted?: boolean;
+}
+
+export async function getAsaasSubscription(config: AsaasClientConfig, subscriptionId: string): Promise<AsaasSubscriptionState> {
+  return asaasRequest<AsaasSubscriptionState>(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`);
+}
+
+export interface AsaasPaymentSummary {
+  id: string;
+  status: string;
+  /// AAAA-MM-DD.
+  dueDate: string;
+  value: number;
+  deleted?: boolean;
+}
+
+/// Cobranças já geradas pela assinatura (até 100, as mais recentes bastam
+/// para achar o período pago e o que está em aberto).
+export async function listAsaasSubscriptionPayments(config: AsaasClientConfig, subscriptionId: string): Promise<AsaasPaymentSummary[]> {
+  const result = await asaasRequest<AsaasListResponse<AsaasPaymentSummary>>(config, `/subscriptions/${encodeURIComponent(subscriptionId)}/payments?limit=100`);
+  return result.data.filter((payment) => !payment.deleted);
+}
+
+/// Adia a próxima cobrança ainda não gerada (gratuidade do administrador).
+/// Operação dedicada: `updateAsaasSubscription` continua sem `nextDueDate`.
+/// `updatePendingPayments: false`: cobranças já emitidas não mudam — quem
+/// chama bloqueia a concessão quando há cobrança emitida dentro da janela.
+export async function setAsaasSubscriptionNextDueDate(config: AsaasClientConfig, subscriptionId: string, nextDueDate: string): Promise<AsaasSubscriptionState> {
+  return asaasRequest<AsaasSubscriptionState>(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ nextDueDate, updatePendingPayments: false }),
+  });
+}
+
 export async function cancelAsaasSubscription(config: AsaasClientConfig, subscriptionId: string): Promise<void> {
   await asaasRequest(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "DELETE" });
 }
