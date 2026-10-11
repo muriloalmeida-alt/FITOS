@@ -147,7 +147,7 @@ export async function listChargesForStudent(
 }
 
 export type StudentChargeWithStudentAndPayment = StudentChargeWithPayment & {
-  student: { id: string; displayName: string };
+  student: { id: string; displayName: string; cpf?: string | null };
 };
 
 /// Todas as cobranças do tenant (não só de um aluno) — base da tela
@@ -162,7 +162,7 @@ export async function listChargesForTenant(
   return client.studentCharge.findMany({
     where: { tenantId: input.tenantId, ...(input.referenceMonth ? { referenceMonth: input.referenceMonth } : {}) },
     orderBy: { referenceMonth: "desc" },
-    include: { ...CHARGE_WITH_PAYMENT_INCLUDE, student: { select: { id: true, displayName: true } } },
+    include: { ...CHARGE_WITH_PAYMENT_INCLUDE, student: { select: { id: true, displayName: true, cpf: true } } },
   });
 }
 
@@ -421,4 +421,184 @@ export async function endChargeRecurrence(
     return recurrence;
   }
   return client.chargeRecurrence.update({ where: { id: recurrence.id }, data: { status: "ENCERRADA" } });
+}
+
+/// Ajusta valor e dia da mensalidade direto no perfil (EPIC-29). Vale
+/// para as próximas competências; lançamentos já gerados ficam como estão.
+export async function updateChargeRecurrence(
+  input: { tenantId: string; recurrenceId: string; amountReais?: number; dueDayOfMonth?: number },
+  client: PrismaClient = prisma
+): Promise<ChargeRecurrence> {
+  const recurrence = await client.chargeRecurrence.findFirst({ where: { id: input.recurrenceId, tenantId: input.tenantId } });
+  if (!recurrence) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Recorrência não encontrada.");
+  }
+  if (recurrence.status === "ENCERRADA") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Esta cobrança recorrente já foi encerrada.");
+  }
+  const data: { amountCents?: number; dueDayOfMonth?: number } = {};
+  if (input.amountReais !== undefined) data.amountCents = centsFromReais(input.amountReais);
+  if (input.dueDayOfMonth !== undefined) data.dueDayOfMonth = normalizeDueDayOfMonth(input.dueDayOfMonth);
+  return client.chargeRecurrence.update({ where: { id: recurrence.id }, data });
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
+}
+
+/// Lança a cobrança de uma recorrência numa competência específica
+/// (FIT-148) — usada por "Gerar" de uma recorrência e por "Gerar todas"
+/// (BK-09). Idempotente: se a competência já foi gerada, devolve a
+/// existente com `created: false` (a unicidade `recurrenceId +
+/// referenceMonth` continua sendo a defesa física).
+export async function generateChargeForRecurrenceMonth(
+  input: { tenantId: string; recurrenceId: string; referenceMonth: Date },
+  client: PrismaClient = prisma
+): Promise<{ charge: StudentCharge; created: boolean }> {
+  assertValidDate(input.referenceMonth, "Competência");
+  const recurrence = await client.chargeRecurrence.findFirst({ where: { id: input.recurrenceId, tenantId: input.tenantId } });
+  if (!recurrence) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Recorrência não encontrada.");
+  }
+  if (recurrence.status === "ENCERRADA") {
+    throw new StudentChargeError("ESTADO_INVALIDO", "Uma recorrência encerrada não gera novas cobranças.");
+  }
+  const referenceMonth = firstDayOfMonthUtc(input.referenceMonth);
+  const existing = await client.studentCharge.findFirst({ where: { recurrenceId: recurrence.id, referenceMonth } });
+  if (existing) return { charge: existing, created: false };
+  try {
+    const charge = await client.studentCharge.create({
+      data: {
+        tenantId: recurrence.tenantId,
+        studentId: recurrence.studentId,
+        description: recurrence.description,
+        amountCents: recurrence.amountCents,
+        referenceMonth,
+        dueDate: dueDateForReferenceMonth(referenceMonth, recurrence.dueDayOfMonth),
+        recurrenceId: recurrence.id,
+      },
+    });
+    return { charge, created: true };
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    const raced = await client.studentCharge.findFirstOrThrow({ where: { recurrenceId: recurrence.id, referenceMonth } });
+    return { charge: raced, created: false };
+  }
+}
+
+/// BK-09: "Gerar todas" — lança de uma vez as mensalidades da competência
+/// para todas as recorrências ativas de alunos ativos. Pula recorrências
+/// criadas depois da competência (nunca gera mês retroativo) e as que já
+/// têm lançamento no mês.
+export async function generateMonthChargesForRecurrences(
+  input: { tenantId: string; referenceMonth: Date },
+  client: PrismaClient = prisma
+): Promise<{ created: number; existing: number }> {
+  assertValidDate(input.referenceMonth, "Competência");
+  const referenceMonth = firstDayOfMonthUtc(input.referenceMonth);
+  const recurrences = await client.chargeRecurrence.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVA", student: { status: "ATIVO" } },
+    select: { id: true, createdAt: true },
+  });
+  let created = 0;
+  let existing = 0;
+  for (const recurrence of recurrences) {
+    if (firstDayOfMonthUtc(recurrence.createdAt) > referenceMonth) continue;
+    const result = await generateChargeForRecurrenceMonth({ tenantId: input.tenantId, recurrenceId: recurrence.id, referenceMonth }, client);
+    if (result.created) created += 1;
+    else existing += 1;
+  }
+  return { created, existing };
+}
+
+/// Recorrências ativas que ainda não têm lançamento na competência — o
+/// número que o botão "Gerar todas" mostra (BK-09).
+export async function countPendingRecurrencesForMonth(
+  input: { tenantId: string; referenceMonth: Date },
+  client: PrismaClient = prisma
+): Promise<number> {
+  const referenceMonth = firstDayOfMonthUtc(input.referenceMonth);
+  const nextMonth = new Date(Date.UTC(referenceMonth.getUTCFullYear(), referenceMonth.getUTCMonth() + 1, 1));
+  return client.chargeRecurrence.count({
+    where: {
+      tenantId: input.tenantId,
+      status: "ATIVA",
+      student: { status: "ATIVO" },
+      createdAt: { lt: nextMonth },
+      charges: { none: { referenceMonth } },
+    },
+  });
+}
+
+export interface CreateChargeInput {
+  tenantId: string;
+  studentId: string;
+  description: string;
+  amountReais: number;
+  referenceMonth: Date;
+  dueDayOfMonth: number;
+  /// BK-10: também cria a recorrência e liga este lançamento a ela.
+  repeatMonthly: boolean;
+}
+
+/// BK-10 (FIT-148): nova cobrança da sheet "Nova cobrança" — com "Repetir
+/// todo mês", a recorrência e o primeiro lançamento nascem numa transação
+/// só (nunca uma recorrência sem o lançamento do mês, nem o contrário).
+export async function createChargeWithOptionalRecurrence(
+  input: CreateChargeInput,
+  client: PrismaClient = prisma
+): Promise<{ charge: StudentCharge; recurrence: ChargeRecurrence | null }> {
+  const student = await getStudentForTenant({ tenantId: input.tenantId, studentId: input.studentId }, client);
+  if (!student) {
+    throw new StudentChargeError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  const description = normalizeDescription(input.description);
+  const amountCents = centsFromReais(input.amountReais);
+  const dueDayOfMonth = normalizeDueDayOfMonth(input.dueDayOfMonth);
+  assertValidDate(input.referenceMonth, "Competência");
+  const referenceMonth = firstDayOfMonthUtc(input.referenceMonth);
+  const dueDate = dueDateForReferenceMonth(referenceMonth, dueDayOfMonth);
+
+  return client.$transaction(async (tx) => {
+    const recurrence = input.repeatMonthly
+      ? await tx.chargeRecurrence.create({ data: { tenantId: input.tenantId, studentId: input.studentId, description, amountCents, dueDayOfMonth } })
+      : null;
+    const charge = await tx.studentCharge.create({
+      data: { tenantId: input.tenantId, studentId: input.studentId, description, amountCents, referenceMonth, dueDate, recurrenceId: recurrence?.id ?? null },
+    });
+    return { charge, recurrence };
+  });
+}
+
+/// "Recebi" em um toque (EPIC-29): o valor cheio, hoje. Forma padrão PIX;
+/// o personal ajusta abrindo a cobrança se foi diferente.
+export async function receiveChargeInFull(input: { tenantId: string; actorUserId: string; chargeId: string; method?: string }, client: PrismaClient = prisma): Promise<StudentCharge> {
+  const charge = await client.studentCharge.findFirst({ where: { id: input.chargeId, tenantId: input.tenantId } });
+  if (!charge) throw new StudentChargeError("NAO_ENCONTRADO", "Cobrança não encontrada.");
+  return registerPayment({ tenantId: input.tenantId, actorUserId: input.actorUserId, chargeId: charge.id, amountReceivedReais: charge.amountCents / 100, paidAt: new Date(), method: input.method ?? "PIX" }, client);
+}
+
+/// Desfazer um pagamento registrado por engano: a cobrança volta a aberta
+/// (atrasada se já venceu).
+export async function undoChargePayment(input: { tenantId: string; actorUserId: string; chargeId: string }, client: PrismaClient = prisma): Promise<StudentCharge> {
+  const charge = await client.studentCharge.findFirst({ where: { id: input.chargeId, tenantId: input.tenantId }, include: { payment: true } });
+  if (!charge) throw new StudentChargeError("NAO_ENCONTRADO", "Cobrança não encontrada.");
+  if (charge.status !== "PAGO" || !charge.payment) throw new StudentChargeError("ESTADO_INVALIDO", "Esta cobrança não está paga.");
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  return client.$transaction(async (tx) => {
+    await tx.payment.delete({ where: { id: charge.payment!.id } });
+    const updated = await tx.studentCharge.update({ where: { id: charge.id }, data: { status: charge.dueDate < startOfToday ? "ATRASADO" : "PENDENTE" } });
+    await tx.auditEvent.create({ data: { tenantId: input.tenantId, actorUserId: input.actorUserId, action: "PAGAMENTO_DESFEITO", entityType: "StudentCharge", entityId: charge.id } });
+    return updated;
+  });
+}
+
+/// Mensalidades do mês se lançam sozinhas (EPIC-29): toda leitura do Início
+/// e do Financeiro garante as cobranças do mês corrente de cada
+/// recorrência ativa. Idempotente.
+export async function ensureCurrentMonthCharges(input: { tenantId: string; now?: Date }, client: PrismaClient = prisma): Promise<{ created: number }> {
+  const now = input.now ?? new Date();
+  const { created } = await generateMonthChargesForRecurrences({ tenantId: input.tenantId, referenceMonth: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) }, client);
+  return { created };
 }

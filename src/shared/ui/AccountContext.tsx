@@ -9,11 +9,29 @@ import { createContext, useContext, type ReactNode } from "react";
 /// prévias. Sem provedor (ex.: testes de componente), o avatar cai para o
 /// ícone neutro de perfil, nunca iniciais inventadas.
 const AccountNameContext = createContext<string | null>(null);
+/// Foto de perfil da sessão (EPIC-35); nula = iniciais.
+const AccountImageContext = createContext<string | null>(null);
+/// Assuntos com mensagem não lida no chat (EPIC-39).
+const UnreadMessagesContext = createContext<number>(0);
 
-export function AccountNameProvider({ name, children }: { name: string | null; children: ReactNode }) {
-  return <AccountNameContext.Provider value={name}>{children}</AccountNameContext.Provider>;
+export function AccountNameProvider({ name, image = null, unreadMessages = 0, children }: { name: string | null; image?: string | null; unreadMessages?: number; children: ReactNode }) {
+  return (
+    <AccountNameContext.Provider value={name}>
+      <AccountImageContext.Provider value={image}>
+        <UnreadMessagesContext.Provider value={unreadMessages}>{children}</UnreadMessagesContext.Provider>
+      </AccountImageContext.Provider>
+    </AccountNameContext.Provider>
+  );
+}
+
+export function useUnreadMessages(): number {
+  return useContext(UnreadMessagesContext);
 }
 
 export function useAccountName(): string | null {
   return useContext(AccountNameContext);
+}
+
+export function useAccountImage(): string | null {
+  return useContext(AccountImageContext);
 }

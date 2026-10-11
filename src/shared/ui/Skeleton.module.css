@@ -1,0 +1,41 @@
+.skeleton {
+  display: block;
+  background-color: #151b24;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  padding: var(--fitos-space-6) var(--fitos-space-5);
+  max-width: 960px;
+}
+
+.gap {
+  height: var(--fitos-space-3);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

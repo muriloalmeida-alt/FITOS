@@ -1,5 +1,7 @@
 import { prisma } from "@/shared/db/prisma";
+import type { PersonalStudentRangeEstimate } from "@prisma/client";
 import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { OnboardingError, updatePersonalAccount } from "@/modules/personal-onboarding/onboarding";
 
 /// Rota de prova mínima da FIT-011: acesso exclusivo do personal ao
 /// próprio tenant. Qualquer `tenantId` recebido na query string (ou em
@@ -19,6 +21,38 @@ export async function GET(_request: Request) {
     const response = authErrorResponse(error);
     if (response) {
       return response;
+    }
+    throw error;
+  }
+}
+
+const optionalString = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+/// Perfil do Personal (FIT-149): edita nome do espaço, perfil profissional
+/// (celular, CREF, faixa de alunos) e o nome da pessoa — sempre do tenant e
+/// do usuário da sessão, nunca de um id vindo do cliente.
+export async function PATCH(request: Request) {
+  try {
+    const ctx = await requirePersonal();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return Response.json({ error: "VALIDACAO", message: "Corpo da requisição inválido." }, { status: 400 });
+    }
+    await updatePersonalAccount({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      businessName: optionalString(body.businessName),
+      phone: optionalString(body.phone),
+      cref: optionalString(body.cref),
+      studentRangeEstimate: optionalString(body.studentRangeEstimate) as PersonalStudentRangeEstimate | undefined,
+      name: optionalString(body.name),
+    });
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    const response = authErrorResponse(error);
+    if (response) return response;
+    if (error instanceof OnboardingError) {
+      return Response.json({ error: error.kind, message: error.message }, { status: 400 });
     }
     throw error;
   }

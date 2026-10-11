@@ -4,9 +4,12 @@ import {
   type WorkoutExercise,
   type WorkoutSession,
   type WorkoutSessionResult,
+  type WorkoutSetResult,
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { recordRevision, sessionSnapshot } from "./sessionRevisions";
+import { scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { getActivePlanAssignmentForStudent, getWorkoutForTenant } from "@/modules/workouts/workouts";
 
 /// Execução de sessão de treino (FIT-041/FIT-103). Toda sessão referencia
@@ -62,10 +65,11 @@ function normalizeOptionalText(value: string | null, label: string, maxLength: n
 export type WorkoutSessionWithDetails = WorkoutSession & {
   workout: Workout & {
     workoutExercises: (WorkoutExercise & {
-      exercise: { name: string; muscle: string | null; instructions: string | null };
+      exercise: { name: string; muscle: string | null; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
     })[];
   };
   results: WorkoutSessionResult[];
+  setResults: (WorkoutSetResult & { performedExercise: { id: string; name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null } | null })[];
 };
 
 const SESSION_INCLUDE = {
@@ -73,11 +77,12 @@ const SESSION_INCLUDE = {
     include: {
       workoutExercises: {
         orderBy: { position: "asc" as const },
-        include: { exercise: { select: { name: true, muscle: true, instructions: true } } },
+        include: { exercise: { select: { name: true, muscle: true, instructions: true, imageUrl: true, imageAlt: true } } },
       },
     },
   },
   results: true,
+  setResults: { orderBy: { setNumber: "asc" as const }, include: { performedExercise: { select: { id: true, name: true, instructions: true, imageUrl: true, imageAlt: true } } } },
 };
 
 export interface StartOrResumeSessionInput {
@@ -146,7 +151,7 @@ async function resumeOrCreateSession(
   }
 
   const created = await client.$transaction(async (tx) => {
-    if (inProgress) {
+    if (inProgress && !(await discardEmptyFreeSession(inProgress, tx))) {
       await tx.workoutSession.update({
         where: { id: inProgress.id },
         data: { status: "ABANDONADA", endedAt: new Date() },
@@ -184,7 +189,7 @@ export async function getSessionForStudent(
   });
 }
 
-async function getInProgressSessionOwnedByStudentOrThrow(
+export async function getInProgressSessionOwnedByStudentOrThrow(
   input: { tenantId: string; studentId: string; sessionId: string },
   client: PrismaClient
 ): Promise<WorkoutSession> {
@@ -255,13 +260,48 @@ export async function recordSessionResult(
 
 /// Conclui uma sessão `EM_ANDAMENTO`. Rejeita (`ESTADO_INVALIDO`) se a
 /// sessão já foi concluída ou abandonada — nunca reabre nem "conclui de
-/// novo" silenciosamente.
+/// novo" silenciosamente. BK-14 (FIT-153): `activeSeconds` é o tempo do
+/// cronômetro, sem as pausas; nunca passa do tempo de relógio da sessão.
 export async function completeWorkoutSession(
-  input: { tenantId: string; studentId: string; sessionId: string },
+  input: { tenantId: string; studentId: string; sessionId: string; activeSeconds?: number | null },
   client: PrismaClient = prisma
 ): Promise<WorkoutSession> {
   const session = await getInProgressSessionOwnedByStudentOrThrow(input, client);
-  return client.workoutSession.update({ where: { id: session.id }, data: { status: "CONCLUIDA", endedAt: new Date() } });
+  if ((await isFreeWorkout(session.workoutId, client)) && (await client.workoutSetResult.count({ where: { workoutSessionId: session.id } })) === 0) {
+    throw new SessionError("VALIDACAO", "Registre ao menos uma série para concluir.");
+  }
+  const endedAt = new Date();
+  const completed = await client.workoutSession.update({
+    where: { id: session.id },
+    data: { status: "CONCLUIDA", endedAt, activeSeconds: activeSecondsFor(input.activeSeconds, session.startedAt, endedAt) },
+  });
+  // Desafios (feature 3): pontua sem nunca impedir a conclusão.
+  await scoreSessionSafely(completed.id, client);
+  return completed;
+}
+
+function activeSecondsFor(value: number | null | undefined, startedAt: Date, endedAt: Date): number | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new SessionError("VALIDACAO", "Tempo ativo inválido.");
+  }
+  return Math.min(value, Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 1000)));
+}
+
+/// BK-13 (FIT-153): "Como foi o treino?" de 1 (leve) a 5 (no limite),
+/// respondido no resumo, depois de concluir. Só da própria sessão concluída;
+/// responder de novo substitui.
+export async function rateWorkoutSession(
+  input: { tenantId: string; studentId: string; sessionId: string; perceivedEffort: number },
+  client: PrismaClient = prisma
+): Promise<WorkoutSession> {
+  if (!Number.isInteger(input.perceivedEffort) || input.perceivedEffort < 1 || input.perceivedEffort > 5) {
+    throw new SessionError("VALIDACAO", "Escolha de 1 a 5.");
+  }
+  const session = await client.workoutSession.findFirst({ where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId } });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Sessão não encontrada.");
+  if (session.status !== "CONCLUIDA") throw new SessionError("ESTADO_INVALIDO", "Só um treino concluído pode ser avaliado.");
+  return client.workoutSession.update({ where: { id: session.id }, data: { perceivedEffort: input.perceivedEffort } });
 }
 
 /// Abandona uma sessão `EM_ANDAMENTO`. Mesma validação de `completeWorkoutSession`
@@ -271,5 +311,57 @@ export async function abandonWorkoutSession(
   client: PrismaClient = prisma
 ): Promise<WorkoutSession> {
   const session = await getInProgressSessionOwnedByStudentOrThrow(input, client);
+  const discarded = await client.$transaction((tx) => discardEmptyFreeSession(session, tx));
+  if (discarded) return { ...session, status: "ABANDONADA", endedAt: new Date() };
   return client.workoutSession.update({ where: { id: session.id }, data: { status: "ABANDONADA", endedAt: new Date() } });
+}
+
+async function isFreeWorkout(workoutId: string, client: Pick<PrismaClient, "workout">): Promise<boolean> {
+  const workout = await client.workout.findUnique({ where: { id: workoutId }, select: { status: true } });
+  return workout?.status === "AVULSO";
+}
+
+/// Treino avulso (FitOS Livre) que termina sem nenhuma série não vira
+/// histórico: a sessão e o treino montado na hora são apagados. Devolve
+/// `true` quando apagou.
+export async function discardEmptyFreeSession(
+  session: { id: string; workoutId: string },
+  tx: Pick<PrismaClient, "workout" | "workoutSession" | "workoutSetResult">
+): Promise<boolean> {
+  if (!(await isFreeWorkout(session.workoutId, tx))) return false;
+  if ((await tx.workoutSetResult.count({ where: { workoutSessionId: session.id } })) > 0) return false;
+  await tx.workoutSession.delete({ where: { id: session.id } });
+  await tx.workout.delete({ where: { id: session.workoutId } });
+  return true;
+}
+
+/// O praticante do FitOS Livre exclui um treino já realizado (concluído ou
+/// abandonado): a sessão sai do histórico, da evolução e dos recordes
+/// (séries e resultados vão junto). Treino avulso não salvo também é
+/// apagado, porque só existia para essa sessão. Sessão em andamento não é
+/// excluída por aqui: para ela existe "Abandonar".
+export async function deleteFinishedWorkoutSession(
+  input: { tenantId: string; studentId: string; sessionId: string; actorUserId: string; onlyRetroactive?: boolean },
+  client: PrismaClient = prisma
+): Promise<void> {
+  const session = await client.workoutSession.findFirst({
+    where: { id: input.sessionId, tenantId: input.tenantId, studentId: input.studentId },
+    include: { workout: { select: { id: true, status: true } } },
+  });
+  if (!session) throw new SessionError("NAO_ENCONTRADO", "Treino não encontrado.");
+  if (session.status !== "CONCLUIDA" && session.status !== "ABANDONADA") {
+    throw new SessionError("ESTADO_INVALIDO", "Só um treino concluído ou abandonado pode ser excluído.");
+  }
+  // Aluno: só o que ele mesmo registrou; o treino do programa fica com o personal.
+  if (input.onlyRetroactive && session.mode !== "RETROATIVO") throw new SessionError("ESTADO_INVALIDO", "Só um treino registrado por você pode ser excluído.");
+  const score = await client.sessionScore.findUnique({ where: { sessionId: session.id }, select: { totalTenths: true, status: true } });
+  await client.$transaction(async (tx) => {
+    // Trilha (feature 2, parte 2): a versão excluída e os pontos estornados.
+    const snapshot = await sessionSnapshot(tx, session);
+    await recordRevision(tx, { tenantId: input.tenantId, studentId: input.studentId, sessionId: session.id, actorUserId: input.actorUserId, action: "EXCLUIDO", snapshot, score });
+    await tx.workoutSession.delete({ where: { id: session.id } });
+    if (session.workout.status === "AVULSO" && (await tx.workoutSession.count({ where: { workoutId: session.workout.id } })) === 0) {
+      await tx.workout.delete({ where: { id: session.workout.id } });
+    }
+  });
 }

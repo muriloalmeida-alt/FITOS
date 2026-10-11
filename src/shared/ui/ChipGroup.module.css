@@ -1,0 +1,116 @@
+.group {
+  min-width: 0;
+}
+
+.groupLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fitos-color-text-muted);
+  margin-bottom: var(--fitos-space-2);
+}
+
+.list {
+  display: flex;
+  gap: var(--fitos-space-2);
+}
+
+.list.chip {
+  flex-wrap: wrap;
+}
+
+.list.scroll {
+  overflow-x: auto;
+  margin: 0 calc(-1 * var(--fitos-space-5));
+  padding: 2px var(--fitos-space-5) 6px;
+  scrollbar-width: none;
+}
+
+.list.card {
+  display: grid;
+  gap: var(--fitos-space-2);
+}
+
+.cols1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cols2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cols3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+button.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #d5dbe1;
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button.chip.selected.light {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  color: var(--fitos-navy-900);
+}
+
+button.chip.selected.accent {
+  background-color: var(--fitos-orange-500);
+  border-color: var(--fitos-orange-500);
+  color: var(--fitos-navy-900);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 56px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card.selected {
+  border-color: var(--fitos-orange-500);
+  background-color: #18140f;
+}
+
+.optionLabel {
+  font-weight: 800;
+}
+
+.optionDescription {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.chip:focus-visible,
+.card:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}

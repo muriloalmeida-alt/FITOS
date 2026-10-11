@@ -55,6 +55,15 @@ enum InvitationStatus {
 /// `origin === "API_NINJAS"` está incompleto — a condição correta é sempre
 /// "`origin !== "PERSONAL"` e `tenantId` nulo" (ver `visibleCatalogOriginCondition`
 /// em `exercises.ts`, corrigida junto com esta migration).
+/// Intensidade de um item aeróbico (EPIC-28, ADR-016). INTERVALADO divide
+/// o tempo em tiros fortes e recuperações no treino ao vivo.
+enum CardioIntensity {
+  LEVE
+  MODERADO
+  FORTE
+  INTERVALADO
+}
+
 enum ExerciseOrigin {
   API_NINJAS
   PERSONAL
@@ -78,9 +87,12 @@ enum WorkoutSessionStatus {
 
 /// Ciclo de vida do modelo de treino (FIT-030). Mesmo padrão de
 /// `ExerciseStatus` — arquivar nunca é exclusão física.
+/// `AVULSO` (treino avulso do FitOS Livre): montado durante a execução,
+/// fora das listas de treinos; "Salvar nos meus treinos" o torna ATIVO.
 enum WorkoutStatus {
   ATIVO
   ARQUIVADO
+  AVULSO
 }
 
 /// Ciclo de vida do plano semanal (FIT-030/FIT-032). Um `TrainingPlan` com
@@ -124,6 +136,10 @@ enum UserRole {
   /// um vínculo com um personal (FIT-106) — são papéis diferentes, ver
   /// `05_TRANSICAO_PERSONAL_PARA_LIVRE.md` do pacote pós-MVP.
   INDIVIDUAL
+  /// Administrador da plataforma: gerencia todos os usuários (senha e
+  /// exclusão). Sem tenant. Nunca vem do cadastro público; só do script
+  /// `admin:garantir` (ADMIN_EMAIL/ADMIN_PASSWORD no ambiente).
+  ADMIN
 }
 
 /// Identidade autenticável. A partir da FIT-009, User também é a tabela de
@@ -141,16 +157,86 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  ownedTenant         Tenant?
-  studentProfile      Student?
-  endedStudentBonds   Student[]    @relation("StudentBondEndedBy")
-  authoredAssessments Assessment[] @relation("AssessmentAuthor")
-  recordedPayments    Payment[]
-  auditEvents         AuditEvent[]
-  sessions            Session[]
-  accounts            Account[]
+  ownedTenant          Tenant?
+  studentProfile       Student?
+  endedStudentBonds    Student[]             @relation("StudentBondEndedBy")
+  authoredAssessments  Assessment[]          @relation("AssessmentAuthor")
+  recordedPayments     Payment[]
+  auditEvents          AuditEvent[]
+  sessions             Session[]
+  accounts             Account[]
+  pushSubscriptions    PushSubscription[]
+  notificationSettings NotificationSettings?
+  passkeys             Passkey[]
+  avatar               UserAvatar?
+  personalAlerts       PersonalAlert[]
+  chatMessages         ChatMessage[]
+  uploadedPhotos       EvolutionPhoto[]      @relation("EvolutionPhotoUploader")
+  healthFormsFilled    HealthForm[]          @relation("HealthFormFiller")
+  musicPreference      MusicPreference?
+  friendGroupsOwned    FriendGroup[]         @relation("FriendGroupOwner")
+  friendGroupMembers   FriendGroupMember[]
+  contestsOpened       ScoreContest[]        @relation("ContestOpenedBy")
+  contestsToReview     ScoreContest[]        @relation("ContestReviewer")
 
   @@map("users")
+}
+
+/// Aparelho que aceitou receber notificações (EPIC-31, Web Push). Um
+/// usuário pode ter vários (celular, computador). `endpoint` identifica o
+/// aparelho no serviço de push; inscrição que o serviço recusa (404/410) é
+/// apagada no envio.
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+/// Aviso de vencimento da assinatura FitOS já enviado (EPIC-34): um por
+/// tenant, data de vencimento e tipo ("5_DIAS" ou "NO_DIA"). A unicidade
+/// garante um aviso só, mesmo com mais de uma instância rodando.
+model SubscriptionDueReminder {
+  id       String   @id @default(cuid())
+  tenantId String
+  dueOn    String
+  kind     String
+  sentAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dueOn, kind])
+  @@map("subscription_due_reminders")
+}
+
+/// Preferências de notificação (EPIC-31). `reminderHour` (0-23, horário de
+/// Brasília) liga o lembrete de treino; `null` = desligado.
+/// `lastReminderOn` (AAAA-MM-DD) impede mandar o lembrete duas vezes no
+/// mesmo dia, mesmo com mais de uma instância rodando.
+model NotificationSettings {
+  userId            String   @id
+  reminderHour      Int?
+  lastReminderOn    String?
+  /// Avisos do personal (Configurações, EPIC-36). `alertInactiveDays` nulo
+  /// desliga o aviso de aluno sem treinar.
+  alertDaysChanged  Boolean  @default(true)
+  alertInactiveDays Int?     @default(7)
+  alertOverdue      Boolean  @default(true)
+  alertProgramEnd   Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
 }
 
 /// Sessão de autenticação (Better Auth). Não é a fonte de autorização de
@@ -171,6 +257,29 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+/// Passkey (EPIC-33): entrar com digital, Face ID ou o bloqueio do
+/// aparelho (WebAuthn, plugin de passkey do Better Auth). Só a chave
+/// pública fica no banco; a privada nunca sai do aparelho.
+model Passkey {
+  id           String    @id @default(cuid())
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+  aaguid       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkeys")
 }
 
 /// Credencial/provedor de autenticação (Better Auth). Para login por
@@ -230,32 +339,71 @@ enum TenantType {
 /// e nome, mas sem alunos/carteira/financeiro. Nenhuma regra de isolamento
 /// muda: continua sendo `tenantId` derivado da sessão, nunca do cliente.
 model Tenant {
-  id        String     @id @default(cuid())
-  ownerId   String     @unique
-  name      String
-  type      TenantType @default(PERSONAL)
-  createdAt DateTime   @default(now())
+  id                    String     @id @default(cuid())
+  ownerId               String     @unique
+  name                  String
+  type                  TenantType @default(PERSONAL)
+  createdAt             DateTime   @default(now())
+  /// Quando a biblioteca inicial (programas, treinos e aeróbicos prontos)
+  /// foi criada neste espaço; nunca recriada (EPIC-28).
+  starterLibraryAt      DateTime?
+  /// EPIC-32: última versão da biblioteca inicial já criada no espaço.
+  starterLibraryVersion Int        @default(0)
+  /// EPIC-33: o que quem entra pelo link de convite já recebe — o
+  /// programa (cópia da biblioteca) e a mensalidade (valor e dia).
+  inviteProgramId       String?
+  inviteFeeCents        Int?
+  inviteFeeDay          Int?
+  /// Prescrição com que um exercício entra num treino (Configurações,
+  /// EPIC-36). Nulo = padrão do FitOS (3 × 12, 60 s).
+  defaultSets           Int?
+  defaultReps           Int?
+  defaultRestSeconds    Int?
+  /// Respostas rápidas do personal no chat (EPIC-41); até salvar a
+  /// primeira vez (`chatQuickRepliesSet`), valem as padrão.
+  chatQuickReplies      String[]   @default([])
+  chatQuickRepliesSet   Boolean    @default(false)
+  /// Link de convite do personal (`/c/<código>`, EPIC-29): quem abre cria a
+  /// própria conta de aluno neste espaço. Gerado no primeiro uso.
+  inviteCode            String?    @unique
+  /// Código de indicação do personal para outros personais (EPIC-47).
+  referralCode          String?    @unique
 
-  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  students              Student[]
-  exercises             Exercise[]
-  trainingPlans         TrainingPlan[]
-  workouts              Workout[]
-  workoutExercises      WorkoutExercise[]
-  planAssignments       PlanAssignment[]
-  workoutSessions       WorkoutSession[]
-  workoutSessionResults WorkoutSessionResult[]
-  assessments           Assessment[]
-  bodyMeasurements      BodyMeasurement[]
-  studentCharges        StudentCharge[]
-  payments              Payment[]
-  chargeRecurrences     ChargeRecurrence[]
-  saasSubscription      SaasSubscription?
-  auditEvents           AuditEvent[]
-  invitations           Invitation[]
-  individualProfile     IndividualProfile?
-  personalProfile       PersonalProfile?
-  goals                 Goal[]
+  owner                    User                        @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  students                 Student[]
+  exercises                Exercise[]
+  trainingPlans            TrainingPlan[]
+  workouts                 Workout[]
+  workoutExercises         WorkoutExercise[]
+  planAssignments          PlanAssignment[]
+  workoutSessions          WorkoutSession[]
+  workoutSessionResults    WorkoutSessionResult[]
+  workoutSetResults        WorkoutSetResult[]
+  assessments              Assessment[]
+  bodyMeasurements         BodyMeasurement[]
+  studentCharges           StudentCharge[]
+  payments                 Payment[]
+  chargeRecurrences        ChargeRecurrence[]
+  saasSubscription         SaasSubscription?
+  classRanking             ClassRanking?
+  accessGrants             AdministrativeAccessGrant[]
+  auditEvents              AuditEvent[]
+  invitations              Invitation[]
+  individualProfile        IndividualProfile?
+  personalProfile          PersonalProfile?
+  goals                    Goal[]
+  evolutionPhotos          EvolutionPhoto[]
+  paymentAccount           PaymentAccount?
+  chatTopics               ChatTopic[]
+  chatMessages             ChatMessage[]
+  chatAttachments          ChatAttachment[]
+  healthForms              HealthForm[]
+  subscriptionDueReminders SubscriptionDueReminder[]
+  referralsMade            PersonalReferral[]          @relation("ReferralReferrer")
+  referralReceived         PersonalReferral?           @relation("ReferralReferred")
+  scheduleSlots            ScheduleSlot[]
+  scheduleEvents           ScheduleEvent[]
+  workoutSessionRevisions  WorkoutSessionRevision[]
 
   @@map("tenants")
 }
@@ -288,8 +436,8 @@ enum WeeklyAvailability {
 /// não gera nenhuma prescrição automática (a FIT-102 decide como o
 /// catálogo/builder usa isso, se usar).
 model IndividualProfile {
-  id                 String             @id @default(cuid())
-  tenantId           String             @unique
+  id                 String              @id @default(cuid())
+  tenantId           String              @unique
   objective          IndividualObjective
   experienceLevel    ExperienceLevel
   weeklyAvailability WeeklyAvailability
@@ -299,16 +447,16 @@ model IndividualProfile {
   /// `PersonalProfile.cpfCnpj`: obrigatório para toda nova submissão do
   /// onboarding, `null` só para perfis concluídos antes deste campo
   /// existir — nunca fabricado retroativamente.
-  cpfCnpj String?
+  cpfCnpj            String?
   /// Sempre preenchido no momento da primeira submissão, nunca sobrescrito
   /// depois (mesmo princípio de "preserva o momento original" de
   /// `endStudentBond`/`softDeleteAssessment`) — reabrir o onboarding para
   /// mudar objetivo/experiência/disponibilidade nunca pede um novo aceite
   /// nem altera esta data (FIT-119). `null` para perfis criados antes deste
   /// campo existir (FIT-101 a FIT-118) — nunca fabricado retroativamente.
-  termsAcceptedAt DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  termsAcceptedAt    DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -335,7 +483,9 @@ enum PersonalStudentRangeEstimate {
 model PersonalProfile {
   id                   String                       @id @default(cuid())
   tenantId             String                       @unique
-  phone                String
+  /// Opcional desde a EPIC-33: o cadastro não pede mais; o personal
+  /// informa no Perfil ou ao cadastrar o cartão.
+  phone                String?
   cref                 String?
   /// CPF/CNPJ do personal (FIT-128, Issue #153) — exigido pelo Asaas em
   /// `POST /v3/customers` para a integração real de pagamento, ainda não
@@ -353,9 +503,9 @@ model PersonalProfile {
   /// já documentada no rodapé da landing, FIT-110) — o texto apresentado
   /// ao lado do aceite é honesto sobre isso ("em preparação"), nunca um
   /// link morto.
-  termsAcceptedAt DateTime
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  termsAcceptedAt      DateTime
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -381,28 +531,56 @@ model PersonalProfile {
 /// StudentCharge, impedindo que uma dessas tabelas filhas aponte para um
 /// Student de um tenant diferente do seu próprio `tenantId`.
 model Student {
-  id            String        @id @default(cuid())
-  tenantId      String
-  userId        String?       @unique
-  email         String
-  displayName   String
-  status        StudentStatus @default(ATIVO)
-  endedAt       DateTime?
-  endReason     String?
-  endedByUserId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  tenantId             String
+  userId               String?       @unique
+  email                String
+  displayName          String
+  status               StudentStatus @default(ATIVO)
+  endedAt              DateTime?
+  endReason            String?
+  endedByUserId        String?
+  /// Objetivo que o aluno escolheu ao entrar pelo convite (EPIC-33).
+  objective            String?
+  /// "Meus dias" (EPIC-31): dias em que o aluno combinou treinar
+  /// (SEGUNDA…DOMINGO). Vazio = os dias do programa.
+  preferredDays        String[]      @default([])
+  /// Autorização explícita para fotos de evolução (EPIC-35,
+  /// REGRAS-DE-NEGOCIO seção 7): quando e por quem foi registrada. Nula =
+  /// sem autorização, nenhuma foto pode ser enviada.
+  /// CPF do aluno, pedido na primeira cobrança pelo app (EPIC-38): o
+  /// Asaas exige CPF do pagador.
+  cpf                  String?
+  /// Cliente do aluno na conta Asaas do personal (zerado ao trocar a conta).
+  asaasCustomerId      String?
+  photoConsentAt       DateTime?
+  photoConsentByUserId String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user              User?              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  endedByUser       User?              @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
-  planAssignments   PlanAssignment[]
-  workoutSessions   WorkoutSession[]
-  assessments       Assessment[]
-  charges           StudentCharge[]
-  chargeRecurrences ChargeRecurrence[]
-  invitations       Invitation[]
-  goals             Goal[]
+  tenant              Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                User?                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  endedByUser         User?                     @relation("StudentBondEndedBy", fields: [endedByUserId], references: [id], onDelete: Restrict)
+  planAssignments     PlanAssignment[]
+  workoutSessions     WorkoutSession[]
+  assessments         Assessment[]
+  charges             StudentCharge[]
+  chargeRecurrences   ChargeRecurrence[]
+  invitations         Invitation[]
+  goals               Goal[]
+  evolutionPhotos     EvolutionPhoto[]
+  scoringReferences   ScoringReference[]
+  periodGoals         PeriodGoal[]
+  rankingEntries      ClassRankingParticipant[]
+  chatTopics          ChatTopic[]
+  healthForm          HealthForm?
+  /// Aluno que indicou este (EPIC-47), quando entrou pelo link com `?ref=`.
+  referredByStudentId String?
+  referredBy          Student?                  @relation("StudentReferral", fields: [referredByStudentId], references: [id], onDelete: SetNull)
+  referrals           Student[]                 @relation("StudentReferral")
+  scheduleSlots       ScheduleSlot[]
+  scheduleEvents      ScheduleEvent[]
+  friendGroupMembers  FriendGroupMember[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, email])
@@ -468,18 +646,18 @@ model Invitation {
 /// `null` (múltiplas linhas com `externalId` nulo não colidem no índice
 /// único, pois o PostgreSQL trata cada `NULL` como distinto).
 model Exercise {
-  id           String         @id @default(cuid())
-  tenantId     String?
-  name         String
-  origin       ExerciseOrigin
-  status       ExerciseStatus @default(ATIVO)
-  externalId   String?
-  type         String?
-  muscle       String?
-  equipments   String?
-  difficulty   String?
-  instructions String?
-  safetyInfo   String?
+  id               String         @id @default(cuid())
+  tenantId         String?
+  name             String
+  origin           ExerciseOrigin
+  status           ExerciseStatus @default(ATIVO)
+  externalId       String?
+  type             String?
+  muscle           String?
+  equipments       String?
+  difficulty       String?
+  instructions     String?
+  safetyInfo       String?
   /// FIT-111: URL pública HTTPS da ilustração do exercício. Migrado para
   /// Cloudflare R2 (storage compatível com S3) — nunca uma URL assinada,
   /// nunca um caminho interno exposto (a regra de assets do pacote proíbe
@@ -492,13 +670,26 @@ model Exercise {
   /// `next/image` (a local não passa por `remotePatterns`, a do R2 passa).
   /// `imageAlt` é texto funcional do movimento (não o nome do arquivo
   /// original), escrito pelo manifesto de importação.
-  imageUrl     String?
-  imageAlt     String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  imageUrl         String?
+  imageAlt         String?
+  /// Funcional e CrossFit (feature 1): categorias do catálogo ("Funcional",
+  /// "CrossFit"), músculos secundários (o filtro por músculo também os
+  /// considera), nomes alternativos (inglês, siglas) e a métrica de registro
+  /// (`shared/lib/exerciseCatalog.ts`).
+  categories       String[]       @default([])
+  secondaryMuscles String[]       @default([])
+  aliases          String[]       @default([])
+  metric           String?
+  /// Nome, aliases e músculos em minúsculas e sem acento, para a busca
+  /// ignorar acento e caixa (`exerciseSearchText`).
+  searchText       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutExercises WorkoutExercise[]
+  performedSets    WorkoutSetResult[]     @relation("SetPerformedExercise")
+  performedResults WorkoutSessionResult[] @relation("ResultPerformedExercise")
 
   @@unique([origin, externalId])
   @@index([tenantId])
@@ -583,6 +774,10 @@ model Workout {
   position       Int
   status         WorkoutStatus @default(ATIVO)
   suggestedDays  String[]      @default([])
+  /// Funcional e CrossFit (feature 1): blocos do treino, em ordem
+  /// (`shared/lib/workoutBlocks.ts`): circuito, AMRAP, EMOM ou For Time,
+  /// com voltas, janela, intervalos ou limite. Vazio = séries tradicionais.
+  blocks         Json?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -615,25 +810,35 @@ model Workout {
 /// "RM"; mesmo padrão de `Exercise.difficulty`/`equipments`), descanso e
 /// observação. RPE/RIR e vídeo são pós-MVP, não representados aqui.
 model WorkoutExercise {
-  id              String   @id @default(cuid())
-  tenantId        String
-  workoutId       String
-  exerciseId      String
-  position        Int
-  sets            Int?
-  reps            Int?
-  durationSeconds Int?
-  load            String?
-  restSeconds     Int?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String           @id @default(cuid())
+  tenantId             String
+  workoutId            String
+  exerciseId           String
+  position             Int
+  sets                 Int?
+  reps                 Int?
+  durationSeconds      Int?
+  load                 String?
+  restSeconds          Int?
+  notes                String?
+  /// Só em item aeróbico (exercício `type = "Aeróbico"`): o tempo fica em
+  /// `durationSeconds` e não há séries nem repetições.
+  intensity            CardioIntensity?
+  /// Funcional e CrossFit (feature 1): bloco do treino a que o item
+  /// pertence (`Workout.blocks[].key`); sem bloco, séries tradicionais.
+  blockKey             String?
+  /// Metas por métrica: distância (m) e calorias do equipamento.
+  targetDistanceMeters Int?
+  targetCalories       Int?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
 
   workoutSessionResults WorkoutSessionResult[]
+  workoutSetResults     WorkoutSetResult[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -695,25 +900,81 @@ model PlanAssignment {
 /// único parcial (não representável no Prisma Schema — ver migration
 /// `20260920020000_add_workout_session_results`).
 model WorkoutSession {
-  id        String               @id @default(cuid())
-  tenantId  String
-  studentId String
-  workoutId String
-  status    WorkoutSessionStatus @default(EM_ANDAMENTO)
-  startedAt DateTime             @default(now())
-  endedAt   DateTime?
+  id                      String               @id @default(cuid())
+  tenantId                String
+  studentId               String
+  workoutId               String
+  status                  WorkoutSessionStatus @default(EM_ANDAMENTO)
+  startedAt               DateTime             @default(now())
+  endedAt                 DateTime?
+  /// BK-13 (EPIC-19/20): esforço percebido de 1 (leve) a 5 (no limite),
+  /// informado ao concluir. CHECK no banco garante a faixa.
+  perceivedEffort         Int?
+  /// BK-14 (FIT-153): tempo ativo da sessão em segundos, descontando as
+  /// pausas do cronômetro. Informado ao concluir; nunca maior que o tempo
+  /// de relógio entre `startedAt` e `endedAt`.
+  activeSeconds           Int?
+  /// Treino avulso (FitOS Livre): o que o praticante escolheu treinar
+  /// (regiões e grupos musculares, `src/shared/lib/workoutFocus.ts`).
+  focus                   String[]             @default([])
+  /// Base das novas features (Fase 0): LIVE = feito com o cronômetro;
+  /// RETROATIVO = registrado depois. `performedAt` é quando o treino
+  /// aconteceu (nulo no LIVE: vale `startedAt`); `recordedAt`, quando foi
+  /// registrado. `declaredDurationSeconds`: duração total informada no
+  /// retroativo (declaratória, sem cronômetro). `operationKey` evita
+  /// registro duplicado por retry ou clique repetido.
+  mode                    WorkoutSessionMode   @default(LIVE)
+  performedAt             DateTime?
+  recordedAt              DateTime             @default(now())
+  declaredDurationSeconds Int?
+  operationKey            String?              @unique
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workout Workout @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
-  results WorkoutSessionResult[]
+  results      WorkoutSessionResult[]
+  setResults   WorkoutSetResult[]
+  chatTopic    ChatTopic?
+  evidences    WorkoutEvidencePhoto[]
+  score        SessionScore?
+  blockResults WorkoutBlockResult[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
   @@index([studentId, tenantId])
   @@index([workoutId, tenantId])
   @@map("workout_sessions")
+}
+
+enum WorkoutSessionMode {
+  LIVE
+  RETROATIVO
+}
+
+/// Foto de evidência do treino (Fase 0): pelo menos uma libera os pontos
+/// da gamificação. Mesmo padrão das fotos de evolução: reduzida no
+/// aparelho, guardada no banco, lida só por rota autenticada. É uma
+/// evidência enviada pelo cliente; não comprova sozinha carga, duração ou
+/// data. `sha256` impede a mesma foto duas vezes no mesmo treino.
+model WorkoutEvidencePhoto {
+  id           String   @id @default(cuid())
+  tenantId     String
+  sessionId    String
+  uploadedById String
+  mimeType     String
+  width        Int
+  height       Int
+  sizeBytes    Int
+  sha256       String
+  data         Bytes
+  createdAt    DateTime @default(now())
+
+  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([sessionId, sha256])
+  @@index([tenantId])
+  @@map("workout_evidence_photos")
 }
 
 /// Resultado executado de um item do treino, dentro de uma sessão
@@ -737,15 +998,50 @@ model WorkoutSessionResult {
   loadUsed                 String?
   recordedAt               DateTime @default(now())
   updatedAt                DateTime @updatedAt
+  /// Exercício feito no lugar do prescrito (EPIC-38), como nas séries.
+  performedExerciseId      String?
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workoutSession  WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
+  performedExercise Exercise? @relation("ResultPerformedExercise", fields: [performedExerciseId], references: [id], onDelete: SetNull)
+
   @@unique([workoutSessionId, workoutExerciseId])
   @@index([tenantId])
   @@index([workoutSessionId, tenantId])
   @@map("workout_session_results")
+}
+
+/// Série executada (BK-11, FIT-153, ADR-015): uma linha por série de um
+/// item do treino, na sessão. `WorkoutSessionResult` (agregado por item)
+/// continua sendo mantido a cada série, para não quebrar histórico,
+/// recordes e telas antigas. Carga em gramas (Int), como `weightGrams`.
+/// Registrar a mesma série de novo substitui os valores (upsert por
+/// sessão + item + número da série).
+model WorkoutSetResult {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  workoutSessionId    String
+  workoutExerciseId   String
+  setNumber           Int
+  reps                Int?
+  durationSeconds     Int?
+  loadGrams           Int?
+  completedAt         DateTime @default(now())
+  /// "Aparelho ocupado" (EPIC-38): exercício feito no lugar do prescrito,
+  /// só nesta sessão. Nulo = o do treino.
+  performedExerciseId String?
+
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workoutSession    WorkoutSession  @relation(fields: [workoutSessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  performedExercise Exercise?       @relation("SetPerformedExercise", fields: [performedExerciseId], references: [id], onDelete: SetNull)
+
+  @@unique([workoutSessionId, workoutExerciseId, setNumber])
+  @@index([tenantId])
+  @@index([workoutExerciseId, tenantId])
+  @@map("workout_set_results")
 }
 
 /// Avaliação/evolução manual do aluno. Peso em gramas (Int) para evitar
@@ -886,18 +1182,22 @@ enum GoalStatus {
 /// `cancelReason`/`cancelledAt` só são preenchidos por `CANCELADO` — cancelar
 /// nunca equivale a pagar (seção 8).
 model StudentCharge {
-  id             String              @id @default(cuid())
-  tenantId       String
-  studentId      String
-  description    String
-  status         StudentChargeStatus @default(PENDENTE)
-  amountCents    Int
-  referenceMonth DateTime
-  dueDate        DateTime
-  cancelReason   String?
-  cancelledAt    DateTime?
-  recurrenceId   String?
-  createdAt      DateTime            @default(now())
+  id                String              @id @default(cuid())
+  tenantId          String
+  studentId         String
+  description       String
+  status            StudentChargeStatus @default(PENDENTE)
+  amountCents       Int
+  referenceMonth    DateTime
+  dueDate           DateTime
+  cancelReason      String?
+  cancelledAt       DateTime?
+  recurrenceId      String?
+  /// Cobrança gerada na conta Asaas do personal (EPIC-38): id e link de
+  /// pagamento (Pix, boleto ou cartão). A baixa vem pelo webhook.
+  externalPaymentId String?             @unique
+  paymentUrl        String?
+  createdAt         DateTime            @default(now())
 
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student    Student           @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -1021,11 +1321,11 @@ model Plan {
 /// documentado em `src/modules/billing/subscriptions.ts`, nunca um nome de
 /// provedor fictício.
 model SaasSubscription {
-  id             String                 @id @default(cuid())
-  tenantId       String                 @unique
-  planId         String
-  status         SaasSubscriptionStatus @default(ATIVA)
-  provider       String
+  id                     String                 @id @default(cuid())
+  tenantId               String                 @unique
+  planId                 String
+  status                 SaasSubscriptionStatus @default(ATIVA)
+  provider               String
   /// Id do cliente/assinatura reais no Asaas (FIT-128, ADR-010) — só
   /// preenchidos quando a ligação de melhor esforço em
   /// `tryEnsureAsaasSubscription` (`src/modules/billing/subscriptions.ts`)
@@ -1042,28 +1342,85 @@ model SaasSubscription {
   /// para exibição em `/painel/assinatura` ("Cartão terminado em ****").
   /// `null` enquanto nenhum cartão tiver sido cadastrado — nunca obrigatório
   /// para um plano de preço zero.
-  creditCardLast4  String?
-  creditCardBrand  String?
-  canceledAt     DateTime?
-  canceledReason String?
+  creditCardLast4        String?
+  creditCardBrand        String?
+  canceledAt             DateTime?
+  canceledReason         String?
   /// Fim do período de teste grátis desta contratação — `null` quando não
   /// há trial em curso (plano sem `trialDays`, trial já expirado/consumido,
   /// ou nunca contratado). Nunca reiniciado numa troca de plano dentro do
   /// mesmo tenant — ver `trialUsedAt` (FIT-127).
-  trialEndsAt    DateTime?
+  trialEndsAt            DateTime?
   /// Marca a primeira vez que este tenant recebeu um trial, para sempre —
   /// nunca é limpo, nem numa troca de plano. `subscribeTenantToPlan` só
   /// concede um novo `trialEndsAt` quando este campo ainda está `null`;
   /// nunca reinicia o trial trocando de plano (regra explícita do EPIC-16).
-  trialUsedAt    DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  trialUsedAt            DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
 
+  accessGrants AdministrativeAccessGrant[]
+
   @@index([planId])
   @@map("saas_subscriptions")
+}
+
+/// Renovação de gratuidade (feature 4): o administrador concede dias de
+/// acesso gratuito a um personal ou FitOS Livre. Benefício separado do
+/// teste inicial: `trialEndsAt`/`trialUsedAt` nunca mudam. `endsAt` é
+/// exclusivo; vencer é derivado da data (sem job). SYNCING/FAILED ficam
+/// para o ajuste da cobrança no Asaas; só ACTIVE libera acesso.
+enum AccessGrantState {
+  ACTIVE
+  SYNCING
+  FAILED
+  REVOKED
+}
+
+model AdministrativeAccessGrant {
+  id             String           @id @default(cuid())
+  tenantId       String
+  subscriptionId String
+  /// Administrador que concedeu (sem FK: o histórico fica mesmo se a conta sair).
+  actorAdminId   String
+  days           Int
+  startsAt       DateTime
+  endsAt         DateTime
+  reasonCode     String
+  reasonText     String?
+  state          AccessGrantState @default(ACTIVE)
+  /// Chave idempotente do formulário: repetir o envio não soma dias.
+  operationKey   String           @unique
+  revokedAt      DateTime?
+  revokedById    String?
+  revokeReason   String?
+  createdAt      DateTime         @default(now())
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription SaasSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, state, endsAt])
+  @@index([subscriptionId])
+  @@map("administrative_access_grants")
+}
+
+/// Trilha de auditoria das ações de benefício do administrador.
+model AdminBenefitAudit {
+  id         String   @id @default(cuid())
+  actorId    String
+  tenantId   String
+  grantId    String
+  operation  String
+  before     Json?
+  after      Json?
+  reason     String
+  occurredAt DateTime @default(now())
+
+  @@index([tenantId, occurredAt])
+  @@map("admin_benefit_audits")
 }
 
 /// Evento de auditoria de alteração crítica. Nunca deve registrar senha,
@@ -1086,4 +1443,569 @@ model AuditEvent {
 
   @@index([tenantId])
   @@map("audit_events")
+}
+
+/// Foto de perfil (EPIC-35). Guardada no banco, já reduzida no aparelho
+/// (quadrada, até 512px), e servida por `/api/avatar/[userId]` só para
+/// quem está autenticado. `User.image` aponta para essa rota com `?v=`.
+model UserAvatar {
+  userId    String   @id
+  mimeType  String
+  data      Bytes
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_avatars")
+}
+
+/// Foto de evolução do aluno (EPIC-35): frente, lado ou costas, na data da
+/// avaliação. Só com `Student.photoConsentAt`; vista só pelo próprio aluno
+/// e pelo personal do tenant, por `/api/fotos-evolucao/[id]`.
+model EvolutionPhoto {
+  id           String   @id @default(cuid())
+  tenantId     String
+  studentId    String
+  uploadedById String
+  pose         String
+  takenAt      DateTime @default(now())
+  mimeType     String
+  width        Int
+  height       Int
+  data         Bytes
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student    Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  uploadedBy User    @relation("EvolutionPhotoUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([studentId, tenantId, takenAt])
+  @@map("evolution_photos")
+}
+
+/// Aviso já enviado ao personal (EPIC-36): um por motivo e referência
+/// (aluno sem treinar desde a última sessão, cobrança atrasada, programa
+/// que terminou). Evita repetir o mesmo aviso a cada rodada.
+model PersonalAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  refKey    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refKey])
+  @@map("personal_alerts")
+}
+
+/// Conta de recebimento do personal (EPIC-38): uma subconta Asaas criada
+/// pelo FitOS em nome dele, para cobrar os alunos pelo app. O dinheiro cai
+/// na subconta do personal (o FitOS fica com 2% por split); a chave da
+/// subconta fica criptografada e o aviso de pagamento dá a baixa.
+model PaymentAccount {
+  tenantId         String    @id
+  provider         String
+  /// "producao" ou "sandbox", pela chave.
+  environment      String
+  apiKeyEncrypted  String
+  /// Identifica a conta na URL do webhook; `webhookSecret` vai no cabeçalho.
+  webhookToken     String    @unique
+  webhookSecret    String
+  webhookId        String?
+  connectedAt      DateTime  @default(now())
+  /// Subconta Asaas criada pelo FitOS (EPIC-38): id, carteira e situação da
+  /// verificação de identidade ("PENDENTE", "APROVADA", "RECUSADA").
+  asaasAccountId   String?
+  walletId         String?
+  status           String    @default("PENDENTE")
+  onboardingUrl    String?
+  statusCheckedAt  DateTime?
+  /// Chave Pix do personal para os saques.
+  payoutPixKey     String?
+  payoutPixKeyType String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("payment_accounts")
+}
+
+/// Assunto do chat entre aluno e personal (EPIC-39): uma categoria
+/// (exercício, treino, dor, agenda, pagamento, outro), o exercício quando
+/// é sobre um, e a situação (aberto/resolvido). As mensagens ficam dentro.
+model ChatTopic {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  studentId             String
+  category              String
+  exerciseId            String?
+  /// Nome do exercício no momento da pergunta (o treino pode mudar depois).
+  exerciseName          String?
+  /// Comentário depois do treino (EPIC-42): a sessão e o nome do treino.
+  workoutSessionId      String?   @unique
+  workoutName           String?
+  resolvedAt            DateTime?
+  lastMessageAt         DateTime  @default(now())
+  lastStudentMessageAt  DateTime?
+  lastPersonalMessageAt DateTime?
+  studentReadAt         DateTime?
+  personalReadAt        DateTime?
+  createdAt             DateTime  @default(now())
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student        Student         @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  workoutSession WorkoutSession? @relation(fields: [workoutSessionId], references: [id], onDelete: SetNull)
+  messages       ChatMessage[]
+
+  @@index([tenantId, lastMessageAt])
+  @@index([studentId, tenantId])
+  @@map("chat_topics")
+}
+
+model ChatMessage {
+  id           String   @id @default(cuid())
+  tenantId     String
+  topicId      String
+  authorUserId String
+  fromStudent  Boolean
+  body         String
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  topic      ChatTopic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author     User            @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  attachment ChatAttachment?
+
+  @@index([topicId, createdAt])
+  @@map("chat_messages")
+}
+
+/// Vídeo da execução ou foto anexada a uma mensagem (EPIC-40). Fica no
+/// banco, sem URL pública: toda leitura passa pela rota autenticada. O
+/// conteúdo é apagado depois de 90 dias (a mensagem fica, com o aviso).
+model ChatAttachment {
+  id          String    @id @default(cuid())
+  tenantId    String
+  messageId   String    @unique
+  kind        String
+  mimeType    String
+  sizeBytes   Int
+  durationSec Int?
+  width       Int?
+  height      Int?
+  data        Bytes?
+  expiredAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("chat_attachments")
+}
+
+/// Ficha de saúde do aluno (EPIC-46): anamnese curta e PAR-Q. Uma por
+/// aluno (a resposta mais recente). Dado sensível: só o aluno e o
+/// personal do vínculo veem.
+model HealthForm {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String   @unique
+  answers        Json
+  /// Quantas respostas "sim" no PAR-Q (0 = liberado para começar).
+  parqYes        Int
+  filledByUserId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student  Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  filledBy User    @relation("HealthFormFiller", fields: [filledByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, tenantId])
+  @@map("health_forms")
+}
+
+/// Indicação de personal para personal (EPIC-47): o indicado ganha 30 dias
+/// a mais de teste; quando o primeiro pagamento dele é confirmado, quem
+/// indicou ganha um mês (`rewardedAt`).
+model PersonalReferral {
+  id               String    @id @default(cuid())
+  referrerTenantId String
+  referredTenantId String    @unique
+  createdAt        DateTime  @default(now())
+  rewardedAt       DateTime?
+
+  referrer Tenant @relation("ReferralReferrer", fields: [referrerTenantId], references: [id], onDelete: Cascade)
+  referred Tenant @relation("ReferralReferred", fields: [referredTenantId], references: [id], onDelete: Cascade)
+
+  @@index([referrerTenantId])
+  @@map("personal_referrals")
+}
+
+/// Horário fixo de um aluno (EPIC-48): toda semana, no dia e hora
+/// combinados (horário de Brasília, minutos desde 0h).
+model ScheduleSlot {
+  id              String    @id @default(cuid())
+  tenantId        String
+  studentId       String
+  weekday         Int
+  startMinutes    Int
+  durationMinutes Int       @default(60)
+  location        String?
+  /// Primeiro dia (AAAA-MM-DD) em que vale; antes disso não aparece.
+  startsOn        String
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  endedAt         DateTime?
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student         @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  events  ScheduleEvent[]
+
+  @@index([tenantId, active])
+  @@index([studentId, tenantId])
+  @@map("schedule_slots")
+}
+
+/// Uma aula num dia (EPIC-48): a situação de uma ocorrência do horário fixo
+/// (`slotId` + `originalDate`: feita, falta, desmarcada) ou uma aula avulsa
+/// / reposição (`slotId` nulo).
+model ScheduleEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  studentId       String
+  slotId          String?
+  originalDate    String?
+  date            String
+  startMinutes    Int
+  durationMinutes Int      @default(60)
+  /// AGENDADA, FEITA, FALTA ou DESMARCADA.
+  status          String   @default("AGENDADA")
+  note            String?
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student Student       @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  slot    ScheduleSlot? @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, originalDate])
+  @@index([tenantId, date])
+  @@index([studentId, tenantId, date])
+  @@map("schedule_events")
+}
+
+/// Música em um toque (PRD v2.1): o serviço que o usuário prefere abrir
+/// durante o treino. Só a preferência; nada de conta, token ou o que toca.
+model MusicPreference {
+  userId    String   @id
+  provider  String
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("music_preferences")
+}
+
+/// FitOS Desafios (feature 3, ADR-019): referência individual de um
+/// exercício, congelada na primeira pontuação. VOLUME em gramas·repetição,
+/// REPETICOES em repetições, TEMPO em segundos. Mudança de programa cria
+/// versão nova (prospectiva): a anterior ganha `supersededAt`, nunca muda.
+model ScoringReference {
+  id           String               @id @default(cuid())
+  tenantId     String
+  studentId    String
+  exerciseId   String
+  kind         ScoringReferenceKind
+  value        Int
+  /// PRESCRICAO (programa), PRIMEIRA_EXECUCAO (sem carga prescrita ou
+  /// treino avulso) ou PADRAO (aeróbico sem tempo prescrito: 30 min).
+  source       String
+  version      Int                  @default(1)
+  createdAt    DateTime             @default(now())
+  supersededAt DateTime?
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([studentId, exerciseId, kind])
+  @@map("scoring_references")
+}
+
+enum ScoringReferenceKind {
+  VOLUME
+  REPETICOES
+  TEMPO
+}
+
+/// Pontuação de um treino concluído (uma por sessão; o diário pessoal é
+/// único, os rankings só leem). Pontos em décimos. Sem foto, os pontos
+/// ficam calculados mas fora do placar (PENDENTE_FOTO); a foto dentro do
+/// prazo libera automaticamente. Excluir o treino leva a pontuação junto.
+model SessionScore {
+  id             String             @id @default(cuid())
+  tenantId       String
+  studentId      String
+  sessionId      String             @unique
+  ruleVersion    Int
+  totalTenths    Int
+  plannedItems   Int
+  balancedTenths Int
+  /// Detalhe por item: exercício, medida, feito, referência, pontos.
+  items          Json
+  status         SessionScoreStatus @default(PENDENTE_FOTO)
+  /// Data da realização (`sessionPerformedAt`): períodos e rankings.
+  performedAt    DateTime
+  photoDeadline  DateTime
+  releasedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  session  WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  events   ScoreEvent[]
+  contests ScoreContest[]
+
+  @@unique([sessionId, tenantId])
+  @@index([tenantId, studentId, performedAt])
+  @@map("session_scores")
+}
+
+enum SessionScoreStatus {
+  PENDENTE_FOTO
+  LIBERADO
+  CONTESTADO
+  MANTIDO
+  ANULADO
+}
+
+/// Trilha auditável de cada mudança de pontuação (crédito, liberação,
+/// estorno, recálculo, decisão de contestação).
+model ScoreEvent {
+  id             String              @id @default(cuid())
+  sessionScoreId String
+  kind           String
+  totalTenths    Int
+  fromStatus     SessionScoreStatus?
+  toStatus       SessionScoreStatus
+  actorId        String?
+  reason         String?
+  createdAt      DateTime            @default(now())
+
+  score SessionScore @relation(fields: [sessionScoreId], references: [id], onDelete: Cascade)
+
+  @@index([sessionScoreId, createdAt])
+  @@map("score_events")
+}
+
+/// Meta de pontos de um período (Desafios, ADR-019), congelada na primeira
+/// leitura do período: 10 × dias previstos × exercícios por treino. A
+/// medalha não é guardada: sai dos pontos oficiais contra esta meta, então
+/// um estorno revisa a medalha sozinho.
+model PeriodGoal {
+  id              String    @id @default(cuid())
+  tenantId        String
+  studentId       String
+  /// SEMANA ou MES.
+  periodType      String
+  /// "2026-10-05" (segunda) ou "2026-10".
+  periodKey       String
+  startsAt        DateTime
+  endsAt          DateTime
+  goalTenths      Int
+  plannedDays     Int
+  itemsPerWorkout Int
+  /// Resultado congelado do período encerrado (feature 2, parte 2): pontos
+  /// oficiais liberados até o fechamento. Editar ou excluir um treino
+  /// depois não muda medalha já consolidada.
+  finalTenths     Int?
+  finalizedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([studentId, periodType, periodKey])
+  @@map("period_goals")
+}
+
+/// Ranking da turma do personal (Desafios, ADR-019). Ligado pelo personal;
+/// `activatedAt` marca o início: treinos anteriores não entram. Desligar
+/// guarda a data e não apaga nada.
+model ClassRanking {
+  tenantId      String    @id
+  enabled       Boolean   @default(false)
+  activatedAt   DateTime?
+  deactivatedAt DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("class_rankings")
+}
+
+/// Adesão voluntária do aluno ao ranking da turma. Conta só treino feito
+/// depois de `joinedAt` (e da ativação). Sair grava `leftAt`; voltar
+/// recomeça a contagem.
+model ClassRankingParticipant {
+  id        String    @id @default(cuid())
+  tenantId  String
+  studentId String    @unique
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  student Student @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("class_ranking_participants")
+}
+
+/// Treino retroativo (feature 2, parte 2): trilha da versão anterior de um
+/// treino editado ou excluído pelo próprio praticante. Sem chave para a
+/// sessão, de propósito: a trilha sobrevive à exclusão.
+model WorkoutSessionRevision {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  studentId          String
+  sessionId          String
+  actorUserId        String
+  /// EDITADO ou EXCLUIDO.
+  action             String
+  /// Data, duração, exercícios e séries antes da mudança.
+  snapshot           Json
+  pointsTenthsBefore Int?
+  pointsStatusBefore String?
+  pointsTenthsAfter  Int?
+  createdAt          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, sessionId])
+  @@map("workout_session_revisions")
+}
+
+/// Desafios (feature 3, 4/4): grupo privado de amigos por convite, entre
+/// quaisquer pessoas que treinam (alunos de personais diferentes e Livre).
+/// Fora de tenant de propósito: o grupo cruza espaços; cada membro leva o
+/// próprio escopo de treino (`tenantId` + `studentId`).
+model FriendGroup {
+  id          String   @id @default(cuid())
+  name        String
+  /// TOTAL (soma dos pontos) ou EQUILIBRADO (média por treino, 3 melhores por semana).
+  mode        String
+  inviteCode  String   @unique
+  ownerUserId String
+  createdAt   DateTime @default(now())
+
+  owner   User                @relation("FriendGroupOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members FriendGroupMember[]
+  seasons FriendSeason[]
+
+  @@map("friend_groups")
+}
+
+/// Quem entrou no grupo, com o escopo de treino daquele momento. Sair grava
+/// `leftAt`: para de contar e perde a leitura; o histórico mostra a saída.
+model FriendGroupMember {
+  id        String    @id @default(cuid())
+  groupId   String
+  userId    String
+  tenantId  String
+  studentId String
+  /// ORGANIZADOR ou MEMBRO.
+  role      String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  group   FriendGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("friend_group_members")
+}
+
+/// Temporada do grupo: 7, 14 ou 28 dias. Uma de cada vez; conta só treino
+/// feito dentro dela e depois da entrada de cada membro.
+model FriendSeason {
+  id         String   @id @default(cuid())
+  groupId    String
+  lengthDays Int
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+
+  group FriendGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, startsAt])
+  @@map("friend_seasons")
+}
+
+/// Contestação de pontos (Desafios 4/4, parte B). Quem participa contesta
+/// um treino de outra pessoa pelo resumo mínimo; o revisor (organizador do
+/// grupo de amigos ou o personal da turma) mantém ou anula com
+/// justificativa. Os pontos continuam valendo até a decisão. Uma contestação
+/// aberta por treino; o autor pode recorrer uma vez de uma anulação.
+model ScoreContest {
+  id              String             @id @default(cuid())
+  sessionScoreId  String
+  /// Treino contestado (para a foto ficar visível ao revisor).
+  sessionId       String
+  /// AMIGOS ou TURMA.
+  context         String
+  friendGroupId   String?
+  /// Espaço da turma (contexto TURMA).
+  classTenantId   String?
+  openedByUserId  String
+  reviewerUserId  String
+  reason          String
+  /// ABERTA, MANTIDO ou ANULADO.
+  status          String             @default("ABERTA")
+  /// Situação dos pontos antes de abrir (volta a ela se nada mudar).
+  previousStatus  SessionScoreStatus
+  decision        String?
+  decidedByUserId String?
+  decidedAt       DateTime?
+  /// Recurso do autor contra uma anulação.
+  isAppeal        Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+
+  score    SessionScore @relation(fields: [sessionScoreId], references: [id], onDelete: Cascade)
+  openedBy User         @relation("ContestOpenedBy", fields: [openedByUserId], references: [id], onDelete: Cascade)
+  reviewer User         @relation("ContestReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@index([reviewerUserId, status])
+  @@index([sessionScoreId])
+  @@map("score_contests")
+}
+
+/// Funcional e CrossFit (feature 1, etapa 3): resultado de um bloco na
+/// execução ao vivo. O timer do bloco guarda instantes e pausas (sobrevive
+/// a recarregar a tela e a reconectar); o resultado é o que a pessoa
+/// confirma, nunca a prescrição. Em For Time, "concluído" guarda o tempo
+/// do bloco; "limite atingido" nunca vira tempo de conclusão.
+model WorkoutBlockResult {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  sessionId          String
+  blockKey           String
+  startedAt          DateTime?
+  pausedAt           DateTime?
+  pausedSeconds      Int       @default(0)
+  endedAt            DateTime?
+  /// CONCLUIDO, LIMITE_ATINGIDO ou PARCIAL.
+  outcome            String?
+  roundsCompleted    Int?
+  partialReps        Int?
+  intervalsCompleted Int?
+  /// Tempo do bloco (só For Time concluído, no modo ao vivo).
+  elapsedSeconds     Int?
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  session WorkoutSession @relation(fields: [sessionId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([sessionId, blockKey])
+  @@map("workout_block_results")
 }

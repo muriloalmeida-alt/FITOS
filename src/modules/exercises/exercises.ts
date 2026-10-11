@@ -1,11 +1,14 @@
 import "server-only";
 import { Prisma, type Exercise, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { exerciseSearchText, isExerciseCategory, normalizeSearch, type ExerciseCategory } from "@/shared/lib/exerciseCatalog";
 
-/// Gestão de exercícios próprios do personal (FIT-022). `tenantId` nunca é
-/// um parâmetro opcional/inferido — todo chamador já deve tê-lo derivado
-/// do contexto de autorização da sessão (`requirePersonal`, FIT-011) antes
-/// de chamar qualquer função deste módulo, mesmo padrão de `students.ts`.
+/// Gestão de exercícios próprios do tenant (FIT-022; FIT-142 estende a
+/// criação também ao workspace individual do FitOS Livre). `tenantId`
+/// nunca é um parâmetro opcional/inferido — todo chamador já deve tê-lo
+/// derivado do contexto de autorização da sessão (`requirePersonal` ou
+/// `requireSubscriber`, FIT-011) antes de chamar qualquer função deste
+/// módulo, mesmo padrão de `students.ts`.
 ///
 /// Exercício próprio nunca muda de tenant nem se torna global por aqui:
 /// nenhuma função deste módulo aceita `tenantId`/`origin` como campo
@@ -103,7 +106,7 @@ export async function createOwnExercise(input: CreateOwnExerciseInput, client: P
 
   try {
     return await client.exercise.create({
-      data: { tenantId: input.tenantId, origin: "PERSONAL", name, type, muscle, equipments, instructions },
+      data: { tenantId: input.tenantId, origin: "PERSONAL", name, type, muscle, equipments, instructions, searchText: exerciseSearchText({ name, muscle }) },
     });
   } catch (error) {
     if (isUniqueConstraintViolation(error)) {
@@ -153,6 +156,7 @@ export async function updateOwnExercise(input: UpdateOwnExerciseInput, client: P
     muscle?: string | null;
     equipments?: string | null;
     instructions?: string | null;
+    searchText?: string;
   } = {};
 
   if (input.name !== undefined) {
@@ -178,6 +182,7 @@ export async function updateOwnExercise(input: UpdateOwnExerciseInput, client: P
   if (Object.keys(data).length === 0) {
     return current;
   }
+  data.searchText = exerciseSearchText({ ...current, name: data.name ?? current.name, muscle: data.muscle !== undefined ? data.muscle : current.muscle });
 
   try {
     const [, updated] = await client.$transaction([
@@ -272,10 +277,15 @@ export type CatalogExerciseSortOrder = "nome_asc";
 
 export interface ListCatalogExercisesInput {
   tenantId: string;
+  /// FIT-147: "biblioteca" = catálogo global; "meus" = próprios do tenant,
+  /// **incluindo arquivados** (para poder reativá-los); padrão = ambos, só ativos.
+  origin?: "todos" | "biblioteca" | "meus";
   search?: string;
   muscle?: string;
   type?: string;
   difficulty?: string;
+  /// Funcional ou CrossFit.
+  category?: ExerciseCategory;
   page?: number;
   pageSize?: number;
 }
@@ -317,11 +327,21 @@ export async function listCatalogExercises(
   const pageSize = Math.min(MAX_CATALOG_PAGE_SIZE, Math.max(1, input.pageSize ?? DEFAULT_CATALOG_PAGE_SIZE));
   const search = input.search?.trim();
 
+  const originCondition: Prisma.ExerciseWhereInput =
+    input.origin === "biblioteca"
+      ? { status: "ATIVO", origin: { not: "PERSONAL" }, tenantId: null }
+      : input.origin === "meus"
+        ? { origin: "PERSONAL", tenantId: input.tenantId }
+        : { status: "ATIVO", ...visibleCatalogOriginCondition(input.tenantId) };
   const where: Prisma.ExerciseWhereInput = {
-    status: "ATIVO",
-    ...visibleCatalogOriginCondition(input.tenantId),
-    ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
-    ...(input.muscle?.trim() ? { muscle: { contains: input.muscle.trim(), mode: "insensitive" as const } } : {}),
+    ...originCondition,
+    AND: [
+      // Nome (como sempre) ou o texto sem acento com aliases e músculos.
+      ...(search ? [{ OR: [{ name: { contains: search, mode: "insensitive" as const } }, { searchText: { contains: normalizeSearch(search) } }] }] : []),
+      // Músculo principal ou secundário (Funcional e CrossFit).
+      ...(input.muscle?.trim() ? [{ OR: [{ muscle: { contains: input.muscle.trim(), mode: "insensitive" as const } }, { secondaryMuscles: { has: input.muscle.trim() } }] }] : []),
+    ],
+    ...(input.category ? { categories: { has: input.category } } : {}),
     ...(input.type?.trim() ? { type: { contains: input.type.trim(), mode: "insensitive" as const } } : {}),
     ...(input.difficulty?.trim() ? { difficulty: { contains: input.difficulty.trim(), mode: "insensitive" as const } } : {}),
   };
@@ -356,6 +376,15 @@ export interface CatalogExercisePickerItem {
   id: string;
   name: string;
   muscle: string | null;
+  /// FIT-146: foto do movimento na biblioteca do editor de treino.
+  imageUrl: string | null;
+  imageAlt: string | null;
+  /// Tipo do catálogo ("Aeróbico" = por tempo; o resto, por séries).
+  type: string | null;
+  /// Funcional e CrossFit: filtro por categoria, músculo secundário e busca por nomes alternativos.
+  categories: string[];
+  secondaryMuscles: string[];
+  aliases: string[];
 }
 
 export async function listCatalogExercisesForPicker(
@@ -371,7 +400,7 @@ export async function listCatalogExercisesForPicker(
     where,
     orderBy: [{ name: "asc" }, { id: "asc" }],
     take: PICKER_HARD_LIMIT,
-    select: { id: true, name: true, muscle: true },
+    select: { id: true, name: true, muscle: true, imageUrl: true, imageAlt: true, type: true, categories: true, secondaryMuscles: true, aliases: true },
   });
 }
 
@@ -388,4 +417,107 @@ export async function getCatalogExerciseForTenant(
   return client.exercise.findFirst({
     where: { id: input.exerciseId, ...visibleCatalogOriginCondition(input.tenantId) },
   });
+}
+
+export interface SwapOption {
+  id: string;
+  name: string;
+  muscle: string | null;
+  type: string | null;
+  imageUrl: string | null;
+  imageAlt: string | null;
+}
+
+/// Opções para trocar um exercício na cópia do aluno (EPIC-28): mesmo
+/// grupo muscular; para aeróbico, outros aeróbicos. Catálogo visível ao
+/// tenant, ativos, com foto primeiro.
+export async function listSwapOptions(input: { tenantId: string; exerciseId: string; limit?: number }, client: PrismaClient = prisma): Promise<SwapOption[]> {
+  const current = await getCatalogExerciseForTenant(input, client);
+  if (!current) return [];
+  const group: Prisma.ExerciseWhereInput = current.type === "Aeróbico" ? { type: "Aeróbico" } : current.muscle ? { muscle: current.muscle, NOT: { type: "Aeróbico" } } : { id: "__nenhum__" };
+  const rows = await client.exercise.findMany({
+    where: { status: "ATIVO", id: { not: current.id }, ...group, AND: [visibleCatalogOriginCondition(input.tenantId)] },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    take: 200,
+    select: { id: true, name: true, muscle: true, type: true, imageUrl: true, imageAlt: true },
+  });
+  return [...rows.filter((row) => row.imageUrl), ...rows.filter((row) => !row.imageUrl)].slice(0, input.limit ?? 12);
+}
+
+export interface CatalogFacets {
+  muscles: string[];
+  types: string[];
+  difficulties: string[];
+  /// Categorias com pelo menos um exercício visível (Funcional, CrossFit).
+  categories: ExerciseCategory[];
+}
+
+/// Opções dos filtros da biblioteca (FIT-147): valores distintos de
+/// músculo, tipo e dificuldade no catálogo visível ao tenant, do mais
+/// frequente ao menos frequente.
+export async function listCatalogFacets(input: { tenantId: string }, client: PrismaClient = prisma): Promise<CatalogFacets> {
+  const where: Prisma.ExerciseWhereInput = { status: "ATIVO", ...visibleCatalogOriginCondition(input.tenantId) };
+  async function distinct(field: "muscle" | "type" | "difficulty"): Promise<string[]> {
+    const rows = await client.exercise.findMany({ where: { ...where, [field]: { not: null } }, select: { [field]: true } });
+    const counts = new Map<string, number>();
+    for (const row of rows as unknown as Record<string, string | null>[]) {
+      const value = row[field];
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([value]) => value);
+  }
+  const [primary, types, difficulties, tagged] = await Promise.all([
+    distinct("muscle"),
+    distinct("type"),
+    distinct("difficulty"),
+    client.exercise.findMany({ where: { ...where, OR: [{ categories: { isEmpty: false } }, { secondaryMuscles: { isEmpty: false } }] }, select: { categories: true, secondaryMuscles: true } }),
+  ]);
+  // Músculos que só aparecem como secundários entram no fim (filtro também os considera).
+  const muscles = [...primary, ...new Set(tagged.flatMap((row) => row.secondaryMuscles).filter((muscle) => !primary.includes(muscle)))];
+  const present = new Set(tagged.flatMap((row) => row.categories));
+  const categories = [...present].filter(isExerciseCategory);
+  return { muscles, types, difficulties, categories };
+}
+
+/// BK-08 (FIT-147): "Criar uma versão minha" de um exercício da biblioteca
+/// global. Cria um exercício próprio com os mesmos dados (inclusive a foto
+/// pública, quando houver) e nome "<nome> (minha versão)", numerado se já
+/// existir. Nunca altera o exercício global.
+export async function copyCatalogExerciseAsOwn(
+  input: { tenantId: string; actorUserId: string; exerciseId: string },
+  client: PrismaClient = prisma
+): Promise<Exercise> {
+  const source = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.exerciseId }, client);
+  if (!source || source.origin === "PERSONAL") {
+    throw new ExerciseError("NAO_ENCONTRADO", "Exercício não encontrado.");
+  }
+  const base = `${source.name} (minha versão)`.slice(0, 120);
+  for (let attempt = 1; attempt <= 20; attempt++) {
+    const name = attempt === 1 ? base : `${base.slice(0, 114)} ${attempt}`;
+    try {
+      return await client.exercise.create({
+        data: {
+          tenantId: input.tenantId,
+          origin: "PERSONAL",
+          name,
+          type: source.type,
+          muscle: source.muscle,
+          equipments: source.equipments,
+          difficulty: source.difficulty,
+          instructions: source.instructions,
+          safetyInfo: source.safetyInfo,
+          imageUrl: source.imageUrl,
+          imageAlt: source.imageAlt,
+          categories: source.categories,
+          secondaryMuscles: source.secondaryMuscles,
+          aliases: source.aliases,
+          metric: source.metric,
+          searchText: exerciseSearchText({ ...source, name }),
+        },
+      });
+    } catch (error) {
+      if (!isUniqueConstraintViolation(error)) throw error;
+    }
+  }
+  throw new ExerciseError("NOME_DUPLICADO_NO_TENANT", "Já existem muitas versões deste exercício na sua conta.");
 }

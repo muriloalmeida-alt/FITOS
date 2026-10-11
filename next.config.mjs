@@ -27,8 +27,27 @@ function buildExerciseImageRemotePatterns() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Versão gravada no build (commit do Railway): o app compara com a do
+  // servidor em "Atualizar versão".
+  env: {
+    NEXT_PUBLIC_APP_VERSION: (process.env.RAILWAY_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
+  },
   images: {
     remotePatterns: buildExerciseImageRemotePatterns(),
+  },
+  // EPIC-31: o service worker das notificações nunca fica em cache (cada
+  // deploy chega na hora) e é sempre servido como JavaScript.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
   },
   // FIT-125/EPIC-16: `/criar-conta` foi renomeada para `/comecar` — redirect
   // permanente para não quebrar links já compartilhados/indexados (a query

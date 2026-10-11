@@ -1,134 +1,63 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/shared/ui/Toast";
 import { PersonalHome } from "./PersonalHome";
+import { parseReceive } from "./QuickActions";
+import type { PersonalFeedItem } from "@/modules/students/personalFeed";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }), usePathname: () => "/painel" }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
+afterEach(() => vi.restoreAllMocks());
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+const stats = { activeStudents: 8, studentLimit: 15, weekCompletion: 62, receivedCents: 0, overdueCount: 1 };
+const items: PersonalFeedItem[] = [
+  { kind: "cobranca_atrasada", studentId: "s3", studentName: "Bruno Martins", description: "Cobrança atrasada · R$ 180,00", actionLabel: "Registrar pagamento", href: "/painel/alunos/s3?acao=receber", tone: "error", at: null, amountCents: 18000, chargeIds: ["c1"] },
+  { kind: "sem_programa", studentId: "s1", studentName: "Ana Souza", description: "Sem programa de treino", actionLabel: "Dar programa", href: "/painel/treinos?aluno=s1", tone: "warn", at: null },
+];
+const charges = [{ id: "c1", studentName: "Bruno Martins", amountCents: 18000, overdue: true }];
 
-describe("PersonalHome (FIT-060, redesenhado na FIT-120)", () => {
-  it("exibe alunos ativos, treinos ativos e o atrasado do mês, com atalhos reais", () => {
-    render(
-      <PersonalHome
-        name="Joana"
-        email="joana@example.test"
-        tenantName="Espaço de Joana"
-        greeting="Bom dia"
-        activeStudentsCount={5}
-        activeWorkoutsCount={3}
-        atrasadoCents={3000}
-        attentionItems={[]}
-      />
-    );
+function renderHome(feed = { items, total: 2 }) {
+  render(
+    <ToastProvider>
+      <PersonalHome name="Joana Lima" greeting="Bom dia" dateLabel="Domingo, 4 de outubro" banner={{ tone: "ok", text: "Pro · 7 vagas livres", cta: "Assinatura" }} stats={stats} feed={feed} isNewSpace={false} openCharges={charges} students={[{ id: "s1", name: "Ana Souza" }]} />
+    </ToastProvider>
+  );
+}
 
+describe("Início do personal em fila (EPIC-29)", () => {
+  it("uma decisão por vez: Recebi resolve no lugar, com Desfazer, e passa para a próxima", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}", { status: 200 }));
+    renderHome();
     expect(screen.getByRole("heading", { level: 1, name: "Bom dia, Joana." })).toBeInTheDocument();
-    expect(screen.getByText("Seu trabalho em movimento.")).toBeInTheDocument();
-    expect(screen.getAllByText("5")).toHaveLength(2);
-    expect(screen.getAllByText("3")).toHaveLength(2);
-    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-
-    // AjustesPainel: acesso rápido circular (Novo aluno, Alunos, Treinos)
-    // + atalhos extras só no desktop — todos destinos reais.
-    const novoAluno = screen.getByRole("link", { name: /^Novo aluno/ });
-    expect(novoAluno).toHaveAttribute("href", "/painel/alunos/novo");
-    expect(screen.getByRole("link", { name: "Alunos Gerenciar" })).toHaveAttribute("href", "/painel/alunos");
-    expect(screen.getByRole("link", { name: "Treinos Organizar" })).toHaveAttribute("href", "/painel/treinos");
-    const novoTreino = screen.getByRole("link", { name: /^Novo treino/ });
-    expect(novoTreino).toHaveAttribute("href", "/painel/treinos/novo");
-    const verFinanceiro = screen.getByRole("link", { name: /^Ver financeiro/ });
-    expect(verFinanceiro).toHaveAttribute("href", "/painel/financeiro");
-
-    expect(screen.queryByText(/Comece cadastrando seu primeiro aluno/)).not.toBeInTheDocument();
+    expect(screen.getByText("0 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Bruno pagou R$ 180,00?".replace(" ", " "))).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lembrar" }).getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    await userEvent.click(screen.getByRole("button", { name: "Recebi" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/cobrancas/c1/recebi", expect.objectContaining({ method: "POST" }));
+    expect(await screen.findByText("Ana está sem programa.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dar programa" })).toHaveAttribute("href", "/painel/treinos?aluno=s1");
+    await userEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/cobrancas/c1/desfazer-pagamento", expect.anything()));
+    await userEvent.click(screen.getByRole("button", { name: "Depois" }));
+    expect(screen.getByText("Tudo em dia.")).toBeInTheDocument();
   });
 
-  it("exibe zero honesto quando não há nada atrasado, alunos ou treinos", () => {
-    render(
-      <PersonalHome
-        name="Joana"
-        email="joana@example.test"
-        tenantName={null}
-        greeting="Boa tarde"
-        activeStudentsCount={0}
-        activeWorkoutsCount={0}
-        atrasadoCents={0}
-        attentionItems={[]}
-      />
-    );
-
-    expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(4);
-    expect(screen.queryByText("Seu espaço")).not.toBeInTheDocument();
-    expect(screen.getByText(/Comece cadastrando seu primeiro aluno/)).toBeInTheDocument();
+  it("botão +: atalhos e 'recebi 180 do Bruno' vira um cartão para confirmar", async () => {
+    renderHome({ items: [], total: 0 });
+    expect(screen.getByText("Nada pede você agora.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Fazer algo" }));
+    const sheet = screen.getByRole("dialog", { name: "O que vamos fazer?" });
+    expect(within(sheet).getByRole("link", { name: "Convidar aluno" })).toHaveAttribute("href", "/painel/alunos/convite");
+    await userEvent.type(within(sheet).getByRole("textbox", { name: "O que vamos fazer?" }), "recebi 180 do bruno");
+    expect(within(sheet).getByText(/como recebido, hoje/)).toHaveTextContent("Bruno Martins");
   });
 
-  it("sem nenhum aluno precisando de atenção, 'Seu dia' mostra estado vazio honesto (nunca um aviso fictício)", () => {
-    render(
-      <PersonalHome
-        name="Joana"
-        email="joana@example.test"
-        tenantName={null}
-        greeting="Boa noite"
-        activeStudentsCount={2}
-        activeWorkoutsCount={1}
-        atrasadoCents={0}
-        attentionItems={[]}
-      />
-    );
-
-    expect(screen.getByRole("heading", { name: "Seu dia" })).toBeInTheDocument();
-    expect(screen.getByText(/Nada pendente por aqui/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Registrar avaliação|Ver cobrança/ })).not.toBeInTheDocument();
-  });
-
-  it("com alunos precisando de atenção, exibe cada um como link para o próprio perfil", () => {
-    render(
-      <PersonalHome
-        name="Joana"
-        email="joana@example.test"
-        tenantName={null}
-        greeting="Bom dia"
-        activeStudentsCount={2}
-        activeWorkoutsCount={1}
-        atrasadoCents={32000}
-        attentionItems={[
-          { studentId: "s1", title: "Diego Santos", description: "Mensalidade vencida · R$ 320,00", icon: "$", tone: "warning" },
-          { studentId: "s2", title: "Lucas Pereira", description: "Avaliação há 70 dias", icon: "◎", tone: "neutral" },
-        ]}
-      />
-    );
-
-    expect(screen.getByRole("heading", { name: "Seu dia" })).toBeInTheDocument();
-    const diego = screen.getByRole("link", { name: /Diego Santos/ });
-    expect(diego).toHaveAttribute("href", "/painel/alunos/s1");
-    expect(screen.getByText("Mensalidade vencida · R$ 320,00")).toBeInTheDocument();
-    const lucas = screen.getByRole("link", { name: /Lucas Pereira/ });
-    expect(lucas).toHaveAttribute("href", "/painel/alunos/s2");
-    expect(screen.getByText("Avaliação há 70 dias")).toBeInTheDocument();
-    expect(screen.getByText("Ver cobrança")).toBeInTheDocument();
-    expect(screen.getByText("Registrar avaliação")).toBeInTheDocument();
-  });
-
-  it("mostra a data do dia como eyebrow quando informada pelo servidor", () => {
-    render(
-      <PersonalHome
-        name="Joana Lima"
-        email="joana@example.test"
-        tenantName={null}
-        greeting="Bom dia"
-        dateLabel="Terça, 29 de setembro"
-        activeStudentsCount={1}
-        activeWorkoutsCount={1}
-        atrasadoCents={0}
-        attentionItems={[]}
-      />
-    );
-
-    expect(screen.getByText("Terça, 29 de setembro")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Bom dia, Joana." })).toBeInTheDocument();
-    expect(screen.getAllByText("aluno ativo").length).toBeGreaterThan(0);
+  it("entende o pagamento pelo nome e pelo valor", () => {
+    const list = [...charges, { id: "c2", studentName: "Ana Souza", amountCents: 20000, overdue: false }];
+    expect(parseReceive("recebi 200 da Ana", list)?.id).toBe("c2");
+    expect(parseReceive("pix do bruno", list)?.id).toBe("c1");
+    expect(parseReceive("montar treino", list)).toBeNull();
   });
 });

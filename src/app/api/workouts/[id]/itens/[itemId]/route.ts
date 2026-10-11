@@ -1,4 +1,6 @@
+import { featureEnabled } from "@/shared/config/features";
 import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { CARDIO_INTENSITIES } from "@/shared/lib/cardio";
 import { removeWorkoutExercise, updateWorkoutExercise, WorkoutError } from "@/modules/workouts/workouts";
 
 /// Edita os parâmetros de prescrição de um item do modelo.
@@ -23,6 +25,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       restSeconds: body.restSeconds === null ? null : typeof body.restSeconds === "number" ? body.restSeconds : undefined,
       load: typeof body.load === "string" ? body.load : undefined,
       notes: typeof body.notes === "string" ? body.notes : undefined,
+      intensity: CARDIO_INTENSITIES.includes(body.intensity) ? body.intensity : undefined,
+      exerciseId: typeof body.exerciseId === "string" ? body.exerciseId : undefined,
+      ...(featureEnabled("FUNCIONAL")
+        ? {
+            blockKey: body.blockKey === null ? null : typeof body.blockKey === "string" ? body.blockKey : undefined,
+            targetDistanceMeters: body.targetDistanceMeters === null ? null : typeof body.targetDistanceMeters === "number" ? body.targetDistanceMeters : undefined,
+            targetCalories: body.targetCalories === null ? null : typeof body.targetCalories === "number" ? body.targetCalories : undefined,
+          }
+        : {}),
     });
 
     return Response.json(item);

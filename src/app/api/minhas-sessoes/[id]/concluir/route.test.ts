@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const requireIndividual = vi.fn();
 const ensureStudentForIndividual = vi.fn();
 const completeWorkoutSession = vi.fn();
+const getSessionSummary = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
@@ -20,6 +21,8 @@ vi.mock("@/modules/execution/sessions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
   return { ...actual, completeWorkoutSession: (...args: unknown[]) => completeWorkoutSession(...args) };
 });
+
+vi.mock("@/modules/execution/sets", () => ({ getSessionSummary: (...args: unknown[]) => getSessionSummary(...args) }));
 
 describe("POST /api/minhas-sessoes/[id]/concluir", () => {
   afterEach(() => {
@@ -42,6 +45,7 @@ describe("POST /api/minhas-sessoes/[id]/concluir", () => {
     requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
     ensureStudentForIndividual.mockResolvedValue({ id: "student-auto-referencia" });
     completeWorkoutSession.mockResolvedValue({ id: "sess1", status: "CONCLUIDA" });
+    getSessionSummary.mockResolvedValue({ activeSeconds: 600, sets: 3, volumeKg: 0, records: [], perceivedEffort: null });
 
     const { POST } = await import("./route");
     const response = await POST(new Request("http://localhost/api/minhas-sessoes/sess1/concluir", { method: "POST" }), {
@@ -55,7 +59,9 @@ describe("POST /api/minhas-sessoes/[id]/concluir", () => {
       tenantId: "tenant-real",
       studentId: "student-auto-referencia",
       sessionId: "sess1",
+      activeSeconds: null,
     });
+    expect(body.summary.sets).toBe(3);
   });
 
   it("retorna 404 quando a sessão não pertence ao praticante", async () => {

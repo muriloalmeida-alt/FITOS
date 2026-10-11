@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const requirePersonal = vi.fn();
-const moveWorkoutToPlan = vi.fn();
+const addWorkoutToPlan = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
@@ -10,7 +10,7 @@ vi.mock("@/modules/tenancy/authContext", async () => {
 
 vi.mock("@/modules/workouts/workouts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
-  return { ...actual, moveWorkoutToPlan: (...args: unknown[]) => moveWorkoutToPlan(...args) };
+  return { ...actual, addWorkoutToPlan: (...args: unknown[]) => addWorkoutToPlan(...args) };
 });
 
 function makeParams(id: string) {
@@ -37,7 +37,7 @@ describe("POST /api/training-plans/[id]/modelos", () => {
 
   it("adiciona (move) usando o tenantId da sessão", async () => {
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    moveWorkoutToPlan.mockResolvedValue({ id: "w1", trainingPlanId: "p1" });
+    addWorkoutToPlan.mockResolvedValue({ workout: { id: "w1", trainingPlanId: "p1" }, copied: false });
 
     const { POST } = await import("./route");
     const response = await POST(
@@ -49,7 +49,7 @@ describe("POST /api/training-plans/[id]/modelos", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(moveWorkoutToPlan).toHaveBeenCalledWith({ tenantId: "tenant-real", workoutId: "w1", targetTrainingPlanId: "p1" });
+    expect(addWorkoutToPlan).toHaveBeenCalledWith({ tenantId: "tenant-real", workoutId: "w1", targetTrainingPlanId: "p1" });
   });
 
   it("retorna 400 quando workoutId não é informado", async () => {
@@ -61,13 +61,13 @@ describe("POST /api/training-plans/[id]/modelos", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(moveWorkoutToPlan).not.toHaveBeenCalled();
+    expect(addWorkoutToPlan).not.toHaveBeenCalled();
   });
 
   it("retorna 404 quando o modelo ou o plano não pertencem ao tenant da sessão", async () => {
     const { WorkoutError } = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
     requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    moveWorkoutToPlan.mockRejectedValue(new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado."));
+    addWorkoutToPlan.mockRejectedValue(new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado."));
 
     const { POST } = await import("./route");
     const response = await POST(

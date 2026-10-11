@@ -1,0 +1,266 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ActionRow, Button, FormAlert, NextStepCard, SegmentedTabs, Sheet, Tag, useToast } from "@/shared/ui";
+import type { EvolutionSeries, MeasureChange } from "@/modules/evolution/evolutionSeries";
+import { requestJson } from "../_workout-builder/apiClient";
+import { EvolutionView } from "../_evolution/EvolutionView";
+import { EvolutionPhotos, type EvolutionPhotoItem } from "../_photos/EvolutionPhotos";
+import type { SessionBadge } from "@/shared/lib/sessionBadges";
+import styles from "./MinhaEvolucaoView.module.css";
+
+export type EvolutionTab = "treinos" | "corpo" | "metas";
+
+interface Props {
+  tab: EvolutionTab;
+  overview: { thisWeek: number; thisMonth: number; streakWeeks: number };
+  records: { exerciseName: string; loadKg: number; reps: number | null; dateIso: string }[];
+  history: { id: string; workoutName: string; dateIso: string; status: "CONCLUIDA" | "ABANDONADA"; effort: number | null; badges?: SessionBadge[] }[];
+  body: { series: EvolutionSeries[]; measures: MeasureChange[] };
+  /// Fotos da avaliação (EPIC-35).
+  photos?: { items: EvolutionPhotoItem[]; consent: boolean };
+  assessments: { id: string; dateIso: string; weightKg: number | null; bodyFatPercent: number | null; notes: string | null }[];
+  goals: { id: string; description: string; targetIso: string | null; status: "EM_ANDAMENTO" | "CONCLUIDA" | "ABANDONADA"; closedIso: string | null }[];
+}
+
+const EFFORT = ["", "leve", "tranquilo", "moderado", "puxado", "no limite"];
+const DEADLINES = [
+  { value: "0", label: "Sem data" },
+  { value: "1", label: "1 mês" },
+  { value: "3", label: "3 meses" },
+  { value: "6", label: "6 meses" },
+];
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" });
+
+function fmt(value: number) {
+  return (Math.round(value * 10) / 10).toLocaleString("pt-BR");
+}
+
+/// Minha evolução do FitOS Livre (FIT-159, L4 do protótipo): abas Treinos
+/// (semana, mês, semanas seguidas, recordes por série e histórico), Corpo
+/// (pesar na régua, excluir) e Metas (sugeridas, EPIC-30).
+export function MinhaEvolucaoView({ tab, overview, records, history, body, photos, assessments, goals }: Props) {
+  const router = useRouter();
+  const toast = useToast();
+  const last = assessments[0] ?? null;
+  const [sheet, setSheet] = useState<null | { remove: string }>(null);
+  /// Treino realizado a excluir (confirmação).
+  const [removeSession, setRemoveSession] = useState<null | { id: string; label: string }>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const open = goals.filter((entry) => entry.status === "EM_ANDAMENTO");
+  const closed = goals.filter((entry) => entry.status !== "EM_ANDAMENTO");
+
+  async function run(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      toast.show(message);
+      setSheet(null);
+      setRemoveSession(null);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível salvar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={styles.view}>
+      <SegmentedTabs
+        label="Minha evolução"
+        value={tab}
+        items={[
+          { key: "treinos", label: "Treinos", href: "/painel/minha-evolucao" },
+          { key: "corpo", label: "Corpo", href: "/painel/minha-evolucao?aba=corpo" },
+          { key: "metas", label: "Metas", count: open.length, href: "/painel/minha-evolucao?aba=metas" },
+        ]}
+      />
+
+      {tab === "treinos" ? (
+        <>
+          <ul className={styles.stats}>
+            <li>
+              <span className={styles.statValue}>{overview.thisWeek}</span> <span className={styles.muted}>na semana</span>
+            </li>
+            <li>
+              <span className={styles.statValue}>{overview.thisMonth}</span> <span className={styles.muted}>no mês</span>
+            </li>
+            <li>
+              <span className={styles.statValue}>{overview.streakWeeks}</span> <span className={styles.muted}>{overview.streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}</span>
+            </li>
+          </ul>
+          <h2 className={styles.title}>Recordes</h2>
+          {records.length === 0 ? (
+            <p className={styles.muted}>Seus recordes aparecem aqui conforme você registra as séries.</p>
+          ) : (
+            <ul className={styles.list}>
+              {records.map((record) => (
+                <li key={record.exerciseName}>
+                  <ActionRow title={record.exerciseName} description={dateFmt.format(new Date(record.dateIso))} trailing={<strong>{`${fmt(record.loadKg)} kg${record.reps ? ` × ${record.reps}` : ""}`}</strong>} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <h2 className={styles.title}>Histórico</h2>
+          {history.length === 0 ? (
+            <p className={styles.muted}>Nenhum treino registrado ainda.</p>
+          ) : (
+            <ul className={styles.list}>
+              {history.map((session) => (
+                <li key={session.id}>
+                  <ActionRow
+                    title={
+                      <>
+                        {session.workoutName} {session.status === "CONCLUIDA" ? <Tag tone="ok">Concluído</Tag> : <Tag tone="muted">Abandonado</Tag>}
+                        {(session.badges ?? []).map((badge) => (
+                          <Tag key={badge.label} tone={badge.tone}>
+                            {badge.label}
+                          </Tag>
+                        ))}
+                      </>
+                    }
+                    action={session.status === "CONCLUIDA" ? { label: "Ver treino", href: `/painel/treinos-realizados/${session.id}` } : undefined}
+                    description={[dateFmt.format(new Date(session.dateIso)), session.effort ? `esforço ${EFFORT[session.effort]}` : null].filter(Boolean).join(" · ")}
+                    trailing={
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        aria-label={`Excluir ${session.workoutName} de ${dateFmt.format(new Date(session.dateIso))}`}
+                        onClick={() => {
+                          setError(null);
+                          setRemoveSession({ id: session.id, label: `${session.workoutName} · ${dateFmt.format(new Date(session.dateIso))}` });
+                        }}
+                      >
+                        Excluir
+                      </Button>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
+
+      {tab === "corpo" ? (
+        <>
+          <NextStepCard eyebrow="Hoje" title="Pesar hoje" description={last ? "A régua já começa no último peso." : "Leva dez segundos."} href="/painel/pesar" />
+          {body.series.length > 0 ? <EvolutionView series={body.series} measures={body.measures} /> : null}
+          {photos ? <EvolutionPhotos photos={photos.items} consent={photos.consent} owner={{ kind: "self", audience: "você" }} /> : null}
+          {assessments.length > 0 ? (
+            <>
+              <h2 className={styles.title}>Registros</h2>
+              <ul className={styles.list}>
+                {assessments.map((entry) => (
+                  <li key={entry.id}>
+                    <ActionRow
+                      title={dateFmt.format(new Date(entry.dateIso))}
+                      description={[entry.weightKg !== null ? `${fmt(entry.weightKg)} kg` : null, entry.bodyFatPercent !== null ? `${fmt(entry.bodyFatPercent)}% gordura` : null, entry.notes].filter(Boolean).join(" · ")}
+                      trailing={
+                        <Button type="button" variant="quiet" aria-label={`Excluir registro de ${dateFmt.format(new Date(entry.dateIso))}`} onClick={() => setSheet({ remove: entry.id })}>
+                          Excluir
+                        </Button>
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === "metas" ? (
+        <>
+          <NextStepCard eyebrow="Próximo passo" title="Nova meta" description="Três sugestões feitas para você." href="/painel/meta" />
+          <h2 className={styles.title}>Em andamento</h2>
+          {open.length === 0 ? (
+            <p className={styles.muted}>Nenhuma meta em andamento.</p>
+          ) : (
+            <ul className={styles.list}>
+              {open.map((entry) => (
+                <li key={entry.id}>
+                  <ActionRow
+                    title={entry.description}
+                    description={entry.targetIso ? `até ${dateFmt.format(new Date(entry.targetIso))}` : "sem data"}
+                    trailing={
+                      <span className={styles.goalActions}>
+                        <Button type="button" variant="quiet" disabled={busy} onClick={() => void run(() => requestJson(`/api/minhas-metas/${entry.id}/concluir`, { method: "POST" }), "Meta concluída!")}>
+                          Concluí
+                        </Button>
+                        <Button type="button" variant="quiet" disabled={busy} aria-label={`Abandonar ${entry.description}`} onClick={() => void run(() => requestJson(`/api/minhas-metas/${entry.id}/abandonar`, { method: "POST" }), "Meta encerrada")}>
+                          Abandonar
+                        </Button>
+                      </span>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          {closed.length > 0 ? (
+            <>
+              <h2 className={styles.title}>Encerradas</h2>
+              <ul className={styles.list}>
+                {closed.map((entry) => (
+                  <li key={entry.id}>
+                    <ActionRow
+                      title={
+                        <>
+                          {entry.description} {entry.status === "CONCLUIDA" ? <Tag tone="ok">Concluída</Tag> : <Tag tone="muted">Abandonada</Tag>}
+                        </>
+                      }
+                      description={entry.closedIso ? dateFmt.format(new Date(entry.closedIso)) : undefined}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      <Sheet
+        open={sheet !== null}
+        onClose={() => setSheet(null)}
+        title="Excluir este registro?"
+        description="Ele sai do gráfico e do histórico."
+        footer={
+          <>
+            <Button type="button" variant="danger" block disabled={busy} onClick={() => sheet !== null && void run(() => requestJson(`/api/minhas-avaliacoes/${sheet.remove}`, { method: "DELETE" }), "Registro excluído")}>
+              Excluir
+            </Button>
+            <Button type="button" variant="quiet" block onClick={() => setSheet(null)}>
+              Voltar
+            </Button>
+          </>
+        }
+      >
+        {error ? <FormAlert>{error}</FormAlert> : null}
+      </Sheet>
+
+      <Sheet
+        open={removeSession !== null}
+        onClose={() => setRemoveSession(null)}
+        title="Excluir este treino?"
+        description={removeSession ? `${removeSession.label}. Ele sai do histórico, da evolução e dos recordes. Não dá para desfazer.` : undefined}
+        footer={
+          <>
+            <Button type="button" variant="danger" block disabled={busy} onClick={() => removeSession !== null && void run(() => requestJson(`/api/minhas-sessoes/${removeSession.id}`, { method: "DELETE" }), "Treino excluído")}>
+              Excluir treino
+            </Button>
+            <Button type="button" variant="quiet" block onClick={() => setRemoveSession(null)}>
+              Voltar
+            </Button>
+          </>
+        }
+      >
+        {error ? <FormAlert>{error}</FormAlert> : null}
+      </Sheet>
+    </div>
+  );
+}

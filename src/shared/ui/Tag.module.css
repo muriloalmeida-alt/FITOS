@@ -1,0 +1,36 @@
+.tag {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+
+.ok {
+  background-color: rgba(130, 213, 201, 0.14);
+  color: #bfeee7;
+}
+
+.warn {
+  background-color: rgba(255, 185, 69, 0.16);
+  color: #ffd9a0;
+}
+
+.error {
+  background-color: rgba(255, 180, 171, 0.14);
+  color: #ffd0ca;
+}
+
+.muted {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #c9d2dc;
+}
+
+.accent {
+  background-color: rgba(255, 120, 71, 0.18);
+  color: var(--fitos-orange-300);
+}

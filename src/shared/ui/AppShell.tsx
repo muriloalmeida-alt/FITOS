@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { titleFit } from "@/shared/lib/titleFit";
 import Link from "next/link";
 import { initialsFromName } from "@/shared/lib/initials";
-import { useAccountName } from "./AccountContext";
+import { useAccountImage, useAccountName, useUnreadMessages } from "./AccountContext";
 import { BrandLogo } from "./BrandLogo";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import styles from "./AppShell.module.css";
@@ -29,6 +30,10 @@ export interface AppShellNavItem {
   comingSoon?: boolean;
   icon?: NavIconName;
   compact?: boolean;
+  /// FIT-149: o avatar do cabeçalho vira um link para este destino (o
+  /// Perfil), no lugar do menu de conta. Os destinos fora da barra ficam
+  /// no próprio Perfil ("Seu negócio").
+  accountLink?: boolean;
 }
 
 interface AppShellProps {
@@ -54,6 +59,7 @@ interface AppShellProps {
 const MAX_COMPACT_ITEMS = 4;
 
 function NavLink({ item, isActive, onNavigate }: { item: AppShellNavItem; isActive: boolean; onNavigate?: () => void }) {
+  const unread = useUnreadMessages();
   if (item.comingSoon || !item.href) {
     return (
       <span className={styles.navItemDisabled} aria-disabled="true">
@@ -71,7 +77,10 @@ function NavLink({ item, isActive, onNavigate }: { item: AppShellNavItem; isActi
       aria-current={isActive ? "page" : undefined}
       onClick={onNavigate}
     >
-      {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
+      <span className={styles.navIconWrap}>
+        {item.icon ? <NavIcon name={item.icon} className={styles.navIcon} /> : null}
+        {item.key === "mensagens" && unread > 0 && !isActive ? <span className={styles.navDot} aria-label={`${unread} ${unread === 1 ? "conversa nova" : "conversas novas"}`} /> : null}
+      </span>
       <span className={styles.navLabel}>{item.label}</span>
     </Link>
   );
@@ -132,6 +141,7 @@ function AccountMenu({
   }, [open]);
 
   const initials = name ? initialsFromName(name) : "";
+  const image = useAccountImage();
 
   return (
     <div className={styles.account} ref={containerRef}>
@@ -143,7 +153,8 @@ function AccountMenu({
         aria-label={name ? `Conta de ${name}` : "Conta"}
         onClick={() => setOpen((current) => !current)}
       >
-        {initials ? <span aria-hidden="true">{initials}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+        {/* eslint-disable-next-line @next/next/no-img-element -- foto privada, servida por rota autenticada (EPIC-35) */}
+        {image ? <img src={image} alt="" className={styles.avatarPhoto} /> : initials ? <span aria-hidden="true">{initials}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
       </button>
       {open ? (
         <div id={menuId} className={styles.accountMenu}>
@@ -165,7 +176,9 @@ function AccountMenu({
 export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, children }: AppShellProps) {
   const [showMore, setShowMore] = useState(false);
   const accountName = useAccountName();
+  const accountImage = useAccountImage();
   const { visible, collapsed, usesAccountMenu } = splitCompact(navItems);
+  const accountLinkItem = navItems.find((item) => item.accountLink) ?? null;
 
   return (
     <div className={styles.shell}>
@@ -173,7 +186,16 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         <BrandLogo background="photo" size={44} className={styles.brand} />
         <div className={styles.topBarEnd}>
           {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
-          <AccountMenu name={accountName} items={usesAccountMenu ? collapsed : []} activeKey={activeKey} trailing={trailing} />
+          {accountLinkItem?.href ? (
+            <div className={styles.account}>
+              <Link href={accountLinkItem.href} className={styles.avatarButton} aria-label={accountName ? `Perfil de ${accountName}` : "Perfil"} aria-current={accountLinkItem.key === activeKey ? "page" : undefined}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- foto privada, servida por rota autenticada (EPIC-35) */}
+                {accountImage ? <img src={accountImage} alt="" className={styles.avatarPhoto} /> : accountName ? <span aria-hidden="true">{initialsFromName(accountName)}</span> : <NavIcon name="perfil" className={styles.navIcon} />}
+              </Link>
+            </div>
+          ) : (
+            <AccountMenu name={accountName} items={usesAccountMenu ? collapsed : []} activeKey={activeKey} trailing={trailing} />
+          )}
         </div>
       </header>
 
@@ -187,7 +209,9 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         <main className={styles.content}>
           <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader}>
             {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
-            <h1 className={styles.title}>{title}</h1>
+            <h1 className={`${styles.title} ${styles[`title-${titleFit(title)}`] ?? ""}`} title={titleFit(title) === "tiny" ? title : undefined}>
+              {title}
+            </h1>
             {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
           {children}

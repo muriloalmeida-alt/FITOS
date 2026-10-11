@@ -1,0 +1,87 @@
+.sheet,
+.queue {
+  display: grid;
+  gap: 12px;
+}
+
+.title {
+  margin: 8px 0 0;
+  font-size: 18px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.workouts,
+.cases {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workouts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--fitos-color-surface-container);
+}
+
+.workouts li > span {
+  display: grid;
+  gap: 2px;
+}
+
+.case {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--fitos-color-outline-variant);
+  background: var(--fitos-color-surface);
+}
+
+.reason {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--fitos-color-primary);
+}
+
+.photos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.photos img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--fitos-color-outline);
+  border-radius: 12px;
+  background: var(--fitos-color-surface-container);
+  color: inherit;
+  font: inherit;
+}
+
+.decide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

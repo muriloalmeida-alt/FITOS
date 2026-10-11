@@ -1,0 +1,68 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-6);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.on {
+  border-color: var(--fitos-orange-500);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.why {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.adjust {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fitos-space-2);
+}
+
+.chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--fitos-orange-500);
+  color: var(--fitos-orange-500);
+}

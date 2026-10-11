@@ -1,0 +1,204 @@
+.avatarButton {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.avatarButton:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 3px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+
+.avatarBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--fitos-color-surface, #0d1828);
+  background-color: var(--fitos-color-primary);
+  color: var(--fitos-color-on-primary);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fileButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 14px;
+  background-color: var(--fitos-color-primary);
+  color: var(--fitos-color-on-primary);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fileButton:focus-within {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.fileButtonBusy {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.photos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.photosHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.subtitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--fitos-color-text-muted);
+}
+
+.muted {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.emptyCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}
+
+.compare,
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pairItem,
+.thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pairImage,
+.thumbImage {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 12px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.caption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fitos-color-text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.poses {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.large {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 12px;
+}

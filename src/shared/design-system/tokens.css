@@ -198,53 +198,68 @@
 }
 
 /*
- * Tema editorial escuro mobile (AjustesPainel/AjustesTelas/AjustesTreino,
- * 29/09/2026 — ver docs/03-design/M3-DESIGN-TOKENS.md, "Tema editorial
- * mobile"). Aplica-se a toda a experiência compacta (mesma faixa em que o
- * `AppShell` usa a barra inferior, < 840px), em qualquer preferência de
- * esquema de cor: fundo quase preto com a camada leve
- * `fitos-bg-mobile-suave.webp` (globals.css), texto claro, seções
- * integradas ao fundo (superfícies translúcidas, nunca caixas brancas) e
- * o laranja oficial `#FF7847` como botão primário com texto navy. O
- * desktop (≥ 840px) continua no tema do pacote visual 2026.
+ * Tema escuro liso (FIT-171, EPIC-23 — decisão de 04/10/2026: "sempre cor
+ * escura e lisa"). Vale para TODAS as larguras e qualquer preferência de
+ * esquema de cor: fundo `#07090D` liso (sem a camada
+ * `fitos-bg-mobile-suave.webp` do EPIC-18, removida), texto claro,
+ * superfícies em degraus de branco translúcido sobre o fundo liso e o
+ * laranja oficial `#FF7847` como botão primário com texto navy. Substitui
+ * o tema claro do desktop e o `prefers-color-scheme` acima, que ficam só
+ * como base dos primitivos.
  */
-@media (max-width: 839px) {
-  :root {
-    --fitos-color-primary: var(--fitos-orange-500);
-    --fitos-color-on-primary: var(--fitos-navy-900);
-    --fitos-color-primary-container: rgba(255, 120, 71, 0.18);
-    --fitos-color-on-primary-container: var(--fitos-orange-300);
-    --fitos-color-secondary: #b8c8db;
-    --fitos-color-on-secondary: #233240;
-    --fitos-color-secondary-container: rgba(184, 200, 219, 0.14);
-    --fitos-color-on-secondary-container: #d4e5f8;
-    --fitos-color-tertiary: #82d5c9;
-    --fitos-color-on-tertiary: #003731;
-    --fitos-color-tertiary-container: rgba(130, 213, 201, 0.16);
-    --fitos-color-on-tertiary-container: #9ef2e5;
-    --fitos-color-surface: #07090d;
-    --fitos-color-surface-container: rgba(255, 255, 255, 0.05);
-    --fitos-color-surface-container-high: rgba(255, 255, 255, 0.09);
-    --fitos-color-on-surface: #ffffff;
-    --fitos-color-on-surface-variant: #d5dbe1;
-    --fitos-color-outline: rgba(255, 255, 255, 0.42);
-    --fitos-color-outline-variant: rgba(255, 255, 255, 0.2);
-    --fitos-color-error: #ffb4ab;
-    --fitos-color-on-error: #690005;
-    --fitos-color-warning: #ffb945;
-    --fitos-color-on-warning: #412d00;
-    --fitos-color-warning-container: rgba(255, 185, 69, 0.16);
-    --fitos-color-on-warning-container: var(--fitos-amber-100);
+:root {
+  --fitos-color-primary: var(--fitos-orange-500);
+  --fitos-color-on-primary: var(--fitos-navy-900);
+  --fitos-color-primary-container: rgba(255, 120, 71, 0.18);
+  --fitos-color-on-primary-container: var(--fitos-orange-300);
+  --fitos-color-secondary: #b8c8db;
+  --fitos-color-on-secondary: #233240;
+  --fitos-color-secondary-container: rgba(184, 200, 219, 0.14);
+  --fitos-color-on-secondary-container: #d4e5f8;
+  --fitos-color-tertiary: #82d5c9;
+  --fitos-color-on-tertiary: #003731;
+  --fitos-color-tertiary-container: rgba(130, 213, 201, 0.16);
+  --fitos-color-on-tertiary-container: #9ef2e5;
+  --fitos-color-surface: #07090d;
+  --fitos-color-surface-container: rgba(255, 255, 255, 0.05);
+  --fitos-color-surface-container-high: rgba(255, 255, 255, 0.09);
+  --fitos-color-on-surface: #ffffff;
+  --fitos-color-on-surface-variant: #d5dbe1;
+  --fitos-color-outline: rgba(255, 255, 255, 0.42);
+  --fitos-color-outline-variant: rgba(255, 255, 255, 0.2);
+  --fitos-color-error: #ffb4ab;
+  --fitos-color-on-error: #690005;
+  --fitos-color-warning: #ffb945;
+  --fitos-color-on-warning: #412d00;
+  --fitos-color-warning-container: rgba(255, 185, 69, 0.16);
+  --fitos-color-on-warning-container: var(--fitos-amber-100);
 
-    --fitos-color-surface-editorial: transparent;
-    --fitos-color-surface-warm: rgba(255, 120, 71, 0.14);
-    --fitos-color-on-surface-secondary: #c9d2dc;
-    --fitos-color-outline-soft: rgba(255, 255, 255, 0.2);
+  --fitos-color-surface-editorial: transparent;
+  --fitos-color-surface-warm: rgba(255, 120, 71, 0.14);
+  --fitos-color-on-surface-secondary: #c9d2dc;
+  --fitos-color-outline-soft: rgba(255, 255, 255, 0.2);
 
-    /* Rótulos em caixa alta (eyebrow), data e CTAs de linha. */
-    --fitos-color-eyebrow: var(--fitos-orange-300);
-    /* Divisor fino entre linhas de lista/campos. */
-    --fitos-color-divider: rgba(255, 255, 255, 0.22);
-    --fitos-color-mobile-base: #07090d;
-  }
+  /* Rótulos em caixa alta (eyebrow), data e CTAs de linha. */
+  --fitos-color-eyebrow: var(--fitos-orange-300);
+  /* Divisor fino entre linhas de lista/campos. */
+  --fitos-color-divider: rgba(255, 255, 255, 0.22);
+  --fitos-color-mobile-base: #07090d;
+
+  /* Superfícies sólidas (FIT-171): cartões, sheets e barras. */
+  --fitos-color-surface-card: #11161e;
+  --fitos-color-surface-raised: #1b222d;
+  --fitos-color-surface-sheet: #11161e;
+  --fitos-color-scrim: rgba(0, 0, 0, 0.62);
+  --fitos-color-success: #82d5c9;
+  --fitos-color-success-container: rgba(130, 213, 201, 0.14);
+  --fitos-color-error-container: rgba(255, 180, 171, 0.14);
+  --fitos-color-danger-container: #3a1714;
+  --fitos-color-on-danger-container: #ffd0ca;
+  --fitos-color-text-muted: #9aa6b3;
+
+  /* Chrome (cabeçalho, rail e barra inferior) no mesmo tema escuro. */
+  --fitos-color-chrome: #0d1420;
+  --fitos-color-chrome-container: #1b222d;
+  --fitos-color-chrome-active-row: #1b222d;
+  color-scheme: dark;
 }

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { passkey } from "@better-auth/passkey";
 import * as z from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
@@ -30,6 +31,10 @@ function requiredEnv(name: string): string {
     );
   }
   return value;
+}
+
+function passkeyRpId(): string {
+  return new URL(requiredEnv("BETTER_AUTH_URL")).hostname;
 }
 
 export const auth = betterAuth({
@@ -74,6 +79,15 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
   advanced: {
+    // Railway (e qualquer proxy à frente do app) entrega o IP do cliente
+    // em `x-real-ip`, valor único definido pelo proxy. Sem isso o Better
+    // Auth não resolve o IP (o `x-forwarded-for` chega com a cadeia de
+    // proxies) e o limite de tentativas vira um contador único para todos
+    // os usuários: 3 logins em 10 s de qualquer pessoa bloqueavam o login
+    // de todo mundo.
+    ipAddress: {
+      ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
+    },
     database: {
       // Deixa o Prisma gerar o id (cuid), consistente com o restante do
       // schema físico (Tenant, Student, etc. também usam @default(cuid())).
@@ -121,7 +135,12 @@ export const auth = betterAuth({
   // último plugin da lista (exigência do próprio Better Auth) para
   // interceptar as respostas de Server Actions e propagar os cookies de
   // sessão corretamente no App Router.
-  plugins: [nextCookies()],
+  plugins: [
+    // EPIC-33: entrar com digital, Face ID ou o bloqueio do aparelho. O
+    // domínio do passkey é o do BETTER_AUTH_URL (produção ou localhost).
+    passkey({ rpID: passkeyRpId(), rpName: "FitOS", origin: new URL(requiredEnv("BETTER_AUTH_URL")).origin }),
+    nextCookies(),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

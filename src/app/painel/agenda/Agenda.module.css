@@ -1,0 +1,129 @@
+.agenda,
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  text-align: center;
+  font-size: 17px;
+}
+
+.week a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  color: var(--fitos-orange-300);
+  font-size: 28px;
+  text-decoration: none;
+}
+
+.actions,
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.row > * {
+  min-width: 0;
+}
+
+.day h2 {
+  margin: 0 0 8px;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.day h2.today {
+  color: var(--fitos-orange-300);
+}
+
+.free {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.off {
+  opacity: 0.55;
+}
+
+.off strong {
+  text-decoration: line-through;
+}
+
+.time {
+  min-width: 48px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.who strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.link {
+  color: var(--fitos-orange-300);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}

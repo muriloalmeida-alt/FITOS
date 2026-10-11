@@ -1,31 +1,7 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
-import { appName } from "@/shared/config/env";
-import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { LogoutButton } from "../../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../../navigation";
-import { CadastrarExercicioForm } from "./CadastrarExercicioForm";
 
-export const metadata: Metadata = {
-  title: `Cadastrar exercício — ${appName}`,
-};
-
-export default async function CadastrarExercicioPage() {
-  try {
-    await requirePersonal();
-  } catch (error) {
-    if (error instanceof AuthError) {
-      redirect(error.kind === "UNAUTHENTICATED" ? "/entrar" : "/painel");
-    }
-    throw error;
-  }
-
-  return (
-    <AppShell eyebrow="Cadastrar exercício" title="Novo exercício" subtitle="Dados e orientação de execução." navItems={PERSONAL_NAV_ITEMS} activeKey="exercicios" trailing={<LogoutButton />}>
-      <Card title="Dados do exercício">
-        <CadastrarExercicioForm />
-      </Card>
-    </AppShell>
-  );
+/// URL antiga de "Cadastrar exercício" (FIT-022): agora o cadastro é uma
+/// sheet sobre a biblioteca (FIT-147).
+export default function NovoExercicioPage() {
+  redirect("/painel/exercicios?origem=meus&novo=1");
 }

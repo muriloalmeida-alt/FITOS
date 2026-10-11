@@ -1,0 +1,31 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 48px 16px;
+  background-color: var(--fitos-color-surface);
+  color: var(--fitos-color-on-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.link {
+  align-self: center;
+  margin-top: 12px;
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  text-decoration: none;
+}

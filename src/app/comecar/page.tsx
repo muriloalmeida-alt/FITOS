@@ -1,85 +1,97 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { appName } from "@/shared/config/env";
-import { CriarContaForm } from "./CriarContaForm";
-import { OnboardingEntry } from "./OnboardingEntry";
-import { PublicMobileFooter, PublicMobileHeader } from "@/shared/ui";
-import styles from "./page.module.css";
+import { Button } from "@/shared/ui";
+import { EntradaShell } from "../_entrada/EntradaShell";
+import styles from "../_entrada/Entrada.module.css";
+import { ConviteEntrada } from "./ConviteEntrada";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { LivreComecar } from "./LivreComecar";
+import { PersonalComecar } from "./PersonalComecar";
 
 export const metadata: Metadata = {
-  title: `Criar conta — ${appName}`,
-  description: "Cadastro de conta de personal trainer ou de workspace individual no FitOS.",
+  title: `Começar — ${appName}`,
+  description: "Comece no FitOS como personal, com um convite ou treinando por conta própria.",
 };
 
-interface CriarContaPageProps {
-  searchParams: Promise<{ modo?: string }>;
+type Caminho = "personal" | "convite" | "livre";
+
+const CAMINHOS: { key: Caminho; kicker: string; title: string; description: string }[] = [
+  { key: "personal", kicker: "Sou personal", title: "Dar treino aos meus alunos", description: "Seu primeiro aluno recebe o treino hoje." },
+  { key: "convite", kicker: "Tenho personal", title: "Treinar com meu personal", description: "Abra o link que ele mandou ou cole o código." },
+  { key: "livre", kicker: "FitOS Livre", title: "Treinar por conta", description: "Três toques e seu plano está pronto." },
+];
+
+/// `?modo=` antigo (FIT-101/112, links já publicados) continua valendo.
+function caminhoFrom(params: { caminho?: string; modo?: string }): Caminho | null {
+  if (params.caminho === "personal" || params.caminho === "convite" || params.caminho === "livre") return params.caminho;
+  if (params.modo === "personal") return "personal";
+  if (params.modo === "individual") return "livre";
+  return null;
 }
 
-/// Entrada do onboarding (FIT-112, seção 6 do pacote): `/comecar` sem
-/// `?modo=` nunca mais assume personal silenciosamente — mostra a
-/// "primeira decisão" com os três caminhos explícitos (`OnboardingEntry`).
-/// `?modo=individual`/`?modo=personal` (FIT-101/ADR-007) são a etapa 2,
-/// alcançada só depois de uma escolha explícita ali ou de um link que já
-/// vem com o caminho decidido (ex.: `/treino-sozinho`, cards da landing).
-/// Qualquer outro valor de `modo` (inclusive ausente) volta para a etapa 1
-/// — nunca um valor não reconhecido cai direto num formulário.
-export default async function CriarContaPage({ searchParams }: CriarContaPageProps) {
-  const { modo } = await searchParams;
-  const step = modo === "personal" || modo === "individual" ? 2 : 1;
+/// Começar (EPIC-33, E2): "o que você quer fazer?", com o resultado de cada
+/// caminho. Personal: uma pergunta e a conta. Convite: código ou link.
+/// Livre: três toques, o plano e só então a conta.
+export default async function ComecarPage({ searchParams }: { searchParams?: Promise<{ caminho?: string; modo?: string; indicado?: string }> } = {}) {
+  const params = (await searchParams) ?? {};
+  const caminho = caminhoFrom(params);
 
-  if (step === 1) {
+  if (!caminho) {
     return (
-      <main className={styles.main}>
-        <PublicMobileHeader />
-        <div className={`${styles.card} ${styles.cardWide}`}>
-          <header className={styles.header}>
-            <p className={styles.stepIndicator}>Passo 1 de 2</p>
-            <h1 className={styles.title}>Como você quer começar?</h1>
-            <p className={styles.subtitle}>Escolha o caminho certo para você — cada um leva a uma experiência diferente.</p>
-          </header>
-
-          <OnboardingEntry />
-
-          <p className={styles.footer}>
-            Já tem conta? <Link href="/entrar">Entrar</Link>
-          </p>
-        </div>
-        <PublicMobileFooter />
-      </main>
+      <EntradaShell>
+        <h1 className={styles.title}>O que você quer fazer?</h1>
+        <nav className={styles.cards} aria-label="Caminhos">
+          {CAMINHOS.map((entry) => (
+            <Link key={entry.key} href={`/comecar?caminho=${entry.key}`} className={styles.action}>
+              <span className={styles.actionKicker}>{entry.kicker}</span>
+              <span className={styles.actionTitle}>{entry.title}</span>
+              <span className={styles.muted}>{entry.description}</span>
+            </Link>
+          ))}
+        </nav>
+        <p className={styles.muted}>
+          Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
+        </p>
+      </EntradaShell>
     );
   }
 
-  const mode = modo as "personal" | "individual";
+  if (caminho === "convite") {
+    return (
+      <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+        <div>
+          <p className={styles.eyebrow}>Tenho personal</p>
+          <h1 className={styles.title}>Cole seu convite</h1>
+        </div>
+        <ConviteEntrada />
+        <Button href="/entrar" variant="quiet" block>
+          Já tenho conta
+        </Button>
+      </EntradaShell>
+    );
+  }
 
-  return (
-    <main className={styles.main}>
-      <PublicMobileHeader />
-      <div className={styles.card}>
-        <header className={styles.header}>
-          <p className={styles.stepIndicator}>Passo 2 de 2</p>
-          <h1 className={styles.title}>Criar conta</h1>
-          <p className={styles.subtitle}>
-            {mode === "individual" ? (
-              <>
-                Cadastro do FitOS Livre — seu espaço para treinar sozinho, sem personal. Alunos com
-                personal recebem acesso a partir de um vínculo criado por ele, não por este formulário.
-              </>
-            ) : (
-              <>
-                O cadastro público do {appName} é destinado a personal trainers. Alunos recebem
-                acesso a partir de um vínculo criado pelo seu personal, não por este formulário.
-              </>
-            )}
-          </p>
-        </header>
-
-        <CriarContaForm mode={mode} />
-
-        <p className={styles.footer}>
-          Já tem conta? <Link href="/entrar">Entrar</Link>
+  if (caminho === "personal") {
+    const plans = await listActivePlansForAudience("PERSONAL");
+    return (
+      <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+        {params.indicado === "1" ? <p className={styles.muted}>Você veio por indicação: são 30 dias a mais de teste grátis.</p> : null}
+        <PersonalComecar plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} />
+        <p className={styles.muted}>
+          Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
         </p>
-      </div>
-      <PublicMobileFooter />
-    </main>
+      </EntradaShell>
+    );
+  }
+
+  const plan = (await listActivePlansForAudience("INDIVIDUAL"))[0] ?? null;
+  return (
+    <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+      <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} />
+      <p className={styles.muted}>
+        Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
+      </p>
+    </EntradaShell>
   );
 }

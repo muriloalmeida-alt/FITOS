@@ -2,6 +2,7 @@ import "server-only";
 import type { Plan, PrismaClient, SaasSubscription, TenantType } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getPlanById } from "./plans";
+import { isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
 import {
   AsaasApiError,
   cancelAsaasSubscription,
@@ -237,6 +238,11 @@ export async function subscribeTenantToPlan(
   }
 
   const existing = await client.saasSubscription.findUnique({ where: { tenantId: input.tenantId } });
+  /// BK-18 (FIT-150): assinar de novo depois de cancelar. A assinatura do
+  /// Asaas foi cancelada junto (e o cartão estava ligado a ela), então
+  /// nunca é reaproveitada: a ligação cria uma nova e o cartão é pedido de
+  /// novo. O teste grátis continua não se repetindo (`trialUsedAt`).
+  const reactivating = existing?.status === "CANCELADA";
   const now = new Date();
   const grantsNewTrial = plan.trialDays !== null && !existing?.trialUsedAt;
   const trialEndsAt = grantsNewTrial
@@ -251,7 +257,7 @@ export async function subscribeTenantToPlan(
     tenantType: input.tenantType,
     tenantId: input.tenantId,
     plan,
-    existing,
+    existing: existing && reactivating ? { ...existing, externalSubscriptionId: null } : existing,
     trialEndsAt,
     client,
     deps,
@@ -280,6 +286,7 @@ export async function subscribeTenantToPlan(
         canceledReason: null,
         trialEndsAt,
         trialUsedAt,
+        ...(reactivating ? { creditCardLast4: null, creditCardBrand: null } : {}),
       },
     });
 
@@ -287,7 +294,7 @@ export async function subscribeTenantToPlan(
       data: {
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        action: "ASSINATURA_CONTRATADA",
+        action: reactivating ? "ASSINATURA_REATIVADA" : "ASSINATURA_CONTRATADA",
         entityType: "SaasSubscription",
         entityId: subscription.id,
       },
@@ -369,5 +376,44 @@ export async function cancelSubscription(
     });
 
     return canceled;
+  });
+}
+
+/// Liga a assinatura à cobrança real quando o CPF/CNPJ chega (EPIC-33): o
+/// teste grátis começa sem CPF nem cartão; ao cadastrar o cartão, o CPF é
+/// pedido junto, gravado no perfil e só então o cliente e a assinatura são
+/// criados no Asaas, com a primeira cobrança no fim do teste. Idempotente:
+/// assinatura já ligada fica como está.
+export async function linkSubscriptionToBilling(
+  input: { tenantId: string; tenantType: TenantType; cpfCnpj: string },
+  client: PrismaClient = prisma,
+  deps: AsaasWiringDeps = {}
+): Promise<SaasSubscription> {
+  const digits = input.cpfCnpj.replace(/\D/g, "");
+  if (!isValidCpfCnpj(digits)) {
+    throw new SubscriptionError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
+  }
+  if (input.tenantType === "PERSONAL") {
+    await client.personalProfile.update({ where: { tenantId: input.tenantId }, data: { cpfCnpj: digits } });
+  } else {
+    await client.individualProfile.update({ where: { tenantId: input.tenantId }, data: { cpfCnpj: digits } });
+  }
+  const existing = await client.saasSubscription.findUnique({ where: { tenantId: input.tenantId }, include: { plan: true } });
+  if (!existing) {
+    throw new SubscriptionError("NAO_ENCONTRADO", "Escolha um plano antes de cadastrar um cartão.");
+  }
+  if (existing.externalCustomerId && existing.externalSubscriptionId) return existing;
+  const asaas = await tryEnsureAsaasSubscription({
+    tenantType: input.tenantType,
+    tenantId: input.tenantId,
+    plan: existing.plan,
+    existing,
+    trialEndsAt: existing.trialEndsAt,
+    client,
+    deps,
+  });
+  return client.saasSubscription.update({
+    where: { tenantId: input.tenantId },
+    data: { provider: asaas.provider, externalCustomerId: asaas.externalCustomerId, externalSubscriptionId: asaas.externalSubscriptionId },
   });
 }

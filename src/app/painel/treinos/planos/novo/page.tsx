@@ -1,31 +1,26 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppShell, Card } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { LogoutButton } from "../../../LogoutButton";
-import { PERSONAL_NAV_ITEMS } from "../../../navigation";
-import { CriarPlanoForm } from "./CriarPlanoForm";
+import { ProgramEditor } from "../ProgramEditor";
+import { loadProgramData } from "../programData";
 
 export const metadata: Metadata = {
-  title: `Criar programa — ${appName}`,
+  title: `Montar programa — ${appName}`,
 };
 
-export default async function CriarPlanoPage() {
+/// "Montar um programa" (FIT-146): abre direto a tela do programa; ele só
+/// é criado no primeiro gesto (nome, vigência ou adicionar treino).
+export default async function NovoProgramaPage() {
+  let ctx;
   try {
-    await requirePersonal();
+    ctx = await requirePersonal();
   } catch (error) {
     if (error instanceof AuthError) {
       redirect(error.kind === "UNAUTHENTICATED" ? "/entrar" : "/painel");
     }
     throw error;
   }
-
-  return (
-    <AppShell eyebrow="Criar programa" title="Criar programa" subtitle="Defina nome e duração do programa." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <Card title="Dados do programa">
-        <CriarPlanoForm />
-      </Card>
-    </AppShell>
-  );
+  const data = await loadProgramData(ctx.tenantId, null);
+  return <ProgramEditor initial={null} {...data} />;
 }

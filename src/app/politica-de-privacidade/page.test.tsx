@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import PoliticaDePrivacidadePage from "./page";
 
 describe("PoliticaDePrivacidadePage (FIT-119)", () => {
@@ -15,5 +15,11 @@ describe("PoliticaDePrivacidadePage (FIT-119)", () => {
     render(<PoliticaDePrivacidadePage />);
 
     expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute("href", "/termos-de-uso");
+  });
+  it("FIT-170: abas Termos e Privacidade, com a atual marcada", () => {
+    render(<PoliticaDePrivacidadePage />);
+    const tabs = screen.getByRole("navigation", { name: "Documentos legais" });
+    expect(within(tabs).getByRole("link", { name: "Privacidade" })).toHaveAttribute("aria-current", "page");
+    expect(within(tabs).getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
   });
 });

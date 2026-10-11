@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const requireStudent = vi.fn();
 const completeWorkoutSession = vi.fn();
+const getSessionSummary = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
@@ -14,6 +15,8 @@ vi.mock("@/modules/execution/sessions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/execution/sessions")>("@/modules/execution/sessions");
   return { ...actual, completeWorkoutSession: (...args: unknown[]) => completeWorkoutSession(...args) };
 });
+
+vi.mock("@/modules/execution/sets", () => ({ getSessionSummary: (...args: unknown[]) => getSessionSummary(...args) }));
 
 describe("POST /api/workout-sessions/[id]/concluir", () => {
   afterEach(() => {
@@ -37,19 +40,22 @@ describe("POST /api/workout-sessions/[id]/concluir", () => {
   it("conclui usando o tenantId e studentId da sessão", async () => {
     requireStudent.mockResolvedValue({ userId: "u1", role: "ALUNO", tenantId: "tenant-real", studentId: "student-real" });
     completeWorkoutSession.mockResolvedValue({ id: "sess1", status: "CONCLUIDA" });
+    getSessionSummary.mockResolvedValue({ activeSeconds: 2400, sets: 12, volumeKg: 3200, records: [], perceivedEffort: null });
 
     const { POST } = await import("./route");
-    const response = await POST(new Request("http://localhost/api/workout-sessions/sess1/concluir", { method: "POST" }), {
+    const response = await POST(new Request("http://localhost/api/workout-sessions/sess1/concluir", { method: "POST", body: JSON.stringify({ activeSeconds: 2400.4 }) }), {
       params: Promise.resolve({ id: "sess1" }),
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.status).toBe("CONCLUIDA");
+    expect(body.summary.sets).toBe(12);
     expect(completeWorkoutSession).toHaveBeenCalledWith({
       tenantId: "tenant-real",
       studentId: "student-real",
       sessionId: "sess1",
+      activeSeconds: 2400,
     });
   });
 

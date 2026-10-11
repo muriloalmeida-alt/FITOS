@@ -1,5 +1,6 @@
 import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
 import { StudentChargeError, cancelStudentCharge } from "@/modules/student-finance/charges";
+import { dropExternalPayment } from "@/modules/student-finance/paymentAccount";
 
 /// Cancela uma cobrança (FIT-050) — exige motivo, nunca equivale a
 /// pagamento (`REGRAS-DE-NEGOCIO.md` seção 8).
@@ -11,6 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const reason = body && typeof body === "object" && typeof body.reason === "string" ? body.reason : "";
 
     const charge = await cancelStudentCharge({ tenantId: ctx.tenantId, chargeId: id, reason });
+    await dropExternalPayment({ tenantId: ctx.tenantId, chargeId: id });
     return Response.json(charge);
   } catch (error) {
     const response = authErrorResponse(error);

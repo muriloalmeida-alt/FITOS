@@ -1,5 +1,6 @@
 import { authErrorResponse, requireSubscriber } from "@/modules/tenancy/authContext";
 import { CheckoutError, attachCreditCardToSubscription } from "@/modules/billing/checkout";
+import { SubscriptionError, linkSubscriptionToBilling } from "@/modules/billing/subscriptions";
 import {
   isValidCreditCardCcv,
   isValidCreditCardExpiry,
@@ -68,6 +69,13 @@ export async function POST(request: Request) {
       return Response.json({ error: "VALIDACAO", message: "CEP inválido." }, { status: 400 });
     }
 
+    // EPIC-33: o CPF/CNPJ vem junto com o primeiro cartão (o teste grátis
+    // começa sem ele) e liga a assinatura à cobrança real.
+    const cpfCnpj = (rawBody as { cpfCnpj?: unknown } | null)?.cpfCnpj;
+    if (typeof cpfCnpj === "string" && cpfCnpj.trim() !== "") {
+      await linkSubscriptionToBilling({ tenantId: ctx.tenantId, tenantType: ctx.tenantType, cpfCnpj });
+    }
+
     const result = await attachCreditCardToSubscription({
       tenantId: ctx.tenantId,
       tenantType: ctx.tenantType,
@@ -85,6 +93,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;
+    if (error instanceof SubscriptionError) {
+      return Response.json({ error: error.kind, message: error.message }, { status: error.kind === "NAO_ENCONTRADO" ? 404 : 400 });
+    }
     if (error instanceof CheckoutError) {
       const status = error.kind === "SEM_ASSINATURA" ? 404 : error.kind === "CARTAO_RECUSADO" ? 422 : 409;
       return Response.json({ error: error.kind, message: error.message }, { status });

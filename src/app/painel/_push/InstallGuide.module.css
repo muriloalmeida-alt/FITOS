@@ -1,0 +1,33 @@
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: rgba(255, 120, 71, 0.16);
+  color: var(--fitos-orange-300);
+}
+
+.appIcon {
+  border-radius: 6px;
+}

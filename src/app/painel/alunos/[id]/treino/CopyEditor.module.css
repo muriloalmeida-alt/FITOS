@@ -1,0 +1,163 @@
+.band {
+  margin: 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 120, 71, 0.1);
+  color: #ffd5c4;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+}
+
+.workoutTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--fitos-space-3);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.days {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: var(--fitos-space-3);
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.group {
+  color: var(--fitos-color-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardioGroup {
+  color: #82d5c9;
+}
+
+.name {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.swap {
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fitos-space-3);
+  margin-top: var(--fitos-space-3);
+}
+
+.intensity {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fitos-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile > span:first-child {
+  width: 100%;
+  height: 110px;
+  border-radius: 0;
+}
+
+.tileImage {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
+.tileName {
+  padding: 8px 10px 10px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--fitos-color-text-muted);
+}

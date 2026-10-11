@@ -1,104 +1,83 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { IndividualHome as Data } from "@/modules/workouts/individualHome";
 import { IndividualHome } from "./IndividualHome";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
-
-const BASE_PROPS = {
-  name: "Marina",
-  tenantName: "Espaço de Marina",
-  objective: "GANHAR_MASSA" as const,
-  experienceLevel: "INTERMEDIARIO" as const,
-  weeklyAvailability: "TRES_A_QUATRO_DIAS" as const,
-  workoutsCount: 2,
-  inProgressWorkoutName: null,
-  suggestedWorkout: null,
-  weeklyRhythm: { completedDays: 0, dayFlags: [false, false, false, false, false, false, false] },
-  subscription: null,
+const workout = { id: "w1", name: "Superiores A", exercises: 5, estimatedMinutes: 40, days: ["SEGUNDA", "QUINTA"] };
+const base: Data = {
+  today: { ...workout, reason: "dia" },
+  missed: null,
+  inProgress: null,
+  workouts: [workout, { id: "w2", name: "Rascunho", exercises: 0, estimatedMinutes: 5, days: [] }],
+  week: { done: [true, false, false, false, false, false, false], doneCount: 1, target: 4 },
+  monthSessions: 7,
+  activeGoals: 2,
+  progressions: [],
 };
 
-describe("IndividualHome (FIT-137 — tela-10 do pacote visual 2026)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+function renderHome(home: Partial<Data> = {}) {
+  render(<IndividualHome name="Rafa Costa" greeting="Bom dia" dateLabel="Segunda, 5 de outubro" home={{ ...base, ...home }} todayIso="2026-10-05T12:00:00.000Z" />);
+}
 
-  it("sem treino em andamento e sem nenhum treino criado: hero convida a criar o primeiro, nunca finge que há algo para começar", () => {
-    render(<IndividualHome {...BASE_PROPS} />);
-
-    expect(screen.getByText("Treine no seu próprio ritmo.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Criar meu primeiro treino" })).toHaveAttribute("href", "/painel/meus-treinos/novo");
-    expect(screen.queryByText("Hoje para você")).not.toBeInTheDocument();
-  });
-
-  it("com treino real sugerido (sem sessão em andamento): hero leva ao treino real, 'Hoje para você' mostra o preview real", () => {
-    render(
-      <IndividualHome
-        {...BASE_PROPS}
-        suggestedWorkout={{ id: "w1", name: "Força essencial", exercisesCount: 5 }}
-      />
-    );
-
-    expect(screen.getByRole("link", { name: "Iniciar treino" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
+describe("IndividualHome (FIT-156)", () => {
+  it("hoje para você inicia o treino do dia, com semana, treinos e evolução", () => {
+    renderHome();
+    expect(screen.getByRole("heading", { level: 1, name: "Bom dia, Rafa." })).toBeInTheDocument();
     expect(screen.getByText("Hoje para você")).toBeInTheDocument();
-    expect(screen.getByText("Força essencial")).toBeInTheDocument();
-    expect(screen.getByText("5 exercícios")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver treino ↗" })).toHaveAttribute("href", "/painel/meus-treinos/w1");
+    expect(screen.getByRole("link", { name: "Iniciar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w1");
+    expect(screen.getByText("1 de 4 treinos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Iniciar Superiores A" })).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w1");
+    expect(screen.getByRole("link", { name: "Montar Rascunho" })).toHaveAttribute("href", "/painel/meus-treinos/w2");
+    expect(screen.getByRole("link", { name: "+ Montar meu treino" })).toHaveAttribute("href", "/painel/meus-treinos/novo");
+    expect(screen.getByRole("link", { name: /7 treinos no mês/ })).toHaveAttribute("href", "/painel/minha-evolucao");
+    expect(screen.getByRole("link", { name: /2 metas em andamento/ })).toHaveAttribute("href", "/painel/minha-evolucao?aba=metas");
   });
 
-  it("com sessão em andamento: hero mostra 'Continuar treino', 'Hoje para você' não aparece (evita duplicar o mesmo treino)", () => {
-    render(
-      <IndividualHome
-        {...BASE_PROPS}
-        inProgressWorkoutName="Força essencial"
-        suggestedWorkout={{ id: "w1", name: "Força essencial", exercisesCount: 5 }}
-      />
-    );
-
-    expect(screen.getByRole("link", { name: "Continuar treino" })).toBeInTheDocument();
-    expect(screen.queryByText("Hoje para você")).not.toBeInTheDocument();
+  it("sem dia sugerido mostra a sugestão do rodízio", () => {
+    renderHome({ today: { ...workout, reason: "rodizio" } });
+    expect(screen.getByText("Sugestão de hoje")).toBeInTheDocument();
+    expect(screen.getByText(/o que você fez há mais tempo/)).toBeInTheDocument();
   });
 
-  it("'Sua evolução' mostra a contagem real de treinos concluídos nesta semana, sempre visível mesmo em zero", () => {
-    render(<IndividualHome {...BASE_PROPS} weeklyRhythm={{ completedDays: 3, dayFlags: [true, true, true, false, false, false, false] }} />);
-
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("treinos nesta semana")).toBeInTheDocument();
+  it("treino em andamento continua", () => {
+    renderHome({ inProgress: { workoutName: "Superiores A", done: 2, total: 5, minutesAgo: 9 } });
+    expect(screen.getByRole("link", { name: "Continuar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao");
   });
 
-  it("'Seu plano' só aparece com assinatura real — período grátis ativo mostra a data real de fim do trial", () => {
-    const { rerender } = render(<IndividualHome {...BASE_PROPS} />);
-    expect(screen.queryByText("Seu plano")).not.toBeInTheDocument();
-
-    const trialEndsAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-    rerender(
-      <IndividualHome
-        {...BASE_PROPS}
-        subscription={{ planName: "FitOS Livre", priceCents: 1990, trialEndsAt }}
-      />
-    );
-
-    expect(screen.getByText("Seu plano")).toBeInTheDocument();
-    expect(screen.getByText("FitOS Livre")).toBeInTheDocument();
-    expect(screen.getByText(/Período grátis até/)).toBeInTheDocument();
-    expect(screen.getByText(/R\$ 19,90\/mês/)).toBeInTheDocument();
+  it("primeiro acesso sem treinos: criar o primeiro", () => {
+    renderHome({ today: null, workouts: [] });
+    expect(screen.getByRole("link", { name: /Criar meu primeiro treino/ })).toHaveAttribute("href", "/painel/meus-treinos/novo");
   });
 
-  it("'Seu plano' com trial já encerrado mostra só o preço mensal, sem menção a período grátis", () => {
-    const trialEndsAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    render(
-      <IndividualHome
-        {...BASE_PROPS}
-        subscription={{ planName: "FitOS Livre", priceCents: 1990, trialEndsAt }}
-      />
-    );
+  it("sugere subir a carga e grava no item ao aceitar (EPIC-30)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}", { status: 200 }));
+    renderHome({ progressions: [{ workoutId: "w1", itemId: "i1", workoutName: "Superiores A", exerciseName: "Puxada alta", fromKg: 40, toKg: 42.5, reps: 12 }] });
+    expect(screen.getByText("Subir puxada alta para 42,5 kg?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Subir" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/meus-treinos/w1/itens/i1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ load: "42,5 kg" }) }));
+    fetchMock.mockRestore();
+  });
 
-    expect(screen.getByText("R$ 19,90/mês")).toBeInTheDocument();
-    expect(screen.queryByText(/Período grátis/)).not.toBeInTheDocument();
+  it("Manter esconde a sugestão", async () => {
+    renderHome({ progressions: [{ workoutId: "w1", itemId: "i9", workoutName: "Superiores A", exerciseName: "Remada", fromKg: 30, toKg: 32.5, reps: 10 }] });
+    await userEvent.click(screen.getByRole("button", { name: "Manter" }));
+    expect(screen.queryByText(/Subir remada/)).not.toBeInTheDocument();
+  });
+
+  it("trocar o dia: o treino que ficou para trás aparece como sugestão (EPIC-38)", () => {
+    renderHome({ missed: { id: "w3", name: "Inferiores B", exercises: 5, estimatedMinutes: 40, days: ["QUARTA"], missedDay: "ontem" } });
+    const card = screen.getByRole("link", { name: /Trocar: Inferiores B hoje/ });
+    expect(card).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w3");
+    expect(card).toHaveTextContent("deixa Superiores A para amanhã");
+  });
+
+  it("dia livre com treino atrasado: ele vira o de hoje (EPIC-38)", () => {
+    renderHome({ today: { id: "w3", name: "Inferiores B", exercises: 5, estimatedMinutes: 40, days: ["QUARTA"], reason: "faltou", missedDay: "quarta" } });
+    expect(screen.getByText("Ficou de quarta")).toBeInTheDocument();
+    expect(screen.getByText(/hoje é dia livre, dá para recuperar/)).toBeInTheDocument();
   });
 });

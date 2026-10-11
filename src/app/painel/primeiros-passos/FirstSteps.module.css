@@ -1,0 +1,134 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-4);
+}
+
+.bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--fitos-space-2);
+}
+
+.bar span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #1b222d;
+}
+
+.bar span[data-on="true"] {
+  background-color: var(--fitos-orange-500);
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-3);
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-raised);
+}
+
+.stepNow {
+  border-color: rgba(255, 120, 71, 0.45);
+  background-color: #141b26;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fitos-space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  color: #101c2c;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.checkOn {
+  border-color: var(--fitos-orange-500);
+  background-color: var(--fitos-orange-500);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fitos-space-3);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-2);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background-color: #1b222d;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option[aria-checked="true"] {
+  border-color: var(--fitos-orange-500);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fitos-space-2);
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.change {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: #ffad8f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}

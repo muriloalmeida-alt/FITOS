@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui";
 import { signOut } from "@/modules/identity/auth-client";
 
-export function LogoutButton() {
+export function LogoutButton({ block = false }: { block?: boolean } = {}) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,7 +20,7 @@ export function LogoutButton() {
   }
 
   return (
-    <Button type="button" variant="outlined" onClick={handleLogout} disabled={isSubmitting}>
+    <Button type="button" variant="outlined" block={block} onClick={handleLogout} disabled={isSubmitting}>
       {isSubmitting ? "Saindo…" : "Sair"}
     </Button>
   );

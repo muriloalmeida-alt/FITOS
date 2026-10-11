@@ -26,8 +26,8 @@ import type { AppShellNavItem } from "@/shared/ui";
 /// existia para o ALUNO desde a FIT-016) — dados profissionais (celular/
 /// CREF/faixa de alunos) e um resumo real da assinatura, com link para a
 /// gestão completa em `/painel/assinatura` (FIT-122, item próprio abaixo).
-/// "Configurações" continua `comingSoon` — nenhuma tela própria para ela
-/// ainda.
+/// "Configurações" é real desde o EPIC-36 (`/painel/configuracoes`):
+/// padrões de treino e de novo aluno, avisos e segurança.
 ///
 /// AjustesPainel/AjustesTelas (29/09/2026): a barra inferior mobile do
 /// Personal passa a ser **Início, Alunos, Treinos, Perfil** (`compact`),
@@ -38,11 +38,15 @@ export const PERSONAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "inicio", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "alunos", label: "Alunos", href: "/painel/alunos", icon: "alunos", compact: true },
   { key: "treinos", label: "Treinos", href: "/painel/treinos", icon: "treinos", compact: true },
+  // EPIC-39: chat com os alunos, por assunto.
+  { key: "mensagens", label: "Mensagens", href: "/painel/mensagens", icon: "mensagens", compact: true },
+  // EPIC-48: horários fixos, faltas e remarcações.
+  { key: "agenda", label: "Agenda", href: "/painel/agenda", icon: "agenda" },
   { key: "exercicios", label: "Exercícios", href: "/painel/exercicios", icon: "exercicios" },
   { key: "financeiro", label: "Financeiro", href: "/painel/financeiro", icon: "financeiro" },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
-  { key: "config", label: "Configurações", comingSoon: true, icon: "config" },
+  { key: "config", label: "Configurações", href: "/painel/configuracoes", icon: "config" },
 ];
 
 /// "Perfil" passa a ser real na FIT-016 (nome, e-mail, logout); "Treino"
@@ -56,7 +60,11 @@ export const ALUNO_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treino", label: "Treino", href: "/painel/treino", icon: "treinos", compact: true },
   { key: "progresso", label: "Progresso", href: "/painel/progresso", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  // EPIC-39: chat com o personal, por assunto.
+  { key: "mensagens", label: "Mensagens", href: "/painel/mensagens", icon: "mensagens", compact: true },
+  // EPIC-48: as próximas aulas com o personal.
+  { key: "agenda", label: "Agenda", href: "/painel/agenda", icon: "agenda" },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
 ];
 
 /// Navegação do workspace individual do FitOS Livre (FIT-100/FIT-101),
@@ -86,7 +94,10 @@ export const INDIVIDUAL_NAV_ITEMS: AppShellNavItem[] = [
   { key: "hoje", label: "Início", href: "/painel", icon: "inicio", compact: true },
   { key: "treinos", label: "Treinos", href: "/painel/meus-treinos", icon: "treinos", compact: true },
   { key: "progresso", label: "Evolução", href: "/painel/minha-evolucao", icon: "evolucao", compact: true },
-  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true },
+  { key: "perfil", label: "Perfil", href: "/painel/perfil", icon: "perfil", compact: true, accountLink: true },
   // FIT-122: "Assinatura" (FitOS Livre) já é real.
   { key: "assinatura", label: "Assinatura", href: "/painel/assinatura", icon: "assinatura" },
 ];
+
+/// Administrador da plataforma: só a gestão de usuários.
+export const ADMIN_NAV_ITEMS: AppShellNavItem[] = [{ key: "usuarios", label: "Usuários", href: "/painel/admin", icon: "alunos", compact: true }];

@@ -2,75 +2,53 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const requirePersonal = vi.fn();
-const listTrainingPlansForTenant = vi.fn();
-const redirect = vi.fn((_url: string) => {
-  throw new Error("NEXT_REDIRECT");
+const listTrainingPlanSummariesForTenant = vi.fn();
+const getTrainingPlanForTenant = vi.fn();
+const notFound = vi.fn(() => {
+  throw new Error("NEXT_NOT_FOUND");
 });
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
   return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
 });
-
 vi.mock("@/modules/workouts/workouts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/workouts/workouts")>("@/modules/workouts/workouts");
-  return { ...actual, listTrainingPlansForTenant: (...args: unknown[]) => listTrainingPlansForTenant(...args) };
+  return {
+    ...actual,
+    listTrainingPlanSummariesForTenant: (...args: unknown[]) => listTrainingPlanSummariesForTenant(...args),
+    getTrainingPlanForTenant: (...args: unknown[]) => getTrainingPlanForTenant(...args),
+  };
 });
-
 vi.mock("next/navigation", () => ({
-  redirect: (url: string) => redirect(url),
+  redirect: vi.fn(),
+  notFound: () => notFound(),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
+vi.mock("@/modules/identity/auth-client", () => ({ signOut: vi.fn() }));
 
-vi.mock("@/modules/identity/auth-client", () => ({
-  signOut: vi.fn(),
-}));
+describe("Programas (FIT-146)", () => {
+  afterEach(() => vi.resetAllMocks());
 
-describe("PlanosPage (FIT-032)", () => {
-  afterEach(() => {
-    vi.resetAllMocks();
+  it("lista programas com a semana e o próximo passo", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    listTrainingPlanSummariesForTenant.mockImplementation(async ({ status }: { status?: string }) =>
+      status === "ARQUIVADO" ? [] : [{ id: "p1", name: "Hipertrofia", status: "ATIVO", durationWeeks: 8, workoutCount: 2, days: ["SEGUNDA", "QUINTA"] }]
+    );
+    const { default: ProgramasPage } = await import("./page");
+    render(await ProgramasPage());
+    expect(screen.getByRole("link", { name: /Montar um programa/ })).toHaveAttribute("href", "/painel/treinos/planos/novo");
+    expect(screen.getByRole("link", { name: /Hipertrofia/ })).toHaveAttribute("href", "/painel/treinos/planos/p1");
+    expect(screen.getByText("8 semanas · 2 treinos · 2 dias por semana")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quinta: treino previsto")).toBeInTheDocument();
   });
 
-  it("redireciona para /entrar quando não há sessão", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
-    const { default: PlanosPage } = await import("./page");
-
-    await expect(PlanosPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/entrar");
-  });
-
-  it("redireciona para /painel quando o usuário autenticado não é personal", async () => {
-    const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>("@/modules/tenancy/authContext");
-    requirePersonal.mockRejectedValue(new AuthError("FORBIDDEN", "Acesso restrito a personal."));
-    const { default: PlanosPage } = await import("./page");
-
-    await expect(PlanosPage()).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/painel");
-  });
-
-  it("lista os programas do tenant", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listTrainingPlansForTenant.mockResolvedValue([
-      { id: "p1", name: "Plano A", durationWeeks: 4 },
-      { id: "p2", name: "Plano B", durationWeeks: null },
-    ]);
-
-    const { default: PlanosPage } = await import("./page");
-    render(await PlanosPage());
-
-    expect(screen.getByText("Plano A")).toBeInTheDocument();
-    expect(screen.getByText("Plano B")).toBeInTheDocument();
-    expect(listTrainingPlansForTenant).toHaveBeenCalledWith({ tenantId: "tenant-real" });
-  });
-
-  it("estado vazio quando não há nenhum programa", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
-    listTrainingPlansForTenant.mockResolvedValue([]);
-
-    const { default: PlanosPage } = await import("./page");
-    render(await PlanosPage());
-
-    expect(screen.getByText(/Nenhum programa ainda/)).toBeInTheDocument();
+  it("programa de outro tenant ou rascunho é 404", async () => {
+    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "t1" });
+    getTrainingPlanForTenant.mockResolvedValue(null);
+    const { default: ProgramaPage } = await import("./[id]/page");
+    await expect(ProgramaPage({ params: Promise.resolve({ id: "alheio" }) })).rejects.toThrow("NEXT_NOT_FOUND");
+    getTrainingPlanForTenant.mockResolvedValue({ id: "d", isDraftBucket: true });
+    await expect(ProgramaPage({ params: Promise.resolve({ id: "d" }) })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

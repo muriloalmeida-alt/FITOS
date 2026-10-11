@@ -1,23 +1,29 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Button, EmptyStateAction } from "@/shared/ui";
+import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { AuthError, requirePersonal } from "@/modules/tenancy/authContext";
-import { listWorkoutsForTenant } from "@/modules/workouts/workouts";
+import { getLibrary } from "@/modules/library/library";
+import { listAssignableStudents } from "@/modules/workouts/workouts";
+import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "../navigation";
-import { TreinosSubNav } from "./TreinosSubNav";
-import styles from "./page.module.css";
+import { LibraryView, type LibraryTab } from "./LibraryView";
 
 export const metadata: Metadata = {
-  title: `Treinos — ${appName}`,
+  title: `Biblioteca — ${appName}`,
 };
 
-/// Lista de modelos de treino do tenant (FIT-030). Planos semanais
-/// (agrupando modelos, dias e vigência) ficam em `/painel/treinos/planos`
-/// (FIT-032) — ver `TreinosSubNav`.
-export default async function TreinosPage() {
+const TABS: LibraryTab[] = ["programas", "treinos", "aerobicos"];
+
+interface TreinosPageProps {
+  searchParams?: Promise<{ aba?: string; aluno?: string }>;
+}
+
+/// Biblioteca do Personal (EPIC-28): programas, treinos e aeróbicos
+/// prontos para aplicar a um ou mais alunos. `?aluno=` já deixa um aluno
+/// escolhido (vindo do perfil dele).
+export default async function TreinosPage({ searchParams }: TreinosPageProps = {}) {
   let ctx;
   try {
     ctx = await requirePersonal();
@@ -28,50 +34,20 @@ export default async function TreinosPage() {
     throw error;
   }
 
-  const workouts = await listWorkoutsForTenant({ tenantId: ctx.tenantId });
+  const sp = (await searchParams) ?? {};
+  const tab = TABS.includes(sp.aba as LibraryTab) ? (sp.aba as LibraryTab) : "programas";
+  const [library, students] = await Promise.all([getLibrary({ tenantId: ctx.tenantId }), listAssignableStudents({ tenantId: ctx.tenantId })]);
+  const preselected = students.some((student) => student.id === sp.aluno) ? sp.aluno! : null;
 
   return (
-    <AppShell eyebrow="Modelos de treino" title="Treinos" subtitle="Modelos prontos para montar programas." navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
-      <TreinosSubNav active="modelos" />
-      <div className={styles.header}>
-        <p className={styles.subtitle}>
-          {workouts.length} {workouts.length === 1 ? "modelo de treino" : "modelos de treino"}
-        </p>
-        <Button href="/painel/treinos/novo" variant="filled">
-          + Criar modelo
-        </Button>
-      </div>
-
-      {workouts.length === 0 ? (
-        <EmptyStateAction
-          title="Nenhum modelo de treino ainda"
-          description="Crie o primeiro para começar a montar planos."
-          action={{ label: "+ Criar modelo", href: "/painel/treinos/novo" }}
-        />
-      ) : (
-        <>
-          <Link href="/painel/treinos/novo" className={styles.nextStepCard}>
-            <p className={styles.nextStepEyebrow}>Próximo passo</p>
-            <p className={styles.nextStepTitle}>Crie um treino memorável</p>
-            <span className={styles.nextStepArrow} aria-hidden="true">
-              ↗
-            </span>
-          </Link>
-
-          <ul className={styles.list} aria-label="Lista de modelos de treino">
-            {workouts.map((workout) => (
-              <li key={workout.id}>
-                <Link href={`/painel/treinos/${workout.id}`} className={styles.row}>
-                  <span className={styles.cellName}>{workout.name}</span>
-                  {workout.suggestedDays.length > 0 ? (
-                    <span className={styles.cellDays}>{workout.suggestedDays.join(", ")}</span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+    <AppShell eyebrow="Treinos" title="Biblioteca" navItems={PERSONAL_NAV_ITEMS} activeKey="treinos" trailing={<LogoutButton />}>
+      <TrainingTabs active="treinos" />
+      <LibraryView
+        tab={tab}
+        entries={{ programas: library.programs, treinos: library.workouts, aerobicos: library.cardio }}
+        students={students.map((student) => ({ id: student.id, name: student.displayName }))}
+        preselectedStudentId={preselected}
+      />
     </AppShell>
   );
 }

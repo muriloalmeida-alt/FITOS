@@ -1,194 +1,144 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Button, Card } from "@/shared/ui";
+import { BrandLogo, Button } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
+import { formatCentsBRL } from "@/shared/lib/money";
+import { listActivePlansForAudience } from "@/modules/billing/plans";
 import exerciseImageManifest from "@/modules/exercises/data/manifesto-imagens-exercicios.json";
-import { LandingHeader } from "./LandingHeader";
-import { ConviteCodeForm } from "../ConviteCodeForm";
 import styles from "./page.module.css";
 
-/// Teaser da biblioteca ilustrada (FIT-111, seção 8B do pacote — deferido
-/// da FIT-110 porque exigia o caminho real de imagens que só a FIT-111
-/// estabelece). A quantidade exibida (`exerciseImageManifest.length`) vem
-/// do próprio manifesto de importação versionado, nunca de um número
-/// hardcoded: a seção nunca fica desatualizada nem "enganosa" (exigência
-/// explícita do pacote) conforme novas ilustrações forem importadas em
-/// histórias futuras — o texto sempre reflete a contagem real publicada.
-const LIBRARY_TEASER_SLUGS = ["agachamento-livre-com-barra", "prancha-lateral", "puxada-alta-pegada-aberta", "rosca-direta-com-barra"];
-const libraryTeaserItems = LIBRARY_TEASER_SLUGS.map((slug) => exerciseImageManifest.find((entry) => entry.slug === slug)).filter(
-  (entry): entry is (typeof exerciseImageManifest)[number] => entry !== undefined
-);
+/// Preço vem do catálogo real a cada visita, nunca de um número fixo.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `${appName} — Gestão fitness, sem peso extra`,
-  description:
-    "Alunos, treinos e evolução em um só lugar. Menos planilha, mais tempo para transformar resultados.",
+  title: `${appName} — Treino, alunos e mensalidades sem formulário`,
+  description: "Monte treinos pela biblioteca, acompanhe cada série dos alunos e controle mensalidades. 30 dias grátis.",
 };
 
-/// Landing comercial pública (FIT-110, EPIC-14; movida de `/` para `/conheca`
-/// na FIT-125/EPIC-16 — `/` passa a resolver sessão). Nunca verifica sessão:
-/// é a mesma página para visitante autenticado ou não (o cabeçalho sempre
-/// oferece "Entrar", nunca detecta e redireciona sozinho — decisão
-/// deliberada, para a landing continuar sendo compartilhável/indexável
-/// sem side effect de navegação).
-///
-/// Referência visual navegável do pacote
-/// (`https://fitos-em-movimento.hmqsgqtv8q.chatgpt.site`) está fora do
-/// alcance de rede desta sandbox (proxy de saída bloqueia o domínio) —
-/// direção visual seguida a partir do texto da seção 4 do pacote e dos
-/// tokens M3 "chrome" já existentes (`--fitos-color-chrome*`, hoje navy/laranja
-/// — ADR-012 — mesma paleta do `AppShell` autenticado), nunca um Design
-/// System paralelo.
-export default function LandingPage() {
+const LIBRARY_SLUGS = ["agachamento-livre-com-barra", "prancha-lateral", "puxada-alta-pegada-aberta", "rosca-direta-com-barra"];
+const library = LIBRARY_SLUGS.map((slug) => exerciseImageManifest.find((entry) => entry.slug === slug)).filter((entry): entry is (typeof exerciseImageManifest)[number] => entry !== undefined);
+
+const BENEFITS = [
+  { title: "Treino montado em um minuto", text: "Escolha os exercícios na biblioteca com foto. Entram com 3 × 12 e você ajusta com + e −." },
+  { title: "Cada série registrada", text: "O aluno marca série por série na academia, com descanso, voz e bipes. Você vê carga, recordes e como foi o treino." },
+  { title: "Mensalidade sem planilha", text: "Gere as cobranças do mês de uma vez e marque o que recebeu com um toque." },
+];
+
+/// Conheça o FitOS (FIT-168, E7 do protótipo): promessa, três benefícios
+/// numerados, biblioteca ilustrada com fotos reais, personal e aluno na
+/// mesma rotina, três caminhos com preço real e CTA final. Só dados reais.
+export default async function LandingPage() {
+  const [personalPlans, livrePlans] = await Promise.all([listActivePlansForAudience("PERSONAL"), listActivePlansForAudience("INDIVIDUAL")]);
+  const personalFrom = personalPlans.length > 0 ? Math.min(...personalPlans.map((plan) => plan.priceCents)) : null;
+  const livre = livrePlans[0] ?? null;
+  const trialDays = personalPlans.find((plan) => plan.trialDays)?.trialDays ?? livre?.trialDays ?? null;
+
   return (
     <main className={styles.main}>
-      <LandingHeader />
+      <header className={styles.header}>
+        <BrandLogo background="photo" size={40} />
+        <Link href="/entrar" className={styles.login}>
+          Entrar
+        </Link>
+      </header>
 
       <section className={styles.hero}>
-        <Image
-          src="/media/brand/visual-2026/scene-runner.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          style={{ objectPosition: "78% 35%" }}
-          className={styles.heroImage}
-        />
-        <div className={styles.heroOverlay} />
-        <div className={styles.heroContent}>
-          <p className={styles.eyebrow}>Gestão fitness, sem peso extra</p>
-          <h1 className={styles.heroTitle}>Seu trabalho. Em movimento.</h1>
-          <p className={styles.heroDescription}>
-            Alunos, treinos e evolução em um só lugar. Menos planilha, mais tempo para transformar
-            resultados.
-          </p>
-          <div className={styles.heroActions}>
-            <Button href="/comecar" variant="filled">
-              Começar agora
-            </Button>
-            <Button href="#recursos" variant="outlined" className={styles.heroSecondaryCta}>
-              Conhecer o {appName}
-            </Button>
+        <p className={styles.eyebrow}>Para personal trainers e quem treina</p>
+        <h1 className={styles.title}>Menos formulário. Mais treino.</h1>
+        <p className={styles.lead}>Alunos, treinos e mensalidades num app só, pensado para a ação: cada tela termina no que você precisa fazer.</p>
+        <Button href="/comecar" size="xl" block>
+          {trialDays ? `Começar ${trialDays} dias grátis` : "Começar agora"}
+        </Button>
+      </section>
+
+      <section className={styles.section} aria-labelledby="beneficios">
+        <h2 id="beneficios" className={styles.sectionTitle}>
+          O que muda no seu dia
+        </h2>
+        <ol className={styles.benefits}>
+          {BENEFITS.map((benefit, index) => (
+            <li key={benefit.title}>
+              <span className={styles.number} aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span>
+                <strong>{benefit.title}</strong>
+                <span className={styles.muted}>{benefit.text}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className={styles.section} aria-labelledby="biblioteca">
+        <h2 id="biblioteca" className={styles.sectionTitle}>
+          Biblioteca ilustrada
+        </h2>
+        <p className={styles.muted}>{exerciseImageManifest.length} exercícios com ilustração da execução, músculo e equipamento.</p>
+        <ul className={styles.library}>
+          {library.map((entry) => (
+            <li key={entry.slug}>
+              <Image src={`/media/exercises/${entry.slug}.webp`} alt={entry.altText} width={240} height={240} className={styles.libraryImage} />
+              <span>{entry.nomeCanonico}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={styles.section} aria-labelledby="rotina">
+        <h2 id="rotina" className={styles.sectionTitle}>
+          Personal e aluno na mesma rotina
+        </h2>
+        <div className={styles.split}>
+          <div className={styles.panel}>
+            <strong>Você</strong>
+            <span className={styles.muted}>Monta o programa, atribui com um toque e vê no Início quem treinou, quem precisa de você e quem está com mensalidade atrasada.</span>
+          </div>
+          <div className={styles.panel}>
+            <strong>Seu aluno</strong>
+            <span className={styles.muted}>Abre o app e já vê o treino do dia. Na academia, registra cada série com uma mão e conta como foi.</span>
           </div>
         </div>
       </section>
 
-      <section id="recursos" className={styles.benefits}>
-        <h2 className={styles.sectionTitle}>Tudo que o seu dia a dia de personal precisa</h2>
-        <div className={styles.benefitsGrid}>
-          <Card title="Alunos sob controle">
-            <p>Cadastro, perfil, avaliações e histórico — tudo em um só lugar, sem planilha paralela.</p>
-          </Card>
-          <Card title="Treinos que evoluem">
-            <p>Planos, exercícios, execução e acompanhamento, do primeiro treino à evolução ao longo do tempo.</p>
-          </Card>
-          <Card title="Financeiro simples">
-            <p>
-              Cobranças e recebimentos como controle financeiro do seu negócio — sem pagamento dentro
-              do app nesta etapa.
-            </p>
-          </Card>
-        </div>
+      <section className={styles.section} aria-labelledby="caminhos">
+        <h2 id="caminhos" className={styles.sectionTitle}>
+          Escolha seu caminho
+        </h2>
+        <ul className={styles.paths}>
+          <li>
+            <Link href="/comecar?caminho=personal" className={styles.path}>
+              <strong>Sou personal</strong>
+              <span className={styles.muted}>{personalFrom !== null ? `A partir de ${formatCentsBRL(personalFrom)} por mês` : "Planos por número de alunos"}</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/comecar?caminho=convite" className={styles.path}>
+              <strong>Tenho convite</strong>
+              <span className={styles.muted}>Sem custo para o aluno: a mensalidade é combinada com o seu personal</span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/treino-sozinho" className={styles.path}>
+              <strong>Treino por conta</strong>
+              <span className={styles.muted}>{livre ? `FitOS Livre por ${formatCentsBRL(livre.priceCents)} por mês` : "FitOS Livre"}</span>
+            </Link>
+          </li>
+        </ul>
       </section>
 
-      <section id="caminhos" className={styles.paths}>
-        <h2 className={styles.sectionTitle}>Comece pelo caminho certo para você</h2>
-        <div className={styles.pathsGrid}>
-          <Card title="Sou Personal">
-            <p>Gestão profissional de alunos, treinos e negócio.</p>
-            <Button href="/comecar?modo=personal" variant="filled" className={styles.pathCta}>
-              Criar conta grátis
-            </Button>
-          </Card>
-
-          <Card title="Treino com Personal">
-            <p>Ativação por convite e vínculo ao espaço do seu personal.</p>
-            <p className={styles.pathHint}>
-              Sem convite ainda? O acesso do aluno depende de um convite criado pelo seu personal —
-              fale com ele para receber o seu.
-            </p>
-            <ConviteCodeForm />
-          </Card>
-
-          <Card title="FitOS Livre">
-            <p>Escolha de produto e treino independente, sem vínculo com personal.</p>
-            <Button href="/treino-sozinho" variant="outlined" className={styles.pathCta}>
-              Conhecer o FitOS Livre
-            </Button>
-          </Card>
-        </div>
-      </section>
-
-      <section id="biblioteca" className={styles.library}>
-        <h2 className={styles.sectionTitle}>Biblioteca ilustrada de exercícios</h2>
-        <p className={styles.libraryIntro}>
-          {exerciseImageManifest.length} de 208 exercícios do catálogo já ilustrados — biblioteca completa em
-          expansão, disponível para Personal, Aluno vinculado e FitOS Livre.
-        </p>
-        <div className={styles.libraryGrid}>
-          {libraryTeaserItems.map((entry) => (
-            <figure key={entry.slug} className={styles.libraryItem}>
-              <Image
-                src={`/media/exercises/${entry.slug}.webp`}
-                alt={entry.altText}
-                width={200}
-                height={200}
-                loading="lazy"
-                sizes="(min-width: 900px) 160px, 40vw"
-                className={styles.libraryImage}
-              />
-              <figcaption className={styles.libraryCaption}>{entry.nomeCanonico}</figcaption>
-            </figure>
-          ))}
-        </div>
-        <p className={styles.libraryExample}>
-          Busque por nome (ex.: &ldquo;agachamento&rdquo;) e filtre por músculo, equipamento e dificuldade — com
-          ilustrações em duas fases do movimento quando aplicável.
-        </p>
-      </section>
-
-      <section id="para-quem" className={styles.relationship}>
-        <div className={styles.relationshipText}>
-          <h2 className={styles.sectionTitle}>Personal e aluno, na mesma rotina</h2>
-          <ul className={styles.relationshipList}>
-            <li>Prescrição organizada, sempre visível para quem precisa dela.</li>
-            <li>Evolução compartilhada — o personal acompanha, o aluno enxerga o próprio progresso.</li>
-            <li>Rotina sem ruído: menos mensagem solta, mais treino de verdade.</li>
-            <li>O acesso do seu aluno é sempre restrito ao seu espaço — nunca aos dados de outro personal.</li>
-          </ul>
-        </div>
-        <div className={styles.relationshipImageWrapper}>
-          <Image
-            src="/media/landing/fitos-landing-hero-secundaria.webp"
-            alt="Personal trainer e aluna revisando juntos o resultado de um treino no celular"
-            width={900}
-            height={600}
-            loading="lazy"
-            sizes="(min-width: 900px) 480px, 90vw"
-            className={styles.relationshipImage}
-          />
-        </div>
-      </section>
-
-      <section className={styles.finalCta}>
-        <h2 className={styles.finalCtaTitle}>Pronto para colocar sua rotina em movimento?</h2>
-        <Button href="/comecar" variant="filled" className={styles.finalCtaButton}>
-          Criar meu perfil
+      <section className={`${styles.section} ${styles.final}`}>
+        <h2 className={styles.sectionTitle}>Pronto para começar?</h2>
+        <Button href="/comecar" size="lg" block>
+          {trialDays ? `Começar ${trialDays} dias grátis` : "Começar agora"}
         </Button>
       </section>
 
       <footer className={styles.footer}>
-        <p className={styles.footerBrand}>{appName}</p>
-        <nav className={styles.footerLinks} aria-label="Links institucionais">
-          <Link href="/entrar">Entrar</Link>
-          <Link href="/comecar">Criar conta</Link>
-          <Link href="/treino-sozinho">FitOS Livre</Link>
-        </nav>
-        <p className={styles.footerLegal}>
-          <Link href="/termos-de-uso">Termos de Uso</Link> e{" "}
-          <Link href="/politica-de-privacidade">Política de Privacidade</Link>.
-        </p>
+        <Link href="/termos-de-uso">Termos de uso</Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/politica-de-privacidade">Privacidade</Link>
       </footer>
     </main>
   );

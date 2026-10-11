@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const requirePersonal = vi.fn();
+const requireSubscriber = vi.fn();
 const reactivateExercise = vi.fn();
 
 vi.mock("@/modules/tenancy/authContext", async () => {
   const actual = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
     "@/modules/tenancy/authContext"
   );
-  return { ...actual, requirePersonal: (...args: unknown[]) => requirePersonal(...args) };
+  return { ...actual, requireSubscriber: (...args: unknown[]) => requireSubscriber(...args) };
 });
 
 vi.mock("@/modules/exercises/exercises", async () => {
@@ -24,7 +24,7 @@ describe("POST /api/exercises/[id]/reativar", () => {
     const { AuthError } = await vi.importActual<typeof import("@/modules/tenancy/authContext")>(
       "@/modules/tenancy/authContext"
     );
-    requirePersonal.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
+    requireSubscriber.mockRejectedValue(new AuthError("UNAUTHENTICATED", "Sessão ausente ou inválida."));
 
     const { POST } = await import("./route");
     const response = await POST(new Request("http://localhost/api/exercises/e1/reativar", { method: "POST" }), {
@@ -35,7 +35,7 @@ describe("POST /api/exercises/[id]/reativar", () => {
   });
 
   it("reativa usando o tenantId e userId da sessão", async () => {
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     reactivateExercise.mockResolvedValue({ id: "e1", status: "ATIVO" });
 
     const { POST } = await import("./route");
@@ -53,7 +53,7 @@ describe("POST /api/exercises/[id]/reativar", () => {
     const { ExerciseError } = await vi.importActual<typeof import("@/modules/exercises/exercises")>(
       "@/modules/exercises/exercises"
     );
-    requirePersonal.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
+    requireSubscriber.mockResolvedValue({ userId: "u1", role: "PERSONAL", tenantId: "tenant-real" });
     reactivateExercise.mockRejectedValue(new ExerciseError("NAO_ENCONTRADO", "Exercício não encontrado."));
 
     const { POST } = await import("./route");

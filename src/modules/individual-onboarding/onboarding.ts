@@ -33,7 +33,9 @@ export interface CompleteIndividualOnboardingInput {
   /// pago do FitOS Livre. `null` no banco existe só para perfis
   /// concluídos antes deste campo existir; toda nova submissão, inclusive
   /// reabrir um onboarding antigo, passa a exigi-lo.
-  cpfCnpj: string;
+  /// Opcional desde a EPIC-33: o teste grátis começa sem cartão e o CPF é
+  /// pedido junto com o cartão. Validado se vier.
+  cpfCnpj?: string;
   termsAccepted: boolean;
 }
 
@@ -47,7 +49,7 @@ function assertValid(input: CompleteIndividualOnboardingInput): void {
   if (!VALID_AVAILABILITIES.includes(input.weeklyAvailability)) {
     throw new OnboardingError("VALIDACAO", "Disponibilidade semanal inválida.");
   }
-  if (!isValidCpfCnpj(input.cpfCnpj)) {
+  if (input.cpfCnpj !== undefined && !isValidCpfCnpj(input.cpfCnpj)) {
     throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
   }
 }
@@ -81,14 +83,14 @@ export async function completeIndividualOnboarding(
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
-      cpfCnpj: input.cpfCnpj,
+      cpfCnpj: input.cpfCnpj ?? null,
       termsAcceptedAt: new Date(),
     },
     update: {
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
-      cpfCnpj: input.cpfCnpj,
+      ...(input.cpfCnpj !== undefined ? { cpfCnpj: input.cpfCnpj } : {}),
     },
   });
 }
@@ -101,4 +103,33 @@ export async function getIndividualOnboardingProfile(
   client: PrismaClient = prisma
 ): Promise<IndividualProfile | null> {
   return client.individualProfile.findUnique({ where: { tenantId } });
+}
+
+const MAX_SPACE_NAME_LENGTH = 80;
+
+/// Perfil do FitOS Livre (FIT-160): "Editar respostas" (objetivo,
+/// experiência e disponibilidade) e o nome do espaço. Só os campos
+/// enviados mudam; CPF/CNPJ e o aceite dos termos ficam como estão.
+export async function updateIndividualPreferences(
+  input: { tenantId: string; objective?: IndividualObjective; experienceLevel?: ExperienceLevel; weeklyAvailability?: WeeklyAvailability; spaceName?: string },
+  client: PrismaClient = prisma
+): Promise<void> {
+  if (input.objective !== undefined && !VALID_OBJECTIVES.includes(input.objective)) throw new OnboardingError("VALIDACAO", "Objetivo inválido.");
+  if (input.experienceLevel !== undefined && !VALID_EXPERIENCE_LEVELS.includes(input.experienceLevel)) throw new OnboardingError("VALIDACAO", "Experiência inválida.");
+  if (input.weeklyAvailability !== undefined && !VALID_AVAILABILITIES.includes(input.weeklyAvailability)) throw new OnboardingError("VALIDACAO", "Disponibilidade inválida.");
+  const spaceName = input.spaceName?.trim();
+  if (input.spaceName !== undefined && (!spaceName || spaceName.length > MAX_SPACE_NAME_LENGTH)) throw new OnboardingError("VALIDACAO", "Informe o nome do seu espaço.");
+
+  const data = {
+    ...(input.objective !== undefined ? { objective: input.objective } : {}),
+    ...(input.experienceLevel !== undefined ? { experienceLevel: input.experienceLevel } : {}),
+    ...(input.weeklyAvailability !== undefined ? { weeklyAvailability: input.weeklyAvailability } : {}),
+  };
+  await client.$transaction(async (tx) => {
+    if (Object.keys(data).length > 0) {
+      const updated = await tx.individualProfile.updateMany({ where: { tenantId: input.tenantId }, data });
+      if (updated.count === 0) throw new OnboardingError("VALIDACAO", "Conclua o seu perfil antes de editar.");
+    }
+    if (spaceName) await tx.tenant.update({ where: { id: input.tenantId }, data: { name: spaceName } });
+  });
 }

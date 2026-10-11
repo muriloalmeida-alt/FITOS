@@ -1,0 +1,28 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fitos-space-6);
+}
+
+.delta {
+  margin: calc(var(--fitos-space-3) * -1) 0 0;
+  color: #ffd9a0;
+  font-size: 14px;
+}
+
+.down {
+  color: #82d5c9;
+}
+
+.chip {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}

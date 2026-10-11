@@ -1,11 +1,11 @@
 import { ExerciseError, reactivateExercise } from "@/modules/exercises/exercises";
-import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
+import { authErrorResponse, requireSubscriber } from "@/modules/tenancy/authContext";
 
 /// Reativa um exercício próprio do tenant do personal autenticado.
 /// Idempotente pela mesma razão da rota de arquivar.
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const ctx = await requirePersonal();
+    const ctx = await requireSubscriber();
     const { id } = await params;
     const exercise = await reactivateExercise({ tenantId: ctx.tenantId, exerciseId: id, actorUserId: ctx.userId });
     return Response.json(exercise);

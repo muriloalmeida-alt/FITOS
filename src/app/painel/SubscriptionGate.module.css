@@ -1,0 +1,65 @@
+.bar {
+  display: block;
+  padding: 10px 16px;
+  background-color: #5a2a14;
+  color: #ffd9c7;
+  font-family: var(--fitos-font-family);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+}
+
+.bar strong {
+  color: var(--fitos-orange-300);
+  white-space: nowrap;
+}
+
+.blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 48px 16px 32px;
+  font-family: var(--fitos-font-family);
+  color: var(--fitos-color-on-surface);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fitos-orange-300);
+}
+
+.title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: auto;
+}

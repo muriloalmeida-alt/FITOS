@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { parse } from "csv-parse/sync";
 import { prisma } from "@/shared/db/prisma";
+import { exerciseSearchText } from "@/shared/lib/exerciseCatalog";
 
 /// Importação do catálogo curado FITOS em PT-BR (IMP-EX-002) — um arquivo
 /// estático versionado no repositório (`data/catalogo-exercicios-fitos-ptbr.csv`),
@@ -134,7 +135,8 @@ async function upsertCuratedExercise(record: CuratedExerciseRecord, client: Pris
 
   try {
     await client.exercise.create({
-      data: { ...data, tenantId: null, origin: "FITOS_CURATED", externalId: record.externalId },
+      // Só na criação: na atualização, o texto da busca já tem os nomes alternativos do catálogo.
+      data: { ...data, tenantId: null, origin: "FITOS_CURATED", externalId: record.externalId, searchText: exerciseSearchText({ name: record.name, muscle: record.muscle }) },
     });
     return "created";
   } catch (error) {

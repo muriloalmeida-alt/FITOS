@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { SPLASH_EXIT_MS, SPLASH_MIN_MS, SPLASH_REDUCED_MOTION_MIN_MS, SplashScreen } from "./SplashScreen";
 
 const replace = vi.fn();
@@ -18,7 +18,7 @@ function mockReducedMotion(reduced: boolean) {
   })) as unknown as typeof window.matchMedia;
 }
 
-describe("SplashScreen (FIT-141)", () => {
+describe("SplashScreen (FIT-141, FIT-162)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockReducedMotion(false);
@@ -29,12 +29,16 @@ describe("SplashScreen (FIT-141)", () => {
     vi.resetAllMocks();
   });
 
-  it("mostra marca, tagline e carregamento acessível", () => {
+  it("mostra a marca e a tagline sobre fundo liso, e some com um toque", () => {
     render(<SplashScreen destination="/entrar" />);
-
     expect(screen.getByRole("img", { name: "FitOS" })).toBeInTheDocument();
     expect(screen.getByText("Treino leva mais longe")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Carregando");
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Toque para continuar" }));
+      vi.advanceTimersByTime(SPLASH_EXIT_MS);
+    });
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith("/entrar");
   });
 
   it("pré-carrega o destino e só troca de rota depois do tempo mínimo, com replace", () => {

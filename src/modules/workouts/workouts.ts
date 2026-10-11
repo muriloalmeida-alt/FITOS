@@ -8,7 +8,9 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { BlockError, parseBlocks, readBlocks } from "@/shared/lib/workoutBlocks";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
+import { CARDIO_INTENSITIES, DEFAULT_CARDIO, isCardioType, type CardioIntensity } from "@/shared/lib/cardio";
 import { getStudentForTenant } from "@/modules/students/students";
 
 /// Modelo de treino (FIT-030). `tenantId` nunca é um parâmetro
@@ -92,14 +94,24 @@ function normalizeOptionalText(value: string | undefined, label: string, maxLeng
 /// único parcial em `(tenantId) WHERE isDraftBucket = true` garante no
 /// máximo um por tenant). Cria um na primeira chamada. Nunca retorna/cria
 /// um snapshot.
-async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
+export async function ensureDraftTrainingPlanForTenant(tenantId: string, client: PrismaClient): Promise<TrainingPlan> {
   const existing = await client.trainingPlan.findFirst({
     where: { tenantId, isDraftBucket: true },
   });
   if (existing) {
     return existing;
   }
-  return client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  try {
+    return await client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  } catch (error) {
+    // Dois pedidos ao mesmo tempo (ex.: duplo clique no registro
+    // retroativo): o outro criou o rascunho primeiro, vale o dele.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const created = await client.trainingPlan.findFirst({ where: { tenantId, isDraftBucket: true } });
+      if (created) return created;
+    }
+    throw error;
+  }
 }
 
 export interface CreateWorkoutInput {
@@ -150,11 +162,38 @@ export async function listWorkoutsForTenant(input: ListWorkoutsInput, client: Pr
   });
 }
 
+/// Tudo o que um item leva numa cópia (duplicar, cópia do aluno, biblioteca):
+/// prescrição, bloco e metas por métrica.
+export function itemCopyFields(item: WorkoutExercise) {
+  return {
+    exerciseId: item.exerciseId,
+    sets: item.sets,
+    reps: item.reps,
+    durationSeconds: item.durationSeconds,
+    load: item.load,
+    restSeconds: item.restSeconds,
+    notes: item.notes,
+    intensity: item.intensity,
+    blockKey: item.blockKey,
+    targetDistanceMeters: item.targetDistanceMeters,
+    targetCalories: item.targetCalories,
+  };
+}
+
+/// Blocos do treino numa cópia (só quando há).
+export function workoutBlocksCopy(workout: { blocks: Prisma.JsonValue | null }): { blocks?: Prisma.InputJsonValue } {
+  const blocks = readBlocks(workout.blocks);
+  return blocks.length ? { blocks: blocks as unknown as Prisma.InputJsonValue } : {};
+}
+
 export interface UpdateWorkoutInput {
   tenantId: string;
   workoutId: string;
   name?: string;
   suggestedDays?: string[];
+  /// Funcional e CrossFit: blocos do treino (lista completa). Itens de um
+  /// bloco removido voltam a ser séries tradicionais.
+  blocks?: unknown;
 }
 
 /// Edita um modelo de treino do tenant. `tenantId`/`trainingPlanId` nunca
@@ -165,19 +204,35 @@ export async function updateWorkout(input: UpdateWorkoutInput, client: PrismaCli
     throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
   }
 
-  const data: { name?: string; suggestedDays?: string[] } = {};
+  const data: { name?: string; suggestedDays?: string[]; blocks?: Prisma.InputJsonValue } = {};
   if (input.name !== undefined) {
     data.name = normalizeRequiredName(input.name);
   }
   if (input.suggestedDays !== undefined) {
     data.suggestedDays = input.suggestedDays;
   }
+  let blockKeys: string[] | null = null;
+  if (input.blocks !== undefined) {
+    try {
+      const blocks = parseBlocks(input.blocks);
+      data.blocks = blocks as unknown as Prisma.InputJsonValue;
+      blockKeys = blocks.map((block) => block.key);
+    } catch (error) {
+      if (error instanceof BlockError) throw new WorkoutError("VALIDACAO", error.message);
+      throw error;
+    }
+  }
 
   if (Object.keys(data).length === 0) {
     return current;
   }
 
-  return client.workout.update({ where: { id: input.workoutId }, data });
+  if (blockKeys === null) return client.workout.update({ where: { id: input.workoutId }, data });
+  const keys = blockKeys;
+  return client.$transaction(async (tx) => {
+    await tx.workoutExercise.updateMany({ where: { workoutId: input.workoutId, tenantId: input.tenantId, blockKey: { not: null, notIn: keys } }, data: { blockKey: null } });
+    return tx.workout.update({ where: { id: input.workoutId }, data });
+  });
 }
 
 export interface WorkoutLifecycleInput {
@@ -242,9 +297,10 @@ export async function addWorkoutExercise(
     throw new WorkoutError("EXERCICIO_INVALIDO", "Exercício não encontrado no catálogo visível à sua conta.");
   }
 
-  const sets = normalizeOptionalPositiveInt(input.sets, "Séries") ?? null;
-  const reps = normalizeOptionalPositiveInt(input.reps, "Repetições") ?? null;
-  const durationSeconds = normalizeOptionalPositiveInt(input.durationSeconds, "A duração") ?? null;
+  const cardio = isCardioType(exercise.type);
+  const sets = cardio ? null : (normalizeOptionalPositiveInt(input.sets, "Séries") ?? null);
+  const reps = cardio ? null : (normalizeOptionalPositiveInt(input.reps, "Repetições") ?? null);
+  const durationSeconds = normalizeOptionalPositiveInt(input.durationSeconds, "A duração") ?? (cardio ? DEFAULT_CARDIO.durationSeconds : null);
   const restSeconds = normalizeOptionalPositiveInt(input.restSeconds, "O descanso") ?? null;
   const load = normalizeOptionalText(input.load, "A carga", MAX_LOAD_LENGTH) ?? null;
   const notes = normalizeOptionalText(input.notes, "A observação", MAX_NOTES_LENGTH) ?? null;
@@ -267,6 +323,7 @@ export async function addWorkoutExercise(
       load,
       restSeconds,
       notes,
+      intensity: cardio ? DEFAULT_CARDIO.intensity : null,
     },
   });
 }
@@ -277,11 +334,11 @@ export async function addWorkoutExercise(
 export async function listWorkoutExercisesForWorkout(
   input: { tenantId: string; workoutId: string },
   client: PrismaClient = prisma
-): Promise<(WorkoutExercise & { exercise: { name: string; muscle: string | null } })[]> {
+): Promise<(WorkoutExercise & { exercise: { name: string; muscle: string | null; imageUrl: string | null; imageAlt: string | null } })[]> {
   return client.workoutExercise.findMany({
     where: { workoutId: input.workoutId, tenantId: input.tenantId },
     orderBy: { position: "asc" },
-    include: { exercise: { select: { name: true, muscle: true } } },
+    include: { exercise: { select: { name: true, muscle: true, imageUrl: true, imageAlt: true } } },
   });
 }
 
@@ -307,6 +364,16 @@ export interface UpdateWorkoutExerciseInput {
   load?: string;
   restSeconds?: number | null;
   notes?: string;
+  /// Só em item aeróbico.
+  intensity?: CardioIntensity;
+  /// Troca o exercício mantendo a prescrição (EPIC-30). Só entre exercícios
+  /// do mesmo tipo: aeróbico por aeróbico, força por força.
+  exerciseId?: string;
+  /// Funcional e CrossFit: bloco do treino (`null` = séries tradicionais)
+  /// e metas por métrica (`null` limpa).
+  blockKey?: string | null;
+  targetDistanceMeters?: number | null;
+  targetCalories?: number | null;
 }
 
 /// Edita os parâmetros de prescrição de um item. `undefined` mantém o
@@ -348,6 +415,35 @@ export async function updateWorkoutExercise(
   const notes = normalizeOptionalText(input.notes, "A observação", MAX_NOTES_LENGTH);
   if (notes !== undefined) {
     data.notes = notes;
+  }
+  if (input.intensity !== undefined) {
+    if (!CARDIO_INTENSITIES.includes(input.intensity)) {
+      throw new WorkoutError("VALIDACAO", "Intensidade inválida.");
+    }
+    data.intensity = input.intensity;
+  }
+  if (input.exerciseId !== undefined && input.exerciseId !== current.exerciseId) {
+    const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId: input.exerciseId }, client);
+    if (!exercise || exercise.status !== "ATIVO") {
+      throw new WorkoutError("VALIDACAO", "Exercício não encontrado no catálogo.");
+    }
+    if (isCardioType(exercise.type) !== (current.intensity !== null)) {
+      throw new WorkoutError("VALIDACAO", "Troque aeróbico por aeróbico e musculação por musculação.");
+    }
+    data.exercise = { connect: { id: exercise.id } };
+  }
+  if (input.blockKey !== undefined) {
+    if (input.blockKey !== null) {
+      const workout = await client.workout.findFirst({ where: { id: input.workoutId, tenantId: input.tenantId }, select: { blocks: true } });
+      if (!readBlocks(workout?.blocks).some((block) => block.key === input.blockKey)) throw new WorkoutError("VALIDACAO", "Bloco não encontrado neste treino.");
+    }
+    data.blockKey = input.blockKey;
+  }
+  if (input.targetDistanceMeters !== undefined) {
+    data.targetDistanceMeters = input.targetDistanceMeters === null ? null : normalizeOptionalPositiveInt(input.targetDistanceMeters, "A distância");
+  }
+  if (input.targetCalories !== undefined) {
+    data.targetCalories = input.targetCalories === null ? null : normalizeOptionalPositiveInt(input.targetCalories, "As calorias");
   }
 
   if (Object.keys(data).length === 0) {
@@ -441,6 +537,7 @@ async function cloneWorkoutRows(
       name: input.nameOverride ?? source.name,
       position: input.position,
       suggestedDays: source.suggestedDays,
+      ...workoutBlocksCopy(source),
     },
   });
 
@@ -449,14 +546,8 @@ async function cloneWorkoutRows(
       data: {
         tenantId: input.tenantId,
         workoutId: clone.id,
-        exerciseId: item.exerciseId,
         position: index,
-        sets: item.sets,
-        reps: item.reps,
-        durationSeconds: item.durationSeconds,
-        load: item.load,
-        restSeconds: item.restSeconds,
-        notes: item.notes,
+        ...itemCopyFields(item),
       },
     });
   }
@@ -730,8 +821,10 @@ export async function reorderWorkoutsInPlan(
   input: { tenantId: string; trainingPlanId: string; orderedWorkoutIds: string[] },
   client: PrismaClient = prisma
 ): Promise<void> {
+  // FIT-146: a tela só mostra (e reordena) os treinos ativos do programa;
+  // arquivados não participam da ordem.
   const current = await client.workout.findMany({
-    where: { trainingPlanId: input.trainingPlanId, tenantId: input.tenantId },
+    where: { trainingPlanId: input.trainingPlanId, tenantId: input.tenantId, status: "ATIVO" },
     select: { id: true },
   });
   const currentIds = new Set(current.map((item) => item.id));
@@ -1065,4 +1158,277 @@ export async function getWeeklyRhythmForStudent(
   }
 
   return { completedDays: dayFlags.filter(Boolean).length, targetDays, dayFlags };
+}
+
+// ---------------------------------------------------------------------------
+// FIT-146 (EPIC-19, Momento 1) — construção de treino sem formulário.
+// ---------------------------------------------------------------------------
+
+/// Prescrição padrão de um exercício adicionado pela biblioteca (decisão de
+/// Murilo, 04/10/2026): 3 séries × 12 repetições, 60 s de descanso, carga
+/// livre. O personal ajusta depois com +/−.
+export const DEFAULT_PRESCRIPTION = { sets: 3, reps: 12, restSeconds: 60 } as const;
+
+export type Prescription = { sets: number; reps: number; restSeconds: number };
+export const PRESCRIPTION_LIMITS = { sets: [1, 10], reps: [1, 50], restSeconds: [0, 300] } as const;
+
+/// Prescrição padrão do espaço (Configurações, EPIC-36): a que o personal
+/// escolheu, ou a do FitOS quando não escolheu.
+export async function getTenantPrescription(tenantId: string, client: PrismaClient = prisma): Promise<Prescription> {
+  const tenant = await client.tenant.findUnique({ where: { id: tenantId }, select: { defaultSets: true, defaultReps: true, defaultRestSeconds: true } });
+  return {
+    sets: tenant?.defaultSets ?? DEFAULT_PRESCRIPTION.sets,
+    reps: tenant?.defaultReps ?? DEFAULT_PRESCRIPTION.reps,
+    restSeconds: tenant?.defaultRestSeconds ?? DEFAULT_PRESCRIPTION.restSeconds,
+  };
+}
+
+export async function setTenantPrescription(input: { tenantId: string } & Prescription, client: PrismaClient = prisma): Promise<Prescription> {
+  for (const key of ["sets", "reps", "restSeconds"] as const) {
+    const [min, max] = PRESCRIPTION_LIMITS[key];
+    const value = input[key];
+    if (!Number.isInteger(value) || value < min || value > max) {
+      throw new WorkoutError("VALIDACAO", key === "sets" ? `Séries de ${min} a ${max}.` : key === "reps" ? `Repetições de ${min} a ${max}.` : `Descanso de ${min} a ${max} s.`);
+    }
+  }
+  await client.tenant.update({ where: { id: input.tenantId }, data: { defaultSets: input.sets, defaultReps: input.reps, defaultRestSeconds: input.restSeconds } });
+  return { sets: input.sets, reps: input.reps, restSeconds: input.restSeconds };
+}
+
+const MAX_BATCH_EXERCISES = 30;
+
+/// BK-01: adiciona vários exercícios de uma vez ao fim do treino, todos com
+/// a prescrição padrão do espaço (EPIC-36), numa única transação (ou entram todos, ou nenhum).
+/// Cada exercício precisa estar no catálogo visível ao tenant — mesma regra
+/// de `addWorkoutExercise`. Repetir um exercício na lista é permitido (o
+/// mesmo movimento pode aparecer duas vezes num treino).
+export async function addWorkoutExercisesBatch(
+  input: { tenantId: string; workoutId: string; exerciseIds: string[] },
+  client: PrismaClient = prisma
+): Promise<WorkoutExercise[]> {
+  if (input.exerciseIds.length === 0) {
+    throw new WorkoutError("VALIDACAO", "Escolha ao menos um exercício.");
+  }
+  if (input.exerciseIds.length > MAX_BATCH_EXERCISES) {
+    throw new WorkoutError("VALIDACAO", `Adicione no máximo ${MAX_BATCH_EXERCISES} exercícios por vez.`);
+  }
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+  const prescription = await getTenantPrescription(input.tenantId, client);
+  const cardioIds = new Set<string>();
+  for (const exerciseId of new Set(input.exerciseIds)) {
+    const exercise = await getCatalogExerciseForTenant({ tenantId: input.tenantId, exerciseId }, client);
+    if (!exercise) {
+      throw new WorkoutError("EXERCICIO_INVALIDO", "Exercício não encontrado no catálogo visível à sua conta.");
+    }
+    if (isCardioType(exercise.type)) cardioIds.add(exerciseId);
+  }
+
+  return client.$transaction(async (tx) => {
+    const maxPosition = await tx.workoutExercise.aggregate({
+      where: { workoutId: input.workoutId, tenantId: input.tenantId },
+      _max: { position: true },
+    });
+    let position = (maxPosition._max.position ?? -1) + 1;
+    const created: WorkoutExercise[] = [];
+    for (const exerciseId of input.exerciseIds) {
+      created.push(
+        await tx.workoutExercise.create({
+          data: {
+            tenantId: input.tenantId,
+            workoutId: input.workoutId,
+            exerciseId,
+            position,
+            ...(cardioIds.has(exerciseId)
+              ? { durationSeconds: DEFAULT_CARDIO.durationSeconds, intensity: DEFAULT_CARDIO.intensity }
+              : { sets: prescription.sets, reps: prescription.reps, restSeconds: prescription.restSeconds }),
+          },
+        })
+      );
+      position += 1;
+    }
+    return created;
+  });
+}
+
+export interface WorkoutSummary {
+  id: string;
+  name: string;
+  status: "ATIVO" | "ARQUIVADO";
+  suggestedDays: string[];
+  exerciseCount: number;
+  trainingPlanId: string;
+  /// `null` quando o treino está em "Meus modelos" (plano rascunho).
+  trainingPlanName: string | null;
+  thumbnails: { imageUrl: string; imageAlt: string | null }[];
+}
+
+/// Resumo dos treinos do tenant para a lista "Seus treinos" (FIT-146):
+/// contagem de exercícios, dias sugeridos, programa em que está e as fotos
+/// dos três primeiros exercícios. Nunca inclui cópias atribuídas
+/// (snapshots). `status` filtra ativos (padrão) ou arquivados.
+export async function listWorkoutSummariesForTenant(
+  input: { tenantId: string; status?: "ATIVO" | "ARQUIVADO" },
+  client: PrismaClient = prisma
+): Promise<WorkoutSummary[]> {
+  const workouts = await client.workout.findMany({
+    where: { tenantId: input.tenantId, status: input.status ?? "ATIVO", trainingPlan: { isSnapshot: false } },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    include: {
+      trainingPlan: { select: { name: true, isDraftBucket: true } },
+      _count: { select: { workoutExercises: true } },
+      workoutExercises: {
+        orderBy: { position: "asc" },
+        take: 3,
+        select: { exercise: { select: { imageUrl: true, imageAlt: true } } },
+      },
+    },
+  });
+  return workouts.map((workout) => ({
+    id: workout.id,
+    name: workout.name,
+    status: workout.status === "ARQUIVADO" ? "ARQUIVADO" : "ATIVO",
+    suggestedDays: workout.suggestedDays,
+    exerciseCount: workout._count.workoutExercises,
+    trainingPlanId: workout.trainingPlanId,
+    trainingPlanName: workout.trainingPlan.isDraftBucket ? null : workout.trainingPlan.name,
+    thumbnails: workout.workoutExercises
+      .filter((item) => item.exercise.imageUrl)
+      .map((item) => ({ imageUrl: item.exercise.imageUrl!, imageAlt: item.exercise.imageAlt })),
+  }));
+}
+
+export interface TrainingPlanSummary {
+  id: string;
+  name: string;
+  status: TrainingPlan["status"];
+  durationWeeks: number | null;
+  workoutCount: number;
+  /// União dos dias sugeridos dos treinos do programa (faixa da semana).
+  days: string[];
+}
+
+/// Resumo dos programas do tenant (FIT-146). Nunca inclui o plano rascunho
+/// nem snapshots de atribuição.
+export async function listTrainingPlanSummariesForTenant(
+  input: { tenantId: string; status?: TrainingPlan["status"] },
+  client: PrismaClient = prisma
+): Promise<TrainingPlanSummary[]> {
+  const plans = await client.trainingPlan.findMany({
+    where: { tenantId: input.tenantId, status: input.status ?? "ATIVO", isSnapshot: false, isDraftBucket: false },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    include: { workouts: { where: { status: "ATIVO" }, select: { suggestedDays: true } } },
+  });
+  return plans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    status: plan.status,
+    durationWeeks: plan.durationWeeks,
+    workoutCount: plan.workouts.length,
+    days: [...new Set(plan.workouts.flatMap((workout) => workout.suggestedDays))],
+  }));
+}
+
+/// Coloca um treino num programa (FIT-146). Treino de "Meus modelos" é
+/// **movido** (comportamento atual); treino que já está em outro programa
+/// é **copiado**, para nunca sumir do programa de origem sem aviso. Retorna
+/// o treino que ficou no programa e se foi cópia.
+export async function addWorkoutToPlan(
+  input: { tenantId: string; workoutId: string; targetTrainingPlanId: string },
+  client: PrismaClient = prisma
+): Promise<{ workout: Workout; copied: boolean }> {
+  const workout = await getWorkoutForTenant({ tenantId: input.tenantId, workoutId: input.workoutId }, client);
+  if (!workout) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
+  }
+  const target = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.targetTrainingPlanId }, client);
+  if (!target || target.isDraftBucket) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano de destino não encontrado.");
+  }
+  if (workout.trainingPlanId === target.id) {
+    return { workout, copied: false };
+  }
+  const source = await client.trainingPlan.findFirstOrThrow({ where: { id: workout.trainingPlanId, tenantId: input.tenantId } });
+  if (source.isDraftBucket) {
+    const moved = await moveWorkoutToPlan(input, client);
+    return { workout: moved, copied: false };
+  }
+  const copy = await cloneWorkoutWithItems(
+    { tenantId: input.tenantId, sourceWorkoutId: workout.id, targetTrainingPlanId: target.id },
+    client
+  );
+  return { workout: copy, copied: true };
+}
+
+export interface AssignableStudent {
+  id: string;
+  displayName: string;
+  /// Programa ativo atual (será substituído ao atribuir outro).
+  activePlanName: string | null;
+}
+
+/// Alunos ativos que podem receber um programa (FIT-146, sheet "Para
+/// quem?"), com o programa ativo atual de cada um.
+export async function listAssignableStudents(
+  input: { tenantId: string },
+  client: PrismaClient = prisma
+): Promise<AssignableStudent[]> {
+  const students = await client.student.findMany({
+    where: { tenantId: input.tenantId, status: "ATIVO" },
+    orderBy: [{ displayName: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      displayName: true,
+      planAssignments: { where: { active: true }, take: 1, select: { trainingPlan: { select: { name: true } } } },
+    },
+  });
+  return students.map((student) => ({
+    id: student.id,
+    displayName: student.displayName,
+    activePlanName: student.planAssignments[0]?.trainingPlan.name ?? null,
+  }));
+}
+
+const MAX_BATCH_ASSIGNMENTS = 50;
+
+/// BK-03: atribui o mesmo programa a vários alunos. Valida todos antes de
+/// atribuir qualquer um (aluno inexistente, de outro tenant ou inativo
+/// recusa o lote inteiro); depois cada atribuição segue a regra de
+/// `assignTrainingPlanToStudent` (cópia imutável por aluno, ADR-005;
+/// programa ativo anterior encerrado).
+export async function assignTrainingPlanToStudents(
+  input: { tenantId: string; actorUserId: string; trainingPlanId: string; studentIds: string[] },
+  client: PrismaClient = prisma
+): Promise<PlanAssignment[]> {
+  const studentIds = [...new Set(input.studentIds)];
+  if (studentIds.length === 0) {
+    throw new WorkoutError("VALIDACAO", "Escolha ao menos um aluno.");
+  }
+  if (studentIds.length > MAX_BATCH_ASSIGNMENTS) {
+    throw new WorkoutError("VALIDACAO", `Atribua a no máximo ${MAX_BATCH_ASSIGNMENTS} alunos por vez.`);
+  }
+  const plan = await getTrainingPlanForTenant({ tenantId: input.tenantId, trainingPlanId: input.trainingPlanId }, client);
+  if (!plan || plan.isDraftBucket) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Plano não encontrado.");
+  }
+  const students = await client.student.findMany({ where: { tenantId: input.tenantId, id: { in: studentIds } } });
+  if (students.length !== studentIds.length) {
+    throw new WorkoutError("NAO_ENCONTRADO", "Aluno não encontrado.");
+  }
+  if (students.some((student) => student.status !== "ATIVO")) {
+    throw new WorkoutError("ESTADO_INVALIDO", "Não é possível atribuir um plano a um aluno inativo ou com vínculo encerrado.");
+  }
+
+  const assignments: PlanAssignment[] = [];
+  for (const studentId of studentIds) {
+    assignments.push(
+      await assignTrainingPlanToStudent(
+        { tenantId: input.tenantId, actorUserId: input.actorUserId, studentId, trainingPlanId: plan.id },
+        client
+      )
+    );
+  }
+  return assignments;
 }

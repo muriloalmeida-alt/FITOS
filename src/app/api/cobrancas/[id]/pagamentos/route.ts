@@ -1,5 +1,6 @@
 import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
 import { StudentChargeError, registerPayment } from "@/modules/student-finance/charges";
+import { dropExternalPayment } from "@/modules/student-finance/paymentAccount";
 
 /// Registra o pagamento de uma cobrança (FIT-051) — sempre autorado pelo
 /// personal autenticado (`ctx.userId`), nunca pelo próprio aluno.
@@ -27,6 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       paidAt,
       method,
     });
+    await dropExternalPayment({ tenantId: ctx.tenantId, chargeId: id });
     return Response.json(charge, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);

@@ -1,0 +1,131 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: rgba(255, 138, 61, 0.12);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.current {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--fitos-orange-300);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.medalTitle {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.line {
+  margin: 0;
+  font-size: 15px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.cap {
+  margin: 12px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bands,
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bands li,
+.gallery li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.bands li > span,
+.gallery li > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.badge {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #0b0f14;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.badgeLg {
+  width: 64px;
+  height: 64px;
+  font-size: 26px;
+}
+
+.bronze {
+  background: linear-gradient(145deg, #e3a06b, #a8642f);
+}
+
+.prata {
+  background: linear-gradient(145deg, #eef1f5, #9aa3ad);
+}
+
+.ouro {
+  background: linear-gradient(145deg, #ffe08a, #d9a21b);
+}
+
+.platina {
+  background: linear-gradient(145deg, #d8f3ff, #7fb6d6);
+}
+
+.none {
+  border: 2px dashed rgba(255, 255, 255, 0.24);
+  color: var(--fitos-color-text-muted);
+}

@@ -1,0 +1,43 @@
+.next {
+  margin-top: 18px;
+}
+
+.list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 1024px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 18px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  text-decoration: none;
+}
+
+.name {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.meta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.strip {
+  margin-top: 10px;
+  max-width: 320px;
+}

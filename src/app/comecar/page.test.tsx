@@ -1,45 +1,48 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import CriarContaPage from "./page";
+import { ToastProvider } from "@/shared/ui";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+vi.mock("@/modules/identity/auth-client", () => ({ signUp: { email: vi.fn() } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/modules/billing/plans", () => ({
+  listActivePlansForAudience: async (audience: string) =>
+    audience === "PERSONAL"
+      ? [
+          { id: "p20", name: "Personal 20", priceCents: 4990, studentLimit: 20, trialDays: 30 },
+          { id: "p50", name: "Personal 50", priceCents: 6990, studentLimit: 50, trialDays: 30 },
+        ]
+      : [{ id: "livre", name: "FitOS Livre", priceCents: 1990, studentLimit: null, trialDays: 30 }],
 }));
 
-function makeSearchParams(params: Record<string, string> = {}) {
-  return Promise.resolve(params);
+async function renderPage(params: Record<string, string> = {}) {
+  const { default: Page } = await import("./page");
+  render(<ToastProvider>{await Page({ searchParams: Promise.resolve(params) })}</ToastProvider>);
 }
 
-describe("CriarContaPage (FIT-112)", () => {
-  it("sem ?modo=: mostra a etapa 1 (os três caminhos), nunca o formulário de personal direto", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams() }));
-
-    expect(screen.getByText("Passo 1 de 2")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sou personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tenho convite do meu personal" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "FitOS Livre" })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Nome completo")).not.toBeInTheDocument();
+describe("Começar (EPIC-33)", () => {
+  it("o que você quer fazer: três caminhos pelo resultado", async () => {
+    await renderPage();
+    expect(screen.getByRole("heading", { level: 1, name: "O que você quer fazer?" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Dar treino aos meus alunos/ })).toHaveAttribute("href", "/comecar?caminho=personal");
+    expect(screen.getByRole("link", { name: /Treinar com meu personal/ })).toHaveAttribute("href", "/comecar?caminho=convite");
+    expect(screen.getByRole("link", { name: /Treinar por conta/ })).toHaveAttribute("href", "/comecar?caminho=livre");
   });
 
-  it("?modo= com valor não reconhecido: volta para a etapa 1, nunca cai num formulário por engano", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "qualquer-coisa" }) }));
-
-    expect(screen.getByText("Passo 1 de 2")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Nome completo")).not.toBeInTheDocument();
+  it("convite aceita código ou link e oferece Já tenho conta", async () => {
+    await renderPage({ caminho: "convite" });
+    expect(screen.getByLabelText("Código ou link do convite")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Já tenho conta" })).toHaveAttribute("href", "/entrar");
   });
 
-  it("?modo=personal: mostra a etapa 2 com o formulário de personal", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "personal" }) }));
-
-    expect(screen.getByText("Passo 2 de 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
-    expect(screen.getByText(/destinado a personal trainers/)).toBeInTheDocument();
+  it("personal começa por quantos alunos, com o plano de cada faixa", async () => {
+    await renderPage({ caminho: "personal" });
+    expect(screen.getByRole("heading", { name: "Quantos alunos hoje?" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /21 a 50 alunos.*Personal 50/ })).toBeInTheDocument();
   });
 
-  it("?modo=individual: mostra a etapa 2 com o formulário do FitOS Livre", async () => {
-    render(await CriarContaPage({ searchParams: makeSearchParams({ modo: "individual" }) }));
-
-    expect(screen.getByText("Passo 2 de 2")).toBeInTheDocument();
-    expect(screen.getByText(/Cadastro do FitOS Livre/)).toBeInTheDocument();
+  it("?modo=individual antigo leva ao Livre, que começa pela pergunta", async () => {
+    await renderPage({ modo: "individual" });
+    expect(screen.getByRole("heading", { name: "O que você quer?" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Seu nome")).not.toBeInTheDocument();
   });
 });

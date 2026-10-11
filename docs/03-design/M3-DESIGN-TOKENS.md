@@ -206,3 +206,21 @@ Os ajustes mobile aprovados em 29/09/2026 (`AjustesPainel`, `AjustesTelas`, `Aju
 | `--fitos-color-error` | `#FFB4AB` | Erro/ação destrutiva sobre fundo escuro. |
 
 Regras: seções integradas ao fundo (espaço, hierarquia e divisor, sem caixas); campos com rótulo persistente e linha (foco = linha laranja 2 px); ação destrutiva usa `Button variant="danger"`, nunca o laranja positivo; barra inferior azul-noturno (`--fitos-color-chrome`) com ativo em `--fitos-orange-500`.
+
+## Tema escuro liso (FIT-171, EPIC-23, 04/10/2026)
+
+Decisão de Murilo: **sempre cor escura e lisa**. O tema editorial escuro acima deixa de ser só mobile e passa a valer em **todas as larguras** e em qualquer `prefers-color-scheme` (bloco `:root` final de `tokens.css`, sem `@media`). A camada `fitos-bg-mobile-suave.webp` foi **removida** (arquivo, `globals.css` e `WorkoutRunner.module.css`): o fundo é `#07090D` liso.
+
+Tokens novos (superfícies sólidas para cartões, sheets e estados):
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--fitos-color-surface-card` | `#11161E` | Cartões, linhas de treino, opções em cartão. |
+| `--fitos-color-surface-raised` | `#1B222D` | Stepper, botão secundário, faixa de dias, campos dentro de sheet. |
+| `--fitos-color-surface-sheet` | `#11161E` | Fundo da `Sheet`. |
+| `--fitos-color-scrim` | preto 62% | Fundo atrás de sheets e diálogos. |
+| `--fitos-color-success` / `-container` | `#82D5C9` / teal 14% | Confirmações ("Salvo automaticamente", dica). |
+| `--fitos-color-error-container` | vermelho 14% | Avisos de erro. |
+| `--fitos-color-danger-container` / `on-` | `#3A1714` / `#FFD0CA` | Botão de ação destrutiva. |
+| `--fitos-color-text-muted` | `#9AA6B3` | Texto de apoio (≈ 7,6:1 sobre `#07090D`). |
+| `--fitos-color-chrome` | `#0D1420` | Cabeçalho, rail e barra inferior no mesmo tema. |
