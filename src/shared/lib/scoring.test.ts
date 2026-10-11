@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balancedTenths, cardioPointsTenths, doneFor, formatPoints, kindFor, strengthPointsTenths } from "./scoring";
+import { balancedTenths, blockPointsTenths, blockSecondsDone, cardioPointsTenths, doneFor, formatPoints, isIsometric, isometricPointsTenths, kindFor, strengthPointsTenths } from "./scoring";
 
 const KG = 1000;
 /// Volume (gramas·repetição) de séries iguais.
@@ -66,5 +66,36 @@ describe("treino: total e equilibrado (PDF 3, seção 04)", () => {
     expect(balancedTenths(420, 0)).toBe(0);
     expect(formatPoints(105)).toBe("10,5");
     expect(formatPoints(420)).toBe("42");
+  });
+});
+
+describe("regra 2: isometria e blocos (Funcional)", () => {
+  it("isometria: só tempo, sem repetições nem carga; 1 ponto por 30 s com teto de 20", () => {
+    expect(isIsometric(false, [{ reps: null, loadGrams: null, durationSeconds: 60 }])).toBe(true);
+    expect(isIsometric(false, [{ reps: 10, loadGrams: null, durationSeconds: null }])).toBe(false);
+    expect(isIsometric(true, [{ reps: null, loadGrams: null, durationSeconds: 600 }])).toBe(false);
+    expect(isometricPointsTenths(180)).toBe(60);
+    expect(isometricPointsTenths(45)).toBe(15);
+    expect(isometricPointsTenths(3600)).toBe(200);
+  });
+
+  it("bloco: 1 ponto por minuto, proporcional, teto de 30", () => {
+    expect(blockPointsTenths(580)).toBe(96);
+    expect(blockPointsTenths(600)).toBe(100);
+    expect(blockPointsTenths(60 * 60)).toBe(300);
+    expect(blockPointsTenths(0)).toBe(0);
+  });
+
+  it("minutos feitos por formato", () => {
+    const base = { windowSeconds: null, intervals: null, intervalSeconds: null, timeCapSeconds: null };
+    const none = { outcome: null, roundsCompleted: null, partialReps: null, intervalsCompleted: null, elapsedSeconds: null };
+    expect(blockSecondsDone({ ...base, kind: "EMOM", intervals: 10, intervalSeconds: 60 }, { ...none, intervalsCompleted: 8 }, 0)).toBe(480);
+    expect(blockSecondsDone({ ...base, kind: "AMRAP", windowSeconds: 720 }, { ...none, roundsCompleted: 5 }, 0)).toBe(720);
+    expect(blockSecondsDone({ ...base, kind: "AMRAP", windowSeconds: 720 }, { ...none, roundsCompleted: 5 }, 400)).toBe(400);
+    expect(blockSecondsDone({ ...base, kind: "AMRAP", windowSeconds: 720 }, none, 720)).toBe(0);
+    expect(blockSecondsDone({ ...base, kind: "FOR_TIME", timeCapSeconds: 900 }, { ...none, outcome: "CONCLUIDO", elapsedSeconds: 580 }, 0)).toBe(580);
+    expect(blockSecondsDone({ ...base, kind: "FOR_TIME", timeCapSeconds: 900 }, { ...none, outcome: "LIMITE_ATINGIDO" }, 950)).toBe(900);
+    expect(blockSecondsDone({ ...base, kind: "FOR_TIME", timeCapSeconds: 900 }, { ...none, outcome: "PARCIAL" }, 0)).toBe(0);
+    expect(blockSecondsDone({ ...base, kind: "CIRCUITO" }, { ...none, roundsCompleted: 3 }, 840)).toBe(840);
   });
 });
