@@ -8,6 +8,7 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { BlockError, parseBlocks, readBlocks } from "@/shared/lib/workoutBlocks";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
 import { CARDIO_INTENSITIES, DEFAULT_CARDIO, isCardioType, type CardioIntensity } from "@/shared/lib/cardio";
 import { getStudentForTenant } from "@/modules/students/students";
@@ -100,7 +101,17 @@ export async function ensureDraftTrainingPlanForTenant(tenantId: string, client:
   if (existing) {
     return existing;
   }
-  return client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  try {
+    return await client.trainingPlan.create({ data: { tenantId, name: DRAFT_TRAINING_PLAN_NAME, isDraftBucket: true } });
+  } catch (error) {
+    // Dois pedidos ao mesmo tempo (ex.: duplo clique no registro
+    // retroativo): o outro criou o rascunho primeiro, vale o dele.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const created = await client.trainingPlan.findFirst({ where: { tenantId, isDraftBucket: true } });
+      if (created) return created;
+    }
+    throw error;
+  }
 }
 
 export interface CreateWorkoutInput {
@@ -151,11 +162,38 @@ export async function listWorkoutsForTenant(input: ListWorkoutsInput, client: Pr
   });
 }
 
+/// Tudo o que um item leva numa cópia (duplicar, cópia do aluno, biblioteca):
+/// prescrição, bloco e metas por métrica.
+export function itemCopyFields(item: WorkoutExercise) {
+  return {
+    exerciseId: item.exerciseId,
+    sets: item.sets,
+    reps: item.reps,
+    durationSeconds: item.durationSeconds,
+    load: item.load,
+    restSeconds: item.restSeconds,
+    notes: item.notes,
+    intensity: item.intensity,
+    blockKey: item.blockKey,
+    targetDistanceMeters: item.targetDistanceMeters,
+    targetCalories: item.targetCalories,
+  };
+}
+
+/// Blocos do treino numa cópia (só quando há).
+export function workoutBlocksCopy(workout: { blocks: Prisma.JsonValue | null }): { blocks?: Prisma.InputJsonValue } {
+  const blocks = readBlocks(workout.blocks);
+  return blocks.length ? { blocks: blocks as unknown as Prisma.InputJsonValue } : {};
+}
+
 export interface UpdateWorkoutInput {
   tenantId: string;
   workoutId: string;
   name?: string;
   suggestedDays?: string[];
+  /// Funcional e CrossFit: blocos do treino (lista completa). Itens de um
+  /// bloco removido voltam a ser séries tradicionais.
+  blocks?: unknown;
 }
 
 /// Edita um modelo de treino do tenant. `tenantId`/`trainingPlanId` nunca
@@ -166,19 +204,35 @@ export async function updateWorkout(input: UpdateWorkoutInput, client: PrismaCli
     throw new WorkoutError("NAO_ENCONTRADO", "Modelo de treino não encontrado.");
   }
 
-  const data: { name?: string; suggestedDays?: string[] } = {};
+  const data: { name?: string; suggestedDays?: string[]; blocks?: Prisma.InputJsonValue } = {};
   if (input.name !== undefined) {
     data.name = normalizeRequiredName(input.name);
   }
   if (input.suggestedDays !== undefined) {
     data.suggestedDays = input.suggestedDays;
   }
+  let blockKeys: string[] | null = null;
+  if (input.blocks !== undefined) {
+    try {
+      const blocks = parseBlocks(input.blocks);
+      data.blocks = blocks as unknown as Prisma.InputJsonValue;
+      blockKeys = blocks.map((block) => block.key);
+    } catch (error) {
+      if (error instanceof BlockError) throw new WorkoutError("VALIDACAO", error.message);
+      throw error;
+    }
+  }
 
   if (Object.keys(data).length === 0) {
     return current;
   }
 
-  return client.workout.update({ where: { id: input.workoutId }, data });
+  if (blockKeys === null) return client.workout.update({ where: { id: input.workoutId }, data });
+  const keys = blockKeys;
+  return client.$transaction(async (tx) => {
+    await tx.workoutExercise.updateMany({ where: { workoutId: input.workoutId, tenantId: input.tenantId, blockKey: { not: null, notIn: keys } }, data: { blockKey: null } });
+    return tx.workout.update({ where: { id: input.workoutId }, data });
+  });
 }
 
 export interface WorkoutLifecycleInput {
@@ -315,6 +369,11 @@ export interface UpdateWorkoutExerciseInput {
   /// Troca o exercício mantendo a prescrição (EPIC-30). Só entre exercícios
   /// do mesmo tipo: aeróbico por aeróbico, força por força.
   exerciseId?: string;
+  /// Funcional e CrossFit: bloco do treino (`null` = séries tradicionais)
+  /// e metas por métrica (`null` limpa).
+  blockKey?: string | null;
+  targetDistanceMeters?: number | null;
+  targetCalories?: number | null;
 }
 
 /// Edita os parâmetros de prescrição de um item. `undefined` mantém o
@@ -372,6 +431,19 @@ export async function updateWorkoutExercise(
       throw new WorkoutError("VALIDACAO", "Troque aeróbico por aeróbico e musculação por musculação.");
     }
     data.exercise = { connect: { id: exercise.id } };
+  }
+  if (input.blockKey !== undefined) {
+    if (input.blockKey !== null) {
+      const workout = await client.workout.findFirst({ where: { id: input.workoutId, tenantId: input.tenantId }, select: { blocks: true } });
+      if (!readBlocks(workout?.blocks).some((block) => block.key === input.blockKey)) throw new WorkoutError("VALIDACAO", "Bloco não encontrado neste treino.");
+    }
+    data.blockKey = input.blockKey;
+  }
+  if (input.targetDistanceMeters !== undefined) {
+    data.targetDistanceMeters = input.targetDistanceMeters === null ? null : normalizeOptionalPositiveInt(input.targetDistanceMeters, "A distância");
+  }
+  if (input.targetCalories !== undefined) {
+    data.targetCalories = input.targetCalories === null ? null : normalizeOptionalPositiveInt(input.targetCalories, "As calorias");
   }
 
   if (Object.keys(data).length === 0) {
@@ -465,6 +537,7 @@ async function cloneWorkoutRows(
       name: input.nameOverride ?? source.name,
       position: input.position,
       suggestedDays: source.suggestedDays,
+      ...workoutBlocksCopy(source),
     },
   });
 
@@ -473,15 +546,8 @@ async function cloneWorkoutRows(
       data: {
         tenantId: input.tenantId,
         workoutId: clone.id,
-        exerciseId: item.exerciseId,
         position: index,
-        sets: item.sets,
-        reps: item.reps,
-        durationSeconds: item.durationSeconds,
-        load: item.load,
-        restSeconds: item.restSeconds,
-        notes: item.notes,
-        intensity: item.intensity,
+        ...itemCopyFields(item),
       },
     });
   }

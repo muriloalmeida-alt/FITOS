@@ -14,6 +14,7 @@ export interface PlanItem {
   restSeconds: number | null;
   notes: string | null;
   intensity?: CardioIntensity | null;
+  blockKey?: string | null;
   exercise: { name: string; instructions: string | null; imageUrl: string | null; imageAlt: string | null };
 }
 
@@ -50,6 +51,7 @@ export function toLiveItems(
       restSeconds: item.restSeconds,
       notes: item.notes,
       intensity: item.intensity ?? null,
+      blockKey: item.blockKey ?? null,
       doneSets: sets
         .filter((set) => set.workoutExerciseId === item.id)
         .sort((a, b) => a.setNumber - b.setNumber)

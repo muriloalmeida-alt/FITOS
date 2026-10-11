@@ -1,0 +1,101 @@
+.prepare {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cap {
+  margin: 26px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.service,
+.openButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.link {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.failure {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+}
+
+.run {
+  position: relative;
+}
+
+.runButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.service:focus-visible,
+.openButton:focus-visible,
+.link:focus-visible,
+.runButton:focus-visible {
+  outline: 3px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}

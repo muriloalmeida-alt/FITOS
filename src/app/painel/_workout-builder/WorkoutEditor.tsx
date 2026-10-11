@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, CardioIcon, ChipGroup, ExerciseThumbnail, FormAlert, Sheet, useToast } from "@/shared/ui";
 import { WEEKDAYS, formatDays } from "@/shared/lib/weekdays";
+import { blockSummary, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
+import { BlockSheet } from "./BlockSheet";
 import { ExerciseLibrary } from "./ExerciseLibrary";
 import { WorkoutItemCard, type ItemPatch } from "./WorkoutItemCard";
 import { requestJson as request } from "./apiClient";
@@ -27,6 +29,8 @@ interface WorkoutEditorProps {
   onDoneHref?: (workoutId: string) => Promise<string | null>;
   /// Prescrição com que os exercícios entram (padrão do espaço, EPIC-36).
   prescription?: { sets: number; reps: number; restSeconds: number };
+  /// Funcional e CrossFit (`FEATURE_FUNCIONAL`): blocos e metas por métrica.
+  blocksEnabled?: boolean;
 }
 
 const DEFAULT_NAME = "Novo treino";
@@ -45,13 +49,16 @@ function toServerPatch(patch: ItemPatch): Record<string, unknown> {
 /// (vários de uma vez) e prescrição com +/−. Tudo salva sozinho; o treino
 /// novo só é criado no primeiro gesto do usuário (nunca um treino vazio
 /// fantasma por abrir a tela).
-export function WorkoutEditor({ api, initial, library, createExerciseHref, renderDone, renderActions, onDoneHref, prescription = { sets: 3, reps: 12, restSeconds: 60 } }: WorkoutEditorProps) {
+export function WorkoutEditor({ api, initial, library, createExerciseHref, renderDone, renderActions, onDoneHref, prescription = { sets: 3, reps: 12, restSeconds: 60 }, blocksEnabled = false }: WorkoutEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const [workoutId, setWorkoutId] = useState<string | null>(initial?.id ?? null);
   const [name, setName] = useState(initial?.name ?? "");
   const [days, setDays] = useState<string[]>(initial?.suggestedDays ?? []);
   const [items, setItems] = useState<EditorItem[]>(initial?.items ?? []);
+  const [blocks, setBlocks] = useState<WorkoutBlock[]>(initial?.blocks ?? []);
+  /// Bloco aberto na sheet: `null` fechada, "novo" para criar.
+  const [editingBlock, setEditingBlock] = useState<WorkoutBlock | "novo" | null>(null);
   const [status] = useState<"ATIVO" | "ARQUIVADO">(initial?.status ?? "ATIVO");
   const [saveState, setSaveState] = useState<SaveState>(initial ? "saved" : "idle");
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +69,8 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
   const [swapItem, setSwapItem] = useState<EditorItem | null>(null);
   const [swapOptions, setSwapOptions] = useState<{ id: string; name: string; muscle: string | null; imageUrl: string | null; imageAlt: string | null }[] | null>(null);
   const creating = useRef<Promise<string> | null>(null);
+  /// Blocos salvam na hora; os itens esperam, para o bloco já existir no servidor.
+  const blocksSave = useRef<Promise<unknown>>(Promise.resolve());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const pending = useRef(new Map<string, Record<string, unknown>>());
   const titleRef = useRef<HTMLInputElement>(null);
@@ -107,6 +116,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
           pending.current.delete(key);
           try {
             const id = await ensureWorkout();
+            await blocksSave.current.catch(() => undefined);
             await request(url(id), { method: "PATCH", body: JSON.stringify(payload) });
             if (timers.current.size === 0) setSaveState("saved");
           } catch (cause) {
@@ -159,6 +169,27 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
       setItems(previous);
       setError(cause instanceof Error ? cause.message : "Não foi possível trocar.");
     }
+  }
+
+  function saveBlocks(next: WorkoutBlock[]) {
+    setBlocks(next);
+    // Itens de bloco removido voltam às séries (o servidor faz o mesmo).
+    const keys = new Set(next.map((block) => block.key));
+    setItems((current) => current.map((item) => (item.blockKey && !keys.has(item.blockKey) ? { ...item, blockKey: null } : item)));
+    setSaveState("saving");
+    setError(null);
+    const previous = blocksSave.current;
+    blocksSave.current = (async () => {
+      await previous.catch(() => undefined);
+      const id = await ensureWorkout();
+      await request(api.workout(id), { method: "PATCH", body: JSON.stringify({ blocks: next }) });
+    })();
+    blocksSave.current.then(
+      () => {
+        if (timers.current.size === 0) setSaveState("saved");
+      },
+      (cause) => fail(cause instanceof Error ? cause.message : "Não foi possível salvar os blocos.")
+    );
   }
 
   function onItemChange(itemId: string, patch: ItemPatch) {
@@ -235,6 +266,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
   }
 
   async function flush() {
+    await blocksSave.current;
     for (const [key, timer] of timers.current) {
       clearTimeout(timer);
       timers.current.delete(key);
@@ -310,6 +342,34 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
         </div>
       ) : null}
 
+      {blocksEnabled ? (
+        <div className={styles.section}>
+          <div className={styles.listHeader}>
+            <h2 className={styles.listTitle}>Blocos</h2>
+            <Button type="button" variant="quiet" onClick={() => setEditingBlock("novo")}>
+              + Bloco
+            </Button>
+          </div>
+          {blocks.length === 0 ? (
+            <p className={styles.blocksHint}>Sem blocos, o treino é de séries tradicionais. Use blocos para circuito, AMRAP, EMOM ou For Time.</p>
+          ) : (
+            <ul className={styles.blocks}>
+              {blocks.map((block) => {
+                const count = items.filter((item) => item.blockKey === block.key).length;
+                return (
+                  <li key={block.key}>
+                    <button type="button" className={styles.block} onClick={() => setEditingBlock(block)}>
+                      <strong>{blockSummary(block)}</strong>
+                      <span>{count === 0 ? "Nenhum exercício ainda: escolha o bloco em cada exercício" : count === 1 ? "1 exercício" : `${count} exercícios`}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
       {items.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>Comece pelos exercícios</p>
@@ -338,6 +398,7 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
                 onMove={(direction) => void onMove(index, direction)}
                 onRemove={() => void onRemove(item.id)}
                 onSwap={workoutId ? () => void openSwap(item) : undefined}
+                blocks={blocksEnabled ? blocks : undefined}
               />
             ))}
           </ol>
@@ -385,6 +446,21 @@ export function WorkoutEditor({ api, initial, library, createExerciseHref, rende
           </ul>
         )}
       </Sheet>
+
+      {editingBlock ? (
+        <BlockSheet
+          initial={editingBlock === "novo" ? null : editingBlock}
+          onClose={() => setEditingBlock(null)}
+          onSave={(block) => {
+            saveBlocks(editingBlock === "novo" ? [...blocks, block] : blocks.map((entry) => (entry.key === block.key ? block : entry)));
+            setEditingBlock(null);
+          }}
+          onRemove={editingBlock === "novo" ? undefined : () => {
+            saveBlocks(blocks.filter((entry) => entry.key !== (editingBlock as WorkoutBlock).key));
+            setEditingBlock(null);
+          }}
+        />
+      ) : null}
 
       <Sheet open={doneOpen} onClose={() => setDoneOpen(false)} title="Treino pronto" description={`${name.trim() || DEFAULT_NAME} · ${items.length} ${items.length === 1 ? "exercício" : "exercícios"} · ${formatDays(days)}. E agora?`}>
         {workoutId ? renderDone({ id: workoutId, name: name.trim() || DEFAULT_NAME, summary: formatDays(days) }, () => setDoneOpen(false)) : null}

@@ -36,7 +36,7 @@ async function setup(label: string) {
   const student = await ensureStudentForIndividual(tenant, prisma);
   const supino = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Supino ${label} ${run}` } });
   const bike = await prisma.exercise.create({ data: { tenantId: null, origin: "API_NINJAS", name: `Bike ${label} ${run}`, type: "Aeróbico" } });
-  return { scope: { tenantId: tenant.id, studentId: student.id }, supino, bike };
+  return { scope: { tenantId: tenant.id, studentId: student.id }, owner, supino, bike };
 }
 
 describe("treino avulso (FitOS Livre)", () => {
@@ -131,25 +131,28 @@ describe("treino avulso (FitOS Livre)", () => {
     expect(quality.reasons[0]).toEqual({ ok: false, text: "Faltou do foco: Costas." });
   });
   it("excluir treino realizado: some do histórico com as séries; avulso não salvo vai junto; em andamento e de outro aluno não", async () => {
-    const { scope, supino } = await setup("excluir");
+    const { scope, owner, supino } = await setup("excluir");
+    const actor = { actorUserId: owner.id };
     const workout = await createWorkout({ tenantId: scope.tenantId, name: `Treino B ${run}` }, prisma);
     const planned = await addWorkoutExercise({ tenantId: scope.tenantId, workoutId: workout.id, exerciseId: supino.id, sets: 3, reps: 10 }, prisma);
     const session = await startOrResumeIndividualWorkoutSession({ ...scope, workoutId: workout.id }, prisma);
     await recordWorkoutSet({ ...scope, sessionId: session.id, workoutExerciseId: planned.id, setNumber: 1, reps: 10, durationSeconds: null, loadKg: 30, performedExerciseId: null }, prisma);
-    await expect(deleteFinishedWorkoutSession({ ...scope, sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
+    await expect(deleteFinishedWorkoutSession({ ...scope, ...actor, sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
     await completeWorkoutSession({ ...scope, sessionId: session.id }, prisma);
-    await expect(deleteFinishedWorkoutSession({ tenantId: scope.tenantId, studentId: "outro", sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
+    await expect(deleteFinishedWorkoutSession({ tenantId: scope.tenantId, studentId: "outro", ...actor, sessionId: session.id }, prisma)).rejects.toMatchObject({ kind: "NAO_ENCONTRADO" });
 
-    await deleteFinishedWorkoutSession({ ...scope, sessionId: session.id }, prisma);
+    await deleteFinishedWorkoutSession({ ...scope, ...actor, sessionId: session.id }, prisma);
     expect(await prisma.workoutSession.findUnique({ where: { id: session.id } })).toBeNull();
     expect(await prisma.workoutSetResult.count({ where: { workoutSessionId: session.id } })).toBe(0);
     expect(await prisma.workout.findUnique({ where: { id: workout.id } })).not.toBeNull();
+    // A versão excluída fica na trilha, com as séries.
+    expect(await prisma.workoutSessionRevision.findFirst({ where: { sessionId: session.id } })).toMatchObject({ action: "EXCLUIDO", actorUserId: owner.id, snapshot: { mode: "LIVE", exercises: [{ exerciseId: supino.id, sets: [{ reps: 10, loadGrams: 30000 }] }] } });
 
     const free = await startOrResumeFreeWorkoutSession(scope, prisma);
     const [item] = await addExercisesToFreeSession({ ...scope, sessionId: free.id, exerciseIds: [supino.id] }, prisma);
     await recordWorkoutSet({ ...scope, sessionId: free.id, workoutExerciseId: item!.id, setNumber: 1, reps: 8, durationSeconds: null, loadKg: 20, performedExerciseId: null }, prisma);
     await completeWorkoutSession({ ...scope, sessionId: free.id }, prisma);
-    await deleteFinishedWorkoutSession({ ...scope, sessionId: free.id }, prisma);
+    await deleteFinishedWorkoutSession({ ...scope, ...actor, sessionId: free.id }, prisma);
     expect(await prisma.workout.findUnique({ where: { id: free.workoutId } })).toBeNull();
   });
 });

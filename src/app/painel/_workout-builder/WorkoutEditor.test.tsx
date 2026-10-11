@@ -163,4 +163,50 @@ describe("WorkoutEditor (FIT-146)", () => {
     expect(within(first).getByText("Afundo reverso")).toBeInTheDocument();
     expect(within(first).getByText("40 kg")).toBeInTheDocument();
   });
+
+  it("blocos (com a flag): cria um AMRAP, põe um exercício no bloco e remove o bloco devolvendo às séries", async () => {
+    const user = userEvent.setup();
+    const bodies: { url: string; body: unknown }[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      bodies.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null });
+      return jsonResponse({});
+    });
+    const initial: EditorWorkout = {
+      id: "w1",
+      name: "WOD",
+      suggestedDays: [],
+      status: "ATIVO",
+      blocks: [],
+      items: [{ id: "i1", exerciseId: "ex-agach", name: "Agachamento livre", muscle: "Quadríceps", imageUrl: null, imageAlt: null, sets: 1, reps: 15, durationSeconds: null, load: null, restSeconds: null, notes: null, intensity: null, blockKey: null }],
+    };
+    render(
+      <ToastProvider>
+        <WorkoutEditor api={PERSONAL_WORKOUT_API} initial={initial} library={library} renderDone={() => null} blocksEnabled />
+      </ToastProvider>
+    );
+    expect(screen.getByText(/Sem blocos, o treino é de séries tradicionais/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "+ Bloco" }));
+    await user.click(screen.getByRole("radio", { name: "AMRAP" }));
+    await user.type(screen.getByLabelText("Nome (opcional)"), "WOD");
+    await user.click(screen.getByRole("button", { name: "Adicionar bloco" }));
+    expect(screen.getByRole("button", { name: /WOD · AMRAP 10 min/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "WOD" }));
+    expect(within(screen.getByRole("button", { name: /WOD · AMRAP 10 min/ })).getByText("1 exercício")).toBeInTheDocument();
+    await waitFor(() => expect(bodies.some((entry) => entry.url === "/api/workouts/w1/itens/i1")).toBe(true), { timeout: 2000 });
+    const blockSave = bodies.find((entry) => entry.url === "/api/workouts/w1")!.body as { blocks: { kind: string; windowSeconds: number; name: string; key: string }[] };
+    expect(blockSave.blocks).toEqual([expect.objectContaining({ kind: "AMRAP", windowSeconds: 600, name: "WOD" })]);
+    expect(bodies.find((entry) => entry.url === "/api/workouts/w1/itens/i1")!.body).toEqual({ blockKey: blockSave.blocks[0]!.key });
+
+    await user.click(screen.getByRole("button", { name: /WOD · AMRAP 10 min/ }));
+    await user.click(screen.getByRole("button", { name: "Remover bloco" }));
+    expect(screen.getByText(/Sem blocos/)).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Bloco" })).not.toBeInTheDocument();
+  });
+
+  it("sem a flag não mostra blocos", () => {
+    renderEditor({ id: "w2", name: "Treino", suggestedDays: [], status: "ATIVO", items: [] });
+    expect(screen.queryByText("Blocos")).not.toBeInTheDocument();
+  });
 });
+

@@ -10,7 +10,11 @@ import { getLastPerformanceForExercises } from "@/modules/execution/sets";
 import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
+import { getMusicPreference } from "@/modules/preferences/music";
+import { featureEnabled } from "@/shared/config/features";
 import { toLiveItems } from "../../_live/liveItems";
+import { listBlockResults, serializeBlockResult } from "@/modules/execution/blockResults";
+import { readBlocks } from "@/shared/lib/workoutBlocks";
 import { loadLibrary } from "../../_workout-builder/editorData";
 import { normalizeFocus } from "@/shared/lib/workoutFocus";
 import styles from "./page.module.css";
@@ -36,9 +40,12 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
 
   const student = await ensureStudentForIndividual({ id: ctx.tenantId, ownerId: ctx.userId });
   const scope = { tenantId: ctx.tenantId, studentId: student.id };
-  const common = { coachName: null, apiBase: "/api/minhas-sessoes", exitHref: "/painel", progressHref: "/painel/minha-evolucao", doneHref: "/painel/minha-evolucao" };
+  const musicProvider = await getMusicPreference(ctx.userId);
+  const common = { musicProvider, pointsEnabled: featureEnabled("GAMIFICACAO"), coachName: null, apiBase: "/api/minhas-sessoes", exitHref: "/painel", progressHref: "/painel/minha-evolucao", doneHref: "/painel/minha-evolucao" };
   const inProgress = await getInProgressSessionForStudent(scope);
 
+  // Funcional e CrossFit (etapa 3): blocos e timer só com a flag ligada.
+  const funcional = featureEnabled("FUNCIONAL");
   if (inProgress) {
     const items = inProgress.workout.workoutExercises;
     const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: items.map((item) => item.exerciseId), excludeSessionId: inProgress.id });
@@ -50,6 +57,8 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
         workoutName={inProgress.workout.name}
         startedAt={inProgress.startedAt.toISOString()}
         items={toLiveItems(items, inProgress.setResults, last)}
+        blocks={funcional ? readBlocks(inProgress.workout.blocks) : undefined}
+        blockResults={funcional ? (await listBlockResults(scope, inProgress.id)).map(serializeBlockResult) : undefined}
         free={inProgress.workout.status === "AVULSO" ? { library: await loadLibrary(ctx.tenantId), focus: normalizeFocus(inProgress.focus) } : undefined}
       />
     );
@@ -70,7 +79,7 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
 
   if (workout && workout.workoutExercises.length > 0) {
     const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: workout.workoutExercises.map((item) => item.exerciseId) });
-    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} />;
+    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} blocks={funcional ? readBlocks(workout.blocks) : undefined} />;
   }
 
   return (

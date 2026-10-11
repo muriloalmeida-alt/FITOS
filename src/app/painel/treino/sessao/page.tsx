@@ -10,7 +10,11 @@ import { getActivePlanAssignmentForStudent, getTodayScheduleForStudent } from "@
 import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
+import { getMusicPreference } from "@/modules/preferences/music";
+import { featureEnabled } from "@/shared/config/features";
 import { toLiveItems } from "../../_live/liveItems";
+import { listBlockResults, serializeBlockResult } from "@/modules/execution/blockResults";
+import { readBlocks } from "@/shared/lib/workoutBlocks";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -37,8 +41,11 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
   ]);
   const coachName = student.tenant.owner.name;
-  const common = { coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
+  const musicProvider = await getMusicPreference(ctx.userId);
+  const common = { musicProvider, pointsEnabled: featureEnabled("GAMIFICACAO"), coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
 
+  // Funcional e CrossFit (etapa 3): blocos e timer só com a flag ligada.
+  const funcional = featureEnabled("FUNCIONAL");
   if (inProgress) {
     const items = inProgress.workout.workoutExercises;
     const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: items.map((item) => item.exerciseId), excludeSessionId: inProgress.id });
@@ -50,6 +57,8 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
         workoutName={inProgress.workout.name}
         startedAt={inProgress.startedAt.toISOString()}
         items={toLiveItems(items, inProgress.setResults, last)}
+        blocks={funcional ? readBlocks(inProgress.workout.blocks) : undefined}
+        blockResults={funcional ? (await listBlockResults(scope, inProgress.id)).map(serializeBlockResult) : undefined}
       />
     );
   }
@@ -62,7 +71,7 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
 
   if (workout && workout.workoutExercises.length > 0) {
     const last = await getLastPerformanceForExercises({ ...scope, exerciseIds: workout.workoutExercises.map((item) => item.exerciseId) });
-    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} />;
+    return <LiveWorkout {...common} sessionId={null} workoutId={workout.id} workoutName={workout.name} startedAt={null} items={toLiveItems(workout.workoutExercises, [], last)} blocks={funcional ? readBlocks(workout.blocks) : undefined} />;
   }
 
   const message =

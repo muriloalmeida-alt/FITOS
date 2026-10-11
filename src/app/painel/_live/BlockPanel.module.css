@@ -1,0 +1,78 @@
+.panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--fitos-color-primary);
+  border-radius: 16px;
+  background: var(--fitos-color-surface);
+}
+
+.head {
+  display: grid;
+  gap: 2px;
+}
+
+.done {
+  color: var(--fitos-color-primary);
+  font-weight: 700;
+}
+
+.timer {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.time {
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.link {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--fitos-color-outline);
+  border-radius: 12px;
+  background: var(--fitos-color-surface-container);
+  color: inherit;
+  font: inherit;
+}
+
+.time2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

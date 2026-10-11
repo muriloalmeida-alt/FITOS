@@ -8,6 +8,8 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { recordRevision, sessionSnapshot } from "./sessionRevisions";
+import { scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { getActivePlanAssignmentForStudent, getWorkoutForTenant } from "@/modules/workouts/workouts";
 
 /// Execução de sessão de treino (FIT-041/FIT-103). Toda sessão referencia
@@ -269,10 +271,13 @@ export async function completeWorkoutSession(
     throw new SessionError("VALIDACAO", "Registre ao menos uma série para concluir.");
   }
   const endedAt = new Date();
-  return client.workoutSession.update({
+  const completed = await client.workoutSession.update({
     where: { id: session.id },
     data: { status: "CONCLUIDA", endedAt, activeSeconds: activeSecondsFor(input.activeSeconds, session.startedAt, endedAt) },
   });
+  // Desafios (feature 3): pontua sem nunca impedir a conclusão.
+  await scoreSessionSafely(completed.id, client);
+  return completed;
 }
 
 function activeSecondsFor(value: number | null | undefined, startedAt: Date, endedAt: Date): number | null {
@@ -336,7 +341,7 @@ export async function discardEmptyFreeSession(
 /// apagado, porque só existia para essa sessão. Sessão em andamento não é
 /// excluída por aqui: para ela existe "Abandonar".
 export async function deleteFinishedWorkoutSession(
-  input: { tenantId: string; studentId: string; sessionId: string },
+  input: { tenantId: string; studentId: string; sessionId: string; actorUserId: string; onlyRetroactive?: boolean },
   client: PrismaClient = prisma
 ): Promise<void> {
   const session = await client.workoutSession.findFirst({
@@ -347,7 +352,13 @@ export async function deleteFinishedWorkoutSession(
   if (session.status !== "CONCLUIDA" && session.status !== "ABANDONADA") {
     throw new SessionError("ESTADO_INVALIDO", "Só um treino concluído ou abandonado pode ser excluído.");
   }
+  // Aluno: só o que ele mesmo registrou; o treino do programa fica com o personal.
+  if (input.onlyRetroactive && session.mode !== "RETROATIVO") throw new SessionError("ESTADO_INVALIDO", "Só um treino registrado por você pode ser excluído.");
+  const score = await client.sessionScore.findUnique({ where: { sessionId: session.id }, select: { totalTenths: true, status: true } });
   await client.$transaction(async (tx) => {
+    // Trilha (feature 2, parte 2): a versão excluída e os pontos estornados.
+    const snapshot = await sessionSnapshot(tx, session);
+    await recordRevision(tx, { tenantId: input.tenantId, studentId: input.studentId, sessionId: session.id, actorUserId: input.actorUserId, action: "EXCLUIDO", snapshot, score });
     await tx.workoutSession.delete({ where: { id: session.id } });
     if (session.workout.status === "AVULSO" && (await tx.workoutSession.count({ where: { workoutId: session.workout.id } })) === 0) {
       await tx.workout.delete({ where: { id: session.workout.id } });

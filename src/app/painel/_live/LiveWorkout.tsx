@@ -22,9 +22,14 @@ import type { CardioIntensity } from "@/shared/lib/cardio";
 import { CardioRunner, FreeCardio, cardioPosition } from "./CardioRunner";
 import { cardioPhases } from "@/shared/lib/cardio";
 import { AskCoach } from "./AskCoach";
+import { MusicShortcut } from "./MusicShortcut";
+import type { MusicProvider } from "@/shared/lib/music";
 import { WorkoutComment } from "./WorkoutComment";
+import { SessionPointsCard } from "./SessionPointsCard";
 import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
+import { BlockPanel, type BlockResultView } from "./BlockPanel";
+import type { WorkoutBlock } from "@/shared/lib/workoutBlocks";
 
 export interface LiveSet {
   setNumber: number;
@@ -55,6 +60,8 @@ export interface LiveItem {
   notes: string | null;
   /// Aeróbico (EPIC-28): tempo e intensidade, uma "série" só.
   intensity: CardioIntensity | null;
+  /// Funcional e CrossFit (etapa 3): bloco do item, se houver.
+  blockKey?: string | null;
   doneSets: LiveSet[];
   /// BK-12: "Última vez".
   last: {
@@ -84,6 +91,14 @@ export interface LiveWorkoutProps {
   /// Treino avulso (FitOS Livre): começa vazio e o praticante inclui os
   /// exercícios da biblioteca durante o treino.
   free?: { library: LibraryExercise[]; focus?: Focus[] };
+  /// Música em um toque: serviço preferido do usuário (ou nenhum ainda).
+  musicProvider?: MusicProvider | null;
+  /// Desafios (feature 3) ligado: pontos e foto no resumo final.
+  pointsEnabled?: boolean;
+  /// Funcional e CrossFit (etapa 3): blocos do treino e resultados já
+  /// registrados na sessão. Ausente com `FEATURE_FUNCIONAL` desligada.
+  blocks?: WorkoutBlock[];
+  blockResults?: BlockResultView[];
 }
 
 interface Summary {
@@ -94,18 +109,13 @@ interface Summary {
 }
 
 type Phase = "ready" | "run" | "done";
-type SheetKind = null | "how" | "list" | "music" | "end" | "busy";
+type SheetKind = null | "how" | "list" | "end" | "busy";
 
 const PREFS_KEY = "fitos:treino:prefs";
 const CLOCK_PREFIX = "fitos:sessao:";
 const LOAD_STEP = 2.5;
 const DEFAULT_REST = 60;
 const EFFORT = ["Leve", "Tranquilo", "Moderado", "Puxado", "No limite"];
-const MUSIC_APPS = [
-  { name: "Spotify", href: "https://open.spotify.com" },
-  { name: "Apple Music", href: "https://music.apple.com" },
-  { name: "YouTube Music", href: "https://music.youtube.com" },
-];
 
 /// Lugar do exercício atual enquanto o treino avulso ainda está vazio.
 const NO_ITEM: LiveItem = {
@@ -244,6 +254,8 @@ export function LiveWorkout(props: LiveWorkoutProps) {
   const lastBeepRef = useRef<number>(-1);
 
   const item = items[current] ?? NO_ITEM;
+  const [blockResults, setBlockResults] = useState<BlockResultView[]>(props.blockResults ?? []);
+  const currentBlock = item.blockKey ? (props.blocks?.find((block) => block.key === item.blockKey) ?? null) : null;
   const free = props.free ?? null;
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -927,36 +939,6 @@ export function LiveWorkout(props: LiveWorkoutProps) {
     </Sheet>
   );
 
-  const musicSheet = (
-    <Sheet
-      open={sheet === "music"}
-      onClose={() => setSheet(null)}
-      title="Música"
-      description="Abra seu app de música. Ele continua tocando enquanto você registra o treino aqui."
-    >
-      <div className={styles.musicGrid}>
-        {MUSIC_APPS.map((app) => (
-          <a
-            key={app.name}
-            href={app.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.musicApp}
-          >
-            {app.name}
-          </a>
-        ))}
-      </div>
-      <Button
-        type="button"
-        variant="secondary"
-        block
-        onClick={() => setSheet(null)}
-      >
-        Voltar ao treino
-      </Button>
-    </Sheet>
-  );
 
   if (phase === "ready") {
     return (
@@ -1050,19 +1032,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
               aria-hidden="true"
             />
           </button>
-          <button
-            type="button"
-            className={styles.option}
-            onClick={() => setSheet("music")}
-          >
-            <span>
-              <strong>Música</strong>
-              <span className={styles.muted}>
-                Spotify, Apple Music ou YouTube Music.
-              </span>
-            </span>
-            <span className={styles.link}>Escolher</span>
-          </button>
+          <MusicShortcut initial={props.musicProvider ?? null} variant="prepare" />
         </div>
         <div className={styles.bar}>
           <button
@@ -1074,7 +1044,6 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             {busy ? "Começando…" : "Começar treino"}
           </button>
         </div>
-        {musicSheet}
       </div>
     );
   }
@@ -1184,6 +1153,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
               {record.exerciseName}: {kg(record.loadKg)} kg
             </p>
           ))}
+          {props.pointsEnabled && sessionId ? <SessionPointsCard sessionId={sessionId} /> : null}
           <p className={styles.cap}>Como foi o treino?</p>
           <div
             className={styles.effort}
@@ -1348,7 +1318,9 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           >
             <span aria-hidden="true">{paused ? "▶" : "❚❚"}</span> {formatClock(activeMs)}
           </button>
-          <span className={styles.topRight} />
+          <span className={styles.topRight}>
+            <MusicShortcut initial={props.musicProvider ?? null} variant="run" />
+          </span>
         </div>
         <div className={styles.scroll}>
           <p className={styles.eyebrow}>Treino avulso</p>
@@ -1403,6 +1375,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
           {formatClock(activeMs)}
         </button>
         <div className={styles.topRight}>
+          <MusicShortcut initial={props.musicProvider ?? null} variant="run" />
           <button
             type="button"
             className={
@@ -1449,6 +1422,15 @@ export function LiveWorkout(props: LiveWorkoutProps) {
       <div className={styles.scroll}>
         {paused ? (
           <p className={styles.warn}>Pausado. Toque no tempo para continuar.</p>
+        ) : null}
+        {currentBlock && sessionId ? (
+          <BlockPanel
+            key={`${sessionId}-${currentBlock.key}`}
+            block={currentBlock}
+            initial={blockResults.find((result) => result.blockKey === currentBlock.key) ?? null}
+            endpoint={`${props.apiBase}/${sessionId}/blocos/${encodeURIComponent(currentBlock.key)}`}
+            onChange={(saved) => setBlockResults((all) => [...all.filter((result) => result.blockKey !== saved.blockKey), saved])}
+          />
         ) : null}
         <div className={styles.exercise}>
           <button
@@ -1671,13 +1653,6 @@ export function LiveWorkout(props: LiveWorkoutProps) {
             <small className={styles.doneHint}>última série</small>
           ) : null}
         </button>
-        <button
-          type="button"
-          className={styles.music}
-          onClick={() => setSheet("music")}
-        >
-          <span aria-hidden="true">♪</span> Música
-        </button>
       </div>
 
       {rest ? (
@@ -1870,7 +1845,6 @@ export function LiveWorkout(props: LiveWorkoutProps) {
 
       {endSheet}
 
-      {musicSheet}
       {busySheet}
       {library}
     </div>

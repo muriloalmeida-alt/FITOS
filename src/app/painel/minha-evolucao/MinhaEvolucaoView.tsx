@@ -7,6 +7,7 @@ import type { EvolutionSeries, MeasureChange } from "@/modules/evolution/evoluti
 import { requestJson } from "../_workout-builder/apiClient";
 import { EvolutionView } from "../_evolution/EvolutionView";
 import { EvolutionPhotos, type EvolutionPhotoItem } from "../_photos/EvolutionPhotos";
+import type { SessionBadge } from "@/shared/lib/sessionBadges";
 import styles from "./MinhaEvolucaoView.module.css";
 
 export type EvolutionTab = "treinos" | "corpo" | "metas";
@@ -15,7 +16,7 @@ interface Props {
   tab: EvolutionTab;
   overview: { thisWeek: number; thisMonth: number; streakWeeks: number };
   records: { exerciseName: string; loadKg: number; reps: number | null; dateIso: string }[];
-  history: { id: string; workoutName: string; dateIso: string; status: "CONCLUIDA" | "ABANDONADA"; effort: number | null }[];
+  history: { id: string; workoutName: string; dateIso: string; status: "CONCLUIDA" | "ABANDONADA"; effort: number | null; badges?: SessionBadge[] }[];
   body: { series: EvolutionSeries[]; measures: MeasureChange[] };
   /// Fotos da avaliação (EPIC-35).
   photos?: { items: EvolutionPhotoItem[]; consent: boolean };
@@ -115,8 +116,14 @@ export function MinhaEvolucaoView({ tab, overview, records, history, body, photo
                     title={
                       <>
                         {session.workoutName} {session.status === "CONCLUIDA" ? <Tag tone="ok">Concluído</Tag> : <Tag tone="muted">Abandonado</Tag>}
+                        {(session.badges ?? []).map((badge) => (
+                          <Tag key={badge.label} tone={badge.tone}>
+                            {badge.label}
+                          </Tag>
+                        ))}
                       </>
                     }
+                    action={session.status === "CONCLUIDA" ? { label: "Ver treino", href: `/painel/treinos-realizados/${session.id}` } : undefined}
                     description={[dateFmt.format(new Date(session.dateIso)), session.effort ? `esforço ${EFFORT[session.effort]}` : null].filter(Boolean).join(" · ")}
                     trailing={
                       <Button

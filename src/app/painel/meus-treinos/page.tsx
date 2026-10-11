@@ -11,6 +11,9 @@ import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { WorkoutSummaryList } from "../_workout-builder/WorkoutSummaryList";
 import { LogoutButton } from "../LogoutButton";
 import { FreeWorkoutButton } from "./FreeWorkoutButton";
+import { featureEnabled } from "@/shared/config/features";
+import buttonStyles from "./FreeWorkoutButton.module.css";
+import Link from "next/link";
 import { INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import styles from "../treinos/page.module.css";
 
@@ -48,6 +51,21 @@ export default async function MeusTreinosPage({ searchParams }: { searchParams?:
         <NextStepCard eyebrow="Próximo passo" title="Montar meu treino" description="Escolha os exercícios. Entram com 3 × 12 e 60 s." href="/painel/meus-treinos/novo" />
         {/* Com um treino em andamento, começar o avulso o abandonaria. */}
         {inProgress ? null : <FreeWorkoutButton />}
+        {/* Feature 2: treino que já aconteceu, sem cronômetro. */}
+        {featureEnabled("RETROATIVO") ? (
+          <Link href="/painel/treinos-realizados/registrar" className={buttonStyles.button}>
+            <span className={buttonStyles.icon} aria-hidden="true">
+              ✓
+            </span>
+            <span className={buttonStyles.text}>
+              <strong>Registrar treino realizado</strong>
+              <span>Treinou e não registrou? Lance até 7 dias depois.</span>
+            </span>
+            <span className={buttonStyles.arrow} aria-hidden="true">
+              →
+            </span>
+          </Link>
+        ) : null}
       </div>
       <FilterLinks
         label="Filtrar treinos"

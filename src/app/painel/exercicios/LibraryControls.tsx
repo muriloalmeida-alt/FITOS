@@ -11,13 +11,15 @@ interface LibraryControlsProps {
   muscles: string[];
   types: string[];
   difficulties: string[];
+  /// Funcional e CrossFit (só aparecem quando o catálogo tem).
+  categories?: string[];
   openCreate: boolean;
 }
 
 /// Busca, filtros e "Cadastrar" da biblioteca (FIT-147). Tudo vira
 /// parâmetro de URL (a lista é renderizada no servidor): busca com pausa
 /// de 300 ms, músculo em chips, tipo e dificuldade numa sheet.
-export function LibraryControls({ muscles, types, difficulties, openCreate }: LibraryControlsProps) {
+export function LibraryControls({ muscles, types, difficulties, categories = [], openCreate }: LibraryControlsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -27,6 +29,7 @@ export function LibraryControls({ muscles, types, difficulties, openCreate }: Li
   const type = params.get("tipo");
   const difficulty = params.get("dificuldade");
   const muscle = params.get("musculo");
+  const category = params.get("categoria");
   const activeFilters = (type ? 1 : 0) + (difficulty ? 1 : 0);
 
   function update(changes: Record<string, string | null>) {
@@ -56,12 +59,22 @@ export function LibraryControls({ muscles, types, difficulties, openCreate }: Li
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
           </svg>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome" aria-label="Buscar por nome" type="search" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome ou músculo" aria-label="Buscar por nome" type="search" />
         </label>
         <Button type="button" variant="secondary" onClick={() => setFiltersOpen(true)}>
           {activeFilters ? `Filtros · ${activeFilters}` : "Filtros"}
         </Button>
       </div>
+      {categories.length > 0 ? (
+        <ChipGroup
+          label="Filtrar por modalidade"
+          variant="scroll"
+          tone="light"
+          value={category ?? "__todas__"}
+          onChange={(value) => update({ categoria: value === "__todas__" ? null : value })}
+          options={[{ value: "__todas__", label: "Todas as modalidades" }, ...categories.map((c) => ({ value: c, label: c }))]}
+        />
+      ) : null}
       <ChipGroup
         label="Filtrar por músculo"
         variant="scroll"
@@ -88,7 +101,7 @@ export function LibraryControls({ muscles, types, difficulties, openCreate }: Li
               variant="quiet"
               block
               onClick={() => {
-                update({ tipo: null, dificuldade: null, musculo: null, q: null });
+                update({ tipo: null, dificuldade: null, musculo: null, categoria: null, q: null });
                 setQuery("");
                 setFiltersOpen(false);
               }}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Button, ChipGroup, ExerciseThumbnail } from "@/shared/ui";
+import { matchesSearch, worksMuscle } from "@/shared/lib/exerciseCatalog";
 import type { LibraryExercise } from "./types";
 import styles from "./ExerciseLibrary.module.css";
 
@@ -24,16 +25,13 @@ interface ExerciseLibraryProps {
 const ALL = "__todos__";
 const FOCUS = "__foco__";
 
-function normalize(text: string) {
-  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
 /// Biblioteca em tela cheia (FIT-146): busca, filtro por músculo e seleção
 /// de vários exercícios de uma vez. "Adicionar N" usa a prescrição padrão
 /// (3 × 12, 60 s). Diálogo modal com Esc para fechar.
 export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, adding = false, createExerciseHref, prescription = { sets: 3, reps: 12, restSeconds: 60 }, focusMuscles = [] }: ExerciseLibraryProps) {
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<string>(focusMuscles.length > 0 ? FOCUS : ALL);
+  const [category, setCategory] = useState<string>(ALL);
   const [selected, setSelected] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -59,11 +57,14 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
   }, [exercises]);
 
+  const categories = useMemo(() => [...new Set(exercises.flatMap((exercise) => exercise.categories ?? []))].sort(), [exercises]);
+
   const filtered = useMemo(() => {
-    const q = normalize(query.trim());
-    const inFilter = (value: string | null) => muscle === ALL || (muscle === FOCUS ? value !== null && focusMuscles.includes(value) : value === muscle);
-    return exercises.filter((exercise) => inFilter(exercise.muscle) && (!q || normalize(exercise.name).includes(q)));
-  }, [exercises, muscle, query, focusMuscles]);
+    // Músculo vale como principal ou secundário; a busca considera nomes alternativos e músculos, sem acento.
+    const inFilter = (exercise: LibraryExercise) => muscle === ALL || (muscle === FOCUS ? exercise.muscle !== null && focusMuscles.includes(exercise.muscle) : worksMuscle(exercise, muscle));
+    const inCategory = (exercise: LibraryExercise) => category === ALL || (exercise.categories ?? []).includes(category);
+    return exercises.filter((exercise) => inCategory(exercise) && inFilter(exercise) && matchesSearch(exercise, query));
+  }, [exercises, muscle, category, query, focusMuscles]);
 
   function toggle(id: string) {
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -96,6 +97,9 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
           <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício" aria-label="Buscar exercício" />
         </label>
         <div className={styles.filters}>
+          {categories.length > 0 ? (
+            <ChipGroup label="Filtrar por modalidade" variant="scroll" tone="light" value={category} onChange={setCategory} options={[{ value: ALL, label: "Todas as modalidades" }, ...categories.map((name) => ({ value: name, label: name }))]} />
+          ) : null}
           <ChipGroup
             label="Filtrar por músculo"
             variant="scroll"
@@ -116,7 +120,7 @@ export function ExerciseLibrary({ exercises, alreadyInWorkout, onClose, onAdd, a
                   <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? ""} width={72} height={72} className={styles.thumb} />
                   <span className={styles.text}>
                     <span className={styles.name}>{exercise.name}</span>
-                    {exercise.muscle ? <span className={styles.muscle}>{exercise.muscle}</span> : null}
+                    {exercise.muscle ? <span className={styles.muscle}>{[...(exercise.categories ?? []), exercise.muscle].join(" · ")}</span> : null}
                     {already ? <span className={styles.already}>Já está no treino</span> : null}
                   </span>
                   <span className={isSelected ? `${styles.check} ${styles.checkOn}` : styles.check} aria-hidden="true">

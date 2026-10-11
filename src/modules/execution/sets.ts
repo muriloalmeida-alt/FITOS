@@ -11,10 +11,10 @@ import { SessionError, getInProgressSessionOwnedByStudentOrThrow } from "./sessi
 /// `WorkoutSessionResult` do item (séries feitas, maior carga e as
 /// repetições dessa série), para histórico, recordes e telas antigas.
 
-const MAX_SET_NUMBER = 50;
-const MAX_REPS = 1000;
-const MAX_DURATION_SECONDS = 36_000;
-const MAX_LOAD_KG = 1000;
+export const MAX_SET_NUMBER = 50;
+export const MAX_REPS = 1000;
+export const MAX_DURATION_SECONDS = 36_000;
+export const MAX_LOAD_KG = 1000;
 
 export interface RecordWorkoutSetInput {
   tenantId: string;
@@ -91,7 +91,7 @@ export async function bestLoadGramsForExercise(
   return best;
 }
 
-async function syncAggregate(input: { tenantId: string; sessionId: string; workoutExerciseId: string }, client: Pick<PrismaClient, "workoutSetResult" | "workoutSessionResult">): Promise<WorkoutSessionResult | null> {
+export async function syncAggregate(input: { tenantId: string; sessionId: string; workoutExerciseId: string }, client: Pick<PrismaClient, "workoutSetResult" | "workoutSessionResult">): Promise<WorkoutSessionResult | null> {
   const sets = await client.workoutSetResult.findMany({ where: { workoutSessionId: input.sessionId, workoutExerciseId: input.workoutExerciseId }, orderBy: { setNumber: "asc" } });
   const key = { workoutSessionId_workoutExerciseId: { workoutSessionId: input.sessionId, workoutExerciseId: input.workoutExerciseId } };
   if (sets.length === 0) {
