@@ -26,7 +26,7 @@ describe("biblioteca do editor: Funcional e CrossFit", () => {
 
     await user.click(screen.getByRole("radio", { name: "Tríceps" }));
     expect(names()).toEqual([expect.stringContaining("Thruster"), expect.stringContaining("Tríceps na polia")]);
-    await user.click(screen.getAllByRole("radio", { name: "Todos" })[0]);
+    await user.click(screen.getByRole("radio", { name: "Todos" }));
 
     await user.type(screen.getByLabelText("Buscar exercício"), "AIR squat");
     expect(names()).toEqual([expect.stringContaining("Agachamento livre")]);
