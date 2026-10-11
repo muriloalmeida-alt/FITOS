@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { featureEnabled } from "@/shared/config/features";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActionRow, AppShell, Avatar, ProgressBar, Tag, type TagTone } from "@/shared/ui";
@@ -92,6 +93,7 @@ export default async function AlunosPage({ searchParams }: AlunosPageProps = {})
       <div className={styles.next}>
         <InviteStudent startOpen={sp.novo === "1"} />
       </div>
+      {featureEnabled("GAMIFICACAO") ? <ActionRow href="/painel/desafios" title="Ranking da turma" description="Desafios: liga o ranking e acompanha os alunos que aderiram" trailing={<span aria-hidden="true">›</span>} /> : null}
       {risk.total > 0 ? (
         <ActionRow
           href="/painel/alunos/risco"
