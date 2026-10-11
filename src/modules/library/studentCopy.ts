@@ -2,7 +2,7 @@ import "server-only";
 import type { CardioIntensity, Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getCatalogExerciseForTenant } from "@/modules/exercises/exercises";
-import { getTenantPrescription, type Prescription, WorkoutError } from "@/modules/workouts/workouts";
+import { getTenantPrescription, itemCopyFields, type Prescription, workoutBlocksCopy, WorkoutError } from "@/modules/workouts/workouts";
 import { formatLoadForStorage } from "@/shared/lib/load";
 import { CARDIO_INTENSITIES, CARDIO_MAX_SECONDS, CARDIO_MIN_SECONDS, DEFAULT_CARDIO, isCardioType } from "@/shared/lib/cardio";
 
@@ -95,7 +95,7 @@ type ItemRow = Prisma.WorkoutExerciseGetPayload<object>;
 type ItemData = Omit<Prisma.WorkoutExerciseUncheckedCreateInput, "tenantId" | "workoutId" | "position">;
 
 function itemData(row: ItemRow): ItemData {
-  return { exerciseId: row.exerciseId, sets: row.sets, reps: row.reps, durationSeconds: row.durationSeconds, load: row.load, restSeconds: row.restSeconds, notes: row.notes, intensity: row.intensity };
+  return itemCopyFields(row);
 }
 
 function defaultsFor(exerciseId: string, cardio: boolean, prescription: Prescription): ItemData {
@@ -144,7 +144,7 @@ export async function reviseStudentCopy(
 
   let replace: { itemId: string; data: ItemData | null } | null = null;
   let append: { workoutId: string; data: ItemData } | null = null;
-  let extraWorkout: { name: string; days: string[]; items: ItemData[] } | null = null;
+  let extraWorkout: { name: string; days: string[]; items: ItemData[]; blocks: ReturnType<typeof workoutBlocksCopy> } | null = null;
 
   if (edit.kind === "swap") {
     const current = findItem(edit.itemId);
@@ -176,7 +176,7 @@ export async function reviseStudentCopy(
   } else {
     const source = await client.workout.findFirst({ where: { id: edit.sourceWorkoutId, tenantId: input.tenantId, trainingPlan: { isSnapshot: false } }, include: { workoutExercises: { orderBy: { position: "asc" } } } });
     if (!source) throw new WorkoutError("NAO_ENCONTRADO", "Treino não encontrado na biblioteca.");
-    extraWorkout = { name: source.name, days: source.suggestedDays, items: source.workoutExercises.map(itemData) };
+    extraWorkout = { name: source.name, days: source.suggestedDays, items: source.workoutExercises.map(itemData), blocks: workoutBlocksCopy(source) };
   }
 
   return client.$transaction(async (tx) => {
@@ -187,7 +187,7 @@ export async function reviseStudentCopy(
       }
     };
     for (const workout of workouts) {
-      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position: workout.position, status: workout.status, suggestedDays: workout.suggestedDays } });
+      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position: workout.position, status: workout.status, suggestedDays: workout.suggestedDays, ...workoutBlocksCopy(workout) } });
       const rows: ItemData[] = [];
       for (const item of items.filter((entry) => entry.workoutId === workout.id)) {
         if (replace && replace.itemId === item.id) {
@@ -201,7 +201,7 @@ export async function reviseStudentCopy(
     }
     if (extraWorkout) {
       const position = (workouts.at(-1)?.position ?? -1) + 1;
-      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: extraWorkout.name, position, suggestedDays: extraWorkout.days } });
+      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: extraWorkout.name, position, suggestedDays: extraWorkout.days, ...extraWorkout.blocks } });
       await createItems(created.id, extraWorkout.items);
     }
     await tx.trainingPlan.update({ where: { id: next.id }, data: { isSnapshot: true } });
@@ -240,7 +240,7 @@ export async function repeatStudentProgram(input: { tenantId: string; actorUserI
     await tx.planAssignment.update({ where: { id: assignment.id }, data: { active: false, endedAt: now } });
     const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name, durationWeeks: plan.durationWeeks } });
     for (const [position, workout] of workouts.entries()) {
-      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position, suggestedDays: workout.suggestedDays } });
+      const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position, suggestedDays: workout.suggestedDays, ...workoutBlocksCopy(workout) } });
       for (const item of workout.workoutExercises) {
         await tx.workoutExercise.create({ data: { ...itemData(item), tenantId: input.tenantId, workoutId: created.id, position: item.position } as Prisma.WorkoutExerciseUncheckedCreateInput });
       }

@@ -774,6 +774,10 @@ model Workout {
   position       Int
   status         WorkoutStatus @default(ATIVO)
   suggestedDays  String[]      @default([])
+  /// Funcional e CrossFit (feature 1): blocos do treino, em ordem
+  /// (`shared/lib/workoutBlocks.ts`): circuito, AMRAP, EMOM ou For Time,
+  /// com voltas, janela, intervalos ou limite. Vazio = séries tradicionais.
+  blocks         Json?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -806,22 +810,28 @@ model Workout {
 /// "RM"; mesmo padrão de `Exercise.difficulty`/`equipments`), descanso e
 /// observação. RPE/RIR e vídeo são pós-MVP, não representados aqui.
 model WorkoutExercise {
-  id              String           @id @default(cuid())
-  tenantId        String
-  workoutId       String
-  exerciseId      String
-  position        Int
-  sets            Int?
-  reps            Int?
-  durationSeconds Int?
-  load            String?
-  restSeconds     Int?
-  notes           String?
+  id                   String           @id @default(cuid())
+  tenantId             String
+  workoutId            String
+  exerciseId           String
+  position             Int
+  sets                 Int?
+  reps                 Int?
+  durationSeconds      Int?
+  load                 String?
+  restSeconds          Int?
+  notes                String?
   /// Só em item aeróbico (exercício `type = "Aeróbico"`): o tempo fica em
   /// `durationSeconds` e não há séries nem repetições.
-  intensity       CardioIntensity?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  intensity            CardioIntensity?
+  /// Funcional e CrossFit (feature 1): bloco do treino a que o item
+  /// pertence (`Workout.blocks[].key`); sem bloco, séries tradicionais.
+  blockKey             String?
+  /// Metas por métrica: distância (m) e calorias do equipamento.
+  targetDistanceMeters Int?
+  targetCalories       Int?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workout  Workout  @relation(fields: [workoutId, tenantId], references: [id, tenantId], onDelete: Cascade)

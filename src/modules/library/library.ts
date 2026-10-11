@@ -1,7 +1,7 @@
 import "server-only";
 import type { CardioIntensity, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { assignTrainingPlanToStudents, WorkoutError } from "@/modules/workouts/workouts";
+import { assignTrainingPlanToStudents, itemCopyFields, workoutBlocksCopy, WorkoutError } from "@/modules/workouts/workouts";
 import { estimateMinutes } from "@/modules/students/studentHome";
 import { prescriptionLine } from "@/shared/lib/prescription";
 import { isCardioType } from "@/shared/lib/cardio";
@@ -141,11 +141,11 @@ export async function applyLibraryItem(
     // Sem programa: um programa novo, só com este treino, atribuído como de costume.
     const holder = await client.trainingPlan.create({ data: { tenantId: input.tenantId, name: workout.name, status: "ARQUIVADO" } });
     await client.$transaction(async (tx) => {
-      const clone = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: holder.id, name: workout.name, position: 0, suggestedDays: workout.suggestedDays } });
+      const clone = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: holder.id, name: workout.name, position: 0, suggestedDays: workout.suggestedDays, ...workoutBlocksCopy(workout) } });
       const items = await tx.workoutExercise.findMany({ where: { workoutId: workout.id, tenantId: input.tenantId }, orderBy: { position: "asc" } });
       for (const item of items) {
         await tx.workoutExercise.create({
-          data: { tenantId: input.tenantId, workoutId: clone.id, exerciseId: item.exerciseId, position: item.position, sets: item.sets, reps: item.reps, durationSeconds: item.durationSeconds, load: item.load, restSeconds: item.restSeconds, notes: item.notes, intensity: item.intensity },
+          data: { tenantId: input.tenantId, workoutId: clone.id, position: item.position, ...itemCopyFields(item) },
         });
       }
     });

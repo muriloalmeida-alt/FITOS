@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/shared/config/features";
 import { authErrorResponse, requirePersonal } from "@/modules/tenancy/authContext";
 import { updateWorkout, WorkoutError } from "@/modules/workouts/workouts";
 
@@ -18,6 +19,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       tenantId: ctx.tenantId,
       workoutId: id,
       name: typeof body.name === "string" ? body.name : undefined,
+      // Funcional e CrossFit: blocos só com a flag ligada.
+      blocks: featureEnabled("FUNCIONAL") && body.blocks !== undefined ? body.blocks : undefined,
       suggestedDays: Array.isArray(body.suggestedDays)
         ? body.suggestedDays.filter((day: unknown) => typeof day === "string")
         : undefined,
