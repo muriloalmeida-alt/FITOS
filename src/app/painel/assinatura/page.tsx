@@ -11,6 +11,9 @@ import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
 import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { AssinaturaView, type CurrentSubscription, type SubscriptionState } from "./AssinaturaView";
+import { featureEnabled } from "@/shared/config/features";
+import { listMyCoupons } from "@/modules/billing/couponRedemptions";
+import { CouponPanel, type CouponPanelItem } from "./CouponPanel";
 
 export const metadata: Metadata = {
   title: `Assinatura — ${appName}`,
@@ -57,6 +60,8 @@ export default async function AssinaturaPage() {
       : prisma.individualProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { cpfCnpj: true } }).then((found) => (found ? { phone: null, cpfCnpj: found.cpfCnpj } : null)),
     getOwnFreeAccess(ctx.tenantId),
   ]);
+  // Cupons (feature 5): só com a flag; nunca para assinatura inadimplente.
+  const coupons: CouponPanelItem[] | null = featureEnabled("CUPONS") ? await listMyCoupons(ctx.tenantId) : null;
   const now = new Date();
 
   let current: CurrentSubscription | null = null;
@@ -112,6 +117,7 @@ export default async function AssinaturaPage() {
         profilePhone={profile?.phone ?? null}
         needsCpf={!profile?.cpfCnpj}
       />
+      {coupons ? <CouponPanel coupons={coupons} canRedeem={subscription !== null && subscription.status !== "INADIMPLENTE" && subscription.plan.priceCents > 0} /> : null}
     </AppShell>
   );
 }
