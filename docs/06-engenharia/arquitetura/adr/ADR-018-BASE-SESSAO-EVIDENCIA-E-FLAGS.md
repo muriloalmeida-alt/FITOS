@@ -33,3 +33,20 @@ Treino retroativo (feature 2), Gamificação (feature 3) e Cupons/Funcional depe
 - O retroativo (feature 2) cria sessões `RETROATIVO` com `performedAt`, `declaredDurationSeconds` e `operationKey`, e usa as rotas de evidência.
 - A gamificação (feature 3) pontua por `sessionPerformedAt()` e só libera pontos com evidência (`evidenceCounts`). Excluir a última foto reverte os pontos (regra da gamificação).
 - Exportação de dados (CSV) não inclui as fotos, como já acontece com as fotos de evolução.
+
+## Adendo: retroativo, parte 2 (edição, exclusão e período consolidado)
+
+- **Treinos realizados** (`/painel/treinos-realizados`) valem para aluno e Livre:
+  - lista com "Registrado" e a situação dos pontos ("Salvo sem pontuação", "N pontos");
+  - detalhe com fotos (anexar depois, remover), pontos, "Editar registro" e "Excluir treino".
+  - O registro saiu de `/painel/meus-treinos/registrar` (que redireciona) para `/painel/treinos-realizados/registrar`, aberto também ao aluno.
+- **Editar** (`PUT /api/minhas-sessoes/[id]/registro`):
+  - só treino `RETROATIVO` concluído, enquanto a data da realização está no prazo de 7 dias, e a nova data também;
+  - a versão anterior (data, duração, exercícios, séries, fotos e pontos) vai para `WorkoutSessionRevision` (`EDITADO`);
+  - a pontuação é recalculada pela diferença (`RECALCULADO`), uma vez, sem duplicar; com foto no novo prazo, libera.
+- **Excluir**: a versão excluída e os pontos de antes ficam na trilha (`EXCLUIDO`), que não tem chave para a sessão e sobrevive à exclusão. O aluno só exclui o que ele mesmo registrou; o Livre, qualquer treino seu.
+- **Período consolidado**:
+  - Semana e mês consolidam 24 h depois do fim.
+  - Depois disso, contam só os pontos liberados até a consolidação. O valor fica congelado em `PeriodGoal.finalTenths` na primeira leitura.
+  - Registro tardio, edição ou exclusão não mudam medalha já consolidada. O cartão de pontos avisa: "Treino salvo no histórico. Este desafio já foi encerrado."
+  - **Limite conhecido:** um período nunca lido depois de consolidado congela com o que existir na primeira leitura.

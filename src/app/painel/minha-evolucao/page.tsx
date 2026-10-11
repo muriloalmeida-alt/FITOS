@@ -8,6 +8,7 @@ import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIn
 import { listAssessmentsForStudent } from "@/modules/evolution/assessments";
 import { buildEvolution } from "@/modules/evolution/evolutionSeries";
 import { listGoalsForStudent } from "@/modules/evolution/goals";
+import { sessionBadges } from "@/shared/lib/sessionBadges";
 import { getTrainingOverviewForStudent, listPersonalRecordsForStudent, listSessionHistoryForStudent } from "@/modules/execution/history";
 import { LogoutButton } from "../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../navigation";
@@ -55,7 +56,7 @@ export default async function MinhaEvolucaoPage({ searchParams }: { searchParams
           .sort((a, b) => b.achievedAt.getTime() - a.achievedAt.getTime())
           .slice(0, 8)
           .map((record) => ({ exerciseName: record.exerciseName, loadKg: record.loadValue, reps: record.repsCompleted, dateIso: record.achievedAt.toISOString() }))}
-        history={history.slice(0, 20).map((session) => ({ id: session.id, workoutName: session.workoutName, dateIso: session.startedAt.toISOString(), status: session.status, effort: session.perceivedEffort }))}
+        history={history.slice(0, 20).map((session) => ({ id: session.id, workoutName: session.workoutName, dateIso: session.performedAt.toISOString(), status: session.status, effort: session.perceivedEffort, badges: sessionBadges(session) }))}
         body={buildEvolution(assessments)}
         photos={{ items: photos.map((photo) => ({ id: photo.id, pose: photo.pose, takenIso: photo.takenAt.toISOString() })), consent: Boolean(student.photoConsentAt) }}
         assessments={assessments.map((entry) => ({

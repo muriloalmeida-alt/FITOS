@@ -19,6 +19,11 @@ export interface FinishedSessionSummary {
   resultsCount: number;
   /// BK-13: esforço percebido (1–5) quando informado.
   perceivedEffort: number | null;
+  /// LIVE (cronômetro) ou RETROATIVO ("Registrado"), e quando aconteceu.
+  mode: "LIVE" | "RETROATIVO";
+  performedAt: Date;
+  /// Desafios: pontos e situação (null sem pontuação).
+  points: { totalTenths: number; status: string } | null;
 }
 
 /// Sessões concluídas ou abandonadas, mais recente primeiro — a sessão
@@ -31,10 +36,13 @@ export async function listSessionHistoryForStudent(
   const sessions = await client.workoutSession.findMany({
     where: { tenantId: input.tenantId, studentId: input.studentId, status: { in: ["CONCLUIDA", "ABANDONADA"] } },
     orderBy: { startedAt: "desc" },
-    include: { workout: { select: { name: true } }, results: { select: { id: true } } },
+    include: { workout: { select: { name: true } }, results: { select: { id: true } }, score: { select: { totalTenths: true, status: true } } },
   });
 
   return sessions.map((session) => ({
+    mode: session.mode,
+    performedAt: session.performedAt ?? session.startedAt,
+    points: session.score ? { totalTenths: session.score.totalTenths, status: session.score.status } : null,
     id: session.id,
     workoutName: session.workout.name,
     status: session.status as "CONCLUIDA" | "ABANDONADA",

@@ -69,6 +69,7 @@ export default async function ProgressoPage() {
         </Button>
       </div>
       {goal ? <ActionRow title={goal.description} description="Sua meta" /> : null}
+      <ActionRow href="/painel/treinos-realizados" title="Treinos realizados" description={featureEnabled("RETROATIVO") ? "Histórico, fotos e registrar treino feito" : "Histórico e fotos dos treinos"} trailing={<span aria-hidden="true">›</span>} />
       <ActionRow href="/painel/relatorio" title="Relatório do mês" description="Treinos, cargas, corpo e fotos do mês" trailing={<span aria-hidden="true">›</span>} />
       {featureEnabled("GAMIFICACAO") ? <ActionRow href="/painel/desafios" title="Desafios" description="Pontos, medalha da semana e do mês" trailing={<span aria-hidden="true">›</span>} /> : null}
       {series.length > 0 ? (

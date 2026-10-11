@@ -34,7 +34,7 @@ function setup() {
   ensureStudentForIndividual.mockResolvedValue({ id: "self" });
   getTrainingOverviewForStudent.mockResolvedValue({ thisWeek: 2, thisMonth: 7, streakWeeks: 3 });
   listPersonalRecordsForStudent.mockResolvedValue([{ exerciseName: "Remada", loadUsed: "30 kg", loadValue: 30, repsCompleted: 10, achievedAt: new Date("2026-10-01T12:00:00Z") }]);
-  listSessionHistoryForStudent.mockResolvedValue([{ id: "s1", workoutName: "Superiores A", status: "ABANDONADA", startedAt: new Date("2026-10-02T12:00:00Z"), endedAt: null, resultsCount: 1, perceivedEffort: null }, { id: "s2", workoutName: "Inferiores B", status: "CONCLUIDA", startedAt: new Date("2026-10-01T12:00:00Z"), endedAt: null, resultsCount: 3, perceivedEffort: 4 }]);
+  listSessionHistoryForStudent.mockResolvedValue([{ id: "s1", workoutName: "Superiores A", status: "ABANDONADA", startedAt: new Date("2026-10-02T12:00:00Z"), performedAt: new Date("2026-10-02T12:00:00Z"), mode: "LIVE", points: null, endedAt: null, resultsCount: 1, perceivedEffort: null }, { id: "s2", workoutName: "Inferiores B", status: "CONCLUIDA", startedAt: new Date("2026-10-01T12:00:00Z"), performedAt: new Date("2026-10-01T12:00:00Z"), mode: "RETROATIVO", points: { totalTenths: 0, status: "PENDENTE_FOTO" }, endedAt: null, resultsCount: 3, perceivedEffort: 4 }]);
   listAssessmentsForStudent.mockResolvedValue([{ id: "a1", recordedAt: new Date("2026-10-01T12:00:00Z"), weightGrams: 70500, bodyFatTenthPercent: 180, notes: "Pós-férias", measurements: [] }]);
   listGoalsForStudent.mockResolvedValue([
     { id: "g1", description: "Correr 5 km", targetDate: null, status: "EM_ANDAMENTO", completedAt: null },

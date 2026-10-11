@@ -13,6 +13,7 @@ import { recordRetroactiveWorkout, retroEditable, updateRetroactiveWorkout } fro
 import { startOrResumeFreeWorkoutSession } from "./freeWorkout";
 import { getSessionPoints } from "@/modules/gamification/sessionScoring";
 import { getAchievements } from "@/modules/gamification/achievements";
+import { getFinishedSessionForSelf } from "./finishedSession";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -105,6 +106,11 @@ describe("treino retroativo: edição e exclusão", () => {
     const live = await startOrResumeFreeWorkoutSession(scope, prisma);
     await expect(updateRetroactiveWorkout({ ...scope, ...actor, sessionId: live.id, ...body, now }, prisma)).rejects.toMatchObject({ kind: "ESTADO_INVALIDO" });
     expect(await prisma.workoutSessionRevision.count({ where: { sessionId } })).toBe(0);
+
+    // Detalhe: só o próprio, com as séries e se ainda dá para editar.
+    expect(await getFinishedSessionForSelf(scope, sessionId, prisma, now)).toMatchObject({ mode: "RETROATIVO", durationSeconds: 2700, editable: true, exercises: [{ exerciseId: leg.id, sets: [{ reps: 10, loadKg: 30 }, { reps: 10, loadKg: 30 }, { reps: 10, loadKg: 30 }] }] });
+    expect(await getFinishedSessionForSelf(scope, sessionId, prisma, late)).toMatchObject({ editable: false });
+    expect(await getFinishedSessionForSelf(other.scope, sessionId, prisma, now)).toBeNull();
   });
 
   it("exclui com trilha e estorno; aluno só exclui o que registrou", async () => {

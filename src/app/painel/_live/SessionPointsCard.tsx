@@ -19,7 +19,8 @@ const deadlineFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2
 /// Desafios (feature 3) no fim do treino: pontos calculados pelo servidor
 /// e a foto que libera os pontos automaticamente. Sem pontuação (flag
 /// desligada ou falha no cálculo), não aparece e não atrapalha o resumo.
-export function SessionPointsCard({ sessionId }: { sessionId: string }) {
+/// `photoAction={false}`: a tela já tem a própria seção de fotos.
+export function SessionPointsCard({ sessionId, photoAction = true }: { sessionId: string; photoAction?: boolean }) {
   const [points, setPoints] = useState<Points | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +88,7 @@ export function SessionPointsCard({ sessionId }: { sessionId: string }) {
                 ? "Prazo da foto encerrado: o treino fica no histórico, sem pontos."
                 : `Adicione uma foto até ${deadlineFmt.format(new Date(points.photoDeadline))} para receber os pontos.`}
       </p>
-      {pending && !expired && !closed ? (
+      {photoAction && pending && !expired && !closed ? (
         <>
           <input ref={input} type="file" accept="image/*" className={styles.hidden} aria-label="Foto do treino" onChange={(event) => void sendPhoto(event.target.files?.[0])} />
           <button type="button" className={styles.photo} onClick={() => input.current?.click()} disabled={busy}>
