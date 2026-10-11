@@ -11,6 +11,7 @@ import { LogoutButton } from "../../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
 import { getMusicPreference } from "@/modules/preferences/music";
+import { featureEnabled } from "@/shared/config/features";
 import { toLiveItems } from "../../_live/liveItems";
 import { loadLibrary } from "../../_workout-builder/editorData";
 import { normalizeFocus } from "@/shared/lib/workoutFocus";
@@ -38,7 +39,7 @@ export default async function SessaoIndividualPage({ searchParams }: { searchPar
   const student = await ensureStudentForIndividual({ id: ctx.tenantId, ownerId: ctx.userId });
   const scope = { tenantId: ctx.tenantId, studentId: student.id };
   const musicProvider = await getMusicPreference(ctx.userId);
-  const common = { musicProvider, coachName: null, apiBase: "/api/minhas-sessoes", exitHref: "/painel", progressHref: "/painel/minha-evolucao", doneHref: "/painel/minha-evolucao" };
+  const common = { musicProvider, pointsEnabled: featureEnabled("GAMIFICACAO"), coachName: null, apiBase: "/api/minhas-sessoes", exitHref: "/painel", progressHref: "/painel/minha-evolucao", doneHref: "/painel/minha-evolucao" };
   const inProgress = await getInProgressSessionForStudent(scope);
 
   if (inProgress) {

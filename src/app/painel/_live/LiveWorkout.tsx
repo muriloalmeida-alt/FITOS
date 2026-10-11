@@ -25,6 +25,7 @@ import { AskCoach } from "./AskCoach";
 import { MusicShortcut } from "./MusicShortcut";
 import type { MusicProvider } from "@/shared/lib/music";
 import { WorkoutComment } from "./WorkoutComment";
+import { SessionPointsCard } from "./SessionPointsCard";
 import { fitToMinutes, shortOptions, workoutMinutes } from "./shortWorkout";
 import styles from "./LiveWorkout.module.css";
 
@@ -88,6 +89,8 @@ export interface LiveWorkoutProps {
   free?: { library: LibraryExercise[]; focus?: Focus[] };
   /// Música em um toque: serviço preferido do usuário (ou nenhum ainda).
   musicProvider?: MusicProvider | null;
+  /// Desafios (feature 3) ligado: pontos e foto no resumo final.
+  pointsEnabled?: boolean;
 }
 
 interface Summary {
@@ -1140,6 +1143,7 @@ export function LiveWorkout(props: LiveWorkoutProps) {
               {record.exerciseName}: {kg(record.loadKg)} kg
             </p>
           ))}
+          {props.pointsEnabled && sessionId ? <SessionPointsCard sessionId={sessionId} /> : null}
           <p className={styles.cap}>Como foi o treino?</p>
           <div
             className={styles.effort}
