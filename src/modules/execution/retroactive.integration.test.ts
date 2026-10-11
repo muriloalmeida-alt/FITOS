@@ -3,7 +3,7 @@
 // Treino retroativo (feature 2) contra PostgreSQL real: vira um treino
 // avulso concluído em modo RETROATIVO, com séries e agregados, sem
 // duplicar por retry, dentro do prazo e só com exercícios do catálogo.
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { ensureStudentForIndividual } from "@/modules/tenancy/ensureStudentForIndividual";
@@ -11,12 +11,15 @@ import { getInProgressSessionForStudent } from "./sessions";
 import { getLastPerformanceForExercises } from "./sets";
 import { getFreeWorkoutQuality, saveFreeWorkout, startOrResumeFreeWorkoutSession } from "./freeWorkout";
 import { RETRO_WORKOUT_NAME, recordRetroactiveWorkout } from "./retroactive";
+import { addSessionEvidence } from "./evidence";
+import { getSessionPoints, previewPoints } from "@/modules/gamification/sessionScoring";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
 const run = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const now = new Date("2026-10-11T15:00:00Z");
 const performedAt = new Date("2026-10-07T21:30:00Z");
 
+afterEach(() => vi.unstubAllEnvs());
 afterAll(async () => {
   const tenant = { tenant: { name: { contains: run } } };
   await prisma.workoutSetResult.deleteMany({ where: tenant });
@@ -114,5 +117,21 @@ describe("treino retroativo", () => {
     await recordRetroactiveWorkout({ ...scope, operationKey, performedAt, durationSeconds: 1800, exercises: [legSets(leg.id)], now }, prisma);
     expect((await getInProgressSessionForStudent(scope, prisma))?.id).toBe(live.id);
     await expect(recordRetroactiveWorkout({ ...other.scope, operationKey, performedAt, durationSeconds: 1800, exercises: [legSets(other.leg.id)], now }, prisma)).rejects.toMatchObject({ kind: "VALIDACAO" });
+  });
+
+  it("Desafios: a prévia bate com a pontuação; pontua ao registrar e a foto em até 7 dias libera", async () => {
+    vi.stubEnv("FEATURE_GAMIFICACAO", "on");
+    const { scope, leg, bike } = await setup();
+    const exercises = [legSets(leg.id), { exerciseId: bike.id, sets: [{ durationSeconds: 40 * 60 }] }];
+    const preview = await previewPoints(scope, exercises.map((exercise) => ({ exerciseId: exercise.exerciseId, sets: exercise.sets.map((set) => ({ reps: (set as { reps?: number }).reps ?? null, loadGrams: (set as { loadKg?: number }).loadKg ? (set as { loadKg: number }).loadKg * 1000 : null, durationSeconds: (set as { durationSeconds?: number }).durationSeconds ?? null })) })), prisma);
+    // Primeira vez: a execução vira a referência (10) e a bicicleta compara com 30 min (40 → 11).
+    expect(preview.totalTenths).toBe(210);
+
+    const result = await recordRetroactiveWorkout({ ...scope, operationKey: key(), performedAt, durationSeconds: 3600, exercises, now }, prisma);
+    const points = await getSessionPoints(scope, result.sessionId, prisma);
+    expect(points).toMatchObject({ totalTenths: 210, status: "PENDENTE_FOTO", photoDeadline: new Date(performedAt.getTime() + 7 * 86_400_000) });
+    const owner = await prisma.tenant.findUniqueOrThrow({ where: { id: scope.tenantId }, select: { ownerId: true } });
+    await addSessionEvidence({ ...scope, userId: owner.ownerId, sessionId: result.sessionId, bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), width: 10, height: 10 }, prisma);
+    expect((await getSessionPoints(scope, result.sessionId, prisma))!.status).toBe("LIBERADO");
   });
 });

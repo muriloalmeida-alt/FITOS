@@ -8,6 +8,7 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { getActivePlanAssignmentForStudent, getWorkoutForTenant } from "@/modules/workouts/workouts";
 
 /// Execução de sessão de treino (FIT-041/FIT-103). Toda sessão referencia
@@ -269,10 +270,13 @@ export async function completeWorkoutSession(
     throw new SessionError("VALIDACAO", "Registre ao menos uma série para concluir.");
   }
   const endedAt = new Date();
-  return client.workoutSession.update({
+  const completed = await client.workoutSession.update({
     where: { id: session.id },
     data: { status: "CONCLUIDA", endedAt, activeSeconds: activeSecondsFor(input.activeSeconds, session.startedAt, endedAt) },
   });
+  // Desafios (feature 3): pontua sem nunca impedir a conclusão.
+  await scoreSessionSafely(completed.id, client);
+  return completed;
 }
 
 function activeSecondsFor(value: number | null | undefined, startedAt: Date, endedAt: Date): number | null {

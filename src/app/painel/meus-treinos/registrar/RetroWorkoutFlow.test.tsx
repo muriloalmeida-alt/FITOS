@@ -13,6 +13,18 @@ const library = [
 const nowIso = "2026-10-11T15:00:00.000Z";
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
+/// Responde por rota; `evidence` é a fila de respostas do envio da foto.
+function routes(register: Response, evidence: (() => Promise<Response>)[]) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/retroativo/previa")) return json({ totalTenths: 100, items: [] });
+    if (url.endsWith("/retroativo")) return register;
+    if (url.includes("/evidencias")) return evidence.shift()!();
+    if (url.includes("/pontos")) return json({ points: null });
+    throw new Error(`inesperado: ${url}`);
+  });
+}
+
 afterEach(() => vi.restoreAllMocks());
 URL.createObjectURL = vi.fn(() => "blob:preview");
 URL.revokeObjectURL = vi.fn();
@@ -26,7 +38,7 @@ async function addLegPress() {
 describe("RetroWorkoutFlow (registrar treino realizado)", () => {
   it("data, execução, duração, foto e revisão; envia uma vez com chave única e anexa a foto", async () => {
     vi.useFakeTimers({ toFake: ["Date"], now: new Date(nowIso) });
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json({ sessionId: "s1", replayed: false, possibleDuplicate: false }, 201)).mockResolvedValueOnce(json({ evidence: { id: "e1" } }, 201));
+    const fetchMock = routes(json({ sessionId: "s1", replayed: false, possibleDuplicate: false }, 201), [async () => json({ evidence: { id: "e1" } }, 201)]);
     render(<RetroWorkoutFlow library={library} nowIso={nowIso} pointsEnabled />);
 
     expect(screen.getByText("Registro retroativo · até 7 dias")).toBeInTheDocument();
@@ -56,22 +68,21 @@ describe("RetroWorkoutFlow (registrar treino realizado)", () => {
     expect(screen.getByText("45 min")).toBeInTheDocument();
     expect(screen.getByText("3 × 10 × 30 kg · Volume: 900 kg")).toBeInTheDocument();
     expect(screen.getByText("✓ Foto anexada")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Concluir registro" }));
+    expect(await screen.findByText("10 pontos")).toBeInTheDocument();
+    expect(screen.getByText("Este treino renderá")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Concluir e receber pontos" }));
 
     expect(await screen.findByRole("heading", { name: "Treino registrado" })).toBeInTheDocument();
-    const sent = JSON.parse(String(fetchMock.mock.calls[0]![1]!.body));
+    const registerCall = fetchMock.mock.calls.find((call) => String(call[0]).endsWith("/retroativo"))!;
+    const sent = JSON.parse(String(registerCall[1]!.body));
     expect(sent).toMatchObject({ performedAt: "2026-10-07T21:30:00.000Z", durationSeconds: 2700, exercises: [{ exerciseId: "leg", sets: [1, 2, 3].map(() => ({ reps: 10, loadKg: 30 })) }] });
     expect(sent.operationKey).toMatch(/^[0-9a-f-]{36}$/);
-    expect(fetchMock.mock.calls[1]![0]).toBe("/api/minhas-sessoes/s1/evidencias");
+    expect(fetchMock.mock.calls.some((call) => call[0] === "/api/minhas-sessoes/s1/evidencias")).toBe(true);
     vi.useRealTimers();
   });
 
   it("foto que falha: treino salvo e opção de enviar de novo; data fora do prazo é recusada", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(json({ sessionId: "s2", replayed: false, possibleDuplicate: true }, 201))
-      .mockRejectedValueOnce(new TypeError("offline"))
-      .mockResolvedValueOnce(json({ evidence: { id: "e2" } }, 201));
+    const fetchMock = routes(json({ sessionId: "s2", replayed: false, possibleDuplicate: true }, 201), [async () => Promise.reject(new TypeError("offline")), async () => json({ evidence: { id: "e2" } }, 201)]);
     render(<RetroWorkoutFlow library={library} nowIso={new Date().toISOString()} pointsEnabled />);
     await userEvent.clear(screen.getByLabelText("Data"));
     await userEvent.type(screen.getByLabelText("Data"), "2020-01-01");
@@ -86,13 +97,13 @@ describe("RetroWorkoutFlow (registrar treino realizado)", () => {
     await userEvent.upload(screen.getByLabelText("Foto do treino"), new File(["x"], "treino.jpg", { type: "image/jpeg" }));
     await screen.findByAltText("Foto escolhida para o treino");
     await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
-    await userEvent.click(screen.getByRole("button", { name: "Concluir registro" }));
+    await userEvent.click(screen.getByRole("button", { name: "Concluir e receber pontos" }));
 
     expect(await screen.findByText(/Treino salvo, mas a foto não foi enviada/)).toBeInTheDocument();
     expect(screen.getByText(/Já existe um treino perto desse horário/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Tentar enviar a foto de novo" }));
     expect(await screen.findByText("✓ Foto anexada")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.filter((call) => String(call[0]).includes("/evidencias"))).toHaveLength(2);
   });
 
   it("aeróbico registra minutos; sem foto segue sem pontuação", async () => {

@@ -11,6 +11,7 @@ import { LogoutButton } from "../../LogoutButton";
 import { ALUNO_NAV_ITEMS } from "../../navigation";
 import { LiveWorkout } from "../../_live/LiveWorkout";
 import { getMusicPreference } from "@/modules/preferences/music";
+import { featureEnabled } from "@/shared/config/features";
 import { toLiveItems } from "../../_live/liveItems";
 import styles from "./page.module.css";
 
@@ -39,7 +40,7 @@ export default async function SessaoPage({ searchParams }: { searchParams?: Prom
   ]);
   const coachName = student.tenant.owner.name;
   const musicProvider = await getMusicPreference(ctx.userId);
-  const common = { musicProvider, coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
+  const common = { musicProvider, pointsEnabled: featureEnabled("GAMIFICACAO"), coachName, apiBase: "/api/workout-sessions", exitHref: "/painel", progressHref: "/painel/progresso", askCoach: true };
 
   if (inProgress) {
     const items = inProgress.workout.workoutExercises;

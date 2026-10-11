@@ -8,6 +8,8 @@ import { resizeImage } from "@/shared/lib/resizeImage";
 import { RETRO_MAX_DAYS, durationLabel, durationSeconds, validatePerformedAt } from "@/shared/lib/retroactive";
 import { ExerciseLibrary } from "../../_workout-builder/ExerciseLibrary";
 import type { LibraryExercise } from "../../_workout-builder/types";
+import { formatPoints } from "@/shared/lib/scoring";
+import { SessionPointsCard } from "../../_live/SessionPointsCard";
 import styles from "./RetroWorkoutFlow.module.css";
 
 interface SetRow {
@@ -81,6 +83,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [previewTenths, setPreviewTenths] = useState<number | null>(null);
   const [done, setDone] = useState<{ sessionId: string; photoSaved: boolean; possibleDuplicate: boolean } | null>(null);
   const operationKey = useRef<string>(crypto.randomUUID());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -147,6 +150,25 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
     return Boolean(response?.ok);
   }
 
+  function payloadExercises() {
+    return items.map((item) => ({
+      exerciseId: item.exercise.id,
+      sets: item.sets.map((set) =>
+        item.cardio ? { durationSeconds: Math.round((number(set.minutes) ?? 0) * 60) } : { reps: Math.round(number(set.reps) ?? 0), loadKg: number(set.load) }
+      ),
+    }));
+  }
+
+  /// Revisão: com os Desafios ligados, a prévia dos pontos (só calcula).
+  async function review() {
+    setStep(3);
+    setPreviewTenths(null);
+    if (!pointsEnabled) return;
+    const response = await fetch("/api/minhas-sessoes/retroativo/previa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ exercises: payloadExercises() }) }).catch(() => null);
+    const body = response?.ok ? ((await response.json().catch(() => null)) as { totalTenths?: number } | null) : null;
+    if (typeof body?.totalTenths === "number") setPreviewTenths(body.totalTenths);
+  }
+
   async function submit() {
     if (busy || typeof duration === "string") return;
     setBusy(true);
@@ -158,12 +180,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
         operationKey: operationKey.current,
         performedAt: performedAt.toISOString(),
         durationSeconds: duration,
-        exercises: items.map((item) => ({
-          exerciseId: item.exercise.id,
-          sets: item.sets.map((set) =>
-            item.cardio ? { durationSeconds: Math.round((number(set.minutes) ?? 0) * 60) } : { reps: Math.round(number(set.reps) ?? 0), loadKg: number(set.load) }
-          ),
-        })),
+        exercises: payloadExercises(),
       }),
     }).catch(() => null);
     if (!response?.ok) {
@@ -206,6 +223,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
         ) : (
           <p className={styles.ok}>{done.photoSaved ? "✓ Foto anexada" : pointsEnabled ? "Salvo sem pontuação." : "Salvo sem foto."}</p>
         )}
+        {pointsEnabled ? <SessionPointsCard sessionId={done.sessionId} /> : null}
         <Link href="/painel/minha-evolucao" className={styles.primaryLink}>
           Ver no histórico
         </Link>
@@ -361,7 +379,14 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
               </span>
             </div>
           ))}
-          <p className={photo ? styles.ok : styles.muted}>{photo ? "✓ Foto anexada" : pointsEnabled ? "Sem foto: nenhum ponto é liberado." : "Sem foto."}</p>
+          <p className={photo ? styles.ok : styles.muted}>{photo ? "✓ Foto anexada" : pointsEnabled ? "Adicione uma foto para receber os pontos." : "Sem foto."}</p>
+          {pointsEnabled && previewTenths !== null ? (
+            <div className={styles.points}>
+              <span>{photo ? "Este treino renderá" : "Com foto, este treino renderia"}</span>
+              <strong>{formatPoints(previewTenths)} pontos</strong>
+              <span className={styles.muted}>Liberação automática, sujeita a contestação.</span>
+            </div>
+          ) : null}
         </>
       ) : null}
 
@@ -375,11 +400,11 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
         ) : null}
         {step === 2 ? (
           <>
-            <Button type="button" size="lg" block onClick={() => setStep(3)} disabled={photoBusy || !photo}>
+            <Button type="button" size="lg" block onClick={() => void review()} disabled={photoBusy || !photo}>
               Continuar
             </Button>
             {photo ? null : (
-              <Button type="button" variant="quiet" block onClick={() => setStep(3)}>
+              <Button type="button" variant="quiet" block onClick={() => void review()}>
                 {pointsEnabled ? "Salvar sem pontuação" : "Continuar sem foto"}
               </Button>
             )}
@@ -387,7 +412,7 @@ export function RetroWorkoutFlow({ library, nowIso, pointsEnabled }: { library: 
         ) : null}
         {step === 3 ? (
           <Button type="button" size="lg" block onClick={() => void submit()} disabled={busy}>
-            {busy ? "Registrando…" : "Concluir registro"}
+            {busy ? "Registrando…" : pointsEnabled && photo ? "Concluir e receber pontos" : "Concluir registro"}
           </Button>
         ) : null}
         {step > 0 ? (
