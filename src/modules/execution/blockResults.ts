@@ -60,18 +60,27 @@ function count(value: unknown, label: string, max: number): number | null {
   return value;
 }
 
+/// Resultado informado pela pessoa, validado contra o formato do bloco
+/// (ao vivo e no retroativo).
+export function parseBlockOutcome(block: WorkoutBlock, input: BlockResultInput): { outcome: BlockOutcome; roundsCompleted: number | null; partialReps: number | null; intervalsCompleted: number | null; note: string | null } {
+  const outcome = input.outcome ?? "PARCIAL";
+  if (outcome !== "CONCLUIDO" && outcome !== "LIMITE_ATINGIDO" && outcome !== "PARCIAL") throw new SessionError("VALIDACAO", "Resultado inválido.");
+  if (outcome === "LIMITE_ATINGIDO" && block.kind !== "FOR_TIME") throw new SessionError("VALIDACAO", "Limite de tempo é só do For Time.");
+  return {
+    outcome,
+    roundsCompleted: count(input.roundsCompleted, "Número de voltas", 500),
+    partialReps: count(input.partialReps, "Repetições da volta parcial", 1000),
+    intervalsCompleted: count(input.intervalsCompleted, "Intervalos", block.intervals ?? 120),
+    note: typeof input.note === "string" && input.note.trim() ? input.note.trim().slice(0, 300) : null,
+  };
+}
+
 /// Encerra o bloco com o resultado confirmado pela pessoa. Em For Time,
 /// "concluído" guarda o tempo do timer; "limite atingido" nunca vira tempo.
 /// Reenviar corrige o resultado (o tempo do fim não muda).
 export async function finishBlock(scope: Scope, sessionId: string, blockKey: string, input: BlockResultInput, client: PrismaClient = prisma, now = new Date()): Promise<WorkoutBlockResult> {
   const block = await sessionBlock(scope, sessionId, blockKey, client);
-  const outcome = input.outcome ?? "PARCIAL";
-  if (outcome !== "CONCLUIDO" && outcome !== "LIMITE_ATINGIDO" && outcome !== "PARCIAL") throw new SessionError("VALIDACAO", "Resultado inválido.");
-  if (outcome === "LIMITE_ATINGIDO" && block.kind !== "FOR_TIME") throw new SessionError("VALIDACAO", "Limite de tempo é só do For Time.");
-  const roundsCompleted = count(input.roundsCompleted, "Número de voltas", 500);
-  const partialReps = count(input.partialReps, "Repetições da volta parcial", 1000);
-  const intervalsCompleted = count(input.intervalsCompleted, "Intervalos", block.intervals ?? 120);
-  const note = typeof input.note === "string" && input.note.trim() ? input.note.trim().slice(0, 300) : null;
+  const { outcome, roundsCompleted, partialReps, intervalsCompleted, note } = parseBlockOutcome(block, input);
 
   const where = { sessionId_blockKey: { sessionId, blockKey } };
   const current = await client.workoutBlockResult.findUnique({ where });
@@ -81,7 +90,7 @@ export async function finishBlock(scope: Scope, sessionId: string, blockKey: str
   const timer = { startedAt: current?.startedAt ?? null, pausedAt: null, pausedSeconds: (current?.pausedSeconds ?? 0) + openPause, endedAt };
   const elapsed = blockElapsedSeconds(timer, now);
   const elapsedSeconds = block.kind === "FOR_TIME" && outcome === "CONCLUIDO" && elapsed > 0 ? elapsed : null;
-  const data = { outcome: outcome as BlockOutcome, roundsCompleted, partialReps, intervalsCompleted, note, elapsedSeconds, endedAt, pausedAt: null, pausedSeconds: timer.pausedSeconds };
+  const data = { outcome, roundsCompleted, partialReps, intervalsCompleted, note, elapsedSeconds, endedAt, pausedAt: null, pausedSeconds: timer.pausedSeconds };
   return client.workoutBlockResult.upsert({ where, create: { tenantId: scope.tenantId, sessionId, blockKey, ...data }, update: data });
 }
 

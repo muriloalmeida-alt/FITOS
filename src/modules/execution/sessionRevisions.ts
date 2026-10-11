@@ -13,23 +13,30 @@ export interface SessionSnapshot {
   mode: string;
   performedAt: string;
   declaredDurationSeconds: number | null;
-  exercises: { exerciseId: string; name: string; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] }[];
+  /// Funcional (etapa 4): blocos e resultados de antes, quando havia.
+  blocks?: unknown;
+  blockResults?: { blockKey: string; outcome: string | null; roundsCompleted: number | null; partialReps: number | null; intervalsCompleted: number | null; elapsedSeconds: number | null }[];
+  exercises: { exerciseId: string; name: string; blockKey?: string | null; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] }[];
   evidences: number;
 }
 
 export async function sessionSnapshot(client: Client, session: { id: string; tenantId: string; workoutId: string; mode: string; performedAt: Date | null; startedAt: Date; declaredDurationSeconds: number | null }): Promise<SessionSnapshot> {
-  const [items, sets, evidences] = await Promise.all([
-    client.workoutExercise.findMany({ where: { workoutId: session.workoutId, tenantId: session.tenantId }, orderBy: { position: "asc" }, select: { id: true, exerciseId: true, exercise: { select: { name: true } } } }),
+  const [items, sets, evidences, workout, blockResults] = await Promise.all([
+    client.workoutExercise.findMany({ where: { workoutId: session.workoutId, tenantId: session.tenantId }, orderBy: { position: "asc" }, select: { id: true, exerciseId: true, blockKey: true, exercise: { select: { name: true } } } }),
     client.workoutSetResult.findMany({ where: { workoutSessionId: session.id, tenantId: session.tenantId }, orderBy: { setNumber: "asc" }, select: { workoutExerciseId: true, reps: true, loadGrams: true, durationSeconds: true } }),
     client.workoutEvidencePhoto.count({ where: { sessionId: session.id } }),
+    client.workout.findUnique({ where: { id: session.workoutId }, select: { blocks: true } }),
+    client.workoutBlockResult.findMany({ where: { sessionId: session.id, tenantId: session.tenantId }, select: { blockKey: true, outcome: true, roundsCompleted: true, partialReps: true, intervalsCompleted: true, elapsedSeconds: true } }),
   ]);
   return {
     mode: session.mode,
     performedAt: (session.performedAt ?? session.startedAt).toISOString(),
     declaredDurationSeconds: session.declaredDurationSeconds,
+    ...(blockResults.length ? { blocks: workout?.blocks ?? null, blockResults } : {}),
     exercises: items.map((item) => ({
       exerciseId: item.exerciseId,
       name: item.exercise.name,
+      ...(item.blockKey ? { blockKey: item.blockKey } : {}),
       sets: sets.filter((set) => set.workoutExerciseId === item.id).map(({ reps, loadGrams, durationSeconds }) => ({ reps, loadGrams, durationSeconds })),
     })),
     evidences,

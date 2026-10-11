@@ -9,6 +9,8 @@ import { recordRevision, sessionSnapshot } from "./sessionRevisions";
 import { SessionError } from "./sessions";
 import { rescoreSessionSafely, scoreSessionSafely } from "@/modules/gamification/sessionScoring";
 import { MAX_DURATION_SECONDS, MAX_LOAD_KG, MAX_REPS, MAX_SET_NUMBER, syncAggregate } from "./sets";
+import { parseBlockOutcome, type BlockResultInput } from "./blockResults";
+import { BlockError, parseBlocks, type BlockOutcome, type WorkoutBlock } from "@/shared/lib/workoutBlocks";
 
 /// Treino retroativo (feature 2, ADR-018): "Registrar treino realizado".
 /// Tudo chega de uma vez (data, exercícios com séries, duração total) e
@@ -35,6 +37,15 @@ export interface RetroSetInput {
 export interface RetroExerciseInput {
   exerciseId: string;
   sets: RetroSetInput[];
+  /// Funcional e CrossFit (etapa 4): exercício dentro de um bloco. Conta
+  /// pelo resultado do bloco; as séries são opcionais.
+  blockKey?: string | null;
+}
+
+/// Bloco feito (formato da prescrição) e o resultado declarado.
+export interface RetroBlockInput {
+  block: unknown;
+  result: BlockResultInput & { elapsedSeconds?: unknown };
 }
 
 export interface RecordRetroactiveInput {
@@ -44,6 +55,7 @@ export interface RecordRetroactiveInput {
   performedAt: Date;
   durationSeconds: number;
   exercises: RetroExerciseInput[];
+  blocks?: RetroBlockInput[];
   now?: Date;
 }
 
@@ -66,7 +78,34 @@ function loadGrams(value: unknown): number | null {
   return Math.round(value * 1000);
 }
 
-type ParsedItem = { exerciseId: string; cardio: boolean; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] };
+type ParsedItem = { exerciseId: string; cardio: boolean; blockKey: string | null; sets: { reps: number | null; loadGrams: number | null; durationSeconds: number | null }[] };
+type ParsedBlockResult = { outcome: BlockOutcome; roundsCompleted: number | null; partialReps: number | null; intervalsCompleted: number | null; note: string | null; elapsedSeconds: number | null };
+type ParsedBlocks = { blocks: WorkoutBlock[]; results: Map<string, ParsedBlockResult> };
+
+/// Blocos do registro: formato válido, resultado coerente com o formato
+/// e pelo menos um exercício em cada. For Time concluído pede o tempo.
+function parseRetroBlocks(input: RetroBlockInput[] | undefined, exercises: RetroExerciseInput[]): ParsedBlocks {
+  let blocks: WorkoutBlock[];
+  try {
+    blocks = parseBlocks((input ?? []).map((entry) => entry.block));
+  } catch (error) {
+    if (error instanceof BlockError) throw new SessionError("VALIDACAO", error.message);
+    throw error;
+  }
+  const results = new Map<string, ParsedBlockResult>();
+  for (const [index, block] of blocks.entries()) {
+    const raw = input![index]!.result ?? {};
+    const parsed = parseBlockOutcome(block, raw);
+    const elapsed = intOrNull(raw.elapsedSeconds, "Tempo do bloco", 1, DAY_SECONDS);
+    if (block.kind === "FOR_TIME" && parsed.outcome === "CONCLUIDO" && elapsed === null) throw new SessionError("VALIDACAO", "Informe em quanto tempo você concluiu o For Time.");
+    if (!exercises.some((exercise) => exercise.blockKey === block.key)) throw new SessionError("VALIDACAO", "Inclua pelo menos um exercício em cada bloco.");
+    results.set(block.key, { ...parsed, elapsedSeconds: block.kind === "FOR_TIME" && parsed.outcome === "CONCLUIDO" ? elapsed : null });
+  }
+  for (const exercise of exercises) {
+    if (exercise.blockKey && !results.has(exercise.blockKey)) throw new SessionError("VALIDACAO", "Bloco não encontrado neste registro.");
+  }
+  return { blocks, results };
+}
 
 function validateDuration(durationSeconds: number) {
   if (!Number.isInteger(durationSeconds) || durationSeconds <= 0 || durationSeconds > DAY_SECONDS) {
@@ -86,7 +125,8 @@ async function parseItems(tenantId: string, exercises: RetroExerciseInput[], cli
   for (const exercise of exercises) {
     const found = await getCatalogExerciseForTenant({ tenantId, exerciseId: exercise.exerciseId }, client);
     if (!found || found.status !== "ATIVO") throw new SessionError("NAO_ENCONTRADO", "Exercício não encontrado no catálogo.");
-    if (exercise.sets.length === 0) throw new SessionError("VALIDACAO", `Informe pelo menos uma série de ${found.name}.`);
+    const blockKey = typeof exercise.blockKey === "string" && exercise.blockKey ? exercise.blockKey : null;
+    if (exercise.sets.length === 0 && !blockKey) throw new SessionError("VALIDACAO", `Informe pelo menos uma série de ${found.name}.`);
     if (exercise.sets.length > MAX_SET_NUMBER) throw new SessionError("VALIDACAO", "Séries demais.");
     const cardio = isCardioType(found.type);
     const sets = exercise.sets.map((set) => {
@@ -100,25 +140,32 @@ async function parseItems(tenantId: string, exercises: RetroExerciseInput[], cli
       }
       return parsed;
     });
-    items.push({ exerciseId: found.id, cardio, sets });
+    items.push({ exerciseId: found.id, cardio, blockKey, sets });
   }
   return items;
 }
 
 /// Grava os exercícios e as séries do registro (criação e edição).
-async function writeItems(tx: Prisma.TransactionClient, at: { tenantId: string; workoutId: string; sessionId: string; performedAt: Date }, items: ParsedItem[]) {
+async function writeItems(tx: Prisma.TransactionClient, at: { tenantId: string; workoutId: string; sessionId: string; performedAt: Date; endedAt: Date }, items: ParsedItem[], parsedBlocks: ParsedBlocks) {
+  await tx.workout.update({ where: { id: at.workoutId }, data: { blocks: parsedBlocks.blocks.length ? (parsedBlocks.blocks as unknown as Prisma.InputJsonValue) : Prisma.DbNull } });
+  if (parsedBlocks.results.size) {
+    await tx.workoutBlockResult.createMany({ data: [...parsedBlocks.results].map(([blockKey, result]) => ({ tenantId: at.tenantId, sessionId: at.sessionId, blockKey, ...result, endedAt: at.endedAt })) });
+  }
   for (const [position, item] of items.entries()) {
     const topReps = Math.max(0, ...item.sets.map((set) => set.reps ?? 0));
+    const topSeconds = Math.max(0, ...item.sets.map((set) => set.durationSeconds ?? 0));
     const created = await tx.workoutExercise.create({
       data: {
         tenantId: at.tenantId,
         workoutId: at.workoutId,
         exerciseId: item.exerciseId,
         position,
-        sets: item.sets.length,
-        ...(item.cardio ? { durationSeconds: Math.max(...item.sets.map((set) => set.durationSeconds ?? 0)) } : topReps > 0 ? { reps: topReps } : {}),
+        sets: item.sets.length || null,
+        blockKey: item.blockKey,
+        ...(item.cardio ? (topSeconds > 0 ? { durationSeconds: topSeconds } : {}) : topReps > 0 ? { reps: topReps } : {}),
       },
     });
+    if (item.sets.length === 0) continue;
     await tx.workoutSetResult.createMany({
       data: item.sets.map((set, index) => ({
         tenantId: at.tenantId,
@@ -153,6 +200,7 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
   const dateError = validatePerformedAt(input.performedAt, now);
   if (dateError) throw new SessionError("VALIDACAO", dateError);
   validateDuration(input.durationSeconds);
+  const parsedBlocks = parseRetroBlocks(input.blocks, input.exercises);
   const items = await parseItems(input.tenantId, input.exercises, client);
 
   const plan = await ensureDraftTrainingPlanForTenant(input.tenantId, client);
@@ -180,7 +228,7 @@ export async function recordRetroactiveWorkout(input: RecordRetroactiveInput, cl
           operationKey: input.operationKey,
         },
       });
-      await writeItems(tx, { tenantId: input.tenantId, workoutId: workout.id, sessionId: session.id, performedAt }, items);
+      await writeItems(tx, { tenantId: input.tenantId, workoutId: workout.id, sessionId: session.id, performedAt, endedAt }, items, parsedBlocks);
       return session.id;
     });
   } catch (error) {
@@ -214,6 +262,7 @@ export interface UpdateRetroactiveInput {
   performedAt: Date;
   durationSeconds: number;
   exercises: RetroExerciseInput[];
+  blocks?: RetroBlockInput[];
   now?: Date;
 }
 
@@ -236,9 +285,11 @@ export async function updateRetroactiveWorkout(input: UpdateRetroactiveInput, cl
   const dateError = validatePerformedAt(input.performedAt, now);
   if (dateError) throw new SessionError("VALIDACAO", dateError);
   validateDuration(input.durationSeconds);
+  const parsedBlocks = parseRetroBlocks(input.blocks, input.exercises);
   const items = await parseItems(input.tenantId, input.exercises, client);
 
   const performedAt = input.performedAt;
+  const endedAt = new Date(performedAt.getTime() + input.durationSeconds * 1000);
   const score = await client.sessionScore.findUnique({ where: { sessionId: session.id }, select: { totalTenths: true, status: true } });
   const revision = await client.$transaction(async (tx) => {
     const snapshot = await sessionSnapshot(tx, session);
@@ -246,12 +297,13 @@ export async function updateRetroactiveWorkout(input: UpdateRetroactiveInput, cl
     // Séries e resultados primeiro (apontam para os exercícios do treino).
     await tx.workoutSetResult.deleteMany({ where: { workoutSessionId: session.id, tenantId: input.tenantId } });
     await tx.workoutSessionResult.deleteMany({ where: { workoutSessionId: session.id, tenantId: input.tenantId } });
+    await tx.workoutBlockResult.deleteMany({ where: { sessionId: session.id, tenantId: input.tenantId } });
     await tx.workoutExercise.deleteMany({ where: { workoutId: session.workoutId, tenantId: input.tenantId } });
     await tx.workoutSession.update({
       where: { id: session.id },
-      data: { performedAt, startedAt: performedAt, endedAt: new Date(performedAt.getTime() + input.durationSeconds * 1000), declaredDurationSeconds: input.durationSeconds },
+      data: { performedAt, startedAt: performedAt, endedAt, declaredDurationSeconds: input.durationSeconds },
     });
-    await writeItems(tx, { tenantId: input.tenantId, workoutId: session.workoutId, sessionId: session.id, performedAt }, items);
+    await writeItems(tx, { tenantId: input.tenantId, workoutId: session.workoutId, sessionId: session.id, performedAt, endedAt }, items, parsedBlocks);
     return created;
   });
 

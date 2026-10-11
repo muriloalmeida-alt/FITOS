@@ -31,10 +31,19 @@ export function durationLabel(seconds: number): string {
 
 /// Exercícios e séries vindos do corpo da requisição (registro e edição):
 /// só o formato; a validação é do servidor (`execution/retroactive`).
-export function parseRetroExercises(value: unknown): { exerciseId: string; sets: { reps: unknown; loadKg: unknown; durationSeconds: unknown }[] }[] {
-  const exercises = Array.isArray(value) ? (value as { exerciseId?: unknown; sets?: unknown }[]) : [];
+/// Com `withBlocks` (FEATURE_FUNCIONAL), mantém o `blockKey` de cada um.
+export function parseRetroExercises(value: unknown, withBlocks = false): { exerciseId: string; blockKey?: string | null; sets: { reps: unknown; loadKg: unknown; durationSeconds: unknown }[] }[] {
+  const exercises = Array.isArray(value) ? (value as { exerciseId?: unknown; blockKey?: unknown; sets?: unknown }[]) : [];
   return exercises.map((exercise) => ({
     exerciseId: String(exercise?.exerciseId ?? ""),
+    ...(withBlocks && typeof exercise?.blockKey === "string" ? { blockKey: exercise.blockKey } : {}),
     sets: Array.isArray(exercise?.sets) ? (exercise.sets as Record<string, unknown>[]).map((set) => ({ reps: set?.reps ?? null, loadKg: set?.loadKg ?? null, durationSeconds: set?.durationSeconds ?? null })) : [],
   }));
+}
+
+/// Blocos do registro vindos do corpo (`[{ block, result }]`): só o
+/// formato; a validação é do servidor.
+export function parseRetroBlocksBody(value: unknown): { block: unknown; result: Record<string, unknown> }[] {
+  const blocks = Array.isArray(value) ? (value as { block?: unknown; result?: unknown }[]) : [];
+  return blocks.map((entry) => ({ block: entry?.block ?? null, result: entry?.result && typeof entry.result === "object" ? (entry.result as Record<string, unknown>) : {} }));
 }
