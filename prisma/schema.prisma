@@ -662,6 +662,17 @@ model Exercise {
   /// original), escrito pelo manifesto de importação.
   imageUrl     String?
   imageAlt     String?
+  /// Funcional e CrossFit (feature 1): categorias do catálogo ("Funcional",
+  /// "CrossFit"), músculos secundários (o filtro por músculo também os
+  /// considera), nomes alternativos (inglês, siglas) e a métrica de registro
+  /// (`shared/lib/exerciseCatalog.ts`).
+  categories       String[] @default([])
+  secondaryMuscles String[] @default([])
+  aliases          String[] @default([])
+  metric           String?
+  /// Nome, aliases e músculos em minúsculas e sem acento, para a busca
+  /// ignorar acento e caixa (`exerciseSearchText`).
+  searchText       String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

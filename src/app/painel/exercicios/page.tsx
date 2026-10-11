@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell, ExerciseThumbnail, Tag } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
 import { difficultyLabel } from "@/shared/lib/difficulty";
+import { isExerciseCategory } from "@/shared/lib/exerciseCatalog";
 import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { listCatalogExercises, listCatalogFacets } from "@/modules/exercises/exercises";
 import { FilterLinks } from "../_workout-builder/FilterLinks";
@@ -21,7 +22,7 @@ const PAGE_SIZE = 30;
 type Origin = "todos" | "biblioteca" | "meus";
 
 interface ExerciciosPageProps {
-  searchParams?: Promise<{ q?: string; origem?: string; musculo?: string; tipo?: string; dificuldade?: string; pagina?: string; novo?: string }>;
+  searchParams?: Promise<{ q?: string; origem?: string; musculo?: string; tipo?: string; dificuldade?: string; categoria?: string; pagina?: string; novo?: string }>;
 }
 
 function hrefWith(base: Record<string, string | undefined>, changes: Record<string, string | undefined>) {
@@ -48,11 +49,12 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
   const sp = (await searchParams) ?? {};
   const origin: Origin = sp.origem === "biblioteca" || sp.origem === "meus" ? sp.origem : "todos";
   const page = Math.max(1, Number(sp.pagina) || 1);
+  const category = isExerciseCategory(sp.categoria) ? sp.categoria : undefined;
   const [result, facets] = await Promise.all([
-    listCatalogExercises({ tenantId: ctx.tenantId, origin, search: sp.q, muscle: sp.musculo, type: sp.tipo, difficulty: sp.dificuldade, page, pageSize: PAGE_SIZE }),
+    listCatalogExercises({ tenantId: ctx.tenantId, origin, search: sp.q, muscle: sp.musculo, type: sp.tipo, difficulty: sp.dificuldade, category, page, pageSize: PAGE_SIZE }),
     listCatalogFacets({ tenantId: ctx.tenantId }),
   ]);
-  const base = { q: sp.q, origem: origin === "todos" ? undefined : origin, musculo: sp.musculo, tipo: sp.tipo, dificuldade: sp.dificuldade };
+  const base = { q: sp.q, origem: origin === "todos" ? undefined : origin, musculo: sp.musculo, tipo: sp.tipo, dificuldade: sp.dificuldade, categoria: category };
   const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
@@ -66,7 +68,7 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
           active: origin === key,
         }))}
       />
-      <LibraryControls muscles={facets.muscles} types={facets.types} difficulties={facets.difficulties} openCreate={sp.novo === "1"} />
+      <LibraryControls muscles={facets.muscles} types={facets.types} difficulties={facets.difficulties} categories={facets.categories} openCreate={sp.novo === "1"} />
 
       {result.items.length === 0 ? (
         <div className={styles.empty}>
@@ -80,7 +82,7 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
         <ul className={styles.list} aria-label="Lista de exercícios">
           {result.items.map((exercise) => {
             const own = exercise.origin === "PERSONAL";
-            const meta = [exercise.muscle, exercise.equipments, difficultyLabel(exercise.difficulty)].filter(Boolean).join(" · ");
+            const meta = [...(exercise.categories ?? []), exercise.muscle, exercise.equipments, difficultyLabel(exercise.difficulty)].filter(Boolean).join(" · ");
             return (
               <li key={exercise.id}>
                 <Link href={`/painel/exercicios/${exercise.id}`} className={styles.row}>

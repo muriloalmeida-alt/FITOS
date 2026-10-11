@@ -53,6 +53,10 @@ export interface LibraryExercise {
   imageAlt: string | null;
   /// Tipo do catálogo, quando a tela precisa ("Aeróbico" = por tempo).
   type?: string | null;
+  /// Funcional e CrossFit: modalidade, músculos secundários e nomes alternativos.
+  categories?: string[];
+  secondaryMuscles?: string[];
+  aliases?: string[];
 }
 
 export interface EditorItem {
