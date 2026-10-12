@@ -268,26 +268,12 @@
   left: 48px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
-  padding: 4px 6px 4px 10px;
+  padding: 0 4px 0 8px;
   border-left: 3px solid var(--fitos-orange-300);
   border-radius: 10px;
   background-color: var(--fitos-color-surface-raised);
-}
-
-/* Bloco curto (aula colada na seguinte): uma linha, sem detalhes. */
-.agendaTight {
-  padding-block: 0;
-}
-
-.agendaTight .agendaMeta {
-  display: none;
-}
-
-.agendaItem.agendaTight .checkButton {
-  width: 24px;
-  height: 24px;
 }
 
 .agendaNext {
@@ -309,20 +295,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Hora, aluno e local numa linha só. */
 .agendaWho {
   display: flex;
   flex: 1;
-  flex-direction: column;
+  align-items: baseline;
   min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
+/* O nome fica inteiro; o local usa o que sobra. */
 .agendaWho strong {
+  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .agendaMeta {
+  flex: 1 1 0;
+  min-width: 0;
   overflow: hidden;
   color: var(--fitos-color-text-muted);
   font-size: 13px;
@@ -336,9 +330,19 @@
   gap: 8px;
 }
 
+.agendaMeta::before {
+  content: " · ";
+  white-space: pre;
+}
+
 .agendaItem .checkButton {
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
+}
+
+.agendaItem .checkButton svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Feita / Falta como ícones (toque de 40 px). */

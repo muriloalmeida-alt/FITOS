@@ -27,7 +27,7 @@ const STATUS: Record<TodayClass["status"], { label: string; tone: TagTone } | nu
 };
 
 /// Altura de uma hora na linha do tempo: quatro horas cabem na janela.
-const HOUR_PX = 56;
+const HOUR_PX = 40;
 const VISIBLE_HOURS = 4;
 const DAY_START = 5;
 const DAY_END = 23;
@@ -124,8 +124,8 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
               const top = offset(item.startMinutes) + 2;
               // Aula curta seguida de outra: o bloco não invade a próxima.
               const room = following ? offset(following.startMinutes) - top - 2 : Infinity;
-              const height = Math.max(24, Math.min(Math.max((item.durationMinutes / 60) * HOUR_PX - 4, 48), room));
-              const classNames = [styles.agendaItem, height < 44 ? styles.agendaTight : "", item.status === "DESMARCADA" ? styles.agendaOff : "", item === next ? styles.agendaNext : ""].filter(Boolean).join(" ");
+              const height = Math.max(24, Math.min(Math.max((item.durationMinutes / 60) * HOUR_PX - 4, 30), room));
+              const classNames = [styles.agendaItem, item.status === "DESMARCADA" ? styles.agendaOff : "", item === next ? styles.agendaNext : ""].filter(Boolean).join(" ");
               return (
                 <li key={item.ref} className={classNames} style={{ top, height }}>
                   <span className={styles.agendaTime}>{formatTime(item.startMinutes)}</span>
