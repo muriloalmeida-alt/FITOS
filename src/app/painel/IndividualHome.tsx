@@ -1,10 +1,9 @@
-import Link from "next/link";
 import type { IndividualHome as IndividualHomeData } from "@/modules/workouts/individualHome";
 import { panelGoals, panelWeek } from "@/shared/lib/panel";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
 import { ProgressionCard } from "./ProgressionCard";
 import { StudentPanel } from "./_panel/StudentPanel";
-import styles from "./IndividualHome.module.css";
+import { NoticeRow } from "./_panel/NoticeRow";
 
 interface IndividualHomeProps {
   name: string;
@@ -48,15 +47,8 @@ export function IndividualHome({ name, dateLabel, home, todayIso, performed = []
       start={{ inProgressHref: home.inProgress ? SESSION_HREF : null, programmed, free: true, done: retroEnabled ? "/painel/treinos-realizados/registrar" : null }}
       navItems={INDIVIDUAL_NAV_ITEMS}
       notices={
-        <>
-          {trialNotice ? (
-            <Link href="/painel/assinatura" className={styles.trial}>
-              <span>{trialNotice}</span>
-              <span aria-hidden="true">→</span>
-            </Link>
-          ) : null}
-          {home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null}
-        </>
+        // Um aviso por vez: o Início cabe na tela sem rolagem.
+        trialNotice ? <NoticeRow eyebrow="Teste grátis" text={trialNotice} href="/painel/assinatura" tone="warn" /> : home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null
       }
     />
   );

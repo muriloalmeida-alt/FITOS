@@ -54,6 +54,8 @@ interface AppShellProps {
   /// Perfil (proposta 10): a página já mostra a foto; o avatar do
   /// cabeçalho não se repete.
   hideAccount?: boolean;
+  /// Início: espaçamento mais justo, para a tela caber sem rolagem.
+  compact?: boolean;
   children: ReactNode;
 }
 
@@ -176,7 +178,7 @@ function AccountMenu({
   );
 }
 
-export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, hideAccount = false, children }: AppShellProps) {
+export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, hideAccount = false, compact = false, children }: AppShellProps) {
   const [showMore, setShowMore] = useState(false);
   const accountName = useAccountName();
   const accountImage = useAccountImage();
@@ -184,7 +186,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
   const accountLinkItem = navItems.find((item) => item.accountLink) ?? null;
 
   return (
-    <div className={styles.shell}>
+    <div className={compact ? `${styles.shell} ${styles.shellCompact}` : styles.shell}>
       <header className={styles.topBar} data-shell="top">
         <BrandLogo background="photo" size={44} className={styles.brand} />
         <div className={styles.topBarEnd}>
@@ -209,7 +211,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
           ))}
         </nav>
 
-        <main className={styles.content}>
+        <main className={compact ? `${styles.content} ${styles.contentCompact}` : styles.content}>
           <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader} data-shell="header">
             {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
             <h1 className={`${styles.title} ${styles[`title-${titleFit(title)}`] ?? ""}`} title={titleFit(title) === "tiny" ? title : undefined}>

@@ -1,0 +1,49 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 120, 71, 0.35);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  text-decoration: none;
+}
+
+.warn {
+  border-color: rgba(255, 99, 99, 0.55);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--fitos-orange-300);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.main {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.arrow {
+  flex: none;
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+}

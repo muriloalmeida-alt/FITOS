@@ -1,9 +1,8 @@
-import { NextStepCard } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { panelGoals, panelWeek } from "@/shared/lib/panel";
 import type { StudentHome } from "@/modules/students/studentHome";
 import { ALUNO_NAV_ITEMS } from "./navigation";
-import { WeighPrompt } from "./WeighPrompt";
+import { NoticeRow } from "./_panel/NoticeRow";
 import { StudentPanel } from "./_panel/StudentPanel";
 
 interface AlunoHomeProps {
@@ -32,8 +31,9 @@ interface AlunoHomeProps {
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" });
 
 /// Início do aluno com personal no painel aprovado (proposta 9): semana,
-/// Iniciar treino (programado ou realizado) e evolução contra a meta; os
-/// avisos (pagamento, aula, ficha, peso) vêm depois.
+/// Iniciar treino (programado ou realizado) e evolução contra a meta; depois,
+/// um aviso por vez, numa linha (pagamento, aula, ficha, peso, nessa
+/// ordem), para o Início caber na tela sem rolagem.
 export function AlunoHome({ displayName, personalName, dateLabel, home, todayIso, performed = [], preferredDays = [], retroEnabled = false, startOpen = false, payment = null, healthPending = false, nextClass = null }: AlunoHomeProps) {
   const firstName = displayName.trim().split(/\s+/)[0] ?? displayName;
   const now = new Date(todayIso);
@@ -52,6 +52,20 @@ export function AlunoHome({ displayName, personalName, dateLabel, home, todayIso
   const assessment = home.lastAssessment;
   const lastWeighDays = assessment ? Math.floor((now.getTime() - new Date(assessment.dateIso).getTime()) / 86_400_000) : null;
   const personalFirst = personalName.split(/\s+/)[0];
+  const notice = payment ? (
+    <NoticeRow
+      eyebrow={payment.overdue ? "Mensalidade atrasada" : "Mensalidade"}
+      text={`Pagar ${formatCentsBRL(payment.amountCents)} · ${payment.overdue ? "venceu" : "vence"} em ${dateFmt.format(new Date(payment.dueIso))}`}
+      href={payment.url}
+      tone={payment.overdue ? "warn" : "default"}
+    />
+  ) : nextClass ? (
+    <NoticeRow eyebrow="Próxima aula" text={`${nextClass} · com ${personalFirst}`} href="/painel/agenda" />
+  ) : healthPending ? (
+    <NoticeRow eyebrow="2 minutos" text="Responda sua ficha de saúde" href="/painel/saude" />
+  ) : lastWeighDays === null || lastWeighDays >= 14 ? (
+    <NoticeRow eyebrow="Pesar hoje?" text={assessment ? `A última foi em ${dateFmt.format(new Date(assessment.dateIso))}` : "Registre seu primeiro peso"} href="/painel/pesar" />
+  ) : null;
 
   return (
     <StudentPanel
@@ -63,21 +77,7 @@ export function AlunoHome({ displayName, personalName, dateLabel, home, todayIso
       start={{ inProgressHref: hero.kind === "progress" ? "/painel/treino/sessao" : null, programmed, free: false, done: retroEnabled ? "/painel/treinos-realizados/registrar" : null }}
       startOpen={startOpen}
       navItems={ALUNO_NAV_ITEMS}
-      notices={
-        <>
-          {payment ? (
-            <NextStepCard
-              eyebrow={payment.overdue ? "Mensalidade atrasada" : "Mensalidade"}
-              title={`Pagar ${formatCentsBRL(payment.amountCents)}`}
-              description={`${payment.description} · ${payment.overdue ? "venceu" : "vence"} em ${dateFmt.format(new Date(payment.dueIso))}. Pix, boleto ou cartão, direto para ${personalFirst}.`}
-              href={payment.url}
-            />
-          ) : null}
-          {nextClass ? <NextStepCard eyebrow="Próxima aula" title={nextClass} description={`Com ${personalFirst}. Não vai? Avise pela agenda.`} href="/painel/agenda" /> : null}
-          {healthPending ? <NextStepCard eyebrow="2 minutos" title="Responda sua ficha de saúde" description={`Para ${personalFirst} montar seu treino com segurança.`} href="/painel/saude" /> : null}
-          {lastWeighDays === null || lastWeighDays >= 14 ? <WeighPrompt lastLabel={assessment ? dateFmt.format(new Date(assessment.dateIso)) : null} todayKey={todayIso.slice(0, 10)} /> : null}
-        </>
-      }
+      notices={notice}
     />
   );
 }

@@ -48,6 +48,20 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
     }
   }
 
+  // Sem aula hoje: uma linha só (a agenda completa fica em "Ver semana").
+  if (classes.length === 0) {
+    return (
+      <section className={styles.agendaEmptyRow} aria-labelledby="agenda-hoje">
+        <span>
+          <strong id="agenda-hoje">Agenda de hoje</strong> · nenhuma aula
+        </span>
+        <Link href="/painel/agenda" className={styles.sectionLink}>
+          Marcar horário <span aria-hidden="true">→</span>
+        </Link>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.section} aria-labelledby="agenda-hoje">
       <div className={styles.sectionHead}>
@@ -58,15 +72,7 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
           Ver semana →
         </Link>
       </div>
-      {classes.length === 0 ? (
-        <p className={styles.empty}>
-          Nenhuma aula hoje.{" "}
-          <Link href="/painel/agenda" className={styles.sectionLink}>
-            Marcar horário
-          </Link>
-        </p>
-      ) : (
-        <ul className={styles.agenda}>
+      <ul className={styles.agenda}>
           {classes.map((item) => {
             const started = item.startMinutes <= nowMinutes;
             const tag = STATUS[item.status];
@@ -105,7 +111,6 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
             );
           })}
         </ul>
-      )}
     </section>
   );
 }

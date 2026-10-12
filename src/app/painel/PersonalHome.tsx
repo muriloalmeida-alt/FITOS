@@ -3,6 +3,7 @@ import { AppShell, NextStepCard } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import type { PersonalFeedItem } from "@/modules/students/personalFeed";
 import { DecisionQueue } from "./DecisionQueue";
+import { NoticeRow } from "./_panel/NoticeRow";
 import { TodayAgenda, type TodayClass } from "./TodayAgenda";
 import { LogoutButton } from "./LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "./navigation";
@@ -33,9 +34,6 @@ interface PersonalHomeProps {
   feed: { items: PersonalFeedItem[]; total: number };
   /// Espaço sem nenhum aluno cadastrado: mostra o primeiro passo.
   isNewSpace: boolean;
-  /// Botão + (EPIC-29): cobranças em aberto e alunos ativos.
-  /// Painel de risco (EPIC-43): quantos alunos e quantos com risco alto.
-  risk?: { total: number; alto: number };
   /// Progressão (EPIC-44): alunos prontos para subir a carga.
   progressionStudents?: number;
   /// Agenda de hoje (EPIC-48): as aulas do dia e a hora atual (minutos,
@@ -49,14 +47,15 @@ function firstName(name: string): string {
 
 /// Início do Personal (EPIC-29): faixa da assinatura, três indicadores que
 /// levam às telas certas e a fila "Pede você agora" (uma decisão por vez,
-/// resolvida no lugar), mais o botão + para o resto. Tudo vem das
-/// consultas reais do tenant.
-export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, risk, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
+/// resolvida no lugar), mais o botão + para o resto. Um aviso por vez,
+/// numa linha, para caber na tela sem rolagem. Tudo vem das consultas
+/// reais do tenant.
+export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
   const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
   return (
-    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName(name)}.`} headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="inicio" trailing={<LogoutButton />}>
+    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName(name)}.`} headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="inicio" trailing={<LogoutButton />} compact>
       {banner ? (
         <Link href="/painel/assinatura" className={`${styles.banner} ${styles[`banner_${banner.tone}`]}`}>
           <span>{banner.text}</span>
@@ -92,28 +91,18 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
           <h2 id="primeiro-passo" className={styles.sectionTitle}>
             Primeiro passo
           </h2>
-          <NextStepCard eyebrow="Comece por aqui" title="Seu primeiro aluno" description="Convite, programa e mensalidade em um minuto." href="/painel/primeiros-passos" />
+          <NextStepCard eyebrow="Comece por aqui" title="Seu primeiro aluno" description="Convite, programa e mensalidade em um minuto." href="/painel/primeiros-passos" icon="none" />
         </section>
       ) : (
         <>
+          {/* Ordem do dia: aulas de hoje, a fila "Pede você agora" e, por
+              último, um aviso numa linha (progressão). O risco de
+              evasão já aparece na fila e na tela de Alunos. */}
           {agendaToday ? <TodayAgenda classes={agendaToday.classes} nowMinutes={agendaToday.nowMinutes} /> : null}
-          {risk && risk.total > 0 ? (
-            <NextStepCard
-              eyebrow={risk.alto > 0 ? `${risk.alto} com risco alto` : "Atenção"}
-              title={`${risk.total} ${risk.total === 1 ? "aluno pode estar indo embora" : "alunos podem estar indo embora"}`}
-              description="Veja o porquê e aja com um toque."
-              href="/painel/alunos/risco"
-            />
-          ) : null}
-          {progressionStudents > 0 ? (
-            <NextStepCard
-              eyebrow="Progressão"
-              title={`${progressionStudents} ${progressionStudents === 1 ? "aluno pronto" : "alunos prontos"} para subir a carga`}
-              description="Fizeram todas as repetições duas vezes seguidas, sem achar pesado."
-              href="/painel/alunos/progressao"
-            />
-          ) : null}
           <DecisionQueue items={feed.items} total={feed.total} />
+          {progressionStudents > 0 ? (
+            <NoticeRow eyebrow="Progressão" text={`${progressionStudents} ${progressionStudents === 1 ? "aluno pronto" : "alunos prontos"} para subir a carga`} href="/painel/alunos/progressao" />
+          ) : null}
         </>
       )}
     </AppShell>

@@ -15,8 +15,8 @@ interface StudentPanelProps {
   start: StartChoices;
   startOpen?: boolean;
   navItems: AppShellNavItem[];
-  /// Avisos do perfil (pagamento, ficha de saúde, teste grátis…), depois
-  /// da evolução para não empurrar a semana para baixo.
+  /// Um aviso por vez (pagamento, ficha de saúde, teste grátis…), depois
+  /// da evolução: o Início cabe na tela sem rolagem.
   notices?: ReactNode;
 }
 
@@ -47,7 +47,7 @@ function Goal({ label, goal }: { label: string; goal: PanelGoal }) {
 /// evolução, nesta ordem, em blocos integrados ao fundo.
 export function StudentPanel({ firstName, dateLabel, message, week, evolution, start, startOpen = false, navItems, notices }: StudentPanelProps) {
   return (
-    <AppShell eyebrow={dateLabel} title={`Olá, ${firstName}!`} subtitle={message} headerMode="mobile" navItems={navItems} activeKey="hoje" trailing={<LogoutButton />}>
+    <AppShell eyebrow={dateLabel} title={`Olá, ${firstName}!`} subtitle={message} headerMode="mobile" navItems={navItems} activeKey="hoje" trailing={<LogoutButton />} compact>
       <section className={styles.block} aria-labelledby="sua-semana">
         <div className={styles.head}>
           <h2 id="sua-semana" className={styles.title}>
@@ -79,16 +79,18 @@ export function StudentPanel({ firstName, dateLabel, message, week, evolution, s
       <StartWorkout choices={start} initialOpen={startOpen} />
 
       <section className={styles.block} aria-labelledby="sua-evolucao">
-        <h2 id="sua-evolucao" className={styles.title}>
-          Sua evolução
-        </h2>
+        <div className={styles.head}>
+          <h2 id="sua-evolucao" className={styles.title}>
+            Sua evolução
+          </h2>
+          <Link href={evolution.href} className={styles.link} aria-label="Ver minha evolução">
+            Ver tudo <span aria-hidden="true">→</span>
+          </Link>
+        </div>
         <div className={styles.goals}>
           <Goal label="Nesta semana" goal={evolution.week} />
           <Goal label="Neste mês" goal={evolution.month} />
         </div>
-        <Link href={evolution.href} className={styles.link}>
-          Ver minha evolução <span aria-hidden="true">→</span>
-        </Link>
       </section>
 
       {notices}

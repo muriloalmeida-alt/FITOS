@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar, Button, Tag, useToast, type TagTone } from "@/shared/ui";
+import { Button, Tag, useToast, type TagTone } from "@/shared/ui";
 import { formatCentsBRL } from "@/shared/lib/money";
 import type { PersonalFeedItem, PersonalFeedKind } from "@/modules/students/personalFeed";
 import styles from "./DecisionQueue.module.css";
@@ -55,7 +55,6 @@ export function DecisionQueue({ items, total }: { items: PersonalFeedItem[]; tot
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const item = items[index] ?? null;
-  const next = items[index + 1] ?? null;
   const advance = () => {
     setError(null);
     setIndex((current) => current + 1);
@@ -157,23 +156,13 @@ export function DecisionQueue({ items, total }: { items: PersonalFeedItem[]; tot
           </span>
         ) : null}
       </div>
-      {items.length > 0 ? (
-        <div className={styles.bar} aria-hidden="true">
-          {items.map((entry, position) => (
-            <span key={`${entry.kind}-${entry.studentId}`} className={position < index ? styles.barOn : undefined} />
-          ))}
-        </div>
-      ) : null}
 
       {item ? (
         <>
           <article className={styles.card} aria-live="polite">
             <div className={styles.who}>
-              <Avatar name={item.studentName} />
-              <span>
-                <span className={styles.name}>{item.studentName}</span>{" "}
-                <Tag tone={KIND_TAG[item.kind].tone}>{KIND_TAG[item.kind].label}</Tag>
-              </span>
+              <span className={styles.name}>{item.studentName}</span>
+              <Tag tone={KIND_TAG[item.kind].tone}>{KIND_TAG[item.kind].label}</Tag>
             </div>
             <p className={styles.what}>{question(item)}</p>
             <p className={styles.why}>{item.description}</p>
@@ -183,11 +172,6 @@ export function DecisionQueue({ items, total }: { items: PersonalFeedItem[]; tot
               {secondary(item)}
             </div>
           </article>
-          {next ? (
-            <p className={styles.peek}>
-              Depois: <strong>{next.studentName}</strong> · {next.description}
-            </p>
-          ) : null}
         </>
       ) : (
         <div className={styles.done}>

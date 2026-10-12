@@ -195,7 +195,7 @@ describe("PainelPage (FIT-012)", () => {
     render(await PainelPage());
 
     expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Joana\.$/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Teste grátis · 5 dias restantes/ })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByRole("link", { name: /Teste grátis · 5 dias/ })).toHaveAttribute("href", "/painel/assinatura");
     expect(screen.getByText("de 15 do plano")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
     expect(screen.getByText("R$ 1.200")).toBeInTheDocument();

@@ -4,7 +4,7 @@
   justify-content: space-between;
   gap: 12px;
   min-height: 52px;
-  margin: 4px 0 16px;
+  margin: 0;
   padding: 10px 16px;
   border-radius: 14px;
   background-color: var(--fitos-color-surface-card);
@@ -47,8 +47,8 @@
   flex-direction: column;
   gap: 4px;
   height: 100%;
-  min-height: 88px;
-  padding: 14px 12px;
+  min-height: 72px;
+  padding: 12px;
   border-radius: 16px;
   background-color: var(--fitos-color-surface-card);
   color: var(--fitos-color-on-surface);
@@ -81,12 +81,12 @@
 }
 
 .section {
-  margin-top: 26px;
+  margin-top: 0;
 }
 
 .sectionTitle {
-  margin: 0 0 8px;
-  font-size: 19px;
+  margin: 0 0 6px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -284,4 +284,35 @@
 .checkMissedOn {
   background-color: #c4473c;
   color: #fff;
+}
+
+/* Telas baixas: indicadores mais baixos e, sem aula hoje, sem a linha da
+   agenda (fica no menu); o Início continua sem rolagem. */
+@media (max-height: 720px) {
+  .stat {
+    min-height: 0;
+    padding: 10px 12px;
+  }
+}
+
+/* Agenda de hoje sem aulas: uma linha discreta. */
+.agendaEmptyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.agendaEmptyRow strong {
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+}
+
+@media (max-height: 720px) {
+  .agendaEmptyRow {
+    display: none;
+  }
 }

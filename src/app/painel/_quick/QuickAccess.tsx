@@ -54,8 +54,9 @@ export function QuickAccess() {
 
   return (
     <>
-      {/* Espaço extra no fim da página: o + nunca cobre o último conteúdo. */}
-      <div className={styles.spacer} aria-hidden="true" />
+      {/* Espaço extra no fim da página: o + nunca cobre o último conteúdo.
+          No Início não: ele cabe na tela, sem rolagem. */}
+      {pathname === "/painel" ? null : <div className={styles.spacer} aria-hidden="true" />}
       {open ? null : (
         <button ref={trigger} type="button" className={styles.fab} onClick={show} aria-label="Abrir ações" aria-expanded={open} aria-haspopup="dialog">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">

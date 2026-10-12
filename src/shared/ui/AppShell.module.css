@@ -192,6 +192,13 @@
   padding-bottom: calc(68px + env(safe-area-inset-bottom) + var(--fitos-space-8));
 }
 
+/* Início (compact): blocos mais próximos para a tela caber sem rolagem. */
+.contentCompact {
+  gap: var(--fitos-space-4);
+  padding-top: var(--fitos-space-3);
+  padding-bottom: calc(68px + env(safe-area-inset-bottom) + var(--fitos-space-3));
+}
+
 /*
  * Navegação — compact (mobile): barra inferior azul-noturno com separador
  * superior e quatro posições de largura igual. Ícone de 24px sobre o
@@ -415,4 +422,21 @@
   border-radius: 50%;
   background-color: var(--fitos-orange-500);
   box-shadow: 0 0 0 2px var(--fitos-color-chrome);
+}
+
+/* Início em telas baixas (iPhone SE e afins): cabeçalho mais curto e sem a
+   mensagem de apoio, para continuar sem rolagem. */
+@media (max-height: 720px) {
+  .shellCompact .topBar {
+    padding-top: max(16px, calc(env(safe-area-inset-top) + var(--fitos-space-2)));
+  }
+
+  .shellCompact .contentCompact {
+    gap: var(--fitos-space-3);
+    padding-top: var(--fitos-space-1);
+  }
+
+  .shellCompact .subtitle {
+    display: none;
+  }
 }

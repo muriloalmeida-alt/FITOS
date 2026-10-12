@@ -1,7 +1,7 @@
 .block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .head {
@@ -96,8 +96,8 @@
 .goal {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px;
+  gap: 4px;
+  padding: 12px 14px;
   border-radius: 16px;
   background-color: var(--fitos-color-surface-card);
   min-width: 0;
@@ -135,7 +135,7 @@
 }
 
 .link {
-  align-self: flex-start;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -183,5 +183,21 @@
 @media (max-width: 340px) {
   .goals {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Telas baixas: semana e metas mais compactas (Início sem rolagem). */
+@media (max-height: 720px) {
+  .dayMark {
+    max-width: 36px;
+    font-size: 14px;
+  }
+
+  .goalMeta {
+    display: none;
+  }
+
+  .goal {
+    padding: 10px 12px;
   }
 }
