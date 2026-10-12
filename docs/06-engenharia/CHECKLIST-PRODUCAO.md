@@ -11,7 +11,7 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 
 - [ ] Ambiente `production` com **banco próprio**. Nada de homologação é reaproveitado.
 - [ ] Backup do PostgreSQL: o plano Hobby não tem backup automático. Subir de plano ou configurar backup diário.
-- [ ] Domínio próprio, e `BETTER_AUTH_URL` com esse domínio.
+- [ ] Domínio `fitosx.com.br` no serviço (Railway → Settings → Networking → Custom Domain) e `BETTER_AUTH_URL=https://<domínio do app>`. No Registro.br, o domínio raiz não aceita CNAME: use `app.fitosx.com.br` (CNAME) ou um DNS com CNAME/ALIAS na raiz (ex.: Cloudflare).
 - [ ] Orçamento e alertas de consumo.
 - [ ] Variáveis com valores **novos**, nunca copiados de homologação:
 
@@ -44,7 +44,7 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 
 ## 4. Resend
 
-- [ ] Domínio verificado (registros DNS SPF/DKIM).
+- [ ] Domínio `fitosx.com.br` verificado no Resend (registros DNS SPF/DKIM) e `EMAIL_FROM="FitOS <nao-responda@fitosx.com.br>"`.
 - [ ] Teste: "Esqueci minha senha" com um e-mail real chega na caixa de entrada.
 
 ## 5. Decisões e jurídico
