@@ -57,7 +57,7 @@ describe("agenda de hoje no Início do personal (EPIC-48)", () => {
 
   it("dia sem aulas", () => {
     renderAgenda([], 600);
-    expect(screen.getByText(/Nenhuma aula hoje/)).toBeInTheDocument();
+    expect(screen.getByText(/nenhuma aula/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Marcar horário" })).toHaveAttribute("href", "/painel/agenda");
   });
 });

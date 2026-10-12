@@ -286,15 +286,33 @@
   color: #fff;
 }
 
-/* Telas baixas: indicadores mais baixos e, sem aula hoje, sem a agenda
-   (fica no menu); o Início continua sem rolagem. */
+/* Telas baixas: indicadores mais baixos e, sem aula hoje, sem a linha da
+   agenda (fica no menu); o Início continua sem rolagem. */
 @media (max-height: 720px) {
   .stat {
     min-height: 0;
     padding: 10px 12px;
   }
+}
 
-  .agendaEmpty {
+/* Agenda de hoje sem aulas: uma linha discreta. */
+.agendaEmptyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.agendaEmptyRow strong {
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+}
+
+@media (max-height: 720px) {
+  .agendaEmptyRow {
     display: none;
   }
 }

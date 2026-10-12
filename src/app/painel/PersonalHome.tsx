@@ -98,8 +98,10 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
         </section>
       ) : (
         <>
+          {/* Ordem do dia: aulas de hoje, a fila "Pede você agora" e, por
+              último, um aviso numa linha (risco ou progressão). */}
           {agendaToday ? <TodayAgenda classes={agendaToday.classes} nowMinutes={agendaToday.nowMinutes} /> : null}
-          {/* Um aviso por vez, numa linha: o Início cabe na tela sem rolagem. */}
+          <DecisionQueue items={feed.items} total={feed.total} />
           {risk && risk.total > 0 ? (
             <NoticeRow
               eyebrow={risk.alto > 0 ? `${risk.alto} com risco alto` : "Atenção"}
@@ -110,7 +112,6 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
           ) : progressionStudents > 0 ? (
             <NoticeRow eyebrow="Progressão" text={`${progressionStudents} ${progressionStudents === 1 ? "aluno pronto" : "alunos prontos"} para subir a carga`} href="/painel/alunos/progressao" />
           ) : null}
-          <DecisionQueue items={feed.items} total={feed.total} />
         </>
       )}
     </AppShell>
