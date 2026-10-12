@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
-import { ChipGroup, FormAlert, Button, useToast } from "@/shared/ui";
+import { ActionRow, ChipGroup, FormAlert, Button, useToast } from "@/shared/ui";
+import { ShareLinkButton } from "../_share/ShareLinkButton";
 import { AVAILABILITY_LABELS, EXPERIENCE_LABELS, OBJECTIVE_LABELS } from "../individualProfileLabels";
 import { LogoutButton } from "../LogoutButton";
 import { BiometricSwitch } from "./BiometricSwitch";
@@ -27,6 +28,16 @@ interface LivreProfileViewProps {
   modalities: Modality[];
   /// Lembrete de treino e dias de treino (EPIC-31).
   preferences: RoutinePreferences;
+  /// Indicação de amigos (FitOS Livre); `null` = desligada.
+  referral?: { code: string; invited: number; confirmed: number; discountPending: boolean } | null;
+}
+
+/// Texto da linha de indicação: a regra e o andamento.
+export function referralDescription(referral: { invited: number; confirmed: number; discountPending: boolean }): string {
+  const rule = "Seu amigo ganha 50% no primeiro mês depois do teste. Quando ele assinar, você ganha 10% na próxima mensalidade (não acumula).";
+  if (referral.discountPending) return `${rule} Você tem 10% garantidos na próxima mensalidade.`;
+  if (!referral.invited) return rule;
+  return `${rule} Amigos: ${referral.invited}${referral.confirmed ? `, ${referral.confirmed} ${referral.confirmed === 1 ? "assinou" : "assinaram"}` : ""}.`;
 }
 
 const options = <T extends string>(labels: Record<T, string>) => (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
@@ -84,6 +95,18 @@ export function LivreProfileView(props: LivreProfileViewProps) {
         </SheetRow>
         <RoutineRows {...props.preferences} />
       </ProfileGroup>
+
+      {props.referral ? (
+        <ProfileGroup title="Convide amigos">
+          <li>
+            <ActionRow
+              title="Convidar para o FitOS"
+              description={referralDescription(props.referral)}
+              trailing={<ShareLinkButton path={`/i/${props.referral.code}`} label="Convidar" text="Estou treinando com o FitOS. Cria sua conta por aqui: são 30 dias grátis e 50% de desconto no primeiro mês." />}
+            />
+          </li>
+        </ProfileGroup>
+      ) : null}
 
       <ProfileGroup title="Conta">
         <MyDataRow

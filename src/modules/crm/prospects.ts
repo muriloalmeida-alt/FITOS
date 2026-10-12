@@ -1,9 +1,9 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
 import { Prisma, type CrmProspectStatus, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { AdminError } from "@/modules/admin/users";
-import { createCoupon, setCouponStatus } from "@/modules/billing/coupons";
+import { setCouponStatus } from "@/modules/billing/coupons";
+import { createAutoCoupon, livreMonthlyPlanIds, randomCode } from "@/modules/billing/autoCoupons";
 import { quoteCoupon, redeemCoupon } from "@/modules/billing/couponRedemptions";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { CrmInputError, parseBulk, parseProspect, type ProspectInput } from "@/shared/lib/crm";
@@ -15,61 +15,14 @@ import { CrmInputError, parseBulk, parseProspect, type ProspectInput } from "@/s
 
 const COUPON_PERCENT_BPS = 5000;
 const TOKEN_ALPHABET = "abcdefghijkmnopqrstuvwxyz23456789";
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function randomFrom(alphabet: string, length: number): string {
-  const bytes = randomBytes(length);
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
-}
 
 function inputError(error: unknown): never {
   if (error instanceof CrmInputError) throw new AdminError("VALIDACAO", error.message);
   throw error;
 }
 
-/// Planos mensais pagos do FitOS Livre: onde o cupom vale.
-async function livreMonthlyPlanIds(client: PrismaClient): Promise<string[]> {
-  const plans = await client.plan.findMany({ where: { audience: "INDIVIDUAL", active: true, billingCycle: "MENSAL", priceCents: { gt: 0 } }, select: { id: true } });
-  if (plans.length === 0) throw new AdminError("CONFLITO", "Não há plano mensal pago do FitOS Livre ativo para o cupom.");
-  return plans.map((plan) => plan.id);
-}
-
-async function createProspectCoupon(actorId: string, name: string, planIds: string[], client: PrismaClient): Promise<{ id: string; code: string }> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const code = `CONHECA-${randomFrom(CODE_ALPHABET, 6)}`;
-    try {
-      const { id } = await createCoupon(
-        actorId,
-        {
-          code,
-          name: `CRM · ${name}`.slice(0, 80),
-          kind: "PERCENT",
-          amount: COUPON_PERCENT_BPS,
-          products: ["INDIVIDUAL"],
-          segments: ["NOVOS"],
-          planIds,
-          cycles: ["MENSAL"],
-          startsAt: null,
-          endsAt: null,
-          durationCycles: 1,
-          maxRedemptions: 1,
-          perAccountLimit: 1,
-          budgetCents: null,
-          stackable: false,
-          note: "Convite do CRM: 50% no primeiro mês depois do teste grátis.",
-        },
-        client
-      );
-      await setCouponStatus(actorId, id, "ATIVAR", client);
-      return { id, code };
-    } catch (error) {
-      // Código repetido (raro): tenta outro.
-      if (error instanceof AdminError && /Já existe um cupom/.test(error.message)) continue;
-      throw error;
-    }
-  }
-  throw new AdminError("CONFLITO", "Não foi possível gerar um código de cupom. Tente de novo.");
-}
+const createProspectCoupon = (actorId: string, name: string, planIds: string[], client: PrismaClient) =>
+  createAutoCoupon(actorId, { prefix: "CONHECA", name: `CRM · ${name}`, percentBps: COUPON_PERCENT_BPS, planIds, note: "Convite do CRM: 50% no primeiro mês depois do teste grátis." }, client);
 
 async function createOne(actorId: string, input: ProspectInput, planIds: string[], client: PrismaClient) {
   if (await client.crmProspect.findUnique({ where: { phone: input.phone }, select: { id: true } })) {
@@ -77,7 +30,7 @@ async function createOne(actorId: string, input: ProspectInput, planIds: string[
   }
   const coupon = await createProspectCoupon(actorId, input.name, planIds, client);
   try {
-    return await client.crmProspect.create({ data: { name: input.name, phone: input.phone, email: input.email, note: input.note, token: randomFrom(TOKEN_ALPHABET, 12), couponId: coupon.id, createdById: actorId } });
+    return await client.crmProspect.create({ data: { name: input.name, phone: input.phone, email: input.email, note: input.note, token: randomCode(TOKEN_ALPHABET, 12), couponId: coupon.id, createdById: actorId } });
   } catch (error) {
     // Mesmo celular cadastrado em paralelo: o cupom criado agora não serve a ninguém.
     await setCouponStatus(actorId, coupon.id, "ENCERRAR", client).catch(() => undefined);

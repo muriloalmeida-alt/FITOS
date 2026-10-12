@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/shared/db/prisma";
 import { claimInvite } from "@/modules/crm/prospects";
 import { CRM_INVITE_COOKIE } from "@/shared/lib/crmCookie";
+import { REFERRAL_COOKIE, applyLivreReferral } from "@/modules/billing/referrals";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { offerable, storedModalities } from "@/shared/lib/modalities";
 import { copyReadyItem, readyProgramModalities } from "@/modules/library/readyLibrary";
@@ -129,7 +130,19 @@ export async function POST(request: Request) {
       jar.delete(CRM_INVITE_COOKIE);
     }
 
-    return Response.json({ ...profile, starterWorkouts, inviteCouponApplied: invite.couponApplied }, { status: 201 });
+    // Indicação de outro aluno do FitOS Livre: 50% no primeiro mês. O
+    // convite do CRM vem antes (as duas não se somam).
+    const referralCode = jar.get(REFERRAL_COOKIE)?.value;
+    let referral = { applied: false, couponApplied: false };
+    if (referralCode && !invite.claimed) {
+      referral = await applyLivreReferral({ referredTenantId: ctx.tenantId, userId: ctx.userId, code: referralCode }).catch((error) => {
+        logEvent("error", "indicacao_livre_falhou", { tenantId: ctx.tenantId, ...describeError(error) });
+        return { applied: false, couponApplied: false };
+      });
+      if (referral.applied) jar.delete(REFERRAL_COOKIE);
+    }
+
+    return Response.json({ ...profile, starterWorkouts, inviteCouponApplied: invite.couponApplied || referral.couponApplied }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;
