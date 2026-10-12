@@ -38,7 +38,7 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 
 - [ ] Primeiro deploy: tudo roda sozinho (`preDeployCommand`), nesta ordem:
   - migrations;
-  - catálogo de exercícios (`catalog:garantir`): num banco novo, carrega o catálogo curado e reaplica os ajustes de imagens, aeróbicos e Funcional. No log: "274 exercício(s)…";
+  - catálogo de exercícios (`catalog:garantir`): num banco novo, carrega o catálogo curado e reaplica os ajustes de imagens, aeróbicos e Funcional. No log: "N exercício(s) criado(s); N ajuste(s) das migrations reaplicado(s)". Nos deploys seguintes: "catálogo completo; nada a fazer";
   - planos comerciais;
   - conta de administrador.
 
