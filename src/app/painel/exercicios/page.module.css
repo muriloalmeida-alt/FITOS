@@ -23,10 +23,14 @@
   text-decoration: none;
 }
 
+/* 56 × 56 sem cortar a execução (proposta 8). */
 .thumb {
   flex: none;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: var(--fitos-color-surface-raised);
 }
 
 .text {

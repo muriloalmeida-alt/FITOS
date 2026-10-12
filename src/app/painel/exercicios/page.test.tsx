@@ -52,7 +52,8 @@ describe("Biblioteca de exercícios (FIT-147)", () => {
     render(<ToastProvider>{await Page({ searchParams: Promise.resolve({ origem: "meus", musculo: "Costas" }) })}</ToastProvider>);
 
     expect(listCatalogExercises).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", origin: "meus", muscle: "Costas", pageSize: 30 }));
-    expect(screen.getByRole("link", { name: "Meus" })).toHaveAttribute("aria-current", "page");
+    // Proposta 8: sem linhas permanentes de filtros; o aplicado vira chip removível.
+    expect(screen.queryByRole("link", { name: "Meus" })).not.toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Lista de exercícios" });
     expect(within(list).getByRole("link", { name: /Remada baixa/ })).toHaveAttribute("href", "/painel/exercicios/g1");
     expect(within(list).getByText("Biblioteca FitOS")).toBeInTheDocument();

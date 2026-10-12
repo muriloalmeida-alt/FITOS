@@ -2,12 +2,12 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
 }
 
 .searchRow {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -18,12 +18,13 @@
   align-items: center;
   gap: 10px;
   min-height: 50px;
-  padding: 0 14px;
+  padding: 0 6px 0 14px;
   border-radius: 14px;
   background-color: var(--fitos-color-surface-card);
   color: var(--fitos-color-text-muted);
 }
 
+/* 16 px: o iOS não dá zoom no campo. */
 .search input {
   flex: 1;
   min-width: 0;
@@ -36,8 +37,131 @@
   font-size: 16px;
 }
 
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.clear,
+.chips button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-text-muted);
+  font: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.filterButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+  color: var(--fitos-color-on-surface);
+  cursor: pointer;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.done {
+  flex: none;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-300);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  border-radius: 999px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chips button {
+  font-size: 18px;
+}
+
 .sheetGroups {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.more {
+  align-self: flex-start;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-300);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+}
+
+.create {
+  align-self: flex-start;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-color-text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Teclado aberto (busca em edição): cabeçalho, abas, navegação, + e o
+   cadastro saem da frente; a busca fica no topo e a lista logo abaixo. */
+:global(body[data-keyboard="open"]) :global([data-shell="top"]),
+:global(body[data-keyboard="open"]) :global([data-shell="header"]),
+:global(body[data-keyboard="open"]) :global([data-shell="nav"]),
+:global(body[data-keyboard="open"]) :global([data-search-hide]) {
+  display: none;
 }
