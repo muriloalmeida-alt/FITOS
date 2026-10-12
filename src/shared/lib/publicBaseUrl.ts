@@ -15,3 +15,15 @@ export function resolvePublicBaseUrl(input: { configured?: string | null; forwar
   const proto = (input.forwardedProto ?? "").split(",")[0]!.trim() || (LOCAL.test(host) ? "http" : "https");
   return `${proto}://${host}`;
 }
+
+/// Endereço público a partir de uma requisição de rota (redirecionamentos
+/// de links de convite). `request.url` atrás do proxy do Railway é o
+/// endereço interno (localhost); só vale como último recurso.
+export function publicBaseUrlFromRequest(request: Request, configured: string | undefined = process.env.BETTER_AUTH_URL): string {
+  return resolvePublicBaseUrl({
+    configured,
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    host: request.headers.get("host") ?? new URL(request.url).host,
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+  });
+}

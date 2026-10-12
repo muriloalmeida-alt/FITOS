@@ -19,6 +19,13 @@ describe("GET /i/[code] (EPIC-47)", () => {
     expect(response.headers.get("set-cookie")).toMatch(/^fitos_indicacao=livre23;/);
   });
 
+  it("atrás do proxy (request.url em localhost), redireciona para o endereço público", async () => {
+    const request = new Request("http://localhost:8080/i/abc23de", { headers: { "x-forwarded-host": "app.fitosx.com.br", "x-forwarded-proto": "https" } });
+    const response = await GET(request, { params: Promise.resolve({ code: "abc23de" }) });
+    expect(response.headers.get("location")).toMatch(/^https:\/\/(app\.fitosx\.com\.br|[^/]+)\/comecar\?caminho=personal&indicado=1$/);
+    expect(response.headers.get("location")).not.toContain("localhost");
+  });
+
   it("código inválido só redireciona", async () => {
     const response = await GET(new Request("https://app.fitos.test/i/x"), { params: Promise.resolve({ code: "../x" }) });
     expect(response.headers.get("location")).toBe("https://app.fitos.test/comecar?caminho=personal");
