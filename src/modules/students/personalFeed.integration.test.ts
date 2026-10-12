@@ -78,13 +78,15 @@ describe("getPersonalFeed (FIT-143, BK-05)", () => {
       ["Carla", "convite_aceito"],
       ["Davi", "sem_programa"],
       ["Eva", "programa_terminando"],
-      ["Fábio", "treino_concluido"],
+      // Treino concluído não entra na fila (não pede ação); Fábio aparece
+      // pela avaliação que falta.
       ["Gabi", "avaliacao_pendente"],
+      ["Fábio", "avaliacao_pendente"],
     ]);
     const byName = Object.fromEntries(feed.items.map((item) => [item.studentName, item]));
     expect(byName.Bruno).toMatchObject({ actionLabel: "Registrar pagamento", href: `/painel/alunos/${bruno.id}?acao=receber`, amountCents: 18000 });
     expect(byName.Eva?.description).toBe("Hipertrofia termina em 3 dias");
-    expect(byName.Fábio).toMatchObject({ description: "Concluiu Treino A · 52 min · esforço puxado", perceivedEffort: 4, actionLabel: "Ver o treino", href: `/painel/alunos/${byName.Fábio!.studentId}/treino` });
+    expect(byName.Fábio).toMatchObject({ description: "Nenhuma avaliação registrada", actionLabel: "Registrar agora" });
     expect(byName.Gabi).toMatchObject({ description: "Última avaliação há 90 dias", href: `/painel/alunos/${gabi.id}/avaliacao` });
     expect(byName.Bruno!.chargeIds).toHaveLength(1);
 

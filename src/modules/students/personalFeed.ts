@@ -7,6 +7,7 @@ import { deriveAccessStatus } from "./invitations";
 /// BK-05 (FIT-143): feed "Acontecendo agora" do Início do personal. Cada
 /// item é **uma** ação a um toque, nunca uma central de alertas. Um item
 /// por aluno, pelo sinal de maior prioridade; lista curta (padrão 8).
+/// Só entra o que pede uma ação do personal: treino concluído não entra.
 
 export type PersonalFeedKind =
   | "cobranca_atrasada"
@@ -14,7 +15,6 @@ export type PersonalFeedKind =
   | "convite_aceito"
   | "sem_programa"
   | "programa_terminando"
-  | "treino_concluido"
   | "avaliacao_pendente";
 
 export interface PersonalFeedItem {
@@ -31,8 +31,6 @@ export interface PersonalFeedItem {
   amountCents?: number;
   /// Cobranças atrasadas, para "Recebi" direto na fila (EPIC-29).
   chargeIds?: string[];
-  /// Esforço percebido 1–5 (só treino concluído, BK-13).
-  perceivedEffort?: number | null;
 }
 
 export interface PersonalFeed {
@@ -41,7 +39,6 @@ export interface PersonalFeed {
 }
 
 const DAY = 86_400_000;
-const RECENT_SESSION_MS = 48 * 3_600_000;
 const INVITE_ACCEPTED_WINDOW_DAYS = 7;
 const PROGRAM_ENDING_WINDOW_DAYS = 7;
 const ASSESSMENT_THRESHOLD_DAYS = 60;
@@ -52,15 +49,8 @@ const PRIORITY: Record<PersonalFeedKind, number> = {
   convite_aceito: 2,
   sem_programa: 3,
   programa_terminando: 4,
-  treino_concluido: 5,
-  avaliacao_pendente: 6,
+  avaliacao_pendente: 5,
 };
-
-const EFFORT_LABELS = ["leve", "tranquilo", "moderado", "puxado", "no limite"];
-
-export function effortLabel(effort: number): string {
-  return EFFORT_LABELS[Math.min(5, Math.max(1, effort)) - 1] ?? "";
-}
 
 function centsBRL(cents: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
@@ -81,12 +71,6 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
       invitations: { orderBy: { createdAt: "desc" }, take: 1 },
       planAssignments: { where: { active: true }, take: 1, include: { trainingPlan: { select: { name: true, durationWeeks: true } } } },
       charges: { where: { status: "ATRASADO" }, select: { id: true, amountCents: true } },
-      workoutSessions: {
-        where: { status: "CONCLUIDA", startedAt: { gte: new Date(now.getTime() - RECENT_SESSION_MS) } },
-        orderBy: { startedAt: "desc" },
-        take: 1,
-        select: { startedAt: true, endedAt: true, activeSeconds: true, perceivedEffort: true, workout: { select: { name: true } } },
-      },
       assessments: { where: { deletedAt: null }, orderBy: { recordedAt: "desc" }, take: 1, select: { recordedAt: true } },
     },
   });
@@ -155,17 +139,6 @@ export async function getPersonalFeed(input: { tenantId: string; now?: Date; lim
         });
         continue;
       }
-    }
-
-    const session = student.workoutSessions[0] ?? null;
-    if (session) {
-      // BK-14: tempo ativo (sem pausas) quando o aparelho informou.
-      const minutes = session.activeSeconds ? Math.max(1, Math.round(session.activeSeconds / 60)) : session.endedAt ? Math.max(1, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000)) : null;
-      const parts = [`Concluiu ${session.workout.name}`];
-      if (minutes) parts.push(`${minutes} min`);
-      if (session.perceivedEffort) parts.push(`esforço ${effortLabel(session.perceivedEffort)}`);
-      items.push({ ...base, kind: "treino_concluido", description: parts.join(" · "), actionLabel: "Ver o treino", href: `${profile}/treino`, tone: "ok", at: session.startedAt, perceivedEffort: session.perceivedEffort });
-      continue;
     }
 
     const lastAssessment = student.assessments[0]?.recordedAt ?? null;
