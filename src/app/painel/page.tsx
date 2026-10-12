@@ -9,7 +9,6 @@ import { getIndividualHome } from "@/modules/workouts/individualHome";
 import { ensureCurrentMonthCharges, getFinancialSummary } from "@/modules/student-finance/charges";
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
 import { getPersonalFeed } from "@/modules/students/personalFeed";
-import { riskCount } from "@/modules/students/riskPanel";
 import { listOccurrences, nextOccurrencesForStudent } from "@/modules/schedule/schedule";
 import { dayLabel, formatTime, localDate, localMinutes } from "@/shared/lib/scheduleTime";
 import { suggestCoachProgressions } from "@/modules/execution/progression";
@@ -118,12 +117,11 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
     // contagem de atrasadas vem depois, já com o status certo.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, risk, progressions, todayClasses, freeAccess] = await Promise.all([
+    const [roster, feed, financialSummary, subscription, progressions, todayClasses, freeAccess] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
       getSubscriptionForTenant(ctx.tenantId),
-      riskCount(ctx.tenantId).catch(() => ({ total: 0, alto: 0 })),
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
       listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
       getOwnFreeAccess(ctx.tenantId).catch(() => null),
@@ -145,7 +143,6 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
         }}
         feed={feed}
         isNewSpace={roster.counts.todos === 0}
-        risk={risk}
         agendaToday={{
           classes: todayClasses.map((item) => ({ ref: item.ref, studentName: item.studentName, startMinutes: item.startMinutes, durationMinutes: item.durationMinutes, location: item.location, note: item.note, extra: item.extra, status: item.status })),
           nowMinutes: localMinutes(now),

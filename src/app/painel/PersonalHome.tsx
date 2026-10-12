@@ -34,9 +34,6 @@ interface PersonalHomeProps {
   feed: { items: PersonalFeedItem[]; total: number };
   /// Espaço sem nenhum aluno cadastrado: mostra o primeiro passo.
   isNewSpace: boolean;
-  /// Botão + (EPIC-29): cobranças em aberto e alunos ativos.
-  /// Painel de risco (EPIC-43): quantos alunos e quantos com risco alto.
-  risk?: { total: number; alto: number };
   /// Progressão (EPIC-44): alunos prontos para subir a carga.
   progressionStudents?: number;
   /// Agenda de hoje (EPIC-48): as aulas do dia e a hora atual (minutos,
@@ -53,7 +50,7 @@ function firstName(name: string): string {
 /// resolvida no lugar), mais o botão + para o resto. Um aviso por vez,
 /// numa linha, para caber na tela sem rolagem. Tudo vem das consultas
 /// reais do tenant.
-export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, risk, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
+export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
   const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
@@ -99,17 +96,11 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
       ) : (
         <>
           {/* Ordem do dia: aulas de hoje, a fila "Pede você agora" e, por
-              último, um aviso numa linha (risco ou progressão). */}
+              último, um aviso numa linha (progressão). O risco de
+              evasão já aparece na fila e na tela de Alunos. */}
           {agendaToday ? <TodayAgenda classes={agendaToday.classes} nowMinutes={agendaToday.nowMinutes} /> : null}
           <DecisionQueue items={feed.items} total={feed.total} />
-          {risk && risk.total > 0 ? (
-            <NoticeRow
-              eyebrow={risk.alto > 0 ? `${risk.alto} com risco alto` : "Atenção"}
-              text={`${risk.total} ${risk.total === 1 ? "aluno pode estar indo embora" : "alunos podem estar indo embora"}`}
-              href="/painel/alunos/risco"
-              tone={risk.alto > 0 ? "warn" : "default"}
-            />
-          ) : progressionStudents > 0 ? (
+          {progressionStudents > 0 ? (
             <NoticeRow eyebrow="Progressão" text={`${progressionStudents} ${progressionStudents === 1 ? "aluno pronto" : "alunos prontos"} para subir a carga`} href="/painel/alunos/progressao" />
           ) : null}
         </>
