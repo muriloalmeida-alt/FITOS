@@ -12,7 +12,7 @@ import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { AssinaturaView, type CurrentSubscription, type SubscriptionState } from "./AssinaturaView";
 import { featureEnabled } from "@/shared/config/features";
-import { accessDateLabel } from "@/shared/lib/accessDates";
+import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
 import { listMyCoupons } from "@/modules/billing/couponRedemptions";
 import { CouponPanel, type CouponPanelItem } from "./CouponPanel";
 
@@ -72,18 +72,36 @@ export default async function AssinaturaPage() {
     const state = stateOf(subscription, now);
     const charge = nextCharge(subscription, state, now, freeAccess?.endsAt ?? null);
     const totalTrialDays = subscription.plan.trialDays ?? 30;
+    const freeUntil = freeAccess?.endsAt ?? null;
+    const combinedFree =
+      (state === "trial" || state === "ativa") && grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)
+        ? {
+            // Começo do período gratuito: o início do teste (se ainda corre) ou o do benefício.
+            startsAt: subscription.trialEndsAt && subscription.trialEndsAt > now ? new Date(Math.min(subscription.createdAt.getTime(), freeAccess!.startsAt.getTime())) : freeAccess!.startsAt,
+            endsAt: freeUntil,
+          }
+        : null;
     current = {
       planId: subscription.planId,
       planName: subscription.plan.name,
       priceCents: subscription.plan.priceCents,
       cycle: subscription.plan.billingCycle,
       state,
-      trial:
-        state === "trial" && subscription.trialEndsAt
+      // Teste grátis + gratuidade concedida somados: o cliente vê um único
+      // período gratuito (dias restantes e fim), não só o teste inicial.
+      trial: combinedFree
+        ? {
+            daysLeft: Math.max(1, Math.ceil((combinedFree.endsAt.getTime() - now.getTime()) / DAY)),
+            totalDays: Math.max(1, Math.ceil((combinedFree.endsAt.getTime() - combinedFree.startsAt.getTime()) / DAY)),
+            endsLabel: dateLabel.format(new Date(combinedFree.endsAt.getTime() - 1)),
+            granted: true,
+          }
+        : state === "trial" && subscription.trialEndsAt
           ? {
               daysLeft: Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / DAY)),
               totalDays: Math.max(totalTrialDays, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / DAY)),
               endsLabel: dateLabel.format(subscription.trialEndsAt),
+              granted: false,
             }
           : null,
       nextChargeLabel: charge ? `${dateLabel.format(charge)} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subscription.plan.priceCents / 100)}` : null,

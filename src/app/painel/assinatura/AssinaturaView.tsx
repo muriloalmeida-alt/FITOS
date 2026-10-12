@@ -45,7 +45,9 @@ export interface CurrentSubscription {
   priceCents: number;
   cycle: "MENSAL" | "ANUAL";
   state: SubscriptionState;
-  trial: { daysLeft: number; totalDays: number; endsLabel: string } | null;
+  /// Período gratuito restante. `granted`: teste grátis somado à
+  /// gratuidade concedida (o fim é o da gratuidade).
+  trial: { daysLeft: number; totalDays: number; endsLabel: string; granted?: boolean } | null;
   /// Gratuidade concedida pela equipe FitOS (não é um novo teste grátis).
   /// `startsLabel` quando começa depois do teste ou de outro benefício.
   benefit: { untilLabel: string; startsLabel: string | null; daysLeft: number } | null;
@@ -148,13 +150,13 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone, needs
                 {formatCentsBRL(subscription.priceCents)} / {CYCLE[subscription.cycle]}
               </p>
             </div>
-            <Tag tone={STATE_TAG[subscription.state].tone}>{STATE_TAG[subscription.state].label}</Tag>
+            <Tag tone={subscription.trial?.granted ? "accent" : STATE_TAG[subscription.state].tone}>{subscription.trial?.granted ? "Acesso gratuito" : STATE_TAG[subscription.state].label}</Tag>
           </div>
           {subscription.trial ? (
             <div className={styles.meter}>
               <ProgressBar
                 value={(100 * (subscription.trial.totalDays - subscription.trial.daysLeft)) / subscription.trial.totalDays}
-                label="Teste grátis"
+                label={subscription.trial.granted ? "Acesso gratuito" : "Teste grátis"}
                 valueText={`${subscription.trial.daysLeft} dias restantes`}
               />
               <span>
