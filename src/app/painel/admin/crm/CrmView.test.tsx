@@ -108,12 +108,13 @@ describe("CRM de convites (admin)", () => {
     }
   });
 
-  it("iPhone: sem agenda no navegador, explica o .vcf; o arquivo de contatos vira a lista", async () => {
+  it("iPhone: sem agenda no navegador, explica a opção do Safari e o .vcf; o arquivo de contatos vira a lista", async () => {
     renderView([]);
     await userEvent.click(screen.getByRole("button", { name: "Importar lista ou agenda" }));
     const bulk = screen.getByRole("dialog", { name: "Importar lista" });
     expect(within(bulk).queryByRole("button", { name: "Escolher da agenda do celular" })).not.toBeInTheDocument();
-    expect(within(bulk).getByText(/No iPhone: abra Contatos/)).toBeInTheDocument();
+    expect(within(bulk).getByText(/Contact Picker API/)).toBeInTheDocument();
+    expect(within(bulk).getByText(/Plano B: em Contatos/)).toBeInTheDocument();
     const vcf = new File(["BEGIN:VCARD\nVERSION:3.0\nFN:Carla Dias\nTEL;type=CELL:31976543210\nEND:VCARD\n"], "contatos.vcf", { type: "text/vcard" });
     await userEvent.upload(within(bulk).getByLabelText(/arquivo de contatos/), vcf);
     expect(await within(bulk).findByRole("status")).toHaveTextContent("1 contato entrou na lista.");
