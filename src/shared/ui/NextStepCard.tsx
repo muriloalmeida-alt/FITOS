@@ -8,8 +8,9 @@ interface NextStepCardProps {
   description?: ReactNode;
   href?: string;
   onClick?: () => void;
-  /// "plus" para criar algo novo; "arrow" para seguir para outro lugar.
-  icon?: "plus" | "arrow";
+  /// "plus" para criar algo novo; "arrow" para seguir para outro lugar;
+  /// "none" quando a tela já tem o botão + (o Início).
+  icon?: "plus" | "arrow" | "none";
 }
 
 function Icon({ name }: { name: "plus" | "arrow" }) {
@@ -32,7 +33,7 @@ export function NextStepCard({ eyebrow, title, description, href, onClick, icon 
         <span className={styles.title}>{title}</span>
         {description ? <span className={styles.description}>{description}</span> : null}
       </span>
-      <Icon name={icon} />
+      {icon === "none" ? null : <Icon name={icon} />}
     </>
   );
   if (href) {

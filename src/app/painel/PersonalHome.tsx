@@ -94,7 +94,7 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
           <h2 id="primeiro-passo" className={styles.sectionTitle}>
             Primeiro passo
           </h2>
-          <NextStepCard eyebrow="Comece por aqui" title="Seu primeiro aluno" description="Convite, programa e mensalidade em um minuto." href="/painel/primeiros-passos" />
+          <NextStepCard eyebrow="Comece por aqui" title="Seu primeiro aluno" description="Convite, programa e mensalidade em um minuto." href="/painel/primeiros-passos" icon="none" />
         </section>
       ) : (
         <>
