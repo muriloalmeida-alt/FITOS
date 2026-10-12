@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { peekInvite } from "@/modules/crm/prospects";
+import { CRM_INVITE_COOKIE } from "@/shared/lib/crmCookie";
 import { appName } from "@/shared/config/env";
 import { Button } from "@/shared/ui";
 import { EntradaShell } from "../_entrada/EntradaShell";
@@ -86,8 +89,15 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
   }
 
   const plan = (await listActivePlansForAudience("INDIVIDUAL"))[0] ?? null;
+  // Convite do CRM: o cupom do link entra sozinho na conta nova.
+  const invite = await peekInvite((await cookies()).get(CRM_INVITE_COOKIE)?.value).catch(() => null);
   return (
     <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
+      {invite ? (
+        <p className={styles.invite} role="status">
+          <strong>Convite FitOS:</strong> {plan?.trialDays ?? 30} dias grátis e, depois, 50% de desconto nos 30 dias seguintes. O cupom {invite.couponCode} entra sozinho na sua conta.
+        </p>
+      ) : null}
       <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} />
       <p className={styles.muted}>
         Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>

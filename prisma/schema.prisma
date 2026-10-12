@@ -390,6 +390,7 @@ model Tenant {
   saasPayments             SaasPayment[]
   couponAudienceMembers    CouponAudienceMember[]
   couponRedemptions        CouponRedemption[]
+  crmProspect              CrmProspect?
   auditEvents              AuditEvent[]
   invitations              Invitation[]
   individualProfile        IndividualProfile?
@@ -2083,6 +2084,7 @@ model Coupon {
   versions       CouponVersion[]    @relation("CouponVersions")
   audit          CouponAudit[]
   redemptions    CouponRedemption[]
+  crmProspect    CrmProspect?
 
   @@map("coupons")
 }
@@ -2234,4 +2236,45 @@ model CouponCycleApplication {
   @@index([externalPaymentId])
   @@index([status, updatedAt])
   @@map("coupon_cycle_applications")
+}
+
+/// CRM de convites (admin): futuro cliente do FitOS Livre convidado pelo
+/// WhatsApp (link wa.me, um toque por contato). Cada contato tem o próprio
+/// cupom de uso único (50% no primeiro mês, além do teste grátis), criado
+/// automaticamente, e um link rastreável (`token`): abrir marca ABERTO; o
+/// cadastro feito por ele aplica o cupom e marca CADASTRADO.
+enum CrmProspectStatus {
+  NOVO
+  CONVIDADO
+  ABERTO
+  CADASTRADO
+  DESCARTADO
+}
+
+model CrmProspect {
+  id          String            @id @default(cuid())
+  name        String
+  /// Celular em dígitos com DDI (ex.: 5511987654321). Um contato por número.
+  phone       String            @unique
+  email       String?
+  note        String?
+  status      CrmProspectStatus @default(NOVO)
+  /// Link do convite (`/conheca/{token}`).
+  token       String            @unique
+  couponId    String            @unique
+  /// Administrador que cadastrou (sem FK: o histórico fica).
+  createdById String
+  invitedAt   DateTime?
+  inviteCount Int               @default(0)
+  openedAt    DateTime?
+  signedUpAt  DateTime?
+  tenantId    String?           @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  coupon Coupon  @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("crm_prospects")
 }
