@@ -23,7 +23,8 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 | Variável | Valor em produção |
 |---|---|
 | `DATABASE_URL` | banco de produção |
-| `BETTER_AUTH_SECRET`, `PAYMENT_KEYS_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` (manter o que já existe em produção) |
+| `PAYMENT_KEYS_SECRET` | `openssl rand -base64 32`. Definir **antes** do primeiro personal conectar o recebimento. Sem ela, as chaves das subcontas são criptografadas com `BETTER_AUTH_SECRET`, e trocar esse segredo depois deixaria as chaves ilegíveis. |
 | `BETTER_AUTH_URL` | `https://app.fitosx.com.br` |
 | `NEXT_PUBLIC_APP_ENV` | `production` |
 | `API_ASAAS` | chave de **produção** do Asaas |
@@ -32,9 +33,17 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 | `API_ASAAS_WEBHOOK_TOKEN` | segredo novo, igual ao cadastrado no webhook do painel Asaas |
 | `RESEND_API_KEY`, `EMAIL_FROM` | chave do Resend e remetente do domínio verificado |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | par novo (`npm run push:chaves`) |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | conta do administrador |
-| `R2_PUBLIC_BASE_URL` | a mesma do catálogo (imagens públicas) |
-| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | projeto Sentry de produção (recomendado) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | conta do administrador. As **duas** são necessárias: `admin:garantir` cria a conta no deploy. Um e-mail que já é de outra conta (personal, aluno, Livre) é recusado. |
+| `R2_PUBLIC_BASE_URL` | `https://pub-76bc00d74c5a4bf98ccac51eb4c92de3.r2.dev`. Lida também no **build** (`next.config.mjs`, imagens permitidas), então configure antes do deploy. |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | projeto Sentry de produção (recomendado). `NEXT_PUBLIC_SENTRY_DSN` entra no build. |
+
+**Não configurar em produção:** `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`. São credenciais de escrita usadas só pelo script manual de imagens; fotos e vídeos do app ficam no banco.
+
+**Conferência no log de inicialização** (evento `startup`):
+- `appEnv: "production"`;
+- `asaas: "producao"` (ou `"sem_chave"` antes do Asaas);
+- `email: "resend"`;
+- `optionalMissingEnv` só com o que ainda não foi configurado de propósito.
 
 - [ ] Primeiro deploy: tudo roda sozinho (`preDeployCommand`), nesta ordem:
   - migrations;
