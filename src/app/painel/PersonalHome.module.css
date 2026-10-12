@@ -261,11 +261,12 @@
   list-style: none;
 }
 
+/* A aula cobre a hora da grade: o horário aparece só uma vez, no bloco. */
 .agendaItem {
   position: absolute;
   z-index: 1;
   right: 0;
-  left: 48px;
+  left: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -277,10 +278,11 @@
 }
 
 .agendaNext {
-  background-color: rgba(255, 120, 71, 0.16);
+  background: linear-gradient(rgba(255, 120, 71, 0.16), rgba(255, 120, 71, 0.16)), var(--fitos-color-surface-raised);
 }
 
-.agendaOff {
+/* Desmarcada: só o conteúdo esmaece; o fundo segue cobrindo a grade. */
+.agendaOff > * {
   opacity: 0.55;
 }
 
