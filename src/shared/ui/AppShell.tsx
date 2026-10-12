@@ -51,6 +51,9 @@ interface AppShellProps {
   navItems: AppShellNavItem[];
   activeKey: string;
   trailing?: ReactNode;
+  /// Perfil (proposta 10): a página já mostra a foto; o avatar do
+  /// cabeçalho não se repete.
+  hideAccount?: boolean;
   children: ReactNode;
 }
 
@@ -173,7 +176,7 @@ function AccountMenu({
   );
 }
 
-export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, children }: AppShellProps) {
+export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navItems, activeKey, trailing, hideAccount = false, children }: AppShellProps) {
   const [showMore, setShowMore] = useState(false);
   const accountName = useAccountName();
   const accountImage = useAccountImage();
@@ -186,7 +189,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         <BrandLogo background="photo" size={44} className={styles.brand} />
         <div className={styles.topBarEnd}>
           {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
-          {accountLinkItem?.href ? (
+          {hideAccount ? null : accountLinkItem?.href ? (
             <div className={styles.account}>
               <Link href={accountLinkItem.href} className={styles.avatarButton} aria-label={accountName ? `Perfil de ${accountName}` : "Perfil"} aria-current={accountLinkItem.key === activeKey ? "page" : undefined}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto privada, servida por rota autenticada (EPIC-35) */}

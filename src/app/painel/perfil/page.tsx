@@ -14,7 +14,6 @@ import { PersonalProfileView } from "./PersonalProfileView";
 import { StudentProfileView } from "./StudentProfileView";
 import { getOrCreateInviteCode } from "@/modules/students/inviteLink";
 import { LivreProfileView } from "./LivreProfileView";
-import { LogoutButton } from "../LogoutButton";
 import { UpdateVersion } from "../../_version/UpdateVersion";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
@@ -29,7 +28,7 @@ function subscriptionSummary(subscription: SaasSubscriptionWithPlan | null, now:
   if (subscription.status === "INADIMPLENTE") return `${subscription.plan.name} · pagamento pendente`;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
     const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
-    return `${subscription.plan.name} · teste grátis, ${days === 1 ? "último dia" : `${days} dias`}`;
+    return `Teste grátis · ${days === 1 ? "último dia" : `${days} dias restantes`}`;
   }
   return `${subscription.plan.name} · ativa`;
 }
@@ -65,7 +64,7 @@ export default async function PerfilPage() {
     const financeSummary = `${formatCentsBRL(finance.recebidoCents)} recebido em ${month}${overdueCount > 0 ? ` · ${overdueCount} ${overdueCount === 1 ? "atrasada" : "atrasadas"}` : ""}`;
 
     return (
-      <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
+      <AppShell title="Meu perfil" headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="perfil" hideAccount>
         <PersonalProfileView
           name={session.user.name}
           image={session.user.image ?? null}
@@ -97,7 +96,7 @@ export default async function PerfilPage() {
     ]);
 
     return (
-      <AppShell eyebrow="Perfil" title="Seu perfil" headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
+      <AppShell title="Meu perfil" headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="perfil" hideAccount>
         <LivreProfileView
           name={session.user.name}
           image={session.user.image ?? null}
@@ -129,7 +128,7 @@ export default async function PerfilPage() {
   ]);
 
   return (
-    <AppShell eyebrow="Perfil" title="Sua conta" headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="perfil" trailing={<LogoutButton />}>
+    <AppShell title="Meu perfil" headerMode="mobile" navItems={ALUNO_NAV_ITEMS} activeKey="perfil" hideAccount>
       <StudentProfileView
         name={session.user.name}
         image={session.user.image ?? null}

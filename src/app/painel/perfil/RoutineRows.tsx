@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FormAlert, useToast } from "@/shared/ui";
+import { Button, FormAlert, useToast } from "@/shared/ui";
 import { WEEKDAYS } from "@/shared/lib/weekdays";
-import { PUSH_HINT, usePush } from "./usePush";
-import { InstallGuide } from "./InstallGuide";
-import styles from "./TrainingPreferences.module.css";
+import { PUSH_HINT, usePush } from "../_push/usePush";
+import { InstallGuide } from "../_push/InstallGuide";
+import { SheetRow } from "./ProfileParts";
+import styles from "./ProfileParts.module.css";
 
 const HOURS = [6, 7, 8, 12, 17, 18, 19, 20];
 
-interface Props {
+export interface RoutinePreferences {
   reminderHour: number | null;
   /// "Meus dias" escolhidos; vazio = os dias do programa.
   days: string[];
@@ -19,18 +20,25 @@ interface Props {
   coachFirst: string | null;
 }
 
-function dayNames(days: string[]) {
-  const names = WEEKDAYS.filter((day) => days.includes(day.key)).map((day) => day.short.toLowerCase());
-  return names.length > 0 ? names.join(", ") : "nenhum dia";
+/// "Terça, quarta e sábado"; "Nenhum dia escolhido" quando vazio.
+export function daySentence(days: readonly string[]): string {
+  const names = WEEKDAYS.filter((day) => days.includes(day.key)).map((day) => day.name.toLowerCase());
+  if (names.length === 0) return "Nenhum dia escolhido";
+  const text = names.length === 1 ? names[0]! : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+  return text[0]!.toUpperCase() + text.slice(1);
 }
 
-/// Lembrete de treino e "Meus dias" editados no lugar (EPIC-31, como no
-/// protótipo): toca na linha, escolhe, salva na hora.
-export function TrainingPreferences({ reminderHour, days, planDays, coachFirst }: Props) {
+export function reminderSentence(hour: number | null): string {
+  return hour === null ? "Desativado" : `Nos dias de treino, às ${hour}h`;
+}
+
+/// Dias de treino e Lembrete (EPIC-31) como linhas do Perfil: o resumo na
+/// linha, a escolha numa modal. Cada toque salva na hora, como antes; erro
+/// volta ao valor anterior.
+export function RoutineRows({ reminderHour, days, planDays, coachFirst }: RoutinePreferences) {
   const router = useRouter();
   const toast = useToast();
   const push = usePush();
-  const [open, setOpen] = useState<null | "lembrete" | "dias">(null);
   const [hour, setHour] = useState(reminderHour);
   const [mine, setMine] = useState(days.length > 0 ? days : planDays);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +65,7 @@ export function TrainingPreferences({ reminderHour, days, planDays, coachFirst }
       setHour(previous);
       return setError("Não foi possível salvar. Tente de novo.");
     }
-    toast.show(next === null ? "Lembrete desligado" : `Lembrete às ${next}h nos dias de treino`);
+    toast.show(next === null ? "Lembrete desativado" : `Lembrete às ${next}h nos dias de treino`);
   }
 
   async function toggleDay(key: string) {
@@ -70,50 +78,45 @@ export function TrainingPreferences({ reminderHour, days, planDays, coachFirst }
       setMine(previous);
       return setError("Não foi possível salvar. Tente de novo.");
     }
-    toast.show("Salvo");
+    toast.show("Dias salvos");
     router.refresh();
   }
 
-  return (
-    <div className={styles.group}>
-      <InstallGuide open={guide} onClose={() => setGuide(false)} />
-      <button type="button" className={open === "lembrete" ? `${styles.fact} ${styles.open}` : styles.fact} aria-expanded={open === "lembrete"} onClick={() => setOpen(open === "lembrete" ? null : "lembrete")}>
-        <span>
-          <span className={styles.label}>Lembrete de treino</span>
-          <span className={styles.value}>{hour === null ? "Desligado" : `Nos dias de treino, às ${hour}h`}</span>
-        </span>
-        <span className={styles.pencil} aria-hidden="true">✎</span>
-      </button>
-      {open === "lembrete" ? (
-        <div className={styles.inline} role="radiogroup" aria-label="Hora do lembrete">
-          {[...HOURS, null].map((value) => (
-            <button key={String(value)} type="button" role="radio" aria-checked={hour === value} className={hour === value ? `${styles.chip} ${styles.chipOn}` : styles.chip} onClick={() => void saveHour(value)}>
-              {value === null ? "Desligado" : `${value}h`}
-            </button>
-          ))}
-        </div>
-      ) : null}
+  const done = (close: () => void) => (
+    <Button type="button" block onClick={close}>
+      Pronto
+    </Button>
+  );
 
-      <button type="button" className={open === "dias" ? `${styles.fact} ${styles.open}` : styles.fact} aria-expanded={open === "dias"} onClick={() => setOpen(open === "dias" ? null : "dias")}>
-        <span>
-          <span className={styles.label}>Meus dias</span>
-          <span className={styles.value}>{dayNames(mine)}</span>
-        </span>
-        <span className={styles.pencil} aria-hidden="true">✎</span>
-      </button>
-      {open === "dias" ? (
-        <div className={styles.inlineCol}>
-          <div className={styles.days} role="group" aria-label="Meus dias">
+  return (
+    <>
+      <SheetRow icon="dias" title="Dias de treino" summary={daySentence(mine)} footer={done}>
+        <div className={styles.form}>
+          <div className={styles.days} role="group" aria-label="Dias de treino">
             {WEEKDAYS.map((day) => (
               <button key={day.key} type="button" aria-pressed={mine.includes(day.key)} aria-label={day.name} className={mine.includes(day.key) ? `${styles.day} ${styles.dayOn}` : styles.day} onClick={() => void toggleDay(day.key)}>
-                {day.letter}
+                {day.short}
               </button>
             ))}
           </div>
           {coachFirst ? <p className={styles.note}>{coachFirst} é avisado se você mudar.</p> : null}
+          {error ? <FormAlert>{error}</FormAlert> : null}
         </div>
-      ) : null}
-      {error ? <FormAlert>{error}</FormAlert> : null}
-    </div>
+      </SheetRow>
+      <SheetRow icon="lembrete" title="Lembrete de treino" summary={reminderSentence(hour)} footer={done}>
+        <div className={styles.form}>
+          <div className={styles.hours} role="radiogroup" aria-label="Hora do lembrete">
+            {[...HOURS, null].map((value) => (
+              <button key={String(value)} type="button" role="radio" aria-checked={hour === value} className={hour === value ? `${styles.chip} ${styles.chipOn}` : styles.chip} onClick={() => void saveHour(value)}>
+                {value === null ? "Desativado" : `${value}h`}
+              </button>
+            ))}
+          </div>
+          {error ? <FormAlert>{error}</FormAlert> : null}
+        </div>
+      </SheetRow>
+      {/* Depois das modais: abre por cima da modal do lembrete. */}
+      <InstallGuide open={guide} onClose={() => setGuide(false)} />
+    </>
   );
 }
