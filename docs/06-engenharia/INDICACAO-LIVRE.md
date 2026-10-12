@@ -15,7 +15,7 @@ Aluno do FitOS Livre convida amigos pelo próprio link e ganha desconto quando u
 
 ## Como funciona
 
-1. **Perfil → Convide amigos → Convidar.** Abre o menu de compartilhar do celular (WhatsApp, Mensagens...) com o link `/i/<código>`. No computador, o link é copiado.
+1. **Perfil → Convide amigos → Convidar.** Abre o menu de compartilhar do celular (WhatsApp, Mensagens...) com a mensagem de boas-vindas e o link `/i/<código>` no mesmo texto. O link vai dentro do texto porque o WhatsApp descarta o texto quando recebe o link separado. No computador, a mensagem é copiada.
 2. **`/i/<código>`** guarda o código no cookie `fitos_indicacao` por 60 dias e leva ao cadastro do Livre (`/comecar?caminho=livre&indicado=1`), que mostra o aviso do desconto.
 3. **Cadastro (`/api/onboarding`).**
    - Liga as contas (`personal_referrals`, a mesma tabela da indicação de personal).

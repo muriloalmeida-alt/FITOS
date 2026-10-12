@@ -48,7 +48,7 @@ export function FriendGroupView({ group, nowIso, workouts = {}, reviewCases = []
     const inviteUrl = `${window.location.origin}/painel/desafios/amigos/convite/${group.inviteCode}`;
     const text = `Entra no meu grupo "${group.name}" no FitOS Desafios: ${inviteUrl} (código ${group.inviteCode})`;
     try {
-      if (navigator.share) await navigator.share({ title: group.name, text, url: inviteUrl });
+      if (navigator.share) await navigator.share({ title: group.name, text });
       else {
         await navigator.clipboard.writeText(text);
         setCopied(true);
