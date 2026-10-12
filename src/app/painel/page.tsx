@@ -69,7 +69,7 @@ function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activ
   const needsCard = subscription.plan.priceCents > 0 && !subscription.creditCardLast4;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
     const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
-    const left = days === 1 ? "último dia" : `${days} dias restantes`;
+    const left = days === 1 ? "último dia" : `${days} dias`;
     if (needsCard && days <= 7) return { tone: "warn", text: `Teste grátis · ${left}`, cta: "Cadastrar cartão" };
     return { tone: "trial", text: `Teste grátis · ${left}`, cta: needsCard ? "Cadastrar cartão" : "Ver planos" };
   }

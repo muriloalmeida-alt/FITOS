@@ -49,7 +49,7 @@ export function TodayAgenda({ classes, nowMinutes }: { classes: TodayClass[]; no
   }
 
   return (
-    <section className={styles.section} aria-labelledby="agenda-hoje">
+    <section className={classes.length === 0 ? `${styles.section} ${styles.agendaEmpty}` : styles.section} aria-labelledby="agenda-hoje">
       <div className={styles.sectionHead}>
         <h2 id="agenda-hoje" className={styles.sectionTitle}>
           Agenda de hoje

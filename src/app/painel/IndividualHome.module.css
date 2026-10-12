@@ -140,3 +140,38 @@
   line-height: 1.4;
   text-decoration: none;
 }
+
+/* Progressão no Início (sem rolagem): pergunta e ações numa faixa só. */
+.askCompact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 120, 71, 0.35);
+  border-radius: 14px;
+  background-color: var(--fitos-color-surface-card);
+}
+
+.askCompactText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.askCompactText .muted {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.askCompactActions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}

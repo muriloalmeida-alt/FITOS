@@ -71,19 +71,19 @@ export function ProgressionCard({ suggestions }: { suggestions: ProgressionSugge
   }
 
   return (
-    <section className={styles.ask} aria-label="Progressão">
-      <p className={styles.eyebrow}>Progressão</p>
-      <p className={styles.askTitle}>
+    <section className={styles.askCompact} aria-label="Progressão">
+      <p className={styles.askCompactText}>
+        <span className={styles.eyebrow}>Progressão</span>
         Subir {current.exerciseName.toLowerCase()} para {br(current.toKg)} kg?
+        <span className={styles.muted}>
+          {current.reps} repetições com {br(current.fromKg)} kg nas duas últimas vezes.
+        </span>
       </p>
-      <p className={styles.muted}>
-        Nas duas últimas vezes você fez {current.reps} repetições em todas as séries com {br(current.fromKg)} kg, sem achar pesado.
-      </p>
-      <div className={styles.askActions}>
-        <Button type="button" block disabled={busy} onClick={() => void raise()}>
+      <div className={styles.askCompactActions}>
+        <Button type="button" disabled={busy} onClick={() => void raise()}>
           Subir
         </Button>
-        <Button type="button" variant="secondary" block onClick={keep}>
+        <Button type="button" variant="secondary" onClick={keep}>
           Manter
         </Button>
       </div>
