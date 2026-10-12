@@ -8,6 +8,7 @@ import { RememberAccount } from "./RememberAccount";
 import { SubscriptionGate } from "./SubscriptionGate";
 import { unreadTopicsCount } from "@/modules/messages/messages";
 import { NewVersionBanner } from "../_version/NewVersionBanner";
+import { QuickAccess } from "./_quick/QuickAccess";
 
 /// Layout de `/painel/*` (AjustesTelas, 29/09/2026): só disponibiliza o nome
 /// real da sessão ao avatar do cabeçalho mobile do `AppShell`. Nenhuma
@@ -28,6 +29,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   const access = subscriptionAccess(tenant?.saasSubscription ?? null, new Date(), tenant?.saasSubscription?.accessGrants ?? []);
   // EPIC-39: ponto de "não lidas" no item Mensagens.
   const unreadMessages = await unreadForSession(session?.user.id ?? null, role);
+  const quickAccess = session ? role === "PERSONAL" || role === "INDIVIDUAL" || (role === "ALUNO" && (await prisma.student.findUnique({ where: { userId: session.user.id }, select: { status: true } }))?.status === "ATIVO") : false;
   const content =
     access.kind === "LIBERADO" ? children : (
       <SubscriptionGate state={{ kind: access.kind, dateIso: (access.kind === "CARENCIA" ? access.blockOn : access.since).toISOString() }} personal={role === "PERSONAL"}>
@@ -39,6 +41,8 @@ export default async function PainelLayout({ children }: { children: ReactNode }
       <RememberAccount account={user ? { name: user.name, email: user.email, role } : null} />
       <NewVersionBanner />
       {content}
+      {/* Acesso rápido (proposta 7): personal, Livre e aluno com vínculo ativo. */}
+      {quickAccess && access.kind !== "BLOQUEADO" ? <QuickAccess /> : null}
     </AccountNameProvider>
   );
 }

@@ -4,7 +4,6 @@ import { formatCentsBRL } from "@/shared/lib/money";
 import type { PersonalFeedItem } from "@/modules/students/personalFeed";
 import { DecisionQueue } from "./DecisionQueue";
 import { TodayAgenda, type TodayClass } from "./TodayAgenda";
-import { QuickActions, type QuickCharge } from "./QuickActions";
 import { LogoutButton } from "./LogoutButton";
 import { PERSONAL_NAV_ITEMS } from "./navigation";
 import styles from "./PersonalHome.module.css";
@@ -35,8 +34,6 @@ interface PersonalHomeProps {
   /// Espaço sem nenhum aluno cadastrado: mostra o primeiro passo.
   isNewSpace: boolean;
   /// Botão + (EPIC-29): cobranças em aberto e alunos ativos.
-  openCharges: QuickCharge[];
-  students: { id: string; name: string }[];
   /// Painel de risco (EPIC-43): quantos alunos e quantos com risco alto.
   risk?: { total: number; alto: number };
   /// Progressão (EPIC-44): alunos prontos para subir a carga.
@@ -54,7 +51,7 @@ function firstName(name: string): string {
 /// levam às telas certas e a fila "Pede você agora" (uma decisão por vez,
 /// resolvida no lugar), mais o botão + para o resto. Tudo vem das
 /// consultas reais do tenant.
-export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, openCharges, students, risk, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
+export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, risk, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
   const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
@@ -119,7 +116,6 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
           <DecisionQueue items={feed.items} total={feed.total} />
         </>
       )}
-      <QuickActions charges={openCharges} students={students} />
     </AppShell>
   );
 }

@@ -110,17 +110,11 @@ export default async function PainelPage() {
     // contagem de atrasadas vem depois, já com o status certo.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, openCharges, risk, progressions, todayClasses] = await Promise.all([
+    const [roster, feed, financialSummary, subscription, risk, progressions, todayClasses] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
       getSubscriptionForTenant(ctx.tenantId),
-      prisma.studentCharge.findMany({
-        where: { tenantId: ctx.tenantId, status: { in: ["PENDENTE", "ATRASADO"] }, student: { status: "ATIVO" } },
-        orderBy: [{ status: "asc" }, { dueDate: "asc" }],
-        take: 50,
-        select: { id: true, amountCents: true, status: true, student: { select: { displayName: true } } },
-      }),
       riskCount(ctx.tenantId).catch(() => ({ total: 0, alto: 0 })),
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
       listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
@@ -142,8 +136,6 @@ export default async function PainelPage() {
         }}
         feed={feed}
         isNewSpace={roster.counts.todos === 0}
-        openCharges={openCharges.map((charge) => ({ id: charge.id, studentName: charge.student.displayName, amountCents: charge.amountCents, overdue: charge.status === "ATRASADO" }))}
-        students={roster.rows.map((row) => ({ id: row.id, name: row.displayName }))}
         risk={risk}
         agendaToday={{
           classes: todayClasses.map((item) => ({ ref: item.ref, studentName: item.studentName, startMinutes: item.startMinutes, durationMinutes: item.durationMinutes, location: item.location, note: item.note, extra: item.extra, status: item.status })),

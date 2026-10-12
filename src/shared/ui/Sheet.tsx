@@ -11,6 +11,9 @@ interface SheetProps {
   children?: ReactNode;
   /// Ações fixas no fim da sheet (ex.: "Salvar" + "Cancelar").
   footer?: ReactNode;
+  /// Acesso rápido (proposta 7): sem título visível; `title` vira o nome
+  /// acessível (`aria-label`). Mostra o botão × e fecha arrastando a alça.
+  compact?: boolean;
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -20,11 +23,12 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 /// `role="dialog"` + `aria-modal`, foco movido para dentro ao abrir, Tab
 /// preso dentro da sheet, Esc e toque no fundo fecham, e o foco volta ao
 /// elemento que abriu. No desktop (≥ 840 px) vira um diálogo centralizado.
-export function Sheet({ open, onClose, title, description, children, footer }: SheetProps) {
+export function Sheet({ open, onClose, title, description, children, footer, compact = false }: SheetProps) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -76,14 +80,41 @@ export function Sheet({ open, onClose, title, description, children, footer }: S
         className={styles.panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={compact ? undefined : titleId}
+        aria-label={compact ? title : undefined}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
       >
-        <div className={styles.grab} aria-hidden="true" />
-        <h2 id={titleId} className={styles.title}>
-          {title}
-        </h2>
+        <div
+          className={compact ? `${styles.grab} ${styles.grabDrag}` : styles.grab}
+          aria-hidden="true"
+          onPointerDown={
+            compact
+              ? (event) => {
+                  dragStart.current = event.clientY;
+                  event.currentTarget.setPointerCapture?.(event.pointerId);
+                }
+              : undefined
+          }
+          onPointerUp={
+            compact
+              ? (event) => {
+                  // Arrastar a alça para baixo fecha; um toque não.
+                  if (dragStart.current !== null && event.clientY - dragStart.current > 60) onClose();
+                  dragStart.current = null;
+                }
+              : undefined
+          }
+        />
+        {compact ? (
+          <button type="button" className={styles.close} aria-label="Fechar" onClick={onClose}>
+            ×
+          </button>
+        ) : (
+          <h2 id={titleId} className={styles.title}>
+            {title}
+          </h2>
+        )}
         {description ? (
           <div id={descriptionId} className={styles.description}>
             {description}
