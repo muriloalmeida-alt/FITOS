@@ -97,6 +97,10 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
         <p className={styles.invite} role="status">
           <strong>Convite FitOS:</strong> {plan?.trialDays ?? 30} dias grátis e, depois, 50% de desconto nos 30 dias seguintes. O cupom {invite.couponCode} entra sozinho na sua conta.
         </p>
+      ) : params.indicado === "1" ? (
+        <p className={styles.invite} role="status">
+          <strong>Convite de um amigo:</strong> {plan?.trialDays ?? 30} dias grátis e, depois, 50% de desconto nos 30 dias seguintes. O desconto entra sozinho na sua conta.
+        </p>
       ) : null}
       <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} />
       <p className={styles.muted}>

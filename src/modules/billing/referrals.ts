@@ -5,12 +5,20 @@ import { prisma } from "@/shared/db/prisma";
 import { asaasRequest } from "./asaasClient";
 import { sendToUser, type PushConfig, type Sender } from "@/modules/notifications/push";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
+import { applyCouponToTenant, createAutoCoupon } from "./autoCoupons";
+import { setCouponStatus } from "./coupons";
 
 /// Indicação de personal para personal (EPIC-47). Quem indica compartilha
 /// `/i/<código>`; o indicado cria a conta e ganha 30 dias a mais de teste.
 /// Quando o primeiro pagamento do indicado é confirmado, quem indicou
 /// ganha um mês: a próxima cobrança anda 30 dias (ou o teste, se ainda
 /// estiver nele).
+///
+/// FitOS Livre para FitOS Livre: o mesmo link e a mesma tabela. O indicado
+/// ganha 50% no primeiro mês depois do teste (cupom próprio, como no CRM);
+/// quando paga a primeira vez, quem indicou ganha 10% na próxima cobrança.
+/// Não acumula: com um desconto de indicação ainda por usar, novas
+/// indicações confirmadas não somam outro.
 
 export const REFERRAL_BONUS_DAYS = 30;
 export const REFERRAL_COOKIE = "fitos_indicacao";
@@ -64,6 +72,75 @@ export async function applyPersonalReferral(input: { referredTenantId: string; c
   return true;
 }
 
+/// Quem cria os cupons automáticos da indicação (auditoria dos cupons).
+export const REFERRAL_ACTOR = "sistema:indicacao";
+export const LIVRE_FRIEND_PERCENT_BPS = 5000;
+export const LIVRE_REWARD_PERCENT_BPS = 1000;
+const REWARD_PREFIX = "INDICA";
+
+/// Cadastro do FitOS Livre por um link de indicação de outro aluno do
+/// Livre: liga as contas e aplica 50% no primeiro mês do indicado. Ignora
+/// (sem erro) código inválido, autoindicação, conta antiga e conta que já
+/// entrou por um convite do CRM. Falha no cupom fica no log.
+export async function applyLivreReferral(input: { referredTenantId: string; userId: string; code: unknown; now?: Date }, client: PrismaClient = prisma): Promise<{ applied: boolean; couponApplied: boolean }> {
+  const none = { applied: false, couponApplied: false };
+  if (!isReferralCode(input.code)) return none;
+  const now = input.now ?? new Date();
+  const [referrer, referred, crmInvite] = await Promise.all([
+    client.tenant.findUnique({ where: { referralCode: input.code }, select: { id: true, type: true, ownerId: true } }),
+    client.tenant.findUnique({ where: { id: input.referredTenantId }, select: { id: true, type: true, ownerId: true, createdAt: true, referralReceived: { select: { id: true } } } }),
+    client.crmProspect.findUnique({ where: { tenantId: input.referredTenantId }, select: { id: true } }),
+  ]);
+  if (!referrer || !referred || referrer.type !== "INDIVIDUAL" || referred.type !== "INDIVIDUAL" || crmInvite) return none;
+  if (referrer.id === referred.id || referrer.ownerId === referred.ownerId || referred.referralReceived) return none;
+  if (now.getTime() - referred.createdAt.getTime() > MAX_ACCOUNT_AGE_DAYS * DAY) return none;
+  let referralId: string;
+  try {
+    referralId = (await client.personalReferral.create({ data: { referrerTenantId: referrer.id, referredTenantId: referred.id }, select: { id: true } })).id;
+  } catch {
+    // Mesmo cadastro em paralelo: o outro já ligou as contas.
+    return none;
+  }
+  logEvent("info", "indicacao_livre_aplicada", { referrerTenantId: referrer.id, referredTenantId: referred.id });
+  try {
+    const coupon = await createAutoCoupon(REFERRAL_ACTOR, { prefix: "AMIGO", name: "Indicação · 50% no primeiro mês", percentBps: LIVRE_FRIEND_PERCENT_BPS, tenantIds: [referred.id], note: "Indicação de amigo: 50% no primeiro mês depois do teste grátis." }, client);
+    await applyCouponToTenant({ tenantId: referred.id, userId: input.userId, code: coupon.code, operationKey: `indicacao-${referralId}` }, client, now);
+    return { applied: true, couponApplied: true };
+  } catch (error) {
+    logEvent("warn", "indicacao_livre_cupom_nao_aplicado", { referredTenantId: referred.id, ...describeError(error) });
+    return { applied: true, couponApplied: false };
+  }
+}
+
+/// Desconto de indicação ainda por usar (não acumula).
+async function hasPendingReward(tenantId: string, client: PrismaClient): Promise<boolean> {
+  const rows = await client.couponRedemption.findMany({ where: { tenantId, state: "COMMITTED", code: { startsWith: `${REWARD_PREFIX}-` } }, select: { cyclesUsed: true, durationCycles: true } });
+  return rows.some((row) => row.cyclesUsed < row.durationCycles);
+}
+
+/// 10% na próxima cobrança de quem indicou (FitOS Livre).
+/// - "aplicado": cupom novo resgatado;
+/// - "ja_tinha": já há um desconto de indicação por usar (não acumula);
+/// - "adiado": outro cupom que não combina está em vigor; tenta de novo no
+///   próximo pagamento do indicado;
+/// - "falhou": erro inesperado (no log).
+async function rewardLivreReferrer(referrer: { id: string; ownerId: string }, referralId: string, client: PrismaClient, now: Date): Promise<"aplicado" | "ja_tinha" | "adiado" | "falhou"> {
+  if (await hasPendingReward(referrer.id, client)) return "ja_tinha";
+  let couponId: string | null = null;
+  try {
+    const coupon = await createAutoCoupon(REFERRAL_ACTOR, { prefix: REWARD_PREFIX, name: "Indicação confirmada · 10% no próximo mês", percentBps: LIVRE_REWARD_PERCENT_BPS, tenantIds: [referrer.id], note: "Indicação confirmada: 10% na próxima cobrança. Não acumula." }, client);
+    couponId = coupon.id;
+    await applyCouponToTenant({ tenantId: referrer.id, userId: referrer.ownerId, code: coupon.code, operationKey: `indicacao-premio-${referralId}` }, client, now);
+    return "aplicado";
+  } catch (error) {
+    if (couponId) await setCouponStatus(REFERRAL_ACTOR, couponId, "ENCERRAR", client).catch(() => undefined);
+    const kind = (error as { kind?: string }).kind;
+    if (kind === "CONFLICT" || kind === "QUOTE_STALE") return "adiado";
+    logEvent("error", "indicacao_livre_premio_falhou", { referrerTenantId: referrer.id, ...describeError(error) });
+    return "falhou";
+  }
+}
+
 const ymd = (date: Date) => date.toISOString().slice(0, 10);
 
 /// Primeiro pagamento confirmado do indicado: um mês para quem indicou.
@@ -74,10 +151,28 @@ export async function rewardReferrer(
 ): Promise<"recompensado" | "sem_indicacao"> {
   const client = deps.client ?? prisma;
   const now = input.now ?? new Date();
-  const referral = await client.personalReferral.findUnique({ where: { referredTenantId: input.referredTenantId }, include: { referrer: { select: { id: true, ownerId: true } }, referred: { select: { name: true } } } });
+  const referral = await client.personalReferral.findUnique({ where: { referredTenantId: input.referredTenantId }, include: { referrer: { select: { id: true, ownerId: true, type: true } }, referred: { select: { name: true } } } });
   if (!referral || referral.rewardedAt) return "sem_indicacao";
   const { count } = await client.personalReferral.updateMany({ where: { id: referral.id, rewardedAt: null }, data: { rewardedAt: now } });
   if (count === 0) return "sem_indicacao";
+
+  if (referral.referrer.type === "INDIVIDUAL") {
+    const how = await rewardLivreReferrer(referral.referrer, referral.id, client, now);
+    logEvent("info", "indicacao_livre_recompensada", { referrerTenantId: referral.referrer.id, referredTenantId: input.referredTenantId, how });
+    if (how === "adiado") {
+      // Volta a valer no próximo pagamento do indicado.
+      await client.personalReferral.update({ where: { id: referral.id }, data: { rewardedAt: null } });
+      return "sem_indicacao";
+    }
+    if (how === "aplicado") {
+      try {
+        await sendToUser(referral.referrer.ownerId, { title: "Indicação confirmada: 10% de desconto", body: `${referral.referred.name} assinou o FitOS. Sua próxima mensalidade sai com 10% de desconto.`, url: "/painel/assinatura", tag: `indicacao-${referral.id}` }, { client, sender: deps.sender, config: deps.config });
+      } catch (error) {
+        logEvent("error", "indicacao_push_falhou", describeError(error));
+      }
+    }
+    return "recompensado";
+  }
 
   const subscription = await client.saasSubscription.findUnique({ where: { tenantId: referral.referrer.id }, select: { trialEndsAt: true, externalSubscriptionId: true } });
   let how = "sem assinatura";
@@ -109,12 +204,19 @@ export async function rewardReferrer(
   return "recompensado";
 }
 
-export async function getReferralSummary(tenantId: string, client: PrismaClient = prisma): Promise<{ code: string; invited: number; confirmed: number; referredBonus: boolean }> {
-  const [code, invited, confirmed, received] = await Promise.all([
+export async function getReferralSummary(tenantId: string, client: PrismaClient = prisma): Promise<{ code: string; invited: number; confirmed: number; referredBonus: boolean; discountPending: boolean }> {
+  const [code, invited, confirmed, received, discountPending] = await Promise.all([
     getOrCreateReferralCode(tenantId, client),
     client.personalReferral.count({ where: { referrerTenantId: tenantId } }),
     client.personalReferral.count({ where: { referrerTenantId: tenantId, rewardedAt: { not: null } } }),
     client.personalReferral.findUnique({ where: { referredTenantId: tenantId }, select: { id: true } }),
+    hasPendingReward(tenantId, client),
   ]);
-  return { code, invited, confirmed, referredBonus: received !== null };
+  return { code, invited, confirmed, referredBonus: received !== null, discountPending };
+}
+
+/// Tipo de conta de quem indicou (o link leva ao cadastro certo).
+export async function referrerType(code: string, client: PrismaClient = prisma): Promise<"PERSONAL" | "INDIVIDUAL" | null> {
+  const tenant = await client.tenant.findUnique({ where: { referralCode: code }, select: { type: true } });
+  return tenant?.type ?? null;
 }

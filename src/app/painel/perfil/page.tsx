@@ -8,6 +8,8 @@ import { prisma } from "@/shared/db/prisma";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
 import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
+import { getReferralSummary } from "@/modules/billing/referrals";
+import { featureEnabled } from "@/shared/config/features";
 import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { formatCentsBRL } from "@/shared/lib/money";
@@ -95,13 +97,15 @@ export default async function PerfilPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [tenant, subscription, settings, self, workouts, freeAccess] = await Promise.all([
+    const [tenant, subscription, settings, self, workouts, freeAccess, referral] = await Promise.all([
       prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
       getSubscriptionForTenant(ctx.tenantId),
       prisma.notificationSettings.findUnique({ where: { userId: ctx.userId } }),
       prisma.student.findUnique({ where: { userId: ctx.userId }, select: { preferredDays: true } }),
       prisma.workout.findMany({ where: { tenantId: ctx.tenantId, status: "ATIVO", trainingPlan: { isSnapshot: false } }, select: { suggestedDays: true } }),
       getOwnFreeAccess(ctx.tenantId),
+      // Indicação de amigos: os prêmios são cupons.
+      featureEnabled("CUPONS") ? getReferralSummary(ctx.tenantId).catch(() => null) : null,
     ]);
 
     return (
@@ -117,6 +121,7 @@ export default async function PerfilPage() {
           subscriptionSummary={subscriptionSummary(subscription, new Date(), freeAccess?.endsAt ?? null)}
           modalities={storedModalities(profile.modalities)}
           preferences={{ reminderHour: settings?.reminderHour ?? null, days: self?.preferredDays ?? [], planDays: [...new Set(workouts.flatMap((workout) => workout.suggestedDays))], coachFirst: null }}
+          referral={referral}
         />
         <UpdateVersion />
       </AppShell>
