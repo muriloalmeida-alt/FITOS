@@ -138,4 +138,23 @@ describe("AssinaturaPage (FIT-150)", () => {
     const day = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }).format(endsAt);
     expect(screen.getByText(new RegExp(`Próxima cobrança: ${day} ·`))).toBeInTheDocument();
   });
+
+  it("teste grátis + 365 dias concedidos: um único período gratuito somado, com o fim e o ano da gratuidade", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-11T15:00:00Z"));
+    try {
+      const trialEndsAt = new Date("2026-11-05T15:00:00Z");
+      asPersonal({ ...base, creditCardLast4: null, createdAt: new Date("2026-10-06T15:00:00Z"), trialEndsAt });
+      getOwnFreeAccess.mockResolvedValue({ startsAt: trialEndsAt, endsAt: new Date("2027-11-05T15:00:00Z"), lastDay: "2027-11-05" });
+      await renderPage();
+
+      expect(screen.getByText("Acesso gratuito")).toBeInTheDocument();
+      expect(screen.queryByText("Teste grátis")).not.toBeInTheDocument();
+      // 25 dias do teste + 365 concedidos.
+      expect(screen.getByText("390 dias restantes · termina em 5 de novembro de 2027")).toBeInTheDocument();
+      expect(screen.getByText(/Próxima cobrança: 5 de novembro de 2027 ·/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
