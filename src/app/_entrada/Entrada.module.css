@@ -373,3 +373,15 @@
   font-weight: 700;
   text-decoration: none;
 }
+
+/* Cupom no cadastro: campo e "Aplicar" lado a lado; a dica embaixo. */
+.couponRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.couponRow > span {
+  grid-column: 1 / -1;
+}

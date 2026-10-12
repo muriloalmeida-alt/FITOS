@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@prisma/client";
 import { Button, FormAlert, TextField, useToast } from "@/shared/ui";
+import { SignupCouponField, couponNotice, type SignupCoupon } from "./SignupCouponField";
 import { signUp } from "@/modules/identity/auth-client";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { modalitiesLabel, type Modality } from "@/shared/lib/modalities";
@@ -77,7 +78,9 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /// um (vê os detalhes e confirma) ou decide depois. A conta vem em seguida
 /// ("salve seu plano"), sem CPF nem cartão. Já logado (cadastro antigo
 /// incompleto), conclui direto.
-export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 30, initialModalities = [] }: { signedIn?: boolean; priceCents?: number | null; trialDays?: number | null; initialModalities?: Modality[] }) {
+export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 30, initialModalities = [], allowCoupon = false }: { signedIn?: boolean; priceCents?: number | null; trialDays?: number | null; initialModalities?: Modality[]; allowCoupon?: boolean }) {
+  const [coupon, setCoupon] = useState<SignupCoupon | null>(null);
+  const [couponPending, setCouponPending] = useState(false);
   const router = useRouter();
   const toast = useToast();
   const [step, setStep] = useState(0);
@@ -149,7 +152,7 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
     const response = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective: answers.objective, experienceLevel: answers.experience, weeklyAvailability: answers.availability, modalities, program: choice ?? null }),
+      body: JSON.stringify({ objective: answers.objective, experienceLevel: answers.experience, weeklyAvailability: answers.availability, modalities, program: choice ?? null, ...(coupon ? { couponCode: coupon.code } : {}) }),
     }).catch(() => null);
     if (!response?.ok) {
       // As escolhas ficam; dá para tentar de novo.
@@ -158,7 +161,9 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
       return false;
     }
     writeDraft(null);
-    toast.show(choice ? "Seu plano está pronto" : "Preferências salvas");
+    const saved = (await response.json().catch(() => null)) as { coupon?: { applied: boolean; message?: string } | null } | null;
+    const notice = couponNotice(saved?.coupon);
+    toast.show(notice ?? (saved?.coupon?.applied ? "Conta criada com o seu cupom de desconto" : choice ? "Seu plano está pronto" : "Preferências salvas"));
     router.push("/painel");
     router.refresh();
     return true;
@@ -178,8 +183,8 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
     if (!EMAIL.test(normalized)) found.email = "Informe um e-mail válido.";
     if (password.length < 8) found.password = "Use pelo menos 8 caracteres.";
     setErrors(found);
-    setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    setFormError(couponPending ? "Toque em Aplicar para conferir o cupom, ou apague o código." : null);
+    if (Object.keys(found).length > 0 || couponPending) return;
     setBusy(true);
     const { error } = await signUp.email({ name: name.trim(), email: normalized, password, role: "INDIVIDUAL" });
     if (error) {
@@ -276,6 +281,7 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
               <TextField label="Seu nome" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} error={errors.name} disabled={busy} required />
               <TextField label="E-mail" name="email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} error={errors.email} disabled={busy} required />
               <PasswordField label="Crie uma senha" value={password} onChange={setPassword} error={errors.password} autoComplete="new-password" disabled={busy} />
+              {allowCoupon ? <SignupCouponField product="INDIVIDUAL" value={coupon} onChange={setCoupon} onPendingChange={setCouponPending} disabled={busy} /> : null}
               <Button type="submit" size="lg" block disabled={busy}>
                 {busy ? "Salvando…" : "Salvar e começar hoje"}
               </Button>

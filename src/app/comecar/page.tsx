@@ -11,6 +11,7 @@ import { ConviteEntrada } from "./ConviteEntrada";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { LivreComecar } from "./LivreComecar";
 import { PersonalComecar } from "./PersonalComecar";
+import { featureEnabled } from "@/shared/config/features";
 
 export const metadata: Metadata = {
   title: `Começar — ${appName}`,
@@ -80,7 +81,7 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
     return (
       <EntradaShell back={{ href: "/comecar", label: "Voltar" }}>
         {params.indicado === "1" ? <p className={styles.muted}>Você veio por indicação: são 30 dias a mais de teste grátis.</p> : null}
-        <PersonalComecar plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} />
+        <PersonalComecar plans={plans.map((plan) => ({ id: plan.id, name: plan.name, priceCents: plan.priceCents, studentLimit: plan.studentLimit }))} allowCoupon={featureEnabled("CUPONS")} />
         <p className={styles.muted}>
           Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
         </p>
@@ -102,7 +103,8 @@ export default async function ComecarPage({ searchParams }: { searchParams?: Pro
           <strong>Convite de um amigo:</strong> {plan?.trialDays ?? 30} dias grátis e, depois, 50% de desconto nos 30 dias seguintes. O desconto entra sozinho na sua conta.
         </p>
       ) : null}
-      <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} />
+      {/* Cupom digitado: não com convite (CRM ou amigo), que já traz o desconto. */}
+      <LivreComecar priceCents={plan?.priceCents ?? null} trialDays={plan?.trialDays ?? null} allowCoupon={featureEnabled("CUPONS") && !invite && params.indicado !== "1"} />
       <p className={styles.muted}>
         Já tem conta? <Link href="/entrar" className={styles.back}>Entrar</Link>
       </p>
