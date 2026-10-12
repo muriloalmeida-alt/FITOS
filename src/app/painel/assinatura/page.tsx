@@ -15,6 +15,7 @@ import { featureEnabled } from "@/shared/config/features";
 import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
 import { listMyCoupons } from "@/modules/billing/couponRedemptions";
 import { CouponPanel, type CouponPanelItem } from "./CouponPanel";
+import { subscriptionDiscount } from "@/shared/lib/subscriptionDiscount";
 
 export const metadata: Metadata = {
   title: `Assinatura — ${appName}`,
@@ -65,12 +66,18 @@ export default async function AssinaturaPage() {
   ]);
   // Cupons (feature 5): só com a flag; nunca para assinatura inadimplente.
   const coupons: CouponPanelItem[] | null = featureEnabled("CUPONS") ? await listMyCoupons(ctx.tenantId) : null;
+  const activeCoupons = coupons
+    ? await prisma.couponRedemption.findMany({ where: { tenantId: ctx.tenantId, state: "COMMITTED" }, orderBy: { committedAt: "asc" }, select: { code: true, kind: true, amount: true, stackable: true, durationCycles: true, cyclesUsed: true } })
+    : [];
   const now = new Date();
 
   let current: CurrentSubscription | null = null;
   if (subscription) {
     const state = stateOf(subscription, now);
     const charge = nextCharge(subscription, state, now, freeAccess?.endsAt ?? null);
+    // Desconto em vigor (cupom de convite, indicação...): aparece no cartão
+    // e no valor da próxima cobrança.
+    const discount = state === "cancelada" ? null : subscriptionDiscount(subscription.plan.priceCents, activeCoupons, subscription.plan.billingCycle);
     const totalTrialDays = subscription.plan.trialDays ?? 30;
     const freeUntil = freeAccess?.endsAt ?? null;
     const combinedFree =
@@ -104,7 +111,10 @@ export default async function AssinaturaPage() {
               granted: false,
             }
           : null,
-      nextChargeLabel: charge ? `${dateLabel.format(charge)} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subscription.plan.priceCents / 100)}` : null,
+      nextChargeLabel: charge
+        ? `${dateLabel.format(charge)} · ${discount ? `${discount.finalLabel} com desconto (em vez de ${discount.baseLabel})` : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subscription.plan.priceCents / 100)}`
+        : null,
+      discount: discount ? { headline: discount.headline, origin: discount.origin } : null,
       benefit: freeAccess
         ? {
             untilLabel: dateLabel.format(new Date(`${freeAccess.lastDay}T12:00:00-03:00`)),

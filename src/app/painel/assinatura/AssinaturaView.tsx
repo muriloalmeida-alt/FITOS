@@ -52,6 +52,8 @@ export interface CurrentSubscription {
   /// `startsLabel` quando começa depois do teste ou de outro benefício.
   benefit: { untilLabel: string; startsLabel: string | null; daysLeft: number } | null;
   nextChargeLabel: string | null;
+  /// Desconto em vigor (cupom): título e de onde veio.
+  discount?: { headline: string; origin: string } | null;
   canceledLabel: string | null;
   card: { brand: string; last4: string } | null;
   needsCard: boolean;
@@ -172,6 +174,12 @@ export function AssinaturaView({ subscription, plans, usage, profilePhone, needs
                 {subscription.benefit.startsLabel ? `Começa em ${subscription.benefit.startsLabel}.` : `${subscription.benefit.daysLeft === 1 ? "Último dia" : `${subscription.benefit.daysLeft} dias restantes`}.`}{" "}
                 {subscription.state === "cancelada" ? "Sua assinatura continua cancelada: nada é cobrado depois." : "Depois dele, a cobrança volta na data abaixo."}
               </span>
+            </div>
+          ) : null}
+          {subscription.discount ? (
+            <div className={styles.benefit} role="status">
+              <strong>{subscription.discount.headline}</strong>
+              <span>{subscription.discount.origin}</span>
             </div>
           ) : null}
           {subscription.nextChargeLabel ? <p className={styles.line}>Próxima cobrança: {subscription.nextChargeLabel}</p> : null}
