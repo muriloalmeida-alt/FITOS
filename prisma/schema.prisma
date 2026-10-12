@@ -389,6 +389,7 @@ model Tenant {
   accessGrants             AdministrativeAccessGrant[]
   saasPayments             SaasPayment[]
   couponAudienceMembers    CouponAudienceMember[]
+  couponRedemptions        CouponRedemption[]
   auditEvents              AuditEvent[]
   invitations              Invitation[]
   individualProfile        IndividualProfile?
@@ -2069,9 +2070,10 @@ model Coupon {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  currentVersion CouponVersion?  @relation("CouponCurrentVersion", fields: [currentVersionId], references: [id])
-  versions       CouponVersion[] @relation("CouponVersions")
+  currentVersion CouponVersion?     @relation("CouponCurrentVersion", fields: [currentVersionId], references: [id])
+  versions       CouponVersion[]    @relation("CouponVersions")
   audit          CouponAudit[]
+  redemptions    CouponRedemption[]
 
   @@map("coupons")
 }
@@ -2100,9 +2102,10 @@ model CouponVersion {
   createdById     String
   createdAt       DateTime       @default(now())
 
-  coupon    Coupon                 @relation("CouponVersions", fields: [couponId], references: [id], onDelete: Cascade)
-  currentOf Coupon?                @relation("CouponCurrentVersion")
-  members   CouponAudienceMember[]
+  coupon      Coupon                 @relation("CouponVersions", fields: [couponId], references: [id], onDelete: Cascade)
+  currentOf   Coupon?                @relation("CouponCurrentVersion")
+  members     CouponAudienceMember[]
+  redemptions CouponRedemption[]
 
   @@unique([couponId, version])
   @@map("coupon_versions")
@@ -2138,4 +2141,50 @@ model CouponAudit {
 
   @@index([couponId, occurredAt])
   @@map("coupon_audit")
+}
+
+/// Resgate de um cupom por uma conta (feature 5, fatia 2). As condições
+/// ficam congeladas aqui (tipo, valor, ciclos, plano, segmento); pausar,
+/// encerrar ou editar a campanha não muda um resgate feito. O desconto é
+/// aplicado cobrança a cobrança (fatia 3) até `cyclesUsed = durationCycles`.
+enum CouponRedemptionState {
+  COMMITTED
+  ENDED
+  CANCELED
+}
+
+model CouponRedemption {
+  id                   String                @id @default(cuid())
+  couponId             String
+  versionId            String
+  tenantId             String
+  actorUserId          String
+  state                CouponRedemptionState @default(COMMITTED)
+  /// Chave do envio: repetir não resgata duas vezes.
+  operationKey         String                @unique
+  code                 String
+  kind                 CouponKind
+  amount               Int
+  stackable            Boolean
+  durationCycles       Int
+  cyclesUsed           Int                   @default(0)
+  segment              String
+  planId               String
+  baseCents            Int
+  discountCents        Int
+  /// Orçamento comprometido (ciclos × desconto no preço do resgate).
+  committedBudgetCents Int
+  /// Desconto efetivamente concedido (fatia 3).
+  appliedCents         Int                   @default(0)
+  committedAt          DateTime              @default(now())
+  endedAt              DateTime?
+  endReason            String?
+
+  coupon  Coupon        @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  version CouponVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, state])
+  @@index([couponId, state])
+  @@map("coupon_redemptions")
 }

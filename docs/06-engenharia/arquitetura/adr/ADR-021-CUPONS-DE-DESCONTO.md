@@ -70,3 +70,15 @@ Hoje o FitOS não guarda as cobranças SaaS. O webhook (`asaasWebhook.ts`) só m
   - se não for, o resgate termina, e a tela avisa antes;
   - os ciclos usados não reiniciam.
 - **Cancelamento:** encerra o resgate. Reembolso não devolve o uso.
+
+## Adendo — fatia 2: resgate pela conta
+
+- **Consulta e confirmação:**
+  - a consulta (`POST /api/meus-cupons/previa`) não consome nada; devolve o preço e uma `revision`;
+  - a confirmação (`POST /api/meus-cupons`) refaz tudo numa transação e recusa a prévia desatualizada (`QUOTE_STALE`);
+  - a mesma `operationKey` devolve o mesmo resgate.
+- **Trava:** a transação trava a conta (`pg_advisory_xact_lock`, para a acumulação) e a versão do cupom (`SELECT … FOR UPDATE`, para a última vaga e o orçamento).
+- **Sem estado `RESERVED` nesta versão:** o resgate não chama o provedor, então não há operação externa em voo para esperar e ele grava direto como `COMMITTED`. A reserva com TTL volta se um checkout com confirmação externa passar a usar cupom.
+- **Erros do contrato:** `INVALID_CODE` (também para rascunho e arquivado, sem revelar que existem), `EXPIRED` (pausado, encerrado ou fora da janela), `INELIGIBLE` (sem plano, plano fora ou público errado, sem revelar a lista), `ALREADY_USED`, `CAP_REACHED` (vagas ou orçamento), `CONFLICT` (acumulação, ou cobrança que ficaria zerada) e `QUOTE_STALE`.
+- **Condições congeladas no resgate:** tipo, valor, ciclos, plano, segmento e desconto por ciclo no preço do dia. O orçamento comprometido é ciclos × desconto.
+- **Tela:** "Tem um cupom?" em Assinatura (personal e Livre, nunca assinatura inadimplente) e a lista dos cupons com "x de N cobranças com desconto". A tela não promete que uma cobrança já mudou: o desconto entra nas próximas cobranças ainda não emitidas (fatia 3).
