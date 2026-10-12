@@ -7,13 +7,12 @@ import { FOCUS_MUSCLES, FOCUS_REGIONS, normalizeFocus, type Focus } from "@/shar
 import { requestJson } from "../_workout-builder/apiClient";
 import styles from "./FreeWorkoutButton.module.css";
 
-/// Treino avulso (FitOS Livre): começa sem treino montado; antes, o
-/// praticante escolhe o que quer treinar (regiões e grupos musculares) e
-/// os exercícios são escolhidos durante a execução.
-export function FreeWorkoutButton() {
+/// Treino avulso (FitOS Livre): escolher o foco (regiões e grupos
+/// musculares) e começar; os exercícios são escolhidos durante a execução.
+/// Usado pelo botão abaixo e pela escolha "Como deseja treinar?" do painel.
+export function FreeWorkoutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
   const [focus, setFocus] = useState<Focus[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -29,6 +28,29 @@ export function FreeWorkoutButton() {
   }
 
   return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="O que você quer treinar hoje?"
+      description="Escolha um ou mais. A biblioteca abre no seu foco e a avaliação no fim considera o que você escolheu."
+      footer={
+        <Button type="button" block size="lg" disabled={focus.length === 0 || busy} onClick={() => void start()}>
+          {busy ? "Começando…" : focus.length === 0 ? "Escolha o foco" : "Começar treino avulso"}
+        </Button>
+      }
+    >
+      <div className={styles.groups}>
+        <ChipGroup<Focus> label="Regiões" showLabel multiple value={focus} onChange={setFocus} options={FOCUS_REGIONS.map((value) => ({ value, label: value }))} />
+        <ChipGroup<Focus> label="Grupos musculares" showLabel multiple value={focus} onChange={setFocus} options={FOCUS_MUSCLES.map((value) => ({ value, label: value }))} />
+      </div>
+    </Sheet>
+  );
+}
+
+/// Botão "Treino avulso" (Meus treinos do Livre).
+export function FreeWorkoutButton() {
+  const [open, setOpen] = useState(false);
+  return (
     <>
       <button type="button" className={styles.button} onClick={() => setOpen(true)}>
         <span className={styles.icon} aria-hidden="true">
@@ -42,22 +64,7 @@ export function FreeWorkoutButton() {
           →
         </span>
       </button>
-      <Sheet
-        open={open}
-        onClose={() => setOpen(false)}
-        title="O que você quer treinar hoje?"
-        description="Escolha um ou mais. A biblioteca abre no seu foco e a avaliação no fim considera o que você escolheu."
-        footer={
-          <Button type="button" block size="lg" disabled={focus.length === 0 || busy} onClick={() => void start()}>
-            {busy ? "Começando…" : focus.length === 0 ? "Escolha o foco" : "Começar treino avulso"}
-          </Button>
-        }
-      >
-        <div className={styles.groups}>
-          <ChipGroup<Focus> label="Regiões" showLabel multiple value={focus} onChange={setFocus} options={FOCUS_REGIONS.map((value) => ({ value, label: value }))} />
-          <ChipGroup<Focus> label="Grupos musculares" showLabel multiple value={focus} onChange={setFocus} options={FOCUS_MUSCLES.map((value) => ({ value, label: value }))} />
-        </div>
-      </Sheet>
+      <FreeWorkoutSheet open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

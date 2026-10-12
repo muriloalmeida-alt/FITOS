@@ -115,6 +115,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
+vi.mock("@/modules/students/panelData", () => ({ loadPanelData: vi.fn(async () => ({ performed: [], preferredDays: [] })) }));
+
 vi.mock("@/modules/identity/auth-client", () => ({
   signOut: vi.fn(),
 }));
@@ -247,8 +249,10 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Pedro\.$/ })).toBeInTheDocument();
-    expect(screen.getByText(/Joana já foi avisado/)).toBeInTheDocument();
+    // Painel (proposta 9): "Olá, [primeiro nome]!", semana, Iniciar treino e evolução.
+    expect(screen.getByRole("heading", { level: 1, name: "Olá, Pedro!" })).toBeInTheDocument();
+    expect(screen.getByText("Hoje: sem programa", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Iniciar treino" })).toBeInTheDocument();
     expect(findUniqueTenant).not.toHaveBeenCalled();
     expect(findUniqueStudent).not.toHaveBeenCalled();
     expect(getStudentHome).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", studentId: "s1" }));
@@ -308,8 +312,8 @@ describe("PainelPage (FIT-012)", () => {
 
     render(await PainelPage());
 
-    expect(screen.getByRole("heading", { level: 1, name: /^(Bom dia|Boa tarde|Boa noite), Praticante\.$/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Iniciar treino" })).toHaveAttribute("href", "/painel/meus-treinos/sessao?treino=w1");
+    expect(screen.getByRole("heading", { level: 1, name: "Olá, Praticante!" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Iniciar treino" })).toBeInTheDocument();
     expect(getIndividualHome).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t5", userId: "u5" }));
     expect(findUniqueOrThrowTenant).not.toHaveBeenCalled();
   });

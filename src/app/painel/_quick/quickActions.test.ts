@@ -27,9 +27,9 @@ describe("acesso rápido: ações por perfil", () => {
     expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))).toEqual(["Continuar treino → /painel/treino/sessao", "Meus treinos → /painel/treino"]);
     inProgress.mockResolvedValue(null);
     schedule.mockResolvedValueOnce({ state: "TREINO_HOJE" });
-    expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))[0]).toBe("Começar treino → /painel/treino/sessao");
+    expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))[0]).toBe("Começar treino → /painel?iniciar=1");
     schedule.mockResolvedValueOnce({ state: "DESCANSO" });
-    expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))[0]).toBe("Começar treino → /painel/treino");
+    expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))[0]).toBe("Começar treino → /painel?iniciar=1");
     schedule.mockResolvedValueOnce({ state: "SEM_PLANO" });
     expect(labels(await quickActionsFor({ role: "ALUNO", userId: "u" }, client("ATIVO")))).toEqual(["Ver meu programa → /painel/treino", "Meus treinos → /painel/treino"]);
   });

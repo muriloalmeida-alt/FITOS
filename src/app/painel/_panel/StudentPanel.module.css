@@ -1,0 +1,187 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Cor explícita no fundo escuro (não herdar de estilos globais). */
+.title {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.muted {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dayName {
+  color: var(--fitos-color-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.dayMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 44px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Previsto: contorno; feito: preenchido com ✓; hoje: anel e nome destacado. */
+.planned .dayMark {
+  box-shadow: inset 0 0 0 1.5px var(--fitos-color-outline);
+}
+
+.done .dayMark {
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+}
+
+.today .dayName {
+  color: var(--fitos-orange-300);
+}
+
+.today .dayMark {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.legend {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.goals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-card);
+  min-width: 0;
+}
+
+.goalLabel {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.goalValue {
+  color: var(--fitos-color-on-surface);
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--fitos-color-surface-raised);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  background-color: var(--fitos-orange-500);
+}
+
+.goalMeta {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+}
+
+.link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--fitos-orange-300);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice strong {
+  font-size: 16px;
+}
+
+.choice span {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 340px) {
+  .goals {
+    grid-template-columns: 1fr;
+  }
+}

@@ -21,6 +21,8 @@ import { AlunoHome } from "./AlunoHome";
 import { AlunoSemVinculo } from "./AlunoSemVinculo";
 import { AlunoInativo } from "./AlunoInativo";
 import { IndividualHome } from "./IndividualHome";
+import { loadPanelData } from "@/modules/students/panelData";
+import { featureEnabled } from "@/shared/config/features";
 
 export const metadata: Metadata = {
   title: `Painel — ${appName}`,
@@ -88,7 +90,7 @@ function livreTrialNotice(subscription: SaasSubscriptionWithPlan | null, now: Da
 /// (`/painel/personal`, `/painel/aluno`), então não há URL para adulterar
 /// e "trocar de shell": o mesmo `/painel` sempre resolve para o shell do
 /// papel real do usuário autenticado.
-export default async function PainelPage() {
+export default async function PainelPage({ searchParams }: { searchParams?: Promise<{ iniciar?: string }> } = {}) {
   const [session, ctx] = await Promise.all([getServerSession(), getAuthContext()]);
 
   if (!session || !ctx.authenticated) {
@@ -153,7 +155,21 @@ export default async function PainelPage() {
     }
     const now = new Date();
     const [home, subscription] = await Promise.all([getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now }), getSubscriptionForTenant(ctx.tenantId)]);
-    return <IndividualHome name={session.user.name} greeting={greetingForHour(hourInProductTimeZone(now))} dateLabel={dateLabelFor(now)} home={home} todayIso={now.toISOString()} trialNotice={livreTrialNotice(subscription, now)} />;
+    // Painel (proposta 9): treinos concluídos e "meus dias" do próprio praticante.
+    const self = await prisma.student.findUnique({ where: { userId: ctx.userId }, select: { id: true } });
+    const panel = self ? await loadPanelData({ tenantId: ctx.tenantId, studentId: self.id }, now) : { performed: [], preferredDays: [] };
+    return (
+      <IndividualHome
+        name={session.user.name}
+        dateLabel={dateLabelFor(now)}
+        home={home}
+        todayIso={now.toISOString()}
+        performed={panel.performed.map((date) => date.toISOString())}
+        preferredDays={panel.preferredDays}
+        retroEnabled={featureEnabled("RETROATIVO")}
+        trialNotice={livreTrialNotice(subscription, now)}
+      />
+    );
   }
 
   if (!ctx.studentId) {
@@ -169,7 +185,7 @@ export default async function PainelPage() {
   }
 
   const now = new Date();
-  const [student, home, openCharge, healthForm, nextClasses] = await Promise.all([
+  const [student, home, openCharge, healthForm, nextClasses, panel] = await Promise.all([
     prisma.student.findUniqueOrThrow({ where: { id: ctx.studentId }, include: { tenant: { include: { owner: true } } } }),
     getStudentHome({ tenantId: ctx.tenantId, studentId: ctx.studentId, now }),
     // EPIC-38: mensalidade em aberto que o personal mandou pelo app.
@@ -178,16 +194,21 @@ export default async function PainelPage() {
     prisma.healthForm.findFirst({ where: { tenantId: ctx.tenantId, studentId: ctx.studentId }, select: { id: true } }),
     // EPIC-48: próxima aula na agenda.
     nextOccurrencesForStudent({ tenantId: ctx.tenantId, studentId: ctx.studentId, now, days: 7, limit: 3 }).catch(() => []),
+    // Painel (proposta 9): treinos concluídos da semana e do mês, "meus dias".
+    loadPanelData({ tenantId: ctx.tenantId, studentId: ctx.studentId }, now),
   ]);
   const nextClass = nextClasses.find((item) => item.status === "AGENDADA") ?? null;
   return (
     <AlunoHome
       displayName={student.displayName}
       personalName={student.tenant.owner.name}
-      greeting={greetingForHour(hourInProductTimeZone(now))}
       dateLabel={dateLabelFor(now)}
       home={home}
       todayIso={now.toISOString()}
+      performed={panel.performed.map((date) => date.toISOString())}
+      preferredDays={panel.preferredDays}
+      retroEnabled={featureEnabled("RETROATIVO")}
+      startOpen={(await searchParams)?.iniciar === "1"}
       healthPending={healthForm === null}
       nextClass={nextClass ? `${dayLabel(nextClass.date)} às ${formatTime(nextClass.startMinutes)}` : null}
       payment={openCharge?.paymentUrl ? { description: openCharge.description, amountCents: openCharge.amountCents, dueIso: openCharge.dueDate.toISOString(), overdue: openCharge.dueDate < now, url: openCharge.paymentUrl } : null}
