@@ -50,3 +50,12 @@ Treino retroativo (feature 2), Gamificação (feature 3) e Cupons/Funcional depe
   - Depois disso, contam só os pontos liberados até a consolidação. O valor fica congelado em `PeriodGoal.finalTenths` na primeira leitura.
   - Registro tardio, edição ou exclusão não mudam medalha já consolidada. O cartão de pontos avisa: "Treino salvo no histórico. Este desafio já foi encerrado."
   - **Limite conhecido:** um período nunca lido depois de consolidado congela com o que existir na primeira leitura.
+
+## Adendo (12/10/2026): flags ligadas por padrão
+
+A pedido do produto, as features `RETROATIVO`, `GAMIFICACAO`, `FUNCIONAL` e `CUPONS` passam a vir **ligadas por padrão** no deploy, sem precisar configurar variável no Railway.
+
+- **Desligar num ambiente:** basta definir `FEATURE_<NOME>=off`. Com a variável definida, só `on` liga.
+- **Features novas:** entram na mesma lista e já chegam ligadas.
+- **Escritas no Asaas:** `GRATUIDADE_ASAAS` e `CUPONS_ASAAS` ficam fora da lista e continuam desligadas até a validação no Sandbox (runbooks).
+- **Testes:** partem das features desligadas (`src/test/setup.ts`) e ligam cada uma com `vi.stubEnv`, como antes.
