@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PersonalStudentRangeEstimate } from "@prisma/client";
-import { Button, FormAlert, TextField } from "@/shared/ui";
+import { Button, FormAlert, TextField, useToast } from "@/shared/ui";
+import { SignupCouponField, couponNotice, type SignupCoupon } from "./SignupCouponField";
 import { signUp } from "@/modules/identity/auth-client";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { suggestPlan } from "@/modules/billing/suggestPlan";
@@ -28,15 +29,15 @@ const RANGES: { value: PersonalStudentRangeEstimate; label: string; short: strin
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function finishOnboarding(range: PersonalStudentRangeEstimate, businessName?: string): Promise<string> {
+async function finishOnboarding(range: PersonalStudentRangeEstimate, businessName?: string, couponCode?: string): Promise<{ redirectTo: string; couponMessage: string | null; couponApplied: boolean }> {
   const response = await fetch("/api/onboarding-personal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ studentRangeEstimate: range, businessName }),
+    body: JSON.stringify({ studentRangeEstimate: range, businessName, couponCode }),
   });
-  const body = (await response.json().catch(() => null)) as { redirectTo?: string; message?: string } | null;
+  const body = (await response.json().catch(() => null)) as { redirectTo?: string; message?: string; coupon?: { applied: boolean; message?: string } | null } | null;
   if (!response.ok) throw new Error(body?.message ?? "Não foi possível criar seu espaço.");
-  return body?.redirectTo ?? "/painel/primeiros-passos";
+  return { redirectTo: body?.redirectTo ?? "/painel/primeiros-passos", couponMessage: couponNotice(body?.coupon), couponApplied: body?.coupon?.applied === true };
 }
 
 /// Começar como personal (EPIC-33, E3): uma pergunta de um toque (quantos
@@ -44,8 +45,11 @@ async function finishOnboarding(range: PersonalStudentRangeEstimate, businessNam
 /// nome do espaço vem sugerido. Sem CPF, celular nem cartão: o teste de 30
 /// dias começa na hora. Já logado (cadastro antigo incompleto), só a
 /// pergunta.
-export function PersonalComecar({ plans, signedIn = false }: { plans: StartPlan[]; signedIn?: boolean }) {
+export function PersonalComecar({ plans, signedIn = false, allowCoupon = false }: { plans: StartPlan[]; signedIn?: boolean; allowCoupon?: boolean }) {
   const router = useRouter();
+  const toast = useToast();
+  const [coupon, setCoupon] = useState<SignupCoupon | null>(null);
+  const [couponPending, setCouponPending] = useState(false);
   const [range, setRange] = useState<PersonalStudentRangeEstimate | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -65,7 +69,7 @@ export function PersonalComecar({ plans, signedIn = false }: { plans: StartPlan[
     if (!signedIn) return;
     setBusy(true);
     try {
-      router.push(await finishOnboarding(value));
+      router.push((await finishOnboarding(value)).redirectTo);
       router.refresh();
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "Não foi possível criar seu espaço.");
@@ -82,8 +86,8 @@ export function PersonalComecar({ plans, signedIn = false }: { plans: StartPlan[
     if (!EMAIL.test(normalized)) found.email = "Informe um e-mail válido.";
     if (password.length < 8) found.password = "Use pelo menos 8 caracteres.";
     setErrors(found);
-    setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    setFormError(couponPending ? "Toque em Aplicar para conferir o cupom, ou apague o código." : null);
+    if (Object.keys(found).length > 0 || couponPending) return;
     setBusy(true);
     const { error } = await signUp.email({ name: name.trim(), email: normalized, password, role: "PERSONAL" });
     if (error) {
@@ -93,7 +97,10 @@ export function PersonalComecar({ plans, signedIn = false }: { plans: StartPlan[
     }
     rememberAccount({ name: name.trim(), email: normalized, role: "PERSONAL" });
     try {
-      router.push(await finishOnboarding(range, spaceName === "Seu espaço" ? undefined : spaceName));
+      const done = await finishOnboarding(range, spaceName === "Seu espaço" ? undefined : spaceName, coupon?.code);
+      if (done.couponMessage) toast.show(done.couponMessage);
+      else if (done.couponApplied) toast.show("Conta criada com o seu cupom de desconto");
+      router.push(done.redirectTo);
       router.refresh();
     } catch {
       // A conta existe; o onboarding pode ser retomado em /onboarding-personal.
@@ -152,6 +159,7 @@ export function PersonalComecar({ plans, signedIn = false }: { plans: StartPlan[
               </button>
             </p>
           )}
+          {allowCoupon ? <SignupCouponField product="PERSONAL" value={coupon} onChange={setCoupon} onPendingChange={setCouponPending} disabled={busy} /> : null}
           <Button type="submit" size="lg" block disabled={busy}>
             {busy ? "Criando…" : "Criar meu espaço"}
           </Button>

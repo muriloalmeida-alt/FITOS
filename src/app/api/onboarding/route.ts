@@ -9,6 +9,8 @@ import { prisma } from "@/shared/db/prisma";
 import { claimInvite } from "@/modules/crm/prospects";
 import { CRM_INVITE_COOKIE } from "@/shared/lib/crmCookie";
 import { REFERRAL_COOKIE, applyLivreReferral } from "@/modules/billing/referrals";
+import { redeemSignupCoupon, type SignupCouponResult } from "@/modules/billing/signupCoupon";
+import { featureEnabled } from "@/shared/config/features";
 import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { offerable, storedModalities } from "@/shared/lib/modalities";
 import { copyReadyItem, readyProgramModalities } from "@/modules/library/readyLibrary";
@@ -142,7 +144,13 @@ export async function POST(request: Request) {
       if (referral.applied) jar.delete(REFERRAL_COOKIE);
     }
 
-    return Response.json({ ...profile, starterWorkouts, inviteCouponApplied: invite.couponApplied || referral.couponApplied }, { status: 201 });
+    // Cupom digitado no cadastro: fica na conta para as próximas cobranças.
+    let coupon: SignupCouponResult | null = null;
+    if (featureEnabled("CUPONS") && typeof body.couponCode === "string" && body.couponCode.trim()) {
+      coupon = await redeemSignupCoupon({ tenantId: ctx.tenantId, userId: ctx.userId, code: body.couponCode });
+    }
+
+    return Response.json({ ...profile, starterWorkouts, inviteCouponApplied: invite.couponApplied || referral.couponApplied, coupon }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;

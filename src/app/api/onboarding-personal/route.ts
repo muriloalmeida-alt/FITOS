@@ -4,6 +4,8 @@ import { completePersonalOnboarding, getPersonalOnboardingProfile, OnboardingErr
 import { listStudents } from "@/modules/students/students";
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
 import { REFERRAL_COOKIE, applyPersonalReferral, referralCodeFromCookie } from "@/modules/billing/referrals";
+import { redeemSignupCoupon, type SignupCouponResult } from "@/modules/billing/signupCoupon";
+import { featureEnabled } from "@/shared/config/features";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { suggestPlan } from "@/modules/billing/suggestPlan";
 import { prisma } from "@/shared/db/prisma";
@@ -78,9 +80,15 @@ export async function POST(request: Request) {
     const referralCode = referralCodeFromCookie(request.headers.get("cookie"));
     if (referralCode) await applyPersonalReferral({ referredTenantId: ctx.tenantId, code: referralCode }).catch(() => false);
 
+    // Cupom digitado no cadastro: fica na conta para as próximas cobranças.
+    let coupon: SignupCouponResult | null = null;
+    if (featureEnabled("CUPONS") && typeof body.couponCode === "string" && body.couponCode.trim()) {
+      coupon = await redeemSignupCoupon({ tenantId: ctx.tenantId, userId: ctx.userId, code: body.couponCode });
+    }
+
     const students = await listStudents({ tenantId: ctx.tenantId, pageSize: 1 });
     const redirectTo = students.total === 0 ? "/painel/primeiros-passos" : "/painel";
-    const response = Response.json({ redirectTo }, { status: 201 });
+    const response = Response.json({ redirectTo, ...(coupon ? { coupon } : {}) }, { status: 201 });
     if (referralCode) response.headers.append("Set-Cookie", `${REFERRAL_COOKIE}=; Path=/; Max-Age=0`);
     return response;
   } catch (error) {
