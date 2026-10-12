@@ -8,6 +8,13 @@ const withYear = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long
 const withoutYear = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: TZ });
 const yearOf = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: TZ });
 
+const numeric = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ });
+
+/// "02/02/2027": para faixas curtas (o Início), que precisam caber numa linha.
+export function shortAccessDateLabel(date: Date): string {
+  return numeric.format(date);
+}
+
 export function accessDateLabel(date: Date, now: Date): string {
   return yearOf.format(date) === yearOf.format(now) ? withoutYear.format(date) : withYear.format(date);
 }

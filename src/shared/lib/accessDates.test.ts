@@ -18,3 +18,10 @@ describe("datas da gratuidade", () => {
     expect(grantOutlastsTrial(null, new Date("2026-10-01T03:00:00Z"), now)).toBe(false);
   });
 });
+
+describe("shortAccessDateLabel", () => {
+  it("data curta para a faixa do Início caber numa linha", async () => {
+    const { shortAccessDateLabel } = await import("./accessDates");
+    expect(shortAccessDateLabel(new Date("2027-02-02T12:00:00-03:00"))).toBe("02/02/2027");
+  });
+});

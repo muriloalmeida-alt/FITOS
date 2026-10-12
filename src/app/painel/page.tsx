@@ -15,7 +15,7 @@ import { dayLabel, formatTime, localDate, localMinutes } from "@/shared/lib/sche
 import { suggestCoachProgressions } from "@/modules/execution/progression";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
 import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
-import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
+import { grantOutlastsTrial, shortAccessDateLabel } from "@/shared/lib/accessDates";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { PersonalHome, type PersonalHomeBanner } from "./PersonalHome";
@@ -64,7 +64,7 @@ function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activ
   if (subscription.status === "CANCELADA") return { tone: "warn", text: "Sua assinatura foi cancelada.", cta: "Assinar de novo" };
   if (subscription.status === "INADIMPLENTE") return { tone: "warn", text: "Pagamento da assinatura pendente.", cta: "Resolver" };
   // Gratuidade concedida que vai além do teste: é ela que vale.
-  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return { tone: "trial", text: `Acesso gratuito até ${accessDateLabel(new Date(freeUntil.getTime() - 1), now)}`, cta: "Assinatura" };
+  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return { tone: "trial", text: `Gratuito até ${shortAccessDateLabel(new Date(freeUntil.getTime() - 1))}`, cta: "Assinatura" };
   // EPIC-33: o teste começa sem cartão; o aviso pede o cartão perto do fim.
   const needsCard = subscription.plan.priceCents > 0 && !subscription.creditCardLast4;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {

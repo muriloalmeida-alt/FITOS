@@ -34,7 +34,7 @@ function subscriptionSummary(subscription: SaasSubscriptionWithPlan | null, now:
   if (!subscription) return "Nenhum plano contratado";
   if (subscription.status === "CANCELADA") return `${subscription.plan.name} · cancelada`;
   if (subscription.status === "INADIMPLENTE") return `${subscription.plan.name} · pagamento pendente`;
-  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return `Acesso gratuito até ${accessDateLabel(new Date(freeUntil.getTime() - 1), now)}`;
+  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return `Gratuito até ${accessDateLabel(new Date(freeUntil.getTime() - 1), now)}`;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
     const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
     return `Teste grátis · ${days === 1 ? "último dia" : `${days} dias restantes`}`;
