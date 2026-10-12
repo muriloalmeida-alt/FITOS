@@ -55,6 +55,8 @@ export function DecisionQueue({ items, total }: { items: PersonalFeedItem[]; tot
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const item = items[index] ?? null;
+  // Ações que ainda pedem o personal (a fila mostra até 8 por vez).
+  const pending = Math.max(0, total - index);
   const advance = () => {
     setError(null);
     setIndex((current) => current + 1);
@@ -150,9 +152,9 @@ export function DecisionQueue({ items, total }: { items: PersonalFeedItem[]; tot
         <h2 id="fila-titulo" className={styles.title}>
           Pede você agora
         </h2>
-        {items.length > 0 ? (
+        {pending > 0 ? (
           <span className={styles.count}>
-            {Math.min(index, items.length)} de {items.length}
+            {pending} {pending === 1 ? "ação" : "ações"}
           </span>
         ) : null}
       </div>

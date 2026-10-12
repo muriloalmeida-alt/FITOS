@@ -111,14 +111,3 @@
   font-size: 18px;
   font-weight: 800;
 }
-
-/* Telas baixas: sem a linha de explicação (Início sem rolagem). */
-@media (max-height: 720px) {
-  .why {
-    display: none;
-  }
-
-  .actions {
-    margin-top: var(--fitos-space-3);
-  }
-}

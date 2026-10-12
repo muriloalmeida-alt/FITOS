@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AppShell, NextStepCard } from "@/shared/ui";
-import { formatCentsBRL } from "@/shared/lib/money";
 import type { PersonalFeedItem } from "@/modules/students/personalFeed";
 import { DecisionQueue } from "./DecisionQueue";
+import { HomeBanner } from "./HomeBanner";
 import { NoticeRow } from "./_panel/NoticeRow";
 import { TodayAgenda, type TodayClass } from "./TodayAgenda";
 import { LogoutButton } from "./LogoutButton";
@@ -20,8 +20,6 @@ export interface PersonalHomeStats {
   studentLimit: number | null;
   /// BK-06: % dos treinos previstos na semana já concluídos (`null` sem previsão).
   weekCompletion: number | null;
-  receivedCents: number;
-  overdueCount: number;
 }
 
 interface PersonalHomeProps {
@@ -45,25 +43,16 @@ function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
 }
 
-/// Início do Personal (EPIC-29): faixa da assinatura, três indicadores que
+/// Início do Personal (EPIC-29): faixa da assinatura, dois indicadores que
 /// levam às telas certas e a fila "Pede você agora" (uma decisão por vez,
-/// resolvida no lugar), mais o botão + para o resto. Um aviso por vez,
-/// numa linha, para caber na tela sem rolagem. Tudo vem das consultas
-/// reais do tenant.
+/// resolvida no lugar), mais o botão + para o resto. Tudo vem das
+/// consultas reais do tenant.
 export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, isNewSpace, progressionStudents = 0, agendaToday = null }: PersonalHomeProps) {
   const studentsHint = stats.studentLimit ? `de ${stats.studentLimit} do plano` : stats.activeStudents === 1 ? "aluno ativo" : "alunos ativos";
-  const moneyHint = stats.overdueCount > 0 ? `${stats.overdueCount} ${stats.overdueCount === 1 ? "atrasada" : "atrasadas"}` : "recebido no mês";
 
   return (
     <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName(name)}.`} headerMode="mobile" navItems={PERSONAL_NAV_ITEMS} activeKey="inicio" trailing={<LogoutButton />} compact>
-      {banner ? (
-        <Link href="/painel/assinatura" className={`${styles.banner} ${styles[`banner_${banner.tone}`]}`}>
-          <span>{banner.text}</span>
-          <span className={styles.bannerCta}>
-            {banner.cta} <span aria-hidden="true">→</span>
-          </span>
-        </Link>
-      ) : null}
+      {banner ? <HomeBanner banner={banner} /> : null}
 
       <ul className={styles.stats} aria-label="Resumo">
         <li>
@@ -76,12 +65,6 @@ export function PersonalHome({ name, greeting, dateLabel, banner, stats, feed, i
           <Link href="/painel/alunos" className={styles.stat}>
             <span className={styles.statValue}>{stats.weekCompletion === null ? "—" : `${stats.weekCompletion}%`}</span>
             <span className={styles.statLabel}>treinos da semana</span>
-          </Link>
-        </li>
-        <li>
-          <Link href="/painel/financeiro" className={styles.stat}>
-            <span className={styles.statValue}>{formatCentsBRL(stats.receivedCents).replace(/,00$/, "")}</span>
-            <span className={stats.overdueCount > 0 ? `${styles.statLabel} ${styles.statDanger}` : styles.statLabel}>{moneyHint}</span>
           </Link>
         </li>
       </ul>
