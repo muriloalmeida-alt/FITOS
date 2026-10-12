@@ -72,7 +72,7 @@ Não existe formulário, rota ou parâmetro que permita a um cliente não autent
 |---|---|---|
 | `BETTER_AUTH_SECRET` | Sim | Segredo usado para assinar cookies de sessão e tokens. Nunca commitado — apenas placeholder em `.env.example`. Falha de inicialização clara se ausente. |
 | `RESEND_API_KEY` | Não | Liga o envio de e-mail (recuperação de senha). Sem ela, nenhum e-mail sai. |
-| `EMAIL_FROM` | Não | Remetente, de domínio verificado no Resend (ex.: `FitOS <nao-responda@fitos.com.br>`). |
+| `EMAIL_FROM` | Não | Remetente, de domínio verificado no Resend (ex.: `FitOS <nao-responda@fitosx.com.br>`). |
 | `BETTER_AUTH_URL` | Sim | URL base da aplicação (usada pelo Better Auth para gerar links/cookies corretamente). Em produção, deve ser a URL pública do serviço; em desenvolvimento, `http://localhost:3000`. |
 
 Nenhuma variável adicional expõe segredo via `NEXT_PUBLIC_*` — o cliente (`auth-client.ts`) não precisa de `BETTER_AUTH_SECRET`; ele fala apenas com `/api/auth/*` no mesmo domínio.

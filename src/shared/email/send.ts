@@ -13,7 +13,7 @@ export interface Email {
   text: string;
 }
 
-export const DEFAULT_EMAIL_FROM = "FitOS <nao-responda@fitos.app>";
+export const DEFAULT_EMAIL_FROM = "FitOS <nao-responda@fitosx.com.br>";
 const RESEND_URL = "https://api.resend.com/emails";
 const TIMEOUT_MS = 10_000;
 
