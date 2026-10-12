@@ -36,9 +36,11 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 | `R2_PUBLIC_BASE_URL` | a mesma do catálogo (imagens públicas) |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | projeto Sentry de produção (recomendado) |
 
-- [ ] Primeiro deploy:
-  - migrations, planos comerciais e admin rodam sozinhos (`preDeployCommand`);
-  - carregar o catálogo de exercícios uma vez no banco novo.
+- [ ] Primeiro deploy: tudo roda sozinho (`preDeployCommand`), nesta ordem:
+  - migrations;
+  - catálogo de exercícios (`catalog:garantir`): num banco novo, carrega o catálogo curado e reaplica os ajustes de imagens, aeróbicos e Funcional. No log: "N exercício(s) criado(s); N ajuste(s) das migrations reaplicado(s)". Nos deploys seguintes: "catálogo completo; nada a fazer";
+  - planos comerciais;
+  - conta de administrador.
 
 ## 3. Asaas
 
