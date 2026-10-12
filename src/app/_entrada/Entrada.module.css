@@ -362,3 +362,14 @@
   font-size: 14px;
   line-height: 1.45;
 }
+
+/* "Esqueci minha senha" (EPIC-24): link discreto abaixo do formulário. */
+.forgot {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: var(--fitos-orange-300);
+  font-weight: 700;
+  text-decoration: none;
+}

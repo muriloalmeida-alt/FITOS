@@ -6,6 +6,9 @@ import * as z from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { ensureTenantForPersonal } from "@/modules/tenancy/ensureTenantForPersonal";
 import { ensureTenantForIndividual } from "@/modules/tenancy/ensureTenantForIndividual";
+import { sendEmail } from "@/shared/email/send";
+import { passwordResetEmail } from "@/shared/email/templates";
+import { resolvePublicBaseUrl } from "@/shared/lib/publicBaseUrl";
 
 /// Papéis que uma pessoa pode escolher livremente no cadastro público
 /// (FIT-101): `PERSONAL` (já existia, era o único valor possível) e
@@ -33,6 +36,21 @@ function requiredEnv(name: string): string {
   return value;
 }
 
+/// Link de "Esqueci minha senha" vale por 1 hora.
+export const RESET_PASSWORD_MINUTES = 60;
+
+/// Link da página de nova senha no endereço público de quem pediu
+/// (nunca localhost atrás do proxy).
+export function resetPasswordUrl(token: string, request?: Request): string {
+  const base = resolvePublicBaseUrl({
+    configured: process.env.BETTER_AUTH_URL,
+    forwardedHost: request?.headers.get("x-forwarded-host"),
+    host: request?.headers.get("host"),
+    forwardedProto: request?.headers.get("x-forwarded-proto"),
+  });
+  return `${base}/redefinir-senha?token=${encodeURIComponent(token)}`;
+}
+
 function passkeyRpId(): string {
   return new URL(requiredEnv("BETTER_AUTH_URL")).hostname;
 }
@@ -45,11 +63,15 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    // Sem verificação de e-mail nem recuperação de senha por e-mail nesta
-    // História: exigiria decidir um provedor de envio de e-mail, fora do
-    // escopo da FIT-009 (ver AUTENTICACAO-E-SESSAO.md, "Limitações
-        // conhecidas").
     autoSignIn: true,
+    // "Esqueci minha senha" (EPIC-24): e-mail pelo Resend com o link da
+    // página de nova senha. Trocar a senha encerra as outras sessões.
+    resetPasswordTokenExpiresIn: RESET_PASSWORD_MINUTES * 60,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, token }, request) => {
+      // Sem esperar o envio: a resposta não muda de tempo quando o e-mail existe.
+      void sendEmail(passwordResetEmail({ to: user.email, name: user.name, url: resetPasswordUrl(token, request), minutes: RESET_PASSWORD_MINUTES }));
+    },
   },
   user: {
     additionalFields: {

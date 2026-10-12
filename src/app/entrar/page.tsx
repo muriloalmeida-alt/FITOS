@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { appName } from "@/shared/config/env";
 import { Button } from "@/shared/ui";
 import { EntradaShell } from "../_entrada/EntradaShell";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 /// Entrar (FIT-163, E2 do protótipo): e-mail e senha com o erro junto do
 /// campo, "Começar agora" e "Recebi um convite". Fundo escuro liso.
-/// "Esqueci minha senha" fica para o EPIC-24 (depende de envio de e-mail).
+/// "Esqueci minha senha" (EPIC-24) leva ao pedido do link por e-mail.
 export default function EntrarPage() {
   return (
     <EntradaShell>
@@ -24,6 +25,9 @@ export default function EntrarPage() {
       <Suspense fallback={<div className={entrada.form} aria-hidden />}>
         <EntrarForm />
       </Suspense>
+      <Link href="/esqueci-senha" className={entrada.forgot}>
+        Esqueci minha senha
+      </Link>
       <div className={entrada.divider}>ainda não tem conta?</div>
       <div className={entrada.alt}>
         <Button href="/comecar" variant="secondary" block>

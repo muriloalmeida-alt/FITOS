@@ -56,7 +56,13 @@ Não existe formulário, rota ou parâmetro que permita a um cliente não autent
 ## Limitações conhecidas (deliberadamente fora do escopo desta História)
 
 - **Rate limiting de login**: correção de registro (descoberta na FIT-012, ao automatizar login real para evidências): o Better Auth 1.7.5 já vem com rate limiting **habilitado por padrão**, sem nenhuma configuração explícita deste projeto — `/sign-in`, `/sign-up`, `/change-password` e `/change-email` têm a regra especial de **3 requisições por 10 segundos** (por IP, armazenada em memória do processo), retornando 429 acima disso (confirmado empiricamente: a 4ª chamada consecutiva a `/api/auth/sign-in/email` no mesmo processo recebeu 429). O texto anterior desta seção ("atualmente não há mitigação de força bruta") estava incorreto e foi corrigido aqui. Ainda registrado como risco residual **parcial**, não como item totalmente resolvido: o armazenamento em memória do processo não é compartilhado entre múltiplas instâncias (não é válido para produção com mais de um servidor sem uma storage compartilhada — Redis, por exemplo — configurada explicitamente), e os limites/janela não foram avaliados nem ajustados deliberadamente para as necessidades do FitOS; apenas documentados como comportamento padrão observado.
-- **Recuperação de senha e verificação de e-mail**: não implementadas — exigiriam decidir um provedor de envio de e-mail (fora do escopo da FIT-009). A tabela `verifications` existe (schema base do provedor) mas não é usada ativamente.
+- **Recuperação de senha** (EPIC-24): implementada, com envio de e-mail pelo Resend (`src/shared/email`).
+  - `/entrar` → "Esqueci minha senha" leva a `/esqueci-senha`. A pessoa informa o e-mail.
+  - O Better Auth (`/request-password-reset`) grava o token em `verifications` e chama `sendResetPassword`. O e-mail leva a `/redefinir-senha?token=…`, montado no endereço público de quem pediu (nunca localhost).
+  - A resposta é sempre a mesma, com ou sem conta cadastrada. O envio não é esperado, então o tempo da resposta também não revela se a conta existe.
+  - O link vale 1 hora e serve uma vez só. Trocar a senha encerra as outras sessões (`revokeSessionsOnPasswordReset`).
+  - Sem `RESEND_API_KEY`, nada é enviado e o pedido fica só no log (`email_nao_configurado`).
+- **Verificação de e-mail**: não implementada.
 - **Operação real no Railway**: a integração usa o mesmo PostgreSQL/Prisma já validado em homologação (FIT-008), mas o deploy desta História especificamente não foi testado em Railway nesta rodada — mesma limitação de acesso já registrada em `docs/06-engenharia/evidencias/FIT-008/DEPLOY-HOMOLOGACAO.md`. Ver `docs/06-engenharia/evidencias/FIT-009/` para o que foi e não foi comprovado.
 - **OAuth/login social/MFA/passkeys**: fora do escopo do MVP (ver EPIC-03).
 
@@ -65,6 +71,8 @@ Não existe formulário, rota ou parâmetro que permita a um cliente não autent
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `BETTER_AUTH_SECRET` | Sim | Segredo usado para assinar cookies de sessão e tokens. Nunca commitado — apenas placeholder em `.env.example`. Falha de inicialização clara se ausente. |
+| `RESEND_API_KEY` | Não | Liga o envio de e-mail (recuperação de senha). Sem ela, nenhum e-mail sai. |
+| `EMAIL_FROM` | Não | Remetente, de domínio verificado no Resend (ex.: `FitOS <nao-responda@fitosx.com.br>`). |
 | `BETTER_AUTH_URL` | Sim | URL base da aplicação (usada pelo Better Auth para gerar links/cookies corretamente). Em produção, deve ser a URL pública do serviço; em desenvolvimento, `http://localhost:3000`. |
 
 Nenhuma variável adicional expõe segredo via `NEXT_PUBLIC_*` — o cliente (`auth-client.ts`) não precisa de `BETTER_AUTH_SECRET`; ele fala apenas com `/api/auth/*` no mesmo domínio.
