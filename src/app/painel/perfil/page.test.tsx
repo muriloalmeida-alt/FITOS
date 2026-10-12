@@ -57,6 +57,9 @@ vi.mock("@/modules/billing/subscriptions", async () => {
   return { ...actual, getSubscriptionForTenant: (...args: unknown[]) => getSubscriptionForTenant(...args) };
 });
 
+const getOwnFreeAccess = vi.fn();
+vi.mock("@/modules/billing/accessGrants", () => ({ getOwnFreeAccess: (...args: unknown[]) => getOwnFreeAccess(...args) }));
+
 vi.mock("@/modules/student-finance/charges", () => ({
   getFinancialSummary: (...args: unknown[]) => getFinancialSummary(...args),
 }));
@@ -166,6 +169,25 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Meus dados/ }));
     const data = screen.getByRole("dialog", { name: "Meus dados" });
     expect(within(data).getByRole("button", { name: /Nome do espaço.*Espaço de Praticante/ })).toBeInTheDocument();
+  });
+
+  it("Livre com gratuidade de 365 dias além do teste: Minha assinatura mostra a gratuidade com o ano, não o teste inicial", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-12T12:00:00Z"));
+    try {
+      getServerSession.mockResolvedValue({ user: { name: "Murilo", email: "murilo@example.test", role: "INDIVIDUAL" } });
+      getAuthContext.mockResolvedValue({ authenticated: true, userId: "u5", role: "INDIVIDUAL", tenantId: "t5", studentId: null });
+      getIndividualOnboardingProfile.mockResolvedValue({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS", modalities: [] });
+      findUniqueTenant.mockResolvedValue({ id: "t5", name: "Espaço de Murilo" });
+      getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: new Date("2026-11-05T15:00:00Z"), plan: { name: "FitOS Livre" } });
+      getOwnFreeAccess.mockResolvedValue({ startsAt: new Date("2026-11-05T15:00:00Z"), endsAt: new Date("2027-11-05T15:00:00Z"), lastDay: "2027-11-05" });
+      const { default: PerfilPage } = await import("./page");
+      render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
+      expect(screen.getByRole("link", { name: /^Minha assinatura.*Acesso gratuito até 5 de novembro de 2027/ })).toHaveAttribute("href", "/painel/assinatura");
+      expect(screen.queryByText(/Teste grátis/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("individual sem onboarding concluído é redirecionado para /onboarding", async () => {
