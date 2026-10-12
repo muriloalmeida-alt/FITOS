@@ -7,6 +7,8 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
+import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
+import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
 import { getFinancialSummary } from "@/modules/student-finance/charges";
 import { formatCentsBRL } from "@/shared/lib/money";
 import { currentReferenceMonth, referenceMonthLabel } from "@/shared/lib/referenceMonth";
@@ -23,10 +25,14 @@ export const metadata: Metadata = {
   title: `Perfil — ${appName}`,
 };
 
-function subscriptionSummary(subscription: SaasSubscriptionWithPlan | null, now: Date): string {
+/// Resumo de "Minha assinatura": a gratuidade concedida pela equipe FitOS
+/// vem antes do teste grátis quando vai além dele (com o ano, se não for
+/// este ano), para o cliente nunca ver só o teste inicial.
+function subscriptionSummary(subscription: SaasSubscriptionWithPlan | null, now: Date, freeUntil: Date | null = null): string {
   if (!subscription) return "Nenhum plano contratado";
   if (subscription.status === "CANCELADA") return `${subscription.plan.name} · cancelada`;
   if (subscription.status === "INADIMPLENTE") return `${subscription.plan.name} · pagamento pendente`;
+  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return `Acesso gratuito até ${accessDateLabel(new Date(freeUntil.getTime() - 1), now)}`;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
     const days = Math.max(1, Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000));
     return `Teste grátis · ${days === 1 ? "último dia" : `${days} dias restantes`}`;
@@ -54,12 +60,13 @@ export default async function PerfilPage() {
     }
     const now = new Date();
     const referenceMonth = currentReferenceMonth(now);
-    const [tenant, subscription, finance, overdueCount, ownExercises] = await Promise.all([
+    const [tenant, subscription, finance, overdueCount, ownExercises, freeAccess] = await Promise.all([
       prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
       getSubscriptionForTenant(ctx.tenantId),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth }),
       prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } }),
       prisma.exercise.count({ where: { tenantId: ctx.tenantId, status: "ATIVO" } }),
+      getOwnFreeAccess(ctx.tenantId),
     ]);
     const month = referenceMonthLabel(referenceMonth).split(" ")[0]!.toLowerCase();
     const financeSummary = `${formatCentsBRL(finance.recebidoCents)} recebido em ${month}${overdueCount > 0 ? ` · ${overdueCount} ${overdueCount === 1 ? "atrasada" : "atrasadas"}` : ""}`;
@@ -75,7 +82,7 @@ export default async function PerfilPage() {
           cref={profile.cref}
           studentRange={profile.studentRangeEstimate}
           financeSummary={financeSummary}
-          subscriptionSummary={subscriptionSummary(subscription, now)}
+          subscriptionSummary={subscriptionSummary(subscription, now, freeAccess?.endsAt ?? null)}
           exercisesSummary={ownExercises === 0 ? "Biblioteca do FitOS" : `Biblioteca do FitOS + ${ownExercises} ${ownExercises === 1 ? "seu" : "seus"}`}
         />
         <UpdateVersion />
@@ -88,12 +95,13 @@ export default async function PerfilPage() {
     if (!profile) {
       redirect("/onboarding");
     }
-    const [tenant, subscription, settings, self, workouts] = await Promise.all([
+    const [tenant, subscription, settings, self, workouts, freeAccess] = await Promise.all([
       prisma.tenant.findUnique({ where: { id: ctx.tenantId } }),
       getSubscriptionForTenant(ctx.tenantId),
       prisma.notificationSettings.findUnique({ where: { userId: ctx.userId } }),
       prisma.student.findUnique({ where: { userId: ctx.userId }, select: { preferredDays: true } }),
       prisma.workout.findMany({ where: { tenantId: ctx.tenantId, status: "ATIVO", trainingPlan: { isSnapshot: false } }, select: { suggestedDays: true } }),
+      getOwnFreeAccess(ctx.tenantId),
     ]);
 
     return (
@@ -106,7 +114,7 @@ export default async function PerfilPage() {
           objective={profile.objective}
           experienceLevel={profile.experienceLevel}
           weeklyAvailability={profile.weeklyAvailability}
-          subscriptionSummary={subscriptionSummary(subscription, new Date())}
+          subscriptionSummary={subscriptionSummary(subscription, new Date(), freeAccess?.endsAt ?? null)}
           modalities={storedModalities(profile.modalities)}
           preferences={{ reminderHour: settings?.reminderHour ?? null, days: self?.preferredDays ?? [], planDays: [...new Set(workouts.flatMap((workout) => workout.suggestedDays))], coachFirst: null }}
         />

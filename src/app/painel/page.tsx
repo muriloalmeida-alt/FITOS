@@ -14,6 +14,8 @@ import { listOccurrences, nextOccurrencesForStudent } from "@/modules/schedule/s
 import { dayLabel, formatTime, localDate, localMinutes } from "@/shared/lib/scheduleTime";
 import { suggestCoachProgressions } from "@/modules/execution/progression";
 import { getSubscriptionForTenant, type SaasSubscriptionWithPlan } from "@/modules/billing/subscriptions";
+import { getOwnFreeAccess } from "@/modules/billing/accessGrants";
+import { accessDateLabel, grantOutlastsTrial } from "@/shared/lib/accessDates";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
 import { getPersonalOnboardingProfile } from "@/modules/personal-onboarding/onboarding";
 import { PersonalHome, type PersonalHomeBanner } from "./PersonalHome";
@@ -57,10 +59,12 @@ function dateLabelFor(date: Date): string {
 
 /// Faixa do Início (FIT-143): teste grátis, problema na assinatura ou o
 /// plano com as vagas livres. Sempre leva a Assinatura.
-function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activeStudents: number, now: Date): PersonalHomeBanner {
+function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activeStudents: number, now: Date, freeUntil: Date | null = null): PersonalHomeBanner {
   if (!subscription) return { tone: "warn", text: "Você ainda não tem um plano.", cta: "Escolher plano" };
   if (subscription.status === "CANCELADA") return { tone: "warn", text: "Sua assinatura foi cancelada.", cta: "Assinar de novo" };
   if (subscription.status === "INADIMPLENTE") return { tone: "warn", text: "Pagamento da assinatura pendente.", cta: "Resolver" };
+  // Gratuidade concedida que vai além do teste: é ela que vale.
+  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return { tone: "trial", text: `Acesso gratuito até ${accessDateLabel(new Date(freeUntil.getTime() - 1), now)}`, cta: "Assinatura" };
   // EPIC-33: o teste começa sem cartão; o aviso pede o cartão perto do fim.
   const needsCard = subscription.plan.priceCents > 0 && !subscription.creditCardLast4;
   if (subscription.trialEndsAt && subscription.trialEndsAt > now) {
@@ -76,8 +80,10 @@ function subscriptionBanner(subscription: SaasSubscriptionWithPlan | null, activ
 
 /// Aviso do FitOS Livre (EPIC-33): só na última semana do teste sem
 /// cartão ou depois que ele acaba sem cartão.
-function livreTrialNotice(subscription: SaasSubscriptionWithPlan | null, now: Date): string | null {
+function livreTrialNotice(subscription: SaasSubscriptionWithPlan | null, now: Date, freeUntil: Date | null = null): string | null {
   if (!subscription || subscription.status !== "ATIVA" || subscription.plan.priceCents <= 0 || subscription.creditCardLast4) return null;
+  // Com gratuidade concedida além do teste, o fim do teste não é o fim do acesso.
+  if (grantOutlastsTrial(subscription.trialEndsAt, freeUntil, now)) return null;
   // Depois do fim do teste, a faixa de carência/bloqueio (EPIC-38) avisa em todas as telas.
   if (!subscription.trialEndsAt || subscription.trialEndsAt <= now) return null;
   const days = Math.ceil((subscription.trialEndsAt.getTime() - now.getTime()) / 86_400_000);
@@ -112,7 +118,7 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
     // contagem de atrasadas vem depois, já com o status certo.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, risk, progressions, todayClasses] = await Promise.all([
+    const [roster, feed, financialSummary, subscription, risk, progressions, todayClasses, freeAccess] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
       getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
@@ -120,6 +126,7 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
       riskCount(ctx.tenantId).catch(() => ({ total: 0, alto: 0 })),
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
       listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
+      getOwnFreeAccess(ctx.tenantId).catch(() => null),
     ]);
     const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
@@ -128,7 +135,7 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
         name={session.user.name}
         greeting={greetingForHour(hourInProductTimeZone(now))}
         dateLabel={dateLabelFor(now)}
-        banner={subscriptionBanner(subscription, roster.counts.ativos, now)}
+        banner={subscriptionBanner(subscription, roster.counts.ativos, now, freeAccess?.endsAt ?? null)}
         stats={{
           activeStudents: roster.counts.ativos,
           studentLimit: subscription?.plan.studentLimit ?? null,
@@ -154,7 +161,7 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
       redirect("/onboarding");
     }
     const now = new Date();
-    const [home, subscription] = await Promise.all([getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now }), getSubscriptionForTenant(ctx.tenantId)]);
+    const [home, subscription, freeAccess] = await Promise.all([getIndividualHome({ tenantId: ctx.tenantId, userId: ctx.userId, now }), getSubscriptionForTenant(ctx.tenantId), getOwnFreeAccess(ctx.tenantId).catch(() => null)]);
     // Painel (proposta 9): treinos concluídos e "meus dias" do próprio praticante.
     const self = await prisma.student.findUnique({ where: { userId: ctx.userId }, select: { id: true } });
     const panel = self ? await loadPanelData({ tenantId: ctx.tenantId, studentId: self.id }, now) : { performed: [], preferredDays: [] };
@@ -167,7 +174,7 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
         performed={panel.performed.map((date) => date.toISOString())}
         preferredDays={panel.preferredDays}
         retroEnabled={featureEnabled("RETROATIVO")}
-        trialNotice={livreTrialNotice(subscription, now)}
+        trialNotice={livreTrialNotice(subscription, now, freeAccess?.endsAt ?? null)}
       />
     );
   }

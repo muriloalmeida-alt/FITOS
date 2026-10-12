@@ -12,6 +12,7 @@ import { LogoutButton } from "../LogoutButton";
 import { PERSONAL_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS } from "../navigation";
 import { AssinaturaView, type CurrentSubscription, type SubscriptionState } from "./AssinaturaView";
 import { featureEnabled } from "@/shared/config/features";
+import { accessDateLabel } from "@/shared/lib/accessDates";
 import { listMyCoupons } from "@/modules/billing/couponRedemptions";
 import { CouponPanel, type CouponPanelItem } from "./CouponPanel";
 
@@ -20,7 +21,9 @@ export const metadata: Metadata = {
 };
 
 const DAY = 86_400_000;
-const dateLabel = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
+// Com o ano quando não é este ano: uma gratuidade de 365 dias não pode
+// parecer terminar em novembro deste ano.
+const dateLabel = { format: (date: Date) => accessDateLabel(date, new Date()) };
 
 function stateOf(subscription: SaasSubscriptionWithPlan, now: Date): SubscriptionState {
   if (subscription.status === "CANCELADA") return "cancelada";
