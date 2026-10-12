@@ -121,8 +121,10 @@ function isUniqueConstraintViolation(error: unknown): boolean {
 /// `externalId` é o próprio `canonical_key` do CSV — estável e legível por
 /// natureza, nunca um hash calculado (diferente da API Ninjas, que não
 /// fornece identificador estável).
-async function upsertCuratedExercise(record: CuratedExerciseRecord, client: PrismaClient): Promise<"created" | "updated"> {
-  const data = {
+/// Campos de um exercício curado que o arquivo define (os mesmos na
+/// criação e na atualização).
+export function curatedExerciseData(record: CuratedExerciseRecord) {
+  return {
     name: record.name,
     type: record.type,
     muscle: record.muscle,
@@ -132,6 +134,10 @@ async function upsertCuratedExercise(record: CuratedExerciseRecord, client: Pris
     safetyInfo: record.safetyInfo,
     status: record.active ? ("ATIVO" as const) : ("ARQUIVADO" as const),
   };
+}
+
+async function upsertCuratedExercise(record: CuratedExerciseRecord, client: PrismaClient): Promise<"created" | "updated"> {
+  const data = curatedExerciseData(record);
 
   try {
     await client.exercise.create({
