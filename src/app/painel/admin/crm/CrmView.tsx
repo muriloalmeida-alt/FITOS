@@ -30,7 +30,8 @@ interface BulkResult {
 }
 
 /// Contact Picker API (Chrome no Android): a agenda do celular, com a
-/// permissão da pessoa a cada uso. O iPhone não oferece; lá vale o .vcf.
+/// permissão da pessoa a cada uso. No iPhone, só com a opção "Contact
+/// Picker API" ligada nos ajustes do Safari; sem ela, vale o .vcf.
 type ContactsManager = { select: (properties: string[], options: { multiple: boolean }) => Promise<{ name?: string[]; tel?: string[] }[]> };
 function contactsManager(): ContactsManager | null {
   if (typeof navigator === "undefined") return null;
@@ -282,9 +283,12 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
                 Escolher da agenda do celular
               </Button>
             ) : (
-              <p className={styles.muted}>
-                No iPhone: abra Contatos, selecione as pessoas (ou uma lista), toque em Compartilhar e salve o arquivo .vcf; depois escolha o arquivo aqui. No Android com Chrome, o botão da agenda aparece aqui.
-              </p>
+              <div className={styles.muted}>
+                <p>
+                  <strong>No iPhone</strong>, ligue uma vez em Ajustes → Apps → Safari → Avançado → Feature Flags → <strong>Contact Picker API</strong>. Feche o Safari (ou o FitOS) e abra esta tela de novo: o botão &quot;Escolher da agenda do celular&quot; aparece aqui.
+                </p>
+                <p>Plano B: em Contatos, selecione as pessoas, toque em Compartilhar e salve o arquivo .vcf; depois escolha o arquivo abaixo. No Android com Chrome, o botão já aparece sozinho.</p>
+              </div>
             )}
             {agendaNote ? (
               <p className={styles.muted} role="status">

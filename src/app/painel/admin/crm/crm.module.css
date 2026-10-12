@@ -120,3 +120,7 @@
   font-size: 15px;
   line-height: 1.5;
 }
+
+.muted p {
+  margin: 0 0 8px;
+}
