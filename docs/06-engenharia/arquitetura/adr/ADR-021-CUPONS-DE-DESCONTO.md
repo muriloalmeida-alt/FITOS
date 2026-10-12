@@ -82,3 +82,21 @@ Hoje o FitOS não guarda as cobranças SaaS. O webhook (`asaasWebhook.ts`) só m
 - **Erros do contrato:** `INVALID_CODE` (também para rascunho e arquivado, sem revelar que existem), `EXPIRED` (pausado, encerrado ou fora da janela), `INELIGIBLE` (sem plano, plano fora ou público errado, sem revelar a lista), `ALREADY_USED`, `CAP_REACHED` (vagas ou orçamento), `CONFLICT` (acumulação, ou cobrança que ficaria zerada) e `QUOTE_STALE`.
 - **Condições congeladas no resgate:** tipo, valor, ciclos, plano, segmento e desconto por ciclo no preço do dia. O orçamento comprometido é ciclos × desconto.
 - **Tela:** "Tem um cupom?" em Assinatura (personal e Livre, nunca assinatura inadimplente) e a lista dos cupons com "x de N cobranças com desconto". A tela não promete que uma cobrança já mudou: o desconto entra nas próximas cobranças ainda não emitidas (fatia 3).
+
+## Adendo: fatia 3, desconto na cobrança do Asaas
+
+- **`CouponCycleApplication`:** uma linha por resgate e cobrança. Estados:
+  - `PENDING` até o Asaas confirmar o valor novo;
+  - `APPLIED` quando confirmou;
+  - `SKIPPED` quando a cobrança já não estava pendente ou foi removida (não usa ciclo);
+  - `FAILED` depois de 3 tentativas.
+- **Webhook** (depois do ledger e só com `FEATURE_CUPONS`):
+  - `PAYMENT_CREATED`: lê a cobrança no Asaas. Se ainda está `PENDING`, calcula o valor com os cupons em vigor (fixo antes do percentual) e faz `PUT /v3/payments/{id}` com `value`;
+  - `PAYMENT_CONFIRMED` ou `RECEIVED`: conta o ciclo, uma vez por cobrança (`countedAt`). Acabados os ciclos, o resgate termina (`CICLOS_CONCLUIDOS`);
+  - `PAYMENT_DELETED`: desconto não contado vira `SKIPPED`.
+- **A assinatura nunca é alterada por cupom:** não há valor recorrente reduzido, então não há desconto eterno nem restauração.
+- **Reconciliação:** roda no agendador a cada 5 minutos para `PENDING` há mais de 1 minuto. Ela **lê** a cobrança antes de escrever: se o valor já é o esperado, só confirma, sem PUT repetido.
+- **Troca de plano:** se o novo plano não é elegível, o resgate termina (`PLANO_INELEGIVEL`) na próxima cobrança.
+- **Cancelamento:** cancelar a assinatura encerra os resgates em vigor (`ASSINATURA_CANCELADA`) na mesma transação.
+- **Escrita no Asaas:** só com `CUPONS_ASAAS=on`. Antes de ligar, executar o runbook `RUNBOOK-VERIFICACAO-CUPONS-ASAAS-HOMOLOGACAO.md`; o ponto a confirmar é o cartão capturado na criação da cobrança.
+- **Administração:** o detalhe da campanha mostra os resgates em vigor e encerrados, o desconto concedido e o que ainda está comprometido.

@@ -6,6 +6,7 @@ import { runDueReminders as runBillingDueReminders } from "./billingReminders";
 import { runPersonalAlerts } from "./personalAlerts";
 import { expireOldAttachments } from "@/modules/messages/attachments";
 import { reconcileSyncingGrants } from "@/modules/billing/accessGrants";
+import { reconcilePendingCouponApplications } from "@/modules/billing/couponBilling";
 
 /// Agendador dos lembretes de treino (EPIC-31) e dos avisos de vencimento
 /// da assinatura (EPIC-34): roda dentro do próprio servidor, a
@@ -58,6 +59,13 @@ export function startReminderScheduler(): void {
       if (pending > 0) logEvent("info", "gratuidade.reconciliacao", { pendentes: pending });
     } catch (error) {
       logEvent("error", "gratuidade.reconciliacao_falhou", describeError(error));
+    }
+    // Cupons: desconto de cobrança preso em PENDING (timeout no Asaas).
+    try {
+      const pending = await reconcilePendingCouponApplications();
+      if (pending > 0) logEvent("info", "cupons.reconciliacao", { pendentes: pending });
+    } catch (error) {
+      logEvent("error", "cupons.reconciliacao_falhou", describeError(error));
     }
   };
   const timer = setInterval(() => void tick(), INTERVAL_MS);

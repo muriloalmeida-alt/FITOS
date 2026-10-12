@@ -374,6 +374,8 @@ export async function cancelSubscription(
         entityId: canceled.id,
       },
     });
+    // Cupons (ADR-021): cancelar encerra os cupons em vigor.
+    await tx.couponRedemption.updateMany({ where: { tenantId: input.tenantId, state: "COMMITTED" }, data: { state: "ENDED", endedAt: new Date(), endReason: "ASSINATURA_CANCELADA" } });
 
     return canceled;
   });

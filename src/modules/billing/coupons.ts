@@ -109,6 +109,9 @@ export interface CouponDetail extends CouponRow {
   note: string | null;
   selected: { tenantId: string; name: string; ownerEmail: string }[];
   audit: { operation: string; actorId: string; occurredAt: Date }[];
+  /// Resgates (todas as versões): em vigor, encerrados, desconto já
+  /// concedido e orçamento ainda comprometido.
+  metrics: { active: number; ended: number; appliedCents: number; committedCents: number };
 }
 
 export async function getCoupon(id: string, client: PrismaClient = prisma): Promise<CouponDetail> {
@@ -121,6 +124,12 @@ export async function getCoupon(id: string, client: PrismaClient = prisma): Prom
   });
   if (!coupon?.currentVersion) throw new AdminError("NAO_ENCONTRADO", "Cupom não encontrado.");
   const { members, ...version } = coupon.currentVersion;
+  const [active, ended, applied, committed] = await Promise.all([
+    client.couponRedemption.count({ where: { couponId: id, state: "COMMITTED" } }),
+    client.couponRedemption.count({ where: { couponId: id, state: "ENDED" } }),
+    client.couponRedemption.aggregate({ where: { couponId: id }, _sum: { appliedCents: true } }),
+    client.couponRedemption.aggregate({ where: { couponId: id, state: "COMMITTED" }, _sum: { committedBudgetCents: true, appliedCents: true } }),
+  ]);
   return {
     id: coupon.id,
     code: coupon.code,
@@ -129,6 +138,12 @@ export async function getCoupon(id: string, client: PrismaClient = prisma): Prom
     ...version,
     selected: members.map((member) => ({ tenantId: member.tenant.id, name: member.tenant.name, ownerEmail: member.tenant.owner.email })),
     audit: coupon.audit,
+    metrics: {
+      active,
+      ended,
+      appliedCents: applied._sum.appliedCents ?? 0,
+      committedCents: (committed._sum.committedBudgetCents ?? 0) - (committed._sum.appliedCents ?? 0),
+    },
   };
 }
 

@@ -1,6 +1,8 @@
 import { rewardReferrer } from "@/modules/billing/referrals";
 import { secretsMatch } from "@/shared/lib/secretCompare";
 import { parseAsaasWebhookPayload, reconcileAsaasPaymentEvent } from "@/modules/billing/asaasWebhook";
+import { handleCouponPaymentEvent } from "@/modules/billing/couponBilling";
+import { featureEnabled } from "@/shared/config/features";
 
 const LOG_PREFIX = "[FIT-128][webhook-asaas]";
 
@@ -48,6 +50,10 @@ export async function POST(request: Request) {
   if (result.tenantId && (result.outcome === "ATIVA_APLICADA" || result.outcome === "IGNORADO_SEM_MUDANCA") && ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_RECEIVED_IN_CASH"].includes(payload.event)) {
     await rewardReferrer({ referredTenantId: result.tenantId }).catch((error) => console.error(`${LOG_PREFIX} indicação: ${error instanceof Error ? error.message : "erro"}`));
   }
+
+  // Cupons (feature 5, ADR-021): desconto na cobrança criada, ciclo na paga.
+  // Nunca derruba o webhook; escrita no Asaas só com `CUPONS_ASAAS=on`.
+  if (featureEnabled("CUPONS")) await handleCouponPaymentEvent(payload.event, payload.payment.id);
 
   return Response.json({ status: "recebido" });
 }

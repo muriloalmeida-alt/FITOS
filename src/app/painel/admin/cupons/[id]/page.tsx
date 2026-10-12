@@ -17,7 +17,7 @@ import styles from "../coupons.module.css";
 
 export const metadata: Metadata = { title: `Cupom — ${appName}` };
 
-const OPERATION_LABEL: Record<string, string> = { CRIADO: "Criado", EDITADO: "Editado", NOVA_VERSAO: "Nova versão", ATIVADO: "Ativado", PAUSADO: "Pausado", RETOMADO: "Retomado", ENCERRADO: "Encerrado", ARQUIVADO: "Arquivado" };
+const OPERATION_LABEL: Record<string, string> = { RESGATADO: "Resgatado por uma conta", CRIADO: "Criado", EDITADO: "Editado", NOVA_VERSAO: "Nova versão", ATIVADO: "Ativado", PAUSADO: "Pausado", RETOMADO: "Retomado", ENCERRADO: "Encerrado", ARQUIVADO: "Arquivado" };
 const dateTimeFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 /// Uma campanha: condições da versão vigente, público, ações e trilha.
@@ -68,6 +68,18 @@ export default async function CupomPage({ params }: { params: Promise<{ id: stri
         <div>
           <dt>Orçamento</dt>
           <dd>{coupon.budgetCents ? formatCents(coupon.budgetCents) : "Sem teto"}</dd>
+        </div>
+        <div>
+          <dt>Resgates</dt>
+          <dd>
+            {coupon.metrics.active} em vigor · {coupon.metrics.ended} encerrados
+          </dd>
+        </div>
+        <div>
+          <dt>Desconto concedido</dt>
+          <dd>
+            {formatCents(coupon.metrics.appliedCents)} · {formatCents(coupon.metrics.committedCents)} a conceder
+          </dd>
         </div>
         <div>
           <dt>Acumulação</dt>

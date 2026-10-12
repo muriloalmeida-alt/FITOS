@@ -291,6 +291,18 @@ export async function setAsaasSubscriptionNextDueDate(config: AsaasClientConfig,
   });
 }
 
+/// Uma cobrança (cupons, ADR-021): estado e valor atuais.
+export async function getAsaasPayment(config: AsaasClientConfig, paymentId: string): Promise<AsaasPaymentSummary> {
+  return asaasRequest<AsaasPaymentSummary>(config, `/payments/${encodeURIComponent(paymentId)}`);
+}
+
+/// Muda só o valor de **uma** cobrança ainda pendente (cupons, ADR-021).
+/// Operação dedicada: a assinatura (valor recorrente) nunca muda por cupom,
+/// então não existe desconto eterno nem nada para restaurar depois.
+export async function setAsaasPaymentValue(config: AsaasClientConfig, paymentId: string, value: number): Promise<AsaasPaymentSummary> {
+  return asaasRequest<AsaasPaymentSummary>(config, `/payments/${encodeURIComponent(paymentId)}`, { method: "PUT", body: JSON.stringify({ value }) });
+}
+
 export async function cancelAsaasSubscription(config: AsaasClientConfig, subscriptionId: string): Promise<void> {
   await asaasRequest(config, `/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "DELETE" });
 }
