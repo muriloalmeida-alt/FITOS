@@ -2,6 +2,7 @@ import "server-only";
 import type { ExperienceLevel, IndividualObjective, IndividualProfile, PrismaClient, WeeklyAvailability } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { isValidCpfCnpj } from "@/shared/lib/cpfCnpj";
+import { ModalityError, parseModalities, type Modality } from "@/shared/lib/modalities";
 
 export class OnboardingError extends Error {
   constructor(
@@ -37,6 +38,9 @@ export interface CompleteIndividualOnboardingInput {
   /// pedido junto com o cartão. Validado se vier.
   cpfCnpj?: string;
   termsAccepted: boolean;
+  /// Modalidades (proposta 11), validadas por `parseModalities`. Sem o
+  /// campo (clientes antigos), as que já estão gravadas ficam.
+  modalities?: unknown;
 }
 
 function assertValid(input: CompleteIndividualOnboardingInput): void {
@@ -51,6 +55,15 @@ function assertValid(input: CompleteIndividualOnboardingInput): void {
   }
   if (input.cpfCnpj !== undefined && !isValidCpfCnpj(input.cpfCnpj)) {
     throw new OnboardingError("VALIDACAO", "Informe um CPF ou CNPJ válido.");
+  }
+}
+
+function modalitiesOrError(raw: unknown): Modality[] {
+  try {
+    return parseModalities(raw);
+  } catch (error) {
+    if (error instanceof ModalityError) throw new OnboardingError("VALIDACAO", error.message);
+    throw error;
   }
 }
 
@@ -70,6 +83,7 @@ export async function completeIndividualOnboarding(
   client: PrismaClient = prisma
 ): Promise<IndividualProfile> {
   assertValid(input);
+  const modalities = input.modalities !== undefined ? modalitiesOrError(input.modalities) : undefined;
 
   const existing = await client.individualProfile.findUnique({ where: { tenantId: input.tenantId } });
   if (!existing && !input.termsAccepted) {
@@ -85,12 +99,14 @@ export async function completeIndividualOnboarding(
       weeklyAvailability: input.weeklyAvailability,
       cpfCnpj: input.cpfCnpj ?? null,
       termsAcceptedAt: new Date(),
+      ...(modalities ? { modalities } : {}),
     },
     update: {
       objective: input.objective,
       experienceLevel: input.experienceLevel,
       weeklyAvailability: input.weeklyAvailability,
       ...(input.cpfCnpj !== undefined ? { cpfCnpj: input.cpfCnpj } : {}),
+      ...(modalities ? { modalities } : {}),
     },
   });
 }
@@ -111,7 +127,7 @@ const MAX_SPACE_NAME_LENGTH = 80;
 /// experiência e disponibilidade) e o nome do espaço. Só os campos
 /// enviados mudam; CPF/CNPJ e o aceite dos termos ficam como estão.
 export async function updateIndividualPreferences(
-  input: { tenantId: string; objective?: IndividualObjective; experienceLevel?: ExperienceLevel; weeklyAvailability?: WeeklyAvailability; spaceName?: string },
+  input: { tenantId: string; objective?: IndividualObjective; experienceLevel?: ExperienceLevel; weeklyAvailability?: WeeklyAvailability; spaceName?: string; modalities?: unknown },
   client: PrismaClient = prisma
 ): Promise<void> {
   if (input.objective !== undefined && !VALID_OBJECTIVES.includes(input.objective)) throw new OnboardingError("VALIDACAO", "Objetivo inválido.");
@@ -120,7 +136,10 @@ export async function updateIndividualPreferences(
   const spaceName = input.spaceName?.trim();
   if (input.spaceName !== undefined && (!spaceName || spaceName.length > MAX_SPACE_NAME_LENGTH)) throw new OnboardingError("VALIDACAO", "Informe o nome do seu espaço.");
 
+  const modalities = input.modalities !== undefined ? modalitiesOrError(input.modalities) : undefined;
+
   const data = {
+    ...(modalities ? { modalities } : {}),
     ...(input.objective !== undefined ? { objective: input.objective } : {}),
     ...(input.experienceLevel !== undefined ? { experienceLevel: input.experienceLevel } : {}),
     ...(input.weeklyAvailability !== undefined ? { weeklyAvailability: input.weeklyAvailability } : {}),

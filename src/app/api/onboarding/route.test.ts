@@ -29,10 +29,16 @@ vi.mock("@/modules/individual-onboarding/onboarding", async () => {
 const createStarterPlanForIndividual = vi.fn(async () => ({ created: 2 }));
 vi.mock("@/modules/individual-onboarding/starterPlan", () => ({ createStarterPlanForIndividual: (...args: unknown[]) => createStarterPlanForIndividual(...(args as [])) }));
 
+const copyReadyItem = vi.fn(async () => ({ workoutIds: ["w1", "w2", "w3"] }));
+vi.mock("@/modules/library/readyLibrary", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/library/readyLibrary")>("@/modules/library/readyLibrary");
+  return { ...actual, copyReadyItem: (...args: unknown[]) => copyReadyItem(...(args as [])) };
+});
+
 const listPlans = vi.fn(async () => [{ id: "plan-individual-livre-v2" }]);
 const findSubscription = vi.fn(async () => null);
 vi.mock("@/modules/billing/plans", () => ({ listActivePlansForAudience: (...args: unknown[]) => listPlans(...(args as [])) }));
-vi.mock("@/shared/db/prisma", () => ({ prisma: { saasSubscription: { findUnique: (...args: unknown[]) => findSubscription(...(args as [])) } } }));
+vi.mock("@/shared/db/prisma", () => ({ prisma: { saasSubscription: { findUnique: (...args: unknown[]) => findSubscription(...(args as [])) }, workout: { count: async () => 0 } } }));
 
 vi.mock("@/modules/billing/subscriptions", async () => {
   const actual = await vi.importActual<typeof import("@/modules/billing/subscriptions")>("@/modules/billing/subscriptions");
@@ -198,6 +204,41 @@ describe("POST /api/onboarding", () => {
     expect(completeIndividualOnboarding).toHaveBeenCalledWith(expect.objectContaining({ cpfCnpj: undefined, termsAccepted: true }));
     expect(subscribeTenantToPlan).toHaveBeenCalledWith({ tenantId: "tenant-real", tenantType: "INDIVIDUAL", planId: "plan-livre", actorUserId: "u1" });
     expect(createStarterPlanForIndividual).toHaveBeenCalled();
+  });
+
+  describe("proposta 11: modalidades e programa escolhido", () => {
+    const post = async (extra: Record<string, unknown>) => {
+      requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
+      completeIndividualOnboarding.mockResolvedValue({ id: "p1", modalities: extra.modalities ?? [] });
+      subscribeTenantToPlan.mockResolvedValue({});
+      listPlans.mockResolvedValue([{ id: "plan-livre" }]);
+      findSubscription.mockResolvedValue(null);
+      const { POST } = await import("./route");
+      return POST(new Request("http://localhost/api/onboarding", { method: "POST", body: JSON.stringify({ objective: "PERDER_PESO", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS", ...extra }) }));
+    };
+
+    it("programa compatível: grava as modalidades e ativa o programa escolhido", async () => {
+      const response = await post({ modalities: ["funcional"], program: { kind: "programa", key: "funcional-primeiros-passos" } });
+      expect(response.status).toBe(201);
+      expect(completeIndividualOnboarding).toHaveBeenCalledWith(expect.objectContaining({ modalities: ["funcional"] }));
+      expect(copyReadyItem).toHaveBeenCalledWith({ tenantId: "tenant-real", kind: "programa", key: "funcional-primeiros-passos" });
+      expect(createStarterPlanForIndividual).not.toHaveBeenCalled();
+      expect(await response.json()).toMatchObject({ starterWorkouts: 3 });
+    });
+
+    it("programa de modalidade não escolhida é recusado antes de gravar qualquer coisa", async () => {
+      const response = await post({ modalities: ["musculacao"], program: { kind: "programa", key: "crossfit-fundamentos" } });
+      expect(response.status).toBe(400);
+      expect(completeIndividualOnboarding).not.toHaveBeenCalled();
+      expect(copyReadyItem).not.toHaveBeenCalled();
+    });
+
+    it("decidir depois: nenhum programa é ativado", async () => {
+      const response = await post({ modalities: ["musculacao", "crossfit"], program: null });
+      expect(response.status).toBe(201);
+      expect(copyReadyItem).not.toHaveBeenCalled();
+      expect(createStarterPlanForIndividual).not.toHaveBeenCalled();
+    });
   });
 
   it("retorna 400 com o motivo quando o domínio rejeita", async () => {

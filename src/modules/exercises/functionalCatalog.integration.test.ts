@@ -30,7 +30,9 @@ async function createTenant(label: string) {
 
 describe("catálogo Funcional e CrossFit", () => {
   it("56 exercícios: 22 Funcional e 34 CrossFit, cada um uma vez, com imagem e métrica", async () => {
-    const tagged = await prisma.exercise.findMany({ where: { origin: "FITOS_CURATED", categories: { isEmpty: false } }, select: { externalId: true, name: true, categories: true, imageUrl: true, metric: true } });
+    // Proposta 11 acrescentou dois (sem imagem) para os programas prontos.
+    const PROGRAM_ONLY = ["fitos:agachamento-ate-o-banco", "fitos:remada-com-elastico"];
+    const tagged = await prisma.exercise.findMany({ where: { origin: "FITOS_CURATED", categories: { isEmpty: false }, externalId: { notIn: PROGRAM_ONLY } }, select: { externalId: true, name: true, categories: true, imageUrl: true, metric: true } });
     expect(tagged).toHaveLength(56);
     expect(tagged.filter((e) => e.categories.includes("Funcional"))).toHaveLength(22);
     expect(tagged.filter((e) => e.categories.includes("CrossFit"))).toHaveLength(34);
@@ -42,6 +44,8 @@ describe("catálogo Funcional e CrossFit", () => {
     }
     // Os que já existiam não foram duplicados: o terra convencional é o deadlift.
     expect(await prisma.exercise.count({ where: { origin: "FITOS_CURATED", externalId: { in: ["fitos:deadlift", "fitos:burpee", "fitos:goblet-squat"] } } })).toBe(0);
+    const added = await prisma.exercise.findMany({ where: { origin: "FITOS_CURATED", externalId: { in: PROGRAM_ONLY } }, select: { categories: true, metric: true } });
+    expect(added).toEqual([{ categories: ["Funcional"], metric: "REPS" }, { categories: ["Funcional"], metric: "REPS" }]);
   });
 
   it("filtra por modalidade, acha por nome alternativo sem acento e por músculo secundário", async () => {

@@ -1,0 +1,72 @@
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background-color: #1b222d;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.card:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.on {
+  border-color: var(--fitos-orange-500);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.hint {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.markOn {
+  border-color: var(--fitos-orange-500);
+  background-color: var(--fitos-orange-500);
+  color: #0b0d12;
+}

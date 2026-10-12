@@ -2,6 +2,9 @@ import "server-only";
 import type { CardioIntensity, PrismaClient } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DEFAULT_PRESCRIPTION } from "@/modules/workouts/workouts";
+import type { Modality } from "@/shared/lib/modalities";
+import { MODALITY_PROGRAMS, type ModalityProgram } from "./modalityPrograms";
+import { createModalityWorkout, resolveModalityExercises } from "./modalityProgramCopy";
 
 /// Biblioteca inicial (EPIC-28): programas, treinos e aeróbicos prontos que
 /// todo personal encontra na primeira visita, para aplicar aos alunos em
@@ -131,10 +134,16 @@ const DRAFT_TRAINING_PLAN_NAME = "Meus modelos";
 /// Versões da biblioteca inicial. Cada espaço recebe uma vez cada versão
 /// que ainda não tem — quem já tinha a primeira recebe só os treinos
 /// prontos novos, sem duplicar nada.
-const VERSIONS: { version: number; workouts: WorkoutDef[]; programs: ProgramDef[] }[] = [
+/// Versão 3 (proposta 11): programas de Funcional e CrossFit, aditivos e
+/// estritos (falta de exercício aborta a criação inteira).
+const VERSIONS: { version: number; workouts: WorkoutDef[]; programs: ProgramDef[]; modalityPrograms?: ModalityProgram[] }[] = [
   { version: 1, workouts: [...WORKOUTS, ...CARDIO], programs: PROGRAMS },
   { version: 2, workouts: [...READY_WORKOUTS, ...READY_CARDIO], programs: READY_PROGRAMS },
+  { version: 3, workouts: [], programs: [], modalityPrograms: MODALITY_PROGRAMS },
 ];
+
+/// Programas de musculação da biblioteca (todos os de antes da proposta 11).
+export const STRENGTH_MODALITIES: Modality[] = ["musculacao"];
 export const STARTER_LIBRARY_VERSION = VERSIONS.at(-1)!.version;
 
 /// Cria (ou completa) a biblioteca inicial do espaço. Idempotente: a
@@ -148,6 +157,8 @@ export async function ensureStarterLibrary(tenantId: string, client: PrismaClien
   const slugs = [...new Set(pending.flatMap((entry) => [...entry.workouts, ...entry.programs.flatMap((program) => program.workouts)]).flatMap((workout) => workout.items.map((item) => item.slug)))];
   const exercises = await client.exercise.findMany({ where: { externalId: { in: slugs }, tenantId: null, status: "ATIVO" }, select: { id: true, externalId: true } });
   const idBySlug = new Map(exercises.map((exercise) => [exercise.externalId!, exercise.id]));
+  const modalityPrograms = pending.flatMap((entry) => entry.modalityPrograms ?? []);
+  const modalityIds = modalityPrograms.length > 0 ? await resolveModalityExercises(client) : new Map<string, string>();
 
   return client.$transaction(
     async (tx) => {
@@ -182,9 +193,15 @@ export async function ensureStarterLibrary(tenantId: string, client: PrismaClien
           position += 1;
         }
         for (const program of entry.programs) {
-          const plan = await tx.trainingPlan.create({ data: { tenantId, name: program.name, durationWeeks: program.weeks } });
+          const plan = await tx.trainingPlan.create({ data: { tenantId, name: program.name, durationWeeks: program.weeks, modalities: STRENGTH_MODALITIES } });
           for (const [index, def] of program.workouts.entries()) {
             await createWorkout(plan.id, def, index);
+          }
+        }
+        for (const program of entry.modalityPrograms ?? []) {
+          const plan = await tx.trainingPlan.create({ data: { tenantId, name: program.name, durationWeeks: program.weeks, modalities: program.modalities } });
+          for (const [index, def] of program.workouts.entries()) {
+            await createModalityWorkout(tx, { tenantId, planId: plan.id, position: index, def, idBySlug: modalityIds });
           }
         }
       }

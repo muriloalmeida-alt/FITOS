@@ -11,6 +11,9 @@ export interface ProfileStudent {
   objective?: string | null;
   /// Foto de perfil do aluno (EPIC-35).
   image?: string | null;
+  /// Modalidades que o aluno quer praticar (proposta 11) e as do programa
+  /// ativo fora delas, para o personal revisar.
+  modalities?: { preferred: string[]; divergence: string[] };
 }
 
 export type AccessStatus = "NAO_CONVIDADO" | "CONVITE_PENDENTE" | "CONVITE_EXPIRADO" | "CONVITE_CANCELADO" | "CONTA_ATIVA";

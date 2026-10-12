@@ -1,0 +1,109 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cap {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background-color: #1b222d;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+}
+
+.on {
+  border-color: var(--fitos-orange-500);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.facts {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.chosen {
+  color: var(--fitos-orange-300);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chev {
+  color: var(--fitos-color-text-muted);
+  font-size: 22px;
+}
+
+.empty {
+  padding: 12px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+}
+
+.emptyTitle {
+  margin: 0 0 2px;
+  font-weight: 800;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.workout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exercises {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}

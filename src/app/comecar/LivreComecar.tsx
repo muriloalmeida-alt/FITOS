@@ -7,13 +7,37 @@ import type { ExperienceLevel, IndividualObjective, WeeklyAvailability } from "@
 import { Button, FormAlert, TextField, useToast } from "@/shared/ui";
 import { signUp } from "@/modules/identity/auth-client";
 import { formatCentsBRL } from "@/shared/lib/money";
-import { WEEKDAYS } from "@/shared/lib/weekdays";
+import { modalitiesLabel, type Modality } from "@/shared/lib/modalities";
+import type { ProgramChoice, Recommendations } from "@/modules/library/recommendationTypes";
 import { PasswordField } from "../_entrada/PasswordField";
 import { rememberAccount } from "../_entrada/rememberedAccount";
+import { ModalityPicker } from "../_modalidades/ModalityPicker";
+import { ProgramRecommendations } from "../_modalidades/ProgramRecommendations";
 import styles from "../_entrada/Entrada.module.css";
 
 type Answers = { objective: IndividualObjective | null; availability: WeeklyAvailability | null; experience: ExperienceLevel | null };
-type Preview = { name: string; days: string[]; exercises: number; minutes: number }[];
+
+/// Respostas guardadas nesta aba: voltar ou recarregar não perde nada.
+const DRAFT_KEY = "fitos:livre-respostas";
+type Draft = { step: number; answers: Answers; modalities: Modality[] };
+
+function readDraft(): Draft | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Draft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(draft: Draft | null) {
+  try {
+    if (draft) window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    else window.sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // Sem armazenamento: segue só em memória.
+  }
+}
 
 const QUESTIONS = [
   {
@@ -48,20 +72,19 @@ const QUESTIONS = [
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function days(keys: string[]) {
-  return WEEKDAYS.filter((day) => keys.includes(day.key)).map((day) => day.short.toLowerCase()).join(" e ");
-}
-
-/// FitOS Livre (EPIC-33, L1 + E6): três toques montam o plano e a pessoa
-/// vê os treinos antes de qualquer cadastro. A conta vem depois ("salve
-/// seu plano"), sem CPF nem cartão: o teste grátis começa na hora. Já
-/// logado (cadastro antigo incompleto), "Começar hoje" conclui direto.
-export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 30 }: { signedIn?: boolean; priceCents?: number | null; trialDays?: number | null }) {
+/// FitOS Livre (EPIC-33, L1 + E6; proposta 11): três toques e as
+/// modalidades, depois os programas prontos compatíveis — a pessoa escolhe
+/// um (vê os detalhes e confirma) ou decide depois. A conta vem em seguida
+/// ("salve seu plano"), sem CPF nem cartão. Já logado (cadastro antigo
+/// incompleto), conclui direto.
+export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 30, initialModalities = [] }: { signedIn?: boolean; priceCents?: number | null; trialDays?: number | null; initialModalities?: Modality[] }) {
   const router = useRouter();
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({ objective: null, availability: null, experience: null });
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [modalities, setModalities] = useState<Modality[]>(initialModalities);
+  const [recommendations, setRecommendations] = useState<Recommendations | null>(null);
+  const [choice, setChoice] = useState<ProgramChoice | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -69,45 +92,73 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const question = QUESTIONS[step];
-  const ready = step >= QUESTIONS.length;
+  const MODALITY_STEP = QUESTIONS.length;
+  const ready = step > MODALITY_STEP;
+
+  // Retomar: as respostas desta aba voltam depois de recarregar.
+  useEffect(() => {
+    const draft = readDraft();
+    if (!draft) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restaura uma vez, depois da hidratação (o sessionStorage não existe no servidor)
+    setAnswers(draft.answers);
+    if (draft.modalities.length > 0) setModalities(draft.modalities);
+    setStep(Math.min(draft.step, MODALITY_STEP + 1));
+  }, [MODALITY_STEP]);
 
   useEffect(() => {
-    if (!ready || !answers.objective || !answers.availability || !answers.experience) return;
+    writeDraft({ step, answers, modalities });
+  }, [step, answers, modalities]);
+
+  useEffect(() => {
+    if (!ready || !answers.objective || !answers.availability || !answers.experience || modalities.length === 0) return;
     const query = new URLSearchParams({ objetivo: answers.objective, dias: answers.availability, experiencia: answers.experience });
+    for (const modality of modalities) query.append("modalidade", modality);
     let cancelled = false;
-    void fetch(`/api/livre/previa?${query}`)
-      .then((response) => response.json())
-      .then((body: { workouts?: Preview }) => {
-        if (!cancelled) setPreview(body.workouts ?? []);
+    void fetch(`/api/livre/recomendacoes?${query}`)
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("falha"))))
+      .then((body: Recommendations) => {
+        if (!cancelled) setRecommendations(body);
       })
       .catch(() => {
-        if (!cancelled) setPreview([]);
+        if (!cancelled) setLoadError(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [ready, answers]);
+  }, [ready, answers, modalities, attempt]);
 
   function pick(value: string) {
     if (!question) return;
     setAnswers((current) => ({ ...current, [question.key]: value }));
-    setPreview(null);
+    setRecommendations(null);
+    setChoice(undefined);
     setStep(step + 1);
+  }
+
+  function toRecommendations() {
+    setRecommendations(null);
+    setLoadError(false);
+    setChoice(undefined);
+    setStep(MODALITY_STEP + 1);
   }
 
   async function finish(): Promise<boolean> {
     const response = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective: answers.objective, experienceLevel: answers.experience, weeklyAvailability: answers.availability }),
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { message?: string } | null;
-      setFormError(body?.message ?? "Não foi possível montar seu plano. Tente de novo.");
+      body: JSON.stringify({ objective: answers.objective, experienceLevel: answers.experience, weeklyAvailability: answers.availability, modalities, program: choice ?? null }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      // As escolhas ficam; dá para tentar de novo.
+      const body = (await response?.json().catch(() => null)) as { message?: string } | null;
+      setFormError(body?.message ?? "Não foi possível salvar suas preferências. Tente de novo.");
       return false;
     }
-    toast.show("Seu plano está pronto");
+    writeDraft(null);
+    toast.show(choice ? "Seu plano está pronto" : "Preferências salvas");
     router.push("/painel");
     router.refresh();
     return true;
@@ -144,15 +195,18 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
 
   const trial = `${trialDays ?? 30} dias grátis, sem cartão.${priceCents ? ` Perto do fim, você escolhe continuar por ${formatCentsBRL(priceCents)} por mês.` : ""}`;
 
+  const chosenName = choice ? recommendations?.groups.flatMap((group) => group.options).find((option) => option.choice.kind === choice.kind && (choice.kind === "inicial" || (option.choice.kind === "programa" && option.choice.key === choice.key)))?.name : null;
+  const total = QUESTIONS.length + 1;
+
   return (
     <>
       <div className={styles.stepsRow}>
         <div className={styles.steps} style={{ flex: 1 }} aria-hidden="true">
-          {QUESTIONS.map((entry, index) => (
-            <span key={entry.key} data-on={String(index <= step)} />
+          {Array.from({ length: total }, (_, index) => (
+            <span key={index} data-on={String(index <= step)} />
           ))}
         </div>
-        <span>{ready ? "Pronto" : `${step + 1} de 3`}</span>
+        <span>{ready ? "Pronto" : `${step + 1} de ${total}`}</span>
       </div>
 
       {question ? (
@@ -175,25 +229,37 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
             </Button>
           ) : null}
         </>
+      ) : step === MODALITY_STEP ? (
+        <>
+          <p className={styles.kicker}>Seu jeito de treinar</p>
+          <h1 className={styles.title}>Quais modalidades você quer praticar?</h1>
+          <p className={styles.muted}>Escolha uma ou mais opções.</p>
+          <ModalityPicker value={modalities} onChange={setModalities} />
+          <Button type="button" size="lg" block disabled={modalities.length === 0} onClick={toRecommendations}>
+            Continuar
+          </Button>
+          <Button type="button" variant="quiet" block onClick={() => setStep(step - 1)}>
+            Voltar
+          </Button>
+        </>
       ) : (
         <>
-          <h1 className={styles.title}>Seu plano chegou</h1>
-          {preview === null ? (
-            <p className={styles.muted} aria-live="polite">Montando…</p>
+          <p className={styles.kicker}>Seu jeito de treinar</p>
+          <h1 className={styles.title}>Programas para você</h1>
+          <p className={styles.muted}>{modalitiesLabel(modalities)}. Escolha como quer começar.</p>
+          {loadError ? (
+            <FormAlert variant="error">
+              Não foi possível carregar os programas.{" "}
+              <button type="button" className={styles.linkButton} onClick={() => { setLoadError(false); setAttempt(attempt + 1); }}>
+                Tentar de novo
+              </button>
+            </FormAlert>
+          ) : recommendations === null ? (
+            <p className={styles.muted} aria-live="polite">Buscando programas…</p>
           ) : (
-            <ul className={styles.options} aria-label="Seus treinos" style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {preview.map((workout) => (
-                <li key={workout.name} className={styles.option} style={{ cursor: "default" }}>
-                  <span className={styles.optionText}>
-                    <span className={styles.optionTitle}>{workout.name}</span>
-                    <span className={styles.muted}>
-                      {[days(workout.days), `cerca de ${workout.minutes} min`].filter(Boolean).join(" · ")}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <ProgramRecommendations data={recommendations} selected={choice} onSelect={setChoice} onAdjust={() => setStep(MODALITY_STEP)} />
           )}
+          <p className={styles.muted}>{chosenName ? `Escolhido: ${chosenName}.` : "Você pode decidir depois."}</p>
           {formError ? (
             <FormAlert variant="error">
               {formError} {formError.includes("entre por aqui") ? <Link href="/entrar">Entrar</Link> : null}
@@ -201,8 +267,8 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
           ) : null}
 
           {signedIn ? (
-            <Button type="button" size="lg" block disabled={busy || preview === null} onClick={() => void startSignedIn()}>
-              {busy ? "Montando…" : "Começar hoje"}
+            <Button type="button" size="lg" block disabled={busy || recommendations === null} onClick={() => void startSignedIn()}>
+              {busy ? "Salvando…" : choice ? "Começar hoje" : "Ir para o painel"}
             </Button>
           ) : saving ? (
             <form className={styles.form} onSubmit={submit} noValidate aria-label="Salve seu plano">
@@ -220,13 +286,13 @@ export function LivreComecar({ signedIn = false, priceCents = null, trialDays = 
             </form>
           ) : (
             <>
-              <Button type="button" size="lg" block disabled={preview === null} onClick={() => setSaving(true)}>
-                Salvar e começar
+              <Button type="button" size="lg" block disabled={recommendations === null && !loadError} onClick={() => setSaving(true)}>
+                {choice ? "Salvar e começar" : "Salvar e ir para o painel"}
               </Button>
               <p className={styles.hint}>{trial}</p>
             </>
           )}
-          <Button type="button" variant="quiet" block onClick={() => setStep(QUESTIONS.length - 1)}>
+          <Button type="button" variant="quiet" block onClick={() => setStep(MODALITY_STEP)}>
             Mudar respostas
           </Button>
         </>

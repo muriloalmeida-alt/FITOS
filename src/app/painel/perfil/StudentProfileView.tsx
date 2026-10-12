@@ -6,6 +6,8 @@ import { LogoutButton } from "../LogoutButton";
 import { BiometricSwitch } from "./BiometricSwitch";
 import { MyDataRow, ProfileGroup, ProfileHeader, ProfileRow, SheetRow, TermsRow, sendJson } from "./ProfileParts";
 import { RoutineRows, type RoutinePreferences } from "./RoutineRows";
+import { ModalitiesEditor } from "./ModalitiesEditor";
+import { modalitiesLabel, type Modality } from "@/shared/lib/modalities";
 import styles from "./ProfileParts.module.css";
 
 interface StudentProfileViewProps {
@@ -16,6 +18,8 @@ interface StudentProfileViewProps {
   coach: { name: string; image: string | null; businessName: string; cref: string | null };
   /// Lembrete de treino e dias de treino (EPIC-31).
   preferences: RoutinePreferences;
+  /// Modalidades (proposta 11); vazio = ainda não definidas.
+  modalities?: Modality[];
   /// Indicação (EPIC-47): link do personal com o aluno como quem indicou.
   invitePath?: string | null;
 }
@@ -23,7 +27,7 @@ interface StudentProfileViewProps {
 /// Perfil do Aluno com personal (proposta 10): o mesmo desenho do Livre,
 /// com as opções do aluno. Sem assinatura própria (o FitOS não cobra o
 /// aluno) e sem editar o espaço do personal.
-export function StudentProfileView({ name, image, email, coach, preferences, invitePath = null }: StudentProfileViewProps) {
+export function StudentProfileView({ name, image, email, coach, preferences, modalities = [], invitePath = null }: StudentProfileViewProps) {
   const coachFirst = coach.name.split(/\s+/)[0] ?? coach.name;
 
   return (
@@ -43,6 +47,9 @@ export function StudentProfileView({ name, image, email, coach, preferences, inv
               />
             ) : null}
           </div>
+        </SheetRow>
+        <SheetRow icon="treino" title="Meu treino" summary={modalities.length > 0 ? modalitiesLabel(modalities) : "Modalidades ainda não escolhidas"}>
+          <ModalitiesEditor value={modalities} note={`${coachFirst} vê suas escolhas; seu programa só muda se ${coachFirst} mudar.`} />
         </SheetRow>
         <RoutineRows {...preferences} />
         <ProfileRow icon="saude" title="Ficha de saúde" summary="Anamnese e PAR-Q, só seu personal vê" href="/painel/saude" />

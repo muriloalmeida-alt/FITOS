@@ -17,6 +17,7 @@ import { StudentProfile } from "./StudentProfile";
 import { prisma } from "@/shared/db/prisma";
 import { listEvolutionPhotos } from "@/modules/media/photos";
 import type { TimelineEntry } from "./profileTypes";
+import { getStudentModalities } from "@/modules/students/modalityPreferences";
 import { formatCentsBRL } from "@/shared/lib/money";
 
 export const metadata: Metadata = {
@@ -67,7 +68,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
   if (sp.acao === "avaliar") redirect(`/painel/alunos/${student.id}/avaliacao`);
   const now = new Date();
 
-  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions, healthForm, referral] = await Promise.all([
+  const [invitation, assignment, rhythm, programs, assessments, sessions, charges, recurrences, photos, studentUser, progressions, healthForm, referral, modalities] = await Promise.all([
     getLatestInvitationForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getActivePlanAssignmentForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
     getWeeklyRhythmForStudent({ tenantId: ctx.tenantId, studentId: student.id }),
@@ -81,6 +82,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
     student.status === "ATIVO" ? suggestCoachProgressions({ tenantId: ctx.tenantId, studentId: student.id }).catch(() => []) : [],
     prisma.healthForm.findFirst({ where: { tenantId: ctx.tenantId, studentId: student.id }, select: { parqYes: true } }),
     prisma.student.findUniqueOrThrow({ where: { id: student.id }, select: { referredBy: { select: { displayName: true } }, _count: { select: { referrals: true } } } }),
+    getStudentModalities({ tenantId: ctx.tenantId, studentId: student.id }),
   ]);
   const accessStatus = deriveAccessStatus(student, invitation);
   const plan = assignment?.trainingPlan ?? null;
@@ -130,6 +132,7 @@ export default async function AlunoPerfilPage({ params, searchParams }: AlunoPer
           endedLabel: student.endedAt ? dateFmt.format(student.endedAt) : null,
           endReason: student.endReason,
           objective: student.objective,
+          modalities: modalities ? { preferred: modalities.modalities, divergence: modalities.divergence } : undefined,
           image: studentUser?.image ?? null,
         }}
         health={healthForm ? { parqYes: healthForm.parqYes } : null}

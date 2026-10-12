@@ -5,6 +5,8 @@ import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subs
 import { createStarterPlanForIndividual } from "@/modules/individual-onboarding/starterPlan";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
 import { prisma } from "@/shared/db/prisma";
+import { offerable, storedModalities } from "@/shared/lib/modalities";
+import { copyReadyItem, readyProgramModalities } from "@/modules/library/readyLibrary";
 
 const VALID_OBJECTIVES: IndividualObjective[] = [
   "GANHAR_MASSA",
@@ -57,6 +59,20 @@ export async function POST(request: Request) {
     ) {
       return Response.json({ error: "VALIDACAO", message: "Informe objetivo, experiência e disponibilidade válidos." }, { status: 400 });
     }
+    // Proposta 11: programa escolhido depois das modalidades. `null` =
+    // seguir sem programa; ausente (cliente antigo) = plano inicial.
+    const program = body.program;
+    if (program !== undefined && program !== null && !(program?.kind === "inicial" || (program?.kind === "programa" && typeof program.key === "string"))) {
+      return Response.json({ error: "VALIDACAO", message: "Programa inválido." }, { status: 400 });
+    }
+    // Antes de gravar qualquer coisa: só um programa compatível com as
+    // modalidades enviadas (todas as dele entre as escolhidas).
+    if (program?.kind === "programa") {
+      const modalities = readyProgramModalities(program.key);
+      if (!modalities || !Array.isArray(body.modalities) || !offerable(modalities, storedModalities(body.modalities))) {
+        return Response.json({ error: "VALIDACAO", message: "Este programa não combina com as modalidades escolhidas." }, { status: 400 });
+      }
+    }
     // EPIC-33: sem CPF e sem plano no cadastro — o teste grátis do plano do
     // Livre começa na hora; CPF e cartão vêm perto do fim do teste.
     const planId = (typeof body.planId === "string" && body.planId.trim()) || (await listActivePlansForAudience("INDIVIDUAL"))[0]?.id;
@@ -72,6 +88,7 @@ export async function POST(request: Request) {
       cpfCnpj: typeof body.cpfCnpj === "string" && body.cpfCnpj.trim() ? body.cpfCnpj : undefined,
       // Os termos são aceitos ao criar a conta (FIT-164).
       termsAccepted: body.termsAccepted ?? true,
+      modalities: body.modalities,
     });
 
     const existing = await prisma.saasSubscription.findUnique({ where: { tenantId: ctx.tenantId }, select: { planId: true } });
@@ -79,15 +96,23 @@ export async function POST(request: Request) {
       await subscribeTenantToPlan({ tenantId: ctx.tenantId, tenantType: "INDIVIDUAL", planId, actorUserId: ctx.userId });
     }
 
-    // EPIC-30: as respostas viram o plano inicial (só num espaço vazio).
-    const starter = await createStarterPlanForIndividual({
-      tenantId: ctx.tenantId,
-      objective: body.objective,
-      availability: body.weeklyAvailability,
-      experience: body.experienceLevel,
-    });
+    // Só num espaço vazio: refazer o onboarding nunca troca o que existe.
+    const empty = (await prisma.workout.count({ where: { tenantId: ctx.tenantId, trainingPlan: { isSnapshot: false } } })) === 0;
+    let starterWorkouts = 0;
+    if (program === undefined || program?.kind === "inicial") {
+      // EPIC-30: as respostas viram o plano inicial (musculação).
+      const starter = await createStarterPlanForIndividual({
+        tenantId: ctx.tenantId,
+        objective: body.objective,
+        availability: body.weeklyAvailability,
+        experience: body.experienceLevel,
+      });
+      starterWorkouts = starter.created;
+    } else if (program?.kind === "programa" && empty) {
+      starterWorkouts = (await copyReadyItem({ tenantId: ctx.tenantId, kind: "programa", key: program.key })).workoutIds.length;
+    }
 
-    return Response.json({ ...profile, starterWorkouts: starter.created }, { status: 201 });
+    return Response.json({ ...profile, starterWorkouts }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;
