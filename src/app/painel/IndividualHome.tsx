@@ -1,147 +1,63 @@
 import Link from "next/link";
-import { ActionRow, AppShell, Button, NextStepCard, ProgressBar, WeekStrip } from "@/shared/ui";
 import type { IndividualHome as IndividualHomeData } from "@/modules/workouts/individualHome";
-import { formatDays, weekStripFromDays } from "@/shared/lib/weekdays";
-import { LogoutButton } from "./LogoutButton";
+import { panelGoals, panelWeek } from "@/shared/lib/panel";
 import { INDIVIDUAL_NAV_ITEMS } from "./navigation";
 import { ProgressionCard } from "./ProgressionCard";
-import { FreeWorkoutButton } from "./meus-treinos/FreeWorkoutButton";
+import { StudentPanel } from "./_panel/StudentPanel";
 import styles from "./IndividualHome.module.css";
 
 interface IndividualHomeProps {
   name: string;
-  greeting: string;
   dateLabel?: string;
   home: IndividualHomeData;
+  /// Agora (ISO), no fuso do produto para a semana e o mês.
   todayIso: string;
+  /// Treinos concluídos (data de realização, ISO) na semana e no mês.
+  performed?: string[];
+  /// "Meus dias"; vazios, contam os dias dos treinos.
+  preferredDays?: string[];
+  /// Registro de treino passado (FEATURE_RETROATIVO).
+  retroEnabled?: boolean;
   /// EPIC-33: aviso de fim do teste sem cartão.
   trialNotice?: string | null;
 }
 
 const SESSION_HREF = "/painel/meus-treinos/sessao";
 
-/// Início do FitOS Livre (FIT-156, L1 do protótipo): "Hoje para você" com
-/// "Iniciar treino" (BK-16), "Treino avulso", semana contra a meta do perfil, seus treinos
-/// com "Iniciar", "+ Montar meu treino" e o resumo da evolução.
-export function IndividualHome({ name, greeting, dateLabel, home, todayIso, trialNotice = null }: IndividualHomeProps) {
+/// Início do FitOS Livre no painel aprovado (proposta 9): semana, Iniciar
+/// treino (programado, avulso ou realizado) e evolução contra a meta.
+export function IndividualHome({ name, dateLabel, home, todayIso, performed = [], preferredDays = [], retroEnabled = false, trialNotice = null }: IndividualHomeProps) {
   const firstName = name.trim().split(/\s+/)[0] ?? name;
+  const now = new Date(todayIso);
+  const dates = performed.map((iso) => new Date(iso));
   const planned = [...new Set(home.workouts.flatMap((workout) => workout.days))];
+  const week = panelWeek(now, dates, planned);
+  const goals = panelGoals(now, dates, preferredDays.length > 0 ? preferredDays : planned, home.week.target);
+  const todayLabel = home.inProgress ? `Hoje: ${home.inProgress.workoutName} em andamento` : home.today?.reason === "dia" ? `Hoje: ${home.today.name}` : "Hoje: dia livre";
+  const programmed = home.today
+    ? { href: `${SESSION_HREF}?treino=${home.today.id}`, description: `Seguir o programa: ${home.today.name}` }
+    : { href: "/painel/meus-treinos/biblioteca", description: "Sem programa ainda: escolha um pronto" };
 
   return (
-    <AppShell eyebrow={dateLabel} title={`${greeting}, ${firstName}.`} headerMode="mobile" navItems={INDIVIDUAL_NAV_ITEMS} activeKey="hoje" trailing={<LogoutButton />}>
-      {trialNotice ? (
-        <Link href="/painel/assinatura" className={styles.trial}>
-          <span>{trialNotice}</span>
-          <span aria-hidden="true">→</span>
-        </Link>
-      ) : null}
-      {home.inProgress ? (
-        <section className={`${styles.hero} ${styles.heroLive}`} aria-label="Treino em andamento">
-          <p className={styles.eyebrow}>Em andamento</p>
-          <h2 className={styles.heroTitle}>{home.inProgress.workoutName}</h2>
-          <ProgressBar value={home.inProgress.total ? (100 * home.inProgress.done) / home.inProgress.total : 0} label="Progresso do treino" valueText={`${home.inProgress.done} de ${home.inProgress.total} exercícios`} />
-          <p className={styles.heroMeta}>
-            {home.inProgress.done} de {home.inProgress.total} exercícios · começou há {home.inProgress.minutesAgo < 1 ? "menos de 1 min" : `${home.inProgress.minutesAgo} min`}
-          </p>
-          <Button href={SESSION_HREF} size="xl" block>
-            Continuar treino
-          </Button>
-        </section>
-      ) : home.today ? (
-        <section className={styles.hero} aria-label="Hoje para você">
-          <p className={styles.eyebrow}>{home.today.reason === "dia" ? "Hoje para você" : home.today.reason === "faltou" ? `Ficou de ${home.today.missedDay}` : "Sugestão de hoje"}</p>
-          <h2 className={styles.heroTitle}>{home.today.name}</h2>
-          <p className={styles.heroMeta}>
-            {home.today.exercises} {home.today.exercises === 1 ? "exercício" : "exercícios"} · cerca de {home.today.estimatedMinutes} min
-            {home.today.reason === "rodizio" ? " · o que você fez há mais tempo" : home.today.reason === "faltou" ? " · hoje é dia livre, dá para recuperar" : ""}
-          </p>
-          <Button href={`${SESSION_HREF}?treino=${home.today.id}`} size="xl" block>
-            Iniciar treino
-          </Button>
-        </section>
-      ) : (
-        <NextStepCard eyebrow="Primeiro passo" title="Criar meu primeiro treino" description="Escolha os exercícios na biblioteca. Entram com 3 × 12." href="/painel/meus-treinos/novo" />
-      )}
-      {home.inProgress ? null : <FreeWorkoutButton />}
-      {!home.inProgress && home.missed ? (
-        <NextStepCard
-          eyebrow={`Ficou de ${home.missed.missedDay}`}
-          title={`Trocar: ${home.missed.name} hoje`}
-          description={`Faz o que ficou para trás e deixa ${home.today?.name ?? "o de hoje"} para amanhã.`}
-          href={`${SESSION_HREF}?treino=${home.missed.id}`}
-        />
-      ) : null}
-
-      {home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null}
-
-      <section className={styles.section} aria-labelledby="semana">
-        <div className={styles.sectionHead}>
-          <h2 id="semana" className={styles.sectionTitle}>
-            Sua semana
-          </h2>
-          <span className={styles.muted}>
-            {home.week.doneCount} de {home.week.target} treinos
-          </span>
-        </div>
-        <WeekStrip days={weekStripFromDays(planned, { done: home.week.done, today: new Date(todayIso) })} label="Sua semana" />
-      </section>
-
-      <section className={styles.section} aria-labelledby="seus-treinos">
-        <div className={styles.sectionHead}>
-          <h2 id="seus-treinos" className={styles.sectionTitle}>
-            Seus treinos
-          </h2>
-          <Link href="/painel/meus-treinos" className={styles.link}>
-            Ver todos
-          </Link>
-        </div>
-        {home.workouts.length > 0 ? (
-          <ul className={styles.list}>
-            {home.workouts.slice(0, 4).map((workout) => (
-              <li key={workout.id}>
-                <ActionRow
-                  title={workout.name}
-                  description={`${workout.exercises} ${workout.exercises === 1 ? "exercício" : "exercícios"} · ${formatDays(workout.days)}`}
-                  trailing={
-                    workout.exercises > 0 ? (
-                      <Button href={`${SESSION_HREF}?treino=${workout.id}`} variant="quiet" aria-label={`Iniciar ${workout.name}`}>
-                        Iniciar
-                      </Button>
-                    ) : (
-                      <Button href={`/painel/meus-treinos/${workout.id}`} variant="quiet" aria-label={`Montar ${workout.name}`}>
-                        Montar
-                      </Button>
-                    )
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <Link href="/painel/meus-treinos/novo" className={styles.add}>
-          + Montar meu treino
-        </Link>
-      </section>
-
-      <section className={styles.section} aria-labelledby="evolucao">
-        <h2 id="evolucao" className={styles.sectionTitle}>
-          Sua evolução
-        </h2>
-        <ul className={styles.stats}>
-          <li>
-            <Link href="/painel/minha-evolucao" className={styles.stat}>
-              <span className={styles.statValue}>{home.monthSessions}</span>{" "}
-              <span className={styles.muted}>treinos no mês</span>
+    <StudentPanel
+      firstName={firstName}
+      dateLabel={dateLabel}
+      message={home.inProgress ? "Seu treino está em andamento." : "Seu próximo treino começa aqui."}
+      week={{ ...week, todayLabel }}
+      evolution={{ ...goals, href: "/painel/minha-evolucao" }}
+      start={{ inProgressHref: home.inProgress ? SESSION_HREF : null, programmed, free: true, done: retroEnabled ? "/painel/treinos-realizados/registrar" : null }}
+      navItems={INDIVIDUAL_NAV_ITEMS}
+      notices={
+        <>
+          {trialNotice ? (
+            <Link href="/painel/assinatura" className={styles.trial}>
+              <span>{trialNotice}</span>
+              <span aria-hidden="true">→</span>
             </Link>
-          </li>
-          <li>
-            <Link href="/painel/minha-evolucao?aba=metas" className={styles.stat}>
-              <span className={styles.statValue}>{home.activeGoals}</span>{" "}
-              <span className={styles.muted}>{home.activeGoals === 1 ? "meta em andamento" : "metas em andamento"}</span>
-            </Link>
-          </li>
-        </ul>
-      </section>
-    </AppShell>
+          ) : null}
+          {home.progressions.length > 0 && !home.inProgress ? <ProgressionCard suggestions={home.progressions} /> : null}
+        </>
+      }
+    />
   );
 }

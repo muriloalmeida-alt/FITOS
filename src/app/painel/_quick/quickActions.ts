@@ -38,9 +38,9 @@ export async function quickActionsFor(who: Who, client: PrismaClient = prisma, n
     const programa = { key: "programa", label: "Meus treinos", href: "/painel/treino", icon: "treinos" as const };
     if (await getInProgressSessionForStudent(scope, client)) return [{ key: "comecar", label: "Continuar treino", href: "/painel/treino/sessao", icon: "inicio" }, programa];
     const schedule = await getTodayScheduleForStudent(scope, client);
-    // Treino do dia vai direto; em dia livre, o programa é o seletor existente.
-    if (schedule.state === "TREINO_HOJE") return [{ key: "comecar", label: "Começar treino", href: "/painel/treino/sessao", icon: "inicio" }, programa];
-    if (schedule.state === "DESCANSO") return [{ key: "comecar", label: "Começar treino", href: "/painel/treino", icon: "inicio" }, programa];
+    // Proposta 9: "Começar treino" abre no Início a mesma escolha de como
+    // treinar (programado ou realizado).
+    if (schedule.state === "TREINO_HOJE" || schedule.state === "DESCANSO") return [{ key: "comecar", label: "Começar treino", href: "/painel?iniciar=1", icon: "inicio" }, programa];
     return [{ key: "comecar", label: "Ver meu programa", href: "/painel/treino", icon: "inicio" }, programa];
   }
   if (who.role === "INDIVIDUAL") {
