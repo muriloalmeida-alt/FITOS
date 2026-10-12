@@ -2180,11 +2180,49 @@ model CouponRedemption {
   endedAt              DateTime?
   endReason            String?
 
-  coupon  Coupon        @relation(fields: [couponId], references: [id], onDelete: Restrict)
-  version CouponVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
-  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  coupon       Coupon                   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  version      CouponVersion            @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  applications CouponCycleApplication[]
 
   @@index([tenantId, state])
   @@index([couponId, state])
   @@map("coupon_redemptions")
+}
+
+/// Desconto aplicado numa cobrança do Asaas (feature 5, fatia 3, ADR-021):
+/// uma linha por resgate e cobrança. PENDING até o Asaas confirmar o valor
+/// novo da cobrança; APPLIED quando confirmou; SKIPPED quando a cobrança
+/// já não estava pendente (paga, vencida ou removida) e não usa ciclo;
+/// FAILED depois de 3 tentativas. O ciclo só conta (`countedAt`) quando a
+/// cobrança é paga, uma vez por cobrança.
+enum CouponApplicationStatus {
+  PENDING
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
+model CouponCycleApplication {
+  id                String                  @id @default(cuid())
+  redemptionId      String
+  tenantId          String
+  externalPaymentId String
+  baseCents         Int
+  discountCents     Int
+  finalCents        Int
+  status            CouponApplicationStatus @default(PENDING)
+  attempts          Int                     @default(0)
+  lastError         String?
+  appliedAt         DateTime?
+  countedAt         DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  redemption CouponRedemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+
+  @@unique([redemptionId, externalPaymentId])
+  @@index([externalPaymentId])
+  @@index([status, updatedAt])
+  @@map("coupon_cycle_applications")
 }
