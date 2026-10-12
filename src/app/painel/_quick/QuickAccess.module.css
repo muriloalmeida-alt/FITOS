@@ -1,0 +1,100 @@
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--fitos-orange-500);
+  color: #101c2c;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.spacer {
+  height: 72px;
+}
+
+@media (min-width: 840px) {
+  .spacer {
+    display: none;
+  }
+
+  .fab {
+    right: 32px;
+    bottom: 32px;
+  }
+}
+
+/* Teclado aberto (proposta 8): a busca esconde o +. */
+:global(body[data-keyboard="open"]) .fab {
+  display: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  color: var(--fitos-color-on-surface);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action:disabled {
+  opacity: 0.6;
+}
+
+.icon {
+  display: flex;
+  color: var(--fitos-orange-300);
+}
+
+.skeleton {
+  height: 56px;
+  border-radius: 16px;
+  background-color: var(--fitos-color-surface-raised);
+  opacity: 0.6;
+}
+
+.error {
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+}
+
+.retry {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--fitos-orange-300);
+  font: inherit;
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .action {
+    transition: background-color 120ms ease;
+  }
+}
