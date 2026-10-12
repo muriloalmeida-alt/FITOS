@@ -37,6 +37,13 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 | `R2_PUBLIC_BASE_URL` | `https://pub-76bc00d74c5a4bf98ccac51eb4c92de3.r2.dev`. Lida também no **build** (`next.config.mjs`, imagens permitidas), então configure antes do deploy. |
 | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | projeto Sentry de produção (recomendado). `NEXT_PUBLIC_SENTRY_DSN` entra no build. |
 
+**Gerar tudo de uma vez:** `npm run -s producao:variaveis -- --admin-email=<e-mail> > producao.env`.
+
+- O comando gera segredos novos: `PAYMENT_KEYS_SECRET`, `ADMIN_PASSWORD`, par VAPID e token do webhook.
+- Preenche os valores fixos de produção.
+- Deixa comentadas as chaves de serviços externos (Resend, Asaas, Sentry).
+- Para aplicar, cole o arquivo no Railway, em Variables → Raw Editor. Nunca versione o arquivo.
+
 **Não configurar em produção:** `R2_ENDPOINT`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`. São credenciais de escrita usadas só pelo script manual de imagens; fotos e vídeos do app ficam no banco.
 
 **Conferência no log de inicialização** (evento `startup`):
