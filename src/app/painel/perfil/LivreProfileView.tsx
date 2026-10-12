@@ -32,6 +32,9 @@ interface LivreProfileViewProps {
   referral?: { code: string; invited: number; confirmed: number; discountPending: boolean } | null;
 }
 
+/// Mensagem do convite (o link vai no fim, junto do texto).
+export const LIVRE_INVITE_TEXT = "Oi! Estou treinando com o FitOS e lembrei de você. Ele organiza seu treino no celular, com plano pronto em poucos toques.\n\nEntrando pelo meu link, você ganha 30 dias grátis e, depois, 50% de desconto nos 30 dias seguintes:";
+
 /// Texto da linha de indicação: a regra e o andamento.
 export function referralDescription(referral: { invited: number; confirmed: number; discountPending: boolean }): string {
   const rule = "Seu amigo ganha 50% no primeiro mês depois do teste. Quando ele assinar, você ganha 10% na próxima mensalidade (não acumula).";
@@ -102,7 +105,7 @@ export function LivreProfileView(props: LivreProfileViewProps) {
             <ActionRow
               title="Convidar para o FitOS"
               description={referralDescription(props.referral)}
-              trailing={<ShareLinkButton path={`/i/${props.referral.code}`} label="Convidar" text="Estou treinando com o FitOS. Cria sua conta por aqui: são 30 dias grátis e 50% de desconto no primeiro mês." />}
+              trailing={<ShareLinkButton path={`/i/${props.referral.code}`} label="Convidar" text={LIVRE_INVITE_TEXT} />}
             />
           </li>
         </ProfileGroup>
