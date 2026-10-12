@@ -14,6 +14,8 @@ interface SheetProps {
   /// Acesso rápido (proposta 7): sem título visível; `title` vira o nome
   /// acessível (`aria-label`). Mostra o botão × e fecha arrastando a alça.
   compact?: boolean;
+  /// Perfil (proposta 10): título visível e também o botão ×.
+  closable?: boolean;
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -23,7 +25,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 /// `role="dialog"` + `aria-modal`, foco movido para dentro ao abrir, Tab
 /// preso dentro da sheet, Esc e toque no fundo fecham, e o foco volta ao
 /// elemento que abriu. No desktop (≥ 840 px) vira um diálogo centralizado.
-export function Sheet({ open, onClose, title, description, children, footer, compact = false }: SheetProps) {
+export function Sheet({ open, onClose, title, description, children, footer, compact = false, closable = false }: SheetProps) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -106,12 +108,13 @@ export function Sheet({ open, onClose, title, description, children, footer, com
               : undefined
           }
         />
-        {compact ? (
+        {compact || closable ? (
           <button type="button" className={styles.close} aria-label="Fechar" onClick={onClose}>
             ×
           </button>
-        ) : (
-          <h2 id={titleId} className={styles.title}>
+        ) : null}
+        {compact ? null : (
+          <h2 id={titleId} className={closable ? `${styles.title} ${styles.titleClosable}` : styles.title}>
             {title}
           </h2>
         )}

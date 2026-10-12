@@ -1,0 +1,226 @@
+.profile {
+  padding-bottom: calc(var(--fitos-space-6) + env(safe-area-inset-bottom));
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.identityText {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.email {
+  margin: 2px 0 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  margin: 4px 0 0;
+  color: var(--fitos-orange-300);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cap {
+  margin: 28px 0 4px;
+  color: var(--fitos-color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background-color: rgba(255, 120, 71, 0.14);
+  color: var(--fitos-orange-300);
+}
+
+.chevron {
+  color: var(--fitos-color-text-muted);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hint,
+.note {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.logout {
+  margin-top: 28px;
+}
+
+/* Biometria: a linha inteira é o interruptor. */
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--fitos-space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.switchRow:disabled {
+  cursor: default;
+}
+
+.switchRow:focus-visible {
+  outline: 2px solid var(--fitos-orange-300);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.switchText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.switchTitle {
+  font-weight: 800;
+}
+
+.switchState {
+  color: var(--fitos-color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.track {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: background-color 0.15s ease;
+}
+
+.track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--fitos-color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.trackOn {
+  border-color: var(--fitos-orange-300);
+  background-color: var(--fitos-orange-500, #ff7847);
+}
+
+.trackOn::after {
+  transform: translateX(20px);
+  background-color: #fff;
+}
+
+.switchRow:disabled .track {
+  opacity: 0.5;
+}
+
+/* Dias de treino na modal. */
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.day {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dayOn {
+  border-color: var(--fitos-orange-300);
+  background-color: rgba(255, 120, 71, 0.2);
+}
+
+.hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 44px;
+  min-width: 56px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--fitos-orange-300);
+  background-color: var(--fitos-orange-300);
+  color: #0b0d12;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .track::after {
+    transition: none;
+  }
+}

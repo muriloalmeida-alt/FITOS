@@ -85,7 +85,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/entrar");
   });
 
-  it("aluno vê o personal vinculado, edita nome e e-mail no lugar e tem Termos, Privacidade e Sair (FIT-155)", async () => {
+  it("aluno: identidade, Treino e rotina e Conta; personal, dados e Termos sob demanda; sem assinatura nem espaço (proposta 10)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Pedro Lima", email: "pedro@example.test", role: "ALUNO" } });
     getAuthContext.mockResolvedValue({ authenticated: true, userId: "u2", role: "ALUNO", tenantId: "t1", studentId: "s1" });
     findStudentOrThrow.mockResolvedValue({ id: "s1", preferredDays: [], tenant: { name: "Studio Joana", owner: { name: "Joana Lima" }, personalProfile: { cref: "123456-G/SP" } } });
@@ -93,20 +93,37 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
 
     render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
 
-    expect(screen.getByText("Joana Lima")).toBeInTheDocument();
-    expect(screen.getByText("Studio Joana · CREF 123456-G/SP")).toBeInTheDocument();
-    expect(screen.getByText(/Mensalidade e programa são combinados direto com Joana/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
-    expect(screen.getAllByRole("button", { name: "Sair" }).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Editar e-mail" }));
-    const inline = screen.getByRole("group", { name: "E-mail de acesso" });
-    expect(within(inline).getByLabelText("Senha atual")).toBeInTheDocument();
-    expect(within(inline).getByRole("button", { name: "Salvar" })).toBeDisabled();
+    expect(screen.getByText("Aluno de Joana")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Treino e rotina", "Conta"]);
     // EPIC-31: lembrete e dias (do programa, enquanto o aluno não escolhe).
     expect(screen.getByText("Nos dias de treino, às 7h")).toBeInTheDocument();
-    expect(screen.getByText("seg, qua")).toBeInTheDocument();
-    // EPIC-33: entrar com digital ou Face ID, ligado pelo Perfil.
-    expect(screen.getByText("Entrar com digital ou Face ID")).toBeInTheDocument();
+    expect(screen.getByText("Segunda e quarta")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Ficha de saúde/ })).toHaveAttribute("href", "/painel/saude");
+    expect(screen.queryByText("Minha assinatura")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /Entrar com biometria/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sair da conta" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Meu personal/ }));
+    const coach = screen.getByRole("dialog", { name: "Seu personal" });
+    expect(within(coach).getByText("Studio Joana · CREF 123456-G/SP")).toBeInTheDocument();
+    expect(within(coach).getByText(/Mensalidade e programa são combinados direto com Joana/)).toBeInTheDocument();
+    fireEvent.click(within(coach).getByRole("button", { name: "Fechar" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Meus dados/ }));
+    const data = screen.getByRole("dialog", { name: "Meus dados" });
+    expect(within(data).queryByText("Nome do espaço")).not.toBeInTheDocument();
+    fireEvent.click(within(data).getByRole("button", { name: /E-mail de acesso/ }));
+    const email = screen.getByRole("dialog", { name: "E-mail de acesso" });
+    expect(within(email).getByLabelText("Senha atual")).toBeInTheDocument();
+    expect(within(email).getByRole("button", { name: "Salvar" })).toBeDisabled();
+    fireEvent.click(within(email).getByRole("button", { name: "Cancelar" }));
+    expect(screen.getByRole("dialog", { name: "Meus dados" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Termos e privacidade/ }));
+    const terms = screen.getByRole("dialog", { name: "Termos e privacidade" });
+    expect(within(terms).getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
+    expect(within(terms).getByRole("link", { name: "Política de privacidade" })).toHaveAttribute("href", "/politica-de-privacidade");
   });
 
   it("aluno autenticado sem vínculo ativo (studentId nulo) é redirecionado para /painel", async () => {
@@ -126,24 +143,29 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     expect(redirect).toHaveBeenCalledWith("/painel");
   });
 
-  it("Livre: respostas em chips no lugar, assinatura com status, dados e nome do espaço (FIT-160)", async () => {
+  it("Livre: Meu treino, Dias, Lembrete; Meus dados com o espaço; assinatura real (proposta 10)", async () => {
     getServerSession.mockResolvedValue({ user: { name: "Praticante", email: "praticante@example.test", role: "INDIVIDUAL" } });
     getAuthContext.mockResolvedValue({ authenticated: true, userId: "u5", role: "INDIVIDUAL", tenantId: "t5", studentId: null });
     getIndividualOnboardingProfile.mockResolvedValue({ objective: "GANHAR_MASSA", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS" });
     findUniqueTenant.mockResolvedValue({ id: "t5", name: "Espaço de Praticante" });
-    getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: null, plan: { name: "FitOS Livre" } });
+    getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: new Date(Date.now() + 26 * 86_400_000 - 60_000), plan: { name: "FitOS Livre" } });
     const { default: PerfilPage } = await import("./page");
     render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
 
-    expect(screen.getByText("Ganhar massa muscular")).toBeInTheDocument();
-    expect(screen.getByText("Iniciante · 3 a 4 dias por semana")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^Assinatura.*FitOS Livre · ativa/ })).toHaveAttribute("href", "/painel/assinatura");
-    expect(screen.getAllByText("Espaço de Praticante").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Termos de uso" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Editar respostas" }));
+    expect(screen.getByText("FitOS Livre")).toBeInTheDocument();
+    expect(screen.getByText("Ganhar massa muscular · Iniciante · 3 a 4 dias por semana")).toBeInTheDocument();
+    expect(screen.getByText("Terça")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Minha assinatura.*Teste grátis · 26 dias restantes/ })).toHaveAttribute("href", "/painel/assinatura");
+
+    fireEvent.click(screen.getByRole("button", { name: /Meu treino/ }));
     const answers = screen.getByRole("group", { name: "Suas respostas" });
     expect(within(answers).getByRole("radio", { name: "3 a 4 dias por semana" })).toHaveAttribute("aria-checked", "true");
     expect(within(answers).getByRole("radio", { name: "Avançado" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Pronto" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Meus dados/ }));
+    const data = screen.getByRole("dialog", { name: "Meus dados" });
+    expect(within(data).getByRole("button", { name: /Nome do espaço.*Espaço de Praticante/ })).toBeInTheDocument();
   });
 
   it("individual sem onboarding concluído é redirecionado para /onboarding", async () => {
@@ -197,21 +219,23 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
   }
 
-  it("personal vê 'Seu negócio' com resumos reais e os dados editáveis (FIT-149)", async () => {
+  it("personal: Seu negócio e Conta com resumos reais; dados profissionais em Meus dados (proposta 10)", async () => {
     asPersonal();
     getSubscriptionForTenant.mockResolvedValue({ status: "ATIVA", trialEndsAt: null, plan: { name: "Pro" } });
     await renderPage();
 
+    expect(screen.getByText("Personal · Studio Joana")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Financeiro.*recebido/ })).toHaveAttribute("href", "/painel/financeiro");
     expect(screen.getByText(/R\$\s3\.600,00 recebido em .+ · 1 atrasada/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /^Assinatura.*Pro · ativa/ })).toHaveAttribute("href", "/painel/assinatura");
+    expect(screen.getByRole("link", { name: /^Minha assinatura.*Pro · ativa/ })).toHaveAttribute("href", "/painel/assinatura");
     expect(screen.getByRole("link", { name: /^Exercícios.*Biblioteca do FitOS \+ 4 seus/ })).toHaveAttribute("href", "/painel/exercicios");
-    expect(screen.getByText("(11) 98765-4321 · CREF 123456-G/SP · De 21 a 50 alunos")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
-    expect(screen.getByRole("link", { name: "Política de privacidade" })).toHaveAttribute("href", "/politica-de-privacidade");
+    expect(screen.getByRole("link", { name: /^Configurações.*Padrões de treino/ })).toHaveAttribute("href", "/painel/configuracoes");
     expect(countExercises).toHaveBeenCalledWith({ where: { tenantId: "t1", status: "ATIVO" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Editar perfil profissional" }));
+    fireEvent.click(screen.getByRole("button", { name: /Meus dados/ }));
+    const data = screen.getByRole("dialog", { name: "Meus dados" });
+    expect(within(data).getByText("(11) 98765-4321 · CREF 123456-G/SP · De 21 a 50 alunos")).toBeInTheDocument();
+    fireEvent.click(within(data).getByRole("button", { name: /Perfil profissional/ }));
     const dialog = screen.getByRole("dialog", { name: "Perfil profissional" });
     expect(within(dialog).getByLabelText("Celular")).toHaveValue("(11) 98765-4321");
     expect(within(dialog).getByRole("radio", { name: "De 21 a 50 alunos" })).toHaveAttribute("aria-checked", "true");
@@ -223,6 +247,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
     await renderPage();
 
     expect(screen.getByText("Nenhum plano contratado")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Meus dados/ }));
     expect(screen.getByText(/· sem CREF ·/)).toBeInTheDocument();
   });
 });

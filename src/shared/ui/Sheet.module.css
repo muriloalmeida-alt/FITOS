@@ -67,6 +67,13 @@
   font-weight: 800;
 }
 
+.titleClosable {
+  padding-right: 48px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
 .description {
   margin-top: var(--fitos-space-1);
   color: var(--fitos-color-text-muted);
