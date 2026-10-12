@@ -13,7 +13,6 @@ const KIND_TAG: Record<PersonalFeedKind, { label: string; tone: TagTone }> = {
   convite_aceito: { label: "Novo", tone: "ok" },
   sem_programa: { label: "Sem programa", tone: "warn" },
   programa_terminando: { label: "Programa", tone: "warn" },
-  treino_concluido: { label: "Treinou", tone: "ok" },
   avaliacao_pendente: { label: "Avaliação", tone: "muted" },
 };
 
@@ -34,8 +33,6 @@ function question(item: PersonalFeedItem): string {
       return `${name} está sem programa.`;
     case "programa_terminando":
       return `Repetir o programa de ${name}?`;
-    case "treino_concluido":
-      return `${name} treinou.`;
     case "avaliacao_pendente":
       return `Hora de avaliar ${name}?`;
   }
