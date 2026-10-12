@@ -183,7 +183,7 @@ describe("PerfilPage (FIT-016 para o aluno; FIT-120 para o personal)", () => {
       getOwnFreeAccess.mockResolvedValue({ startsAt: new Date("2026-11-05T15:00:00Z"), endsAt: new Date("2027-11-05T15:00:00Z"), lastDay: "2027-11-05" });
       const { default: PerfilPage } = await import("./page");
       render(<ToastProvider>{await PerfilPage()}</ToastProvider>);
-      expect(screen.getByRole("link", { name: /^Minha assinatura.*Acesso gratuito até 5 de novembro de 2027/ })).toHaveAttribute("href", "/painel/assinatura");
+      expect(screen.getByRole("link", { name: /^Minha assinatura.*Gratuito até 5 de novembro de 2027/ })).toHaveAttribute("href", "/painel/assinatura");
       expect(screen.queryByText(/Teste grátis/)).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
