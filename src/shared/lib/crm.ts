@@ -94,3 +94,71 @@ export function inviteMessage(input: { name: string; couponCode: string; link: s
 export function whatsappLink(phone: string, message: string): string {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
+
+export interface PhoneContact {
+  name: string;
+  phone: string;
+}
+
+/// Primeiro número do contato que é um celular brasileiro válido.
+export function firstMobile(numbers: readonly string[]): string | null {
+  for (const number of numbers) {
+    const phone = normalizeBrazilianMobile(number);
+    if (phone) return phone;
+  }
+  return null;
+}
+
+/// Contatos da agenda (Contact Picker ou vCard) → linhas "Nome; celular"
+/// para a importação em lote. Sem celular válido fica de fora e é contado.
+export function contactsToLines(contacts: { name: string; numbers: string[] }[]): { lines: string[]; skipped: string[] } {
+  const lines: string[] = [];
+  const skipped: string[] = [];
+  for (const contact of contacts) {
+    const name = contact.name.trim().replace(/\s+/g, " ") || "Sem nome";
+    const phone = firstMobile(contact.numbers);
+    if (phone) lines.push(`${name}; ${formatMobile(phone)}`);
+    else skipped.push(name);
+  }
+  return { lines, skipped };
+}
+
+function unescapeVcard(value: string): string {
+  return value.replace(/\\n/gi, " ").replace(/\\([,;\\])/g, "$1").trim();
+}
+
+/// Arquivo .vcf exportado da agenda (iPhone ou Android): um ou vários
+/// cartões. Usa FN (ou N), e todos os TEL do cartão.
+export function parseVcard(text: string): { name: string; numbers: string[] }[] {
+  // Linhas dobradas (continuação começa com espaço ou tab).
+  const lines = text.replace(/\r\n/g, "\n").replace(/\n[ \t]/g, "").split("\n");
+  const cards: { name: string; numbers: string[] }[] = [];
+  let current: { fn: string; n: string; numbers: string[] } | null = null;
+  for (const raw of lines) {
+    const line = raw.trim();
+    const upper = line.toUpperCase();
+    if (upper === "BEGIN:VCARD") {
+      current = { fn: "", n: "", numbers: [] };
+      continue;
+    }
+    if (upper === "END:VCARD") {
+      if (current) {
+        const fromN = current.n.split(";").map((part) => part.trim()).filter(Boolean);
+        const name = current.fn || [fromN[1], fromN[0]].filter(Boolean).join(" ");
+        cards.push({ name, numbers: current.numbers });
+      }
+      current = null;
+      continue;
+    }
+    if (!current) continue;
+    const colon = line.indexOf(":");
+    if (colon < 0) continue;
+    // "item1.TEL;type=CELL" → "TEL".
+    const key = line.slice(0, colon).split(";")[0]!.split(".").pop()!.toUpperCase();
+    const value = line.slice(colon + 1);
+    if (key === "FN") current.fn = unescapeVcard(value);
+    else if (key === "N") current.n = unescapeVcard(value);
+    else if (key === "TEL") current.numbers.push(value.replace(/^tel:/i, "").trim());
+  }
+  return cards;
+}

@@ -16,6 +16,11 @@ Convida futuros clientes do **FitOS Livre** pelo WhatsApp com a mensagem padrão
 - **Em lote**: lista colada ou arquivo `.csv`, uma pessoa por linha (`Nome; celular; e-mail`), com separador `;`, `,` ou tab, até 200 por vez.
   - Celular já cadastrado no CRM é pulado e informado.
   - Linhas inválidas voltam com o motivo.
+- **Da agenda do celular**:
+  - Android com Chrome: o botão "Escolher da agenda do celular" (Contact Picker API) abre a agenda, com a permissão da pessoa a cada uso, e permite marcar vários contatos.
+  - iPhone: o Safari não oferece essa API. Exporte os contatos como arquivo `.vcf` (Contatos → selecionar ou lista → Compartilhar) e escolha o arquivo na mesma tela.
+  - Do contato entra o primeiro número que é celular brasileiro válido; quem não tem celular fica de fora e é listado.
+  - A lista vai para a caixa de texto, para revisar antes de importar.
 - O celular é normalizado (`5511987654321`) e cada número entra uma única vez.
 
 ## Cupom por contato

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CrmProspectStatus } from "@prisma/client";
 import { ActionRow, Button, FormAlert, Sheet, Tag, TextField, useToast } from "@/shared/ui";
 import { requestJson } from "../../_workout-builder/apiClient";
+import { contactsToLines, parseVcard } from "@/shared/lib/crm";
 import { STATUS_LABEL, STATUS_TONE } from "./crmLabels";
 import styles from "./crm.module.css";
 
@@ -28,6 +29,15 @@ interface BulkResult {
   errors: { line: number; text: string; message: string }[];
 }
 
+/// Contact Picker API (Chrome no Android): a agenda do celular, com a
+/// permissão da pessoa a cada uso. O iPhone não oferece; lá vale o .vcf.
+type ContactsManager = { select: (properties: string[], options: { multiple: boolean }) => Promise<{ name?: string[]; tel?: string[] }[]> };
+function contactsManager(): ContactsManager | null {
+  if (typeof navigator === "undefined") return null;
+  const manager = (navigator as Navigator & { contacts?: ContactsManager }).contacts;
+  return manager && typeof manager.select === "function" ? manager : null;
+}
+
 /// Conta o envio sem atrasar a abertura do WhatsApp (o link abre na hora).
 function markSent(id: string) {
   void fetch(`/api/admin/crm/${id}/enviado`, { method: "POST", keepalive: true }).catch(() => undefined);
@@ -46,10 +56,44 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
   const [form, setForm] = useState({ name: "", phone: "", email: "", note: "" });
   const [text, setText] = useState("");
   const [result, setResult] = useState<BulkResult | null>(null);
+  const [picker, setPicker] = useState(false);
+  const [agendaNote, setAgendaNote] = useState<string | null>(null);
+
+  // Só no cliente: o servidor não sabe se o aparelho tem a agenda.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- capacidade do aparelho, lida uma vez depois da hidratação
+    setPicker(contactsManager() !== null);
+  }, []);
+
+  function addContacts(contacts: { name: string; numbers: string[] }[]) {
+    const { lines, skipped } = contactsToLines(contacts);
+    if (lines.length > 0) setText((current) => [current.trim(), ...lines].filter(Boolean).join("\n"));
+    setAgendaNote(
+      [
+        lines.length > 0 ? `${lines.length} ${lines.length === 1 ? "contato entrou" : "contatos entraram"} na lista.` : "Nenhum contato com celular válido.",
+        skipped.length > 0 ? `Sem celular válido: ${skipped.slice(0, 5).join(", ")}${skipped.length > 5 ? ` e mais ${skipped.length - 5}` : ""}.` : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+
+  async function pickFromAgenda() {
+    const manager = contactsManager();
+    if (!manager) return;
+    setError(null);
+    try {
+      const picked = await manager.select(["name", "tel"], { multiple: true });
+      addContacts(picked.map((contact) => ({ name: contact.name?.[0] ?? "", numbers: contact.tel ?? [] })));
+    } catch {
+      // Cancelou ou negou a permissão: nada muda.
+    }
+  }
 
   function open(kind: "novo" | "lote") {
     setError(null);
     setResult(null);
+    setAgendaNote(null);
     setSheet(kind);
   }
 
@@ -74,7 +118,10 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    setText(await file.text());
+    const content = await file.text();
+    // Contatos exportados da agenda (.vcf) ou planilha (.csv).
+    if (/\.vcf$/i.test(file.name) || /BEGIN:VCARD/i.test(content)) addContacts(parseVcard(content));
+    else setText(content);
   }
 
   const next = queue[0] ?? null;
@@ -86,7 +133,7 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
           Adicionar contato
         </Button>
         <Button type="button" variant="secondary" onClick={() => open("lote")}>
-          Importar lista
+          Importar lista ou agenda
         </Button>
       </div>
 
@@ -178,7 +225,7 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
         open={sheet === "lote"}
         onClose={() => setSheet(null)}
         title="Importar lista"
-        description="Um contato por linha: Nome; celular; e-mail (opcional). Aceita ; , ou tab, e arquivo .csv. Até 200 por vez."
+        description="Da agenda do celular, de um arquivo de contatos (.vcf) ou de uma lista: Nome; celular; e-mail (opcional). Até 200 por vez; revise antes de importar."
         footer={
           result ? (
             <Button type="button" block onClick={() => setSheet(null)}>
@@ -230,13 +277,27 @@ export function CrmView({ rows, queue }: { rows: CrmRow[]; queue: CrmRow[] }) {
           </div>
         ) : (
           <div className={styles.form}>
+            {picker ? (
+              <Button type="button" variant="secondary" block onClick={() => void pickFromAgenda()}>
+                Escolher da agenda do celular
+              </Button>
+            ) : (
+              <p className={styles.muted}>
+                No iPhone: abra Contatos, selecione as pessoas (ou uma lista), toque em Compartilhar e salve o arquivo .vcf; depois escolha o arquivo aqui. No Android com Chrome, o botão da agenda aparece aqui.
+              </p>
+            )}
+            {agendaNote ? (
+              <p className={styles.muted} role="status">
+                {agendaNote}
+              </p>
+            ) : null}
             <label className={styles.textareaLabel}>
               Lista
               <textarea className={styles.textarea} rows={8} value={text} placeholder={"Ana Lima; (11) 98765-4321; ana@email.com\nBruno Souza; 21 99876-5432"} onChange={(event) => setText(event.target.value)} />
             </label>
             <label className={styles.file}>
-              Ou escolha um arquivo .csv
-              <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(event) => void onFile(event)} />
+              Ou escolha um arquivo de contatos (.vcf) ou lista (.csv)
+              <input type="file" accept=".vcf,.csv,.txt,text/vcard,text/x-vcard,text/csv,text/plain" onChange={(event) => void onFile(event)} />
             </label>
             {error ? <FormAlert>{error}</FormAlert> : null}
           </div>

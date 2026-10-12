@@ -67,7 +67,7 @@ describe("CRM de convites (admin)", () => {
     await userEvent.click(within(add).getByRole("button", { name: "Adicionar" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/crm", expect.objectContaining({ body: JSON.stringify({ name: "Carla Dias", phone: "31976543210", email: "", note: "" }) }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Importar lista" }));
+    await userEvent.click(screen.getByRole("button", { name: "Importar lista ou agenda" }));
     const bulk = screen.getByRole("dialog", { name: "Importar lista" });
     await userEvent.type(within(bulk).getByLabelText("Lista"), "Eva; 11 91234-5678");
     await userEvent.click(within(bulk).getByRole("button", { name: "Importar" }));
@@ -86,5 +86,37 @@ describe("CRM de convites (admin)", () => {
     await userEvent.click(within(items[0]!).getByRole("button", { name: "Descartar" }));
     await userEvent.click(within(screen.getByRole("dialog", { name: "Descartar Ana Lima?" })).getByRole("button", { name: "Descartar" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/crm/p1/descartar", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("agenda do celular (Android): escolhe vários contatos e só os celulares válidos entram na lista para revisar", async () => {
+    const select = vi.fn(async () => [
+      { name: ["Ana Lima"], tel: ["+55 11 98765-4321"] },
+      { name: ["Bruno Souza"], tel: ["(21) 3456-7890", "21998765432"] },
+      { name: ["Fixo Só"], tel: ["(31) 3333-4444"] },
+    ]);
+    Object.defineProperty(navigator, "contacts", { value: { select }, configurable: true });
+    try {
+      renderView([]);
+      await userEvent.click(screen.getByRole("button", { name: "Importar lista ou agenda" }));
+      const bulk = screen.getByRole("dialog", { name: "Importar lista" });
+      await userEvent.click(within(bulk).getByRole("button", { name: "Escolher da agenda do celular" }));
+      expect(select).toHaveBeenCalledWith(["name", "tel"], { multiple: true });
+      expect(within(bulk).getByLabelText("Lista")).toHaveValue("Ana Lima; (11) 98765-4321\nBruno Souza; (21) 99876-5432");
+      expect(within(bulk).getByRole("status")).toHaveTextContent("2 contatos entraram na lista. Sem celular válido: Fixo Só.");
+    } finally {
+      Reflect.deleteProperty(navigator, "contacts");
+    }
+  });
+
+  it("iPhone: sem agenda no navegador, explica o .vcf; o arquivo de contatos vira a lista", async () => {
+    renderView([]);
+    await userEvent.click(screen.getByRole("button", { name: "Importar lista ou agenda" }));
+    const bulk = screen.getByRole("dialog", { name: "Importar lista" });
+    expect(within(bulk).queryByRole("button", { name: "Escolher da agenda do celular" })).not.toBeInTheDocument();
+    expect(within(bulk).getByText(/No iPhone: abra Contatos/)).toBeInTheDocument();
+    const vcf = new File(["BEGIN:VCARD\nVERSION:3.0\nFN:Carla Dias\nTEL;type=CELL:31976543210\nEND:VCARD\n"], "contatos.vcf", { type: "text/vcard" });
+    await userEvent.upload(within(bulk).getByLabelText(/arquivo de contatos/), vcf);
+    expect(await within(bulk).findByRole("status")).toHaveTextContent("1 contato entrou na lista.");
+    expect(within(bulk).getByLabelText("Lista")).toHaveValue("Carla Dias; (31) 97654-3210");
   });
 });

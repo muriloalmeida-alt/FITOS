@@ -50,3 +50,35 @@ describe("CRM: mensagem", () => {
     expect(whatsappLink("5511987654321", "Oi & tchau")).toBe("https://wa.me/5511987654321?text=Oi%20%26%20tchau");
   });
 });
+
+describe("CRM: agenda do celular", () => {
+  it("vCard do iPhone e do Android: vários cartões, linhas dobradas, item1.TEL, N sem FN e celular escolhido entre os números", async () => {
+    const { parseVcard, contactsToLines } = await import("./crm");
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      "N:Lima;Ana;;;",
+      "FN:Ana Lima",
+      "item1.TEL;type=CELL;type=pref:+55 11 98765-4321",
+      "END:VCARD",
+      "BEGIN:VCARD",
+      "VERSION:2.1",
+      "N:Souza;Bruno;;;",
+      "TEL;HOME:(21) 3456-7890",
+      "TEL;CELL:(21) 99876-",
+      " 5432",
+      "END:VCARD",
+      "BEGIN:VCARD",
+      "FN:Carla Fixo",
+      "TEL:(31) 3333-4444",
+      "END:VCARD",
+    ].join("\r\n");
+    const contacts = parseVcard(vcf);
+    expect(contacts).toEqual([
+      { name: "Ana Lima", numbers: ["+55 11 98765-4321"] },
+      { name: "Bruno Souza", numbers: ["(21) 3456-7890", "(21) 99876-5432"] },
+      { name: "Carla Fixo", numbers: ["(31) 3333-4444"] },
+    ]);
+    expect(contactsToLines(contacts)).toEqual({ lines: ["Ana Lima; (11) 98765-4321", "Bruno Souza; (21) 99876-5432"], skipped: ["Carla Fixo"] });
+  });
+});
