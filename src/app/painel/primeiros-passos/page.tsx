@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicBaseUrl } from "@/shared/lib/publicBaseUrl.server";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
@@ -32,7 +33,7 @@ export default async function PrimeirosPassosPage() {
     prisma.tenant.findUniqueOrThrow({ where: { id: ctx.tenantId }, select: { name: true, owner: { select: { name: true } } } }),
     prisma.student.count({ where: { tenantId: ctx.tenantId } }),
   ]);
-  const base = (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = await publicBaseUrl();
   const programs = [...library.programs].sort((a, b) => {
     const rank = (name: string) => (FEATURED.indexOf(name) === -1 ? 99 : FEATURED.indexOf(name));
     return rank(a.name) - rank(b.name);

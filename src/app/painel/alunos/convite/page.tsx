@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicBaseUrl } from "@/shared/lib/publicBaseUrl.server";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { AppShell, Avatar, ActionRow } from "@/shared/ui";
@@ -26,7 +27,7 @@ export default async function InviteLinkPage() {
     throw error;
   }
   const code = await getOrCreateInviteCode(ctx.tenantId);
-  const base = (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = await publicBaseUrl();
   const url = `${base}/c/${code}`;
   const qrSvg = await QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#101c2c", light: "#ffffff" } });
   const since = new Date();

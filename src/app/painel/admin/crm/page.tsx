@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicBaseUrl } from "@/shared/lib/publicBaseUrl.server";
 import type { CrmProspectStatus } from "@prisma/client";
 import { AppShell } from "@/shared/ui";
 import { appName } from "@/shared/config/env";
@@ -24,7 +25,7 @@ export default async function CrmPage({ searchParams }: { searchParams?: Promise
   const sp = (await searchParams) ?? {};
   const filter = STATUS_FILTERS.find((entry) => entry.key === sp.situacao) ?? STATUS_FILTERS[0]!;
   const { rows, counts } = await listProspects({ status: filter.status, query: sp.q });
-  const base = (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = await publicBaseUrl();
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   const href = (key: string) => {
     const params = new URLSearchParams();
