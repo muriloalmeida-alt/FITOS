@@ -1,13 +1,17 @@
 import "server-only";
 
-/// Base URL do Sandbox do Asaas — a única alcançada e autenticada até agora
-/// (diagnóstico temporário da FIT-128, removido depois de confirmar
-/// `access_token`/`User-Agent`/base URL a partir de homologação: HTTP 200 em
-/// 497ms, formato de listagem válido). `api.asaas.com` (produção) nunca é
-/// usado por este módulo — ADR-003 continua `Proposto`, nenhuma cobrança
-/// produtiva pode ser construída sobre o candidato antes da prova completa
-/// (`ASSINATURA-SAAS.md`) e da atualização do ADR para `Aceito`.
+/// Base URL do Sandbox do Asaas (padrão). Produção só com `ASAAS_BASE_URL`
+/// configurada no ambiente de produção — depois dos runbooks no Sandbox
+/// (`ASSINATURA-SAAS.md`, ADR-003).
 export const ASAAS_SANDBOX_BASE_URL = "https://api-sandbox.asaas.com/v3";
+
+/// Ambiente do Asaas da conta do FitOS: `ASAAS_BASE_URL` (produção:
+/// `https://api.asaas.com/v3`); sem ela, o Sandbox. A mesma variável já
+/// escolhe o ambiente das subcontas dos personais (`fitosAsaas.ts`), então
+/// assinatura do FitOS e cobrança dos alunos andam sempre juntas.
+export function asaasBaseUrl(env: Record<string, string | undefined> = process.env): string {
+  return (env.ASAAS_BASE_URL?.trim() || ASAAS_SANDBOX_BASE_URL).replace(/\/$/, "");
+}
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -100,7 +104,7 @@ function categorizeNetworkError(error: unknown): string {
 /// como comportamento confirmado antes de uma prova técnica real.
 export async function asaasRequest<T>(config: AsaasClientConfig, path: string, init?: RequestInit): Promise<T> {
   const fetchImpl = config.fetchImpl ?? fetch;
-  const baseUrl = config.baseUrl ?? ASAAS_SANDBOX_BASE_URL;
+  const baseUrl = config.baseUrl ?? asaasBaseUrl();
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { ASAAS_SANDBOX_BASE_URL, asaasRequest, type AsaasClientConfig } from "@/modules/billing/asaasClient";
+import { asaasBaseUrl, asaasRequest, type AsaasClientConfig } from "@/modules/billing/asaasClient";
 
 /// Conta Asaas principal do FitOS (EPIC-38): cria as subcontas dos
 /// personais e recebe a taxa de 2% por split. `API_ASAAS` é a chave;
@@ -11,7 +11,7 @@ export const FITOS_FEE_PERCENT = 2;
 export function fitosAsaasConfig(deps: { fetchImpl?: typeof fetch } = {}): AsaasClientConfig & { environment: "producao" | "sandbox" } {
   const apiKey = process.env.API_ASAAS;
   if (!apiKey) throw new Error("API_ASAAS ausente: a conta Asaas do FitOS não está configurada.");
-  const baseUrl = (process.env.ASAAS_BASE_URL ?? ASAAS_SANDBOX_BASE_URL).replace(/\/$/, "");
+  const baseUrl = asaasBaseUrl();
   return { apiKey, baseUrl, fetchImpl: deps.fetchImpl, environment: baseUrl.includes("sandbox") ? "sandbox" : "producao" };
 }
 
