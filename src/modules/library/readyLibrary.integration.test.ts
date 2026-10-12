@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import { testDatabaseUrl } from "@/shared/db/testDatabaseUrl";
 import { ensureCuratedCatalogForTests } from "@/modules/exercises/curatedCatalogForTests";
 import { STARTER_LIBRARY } from "./starterLibrary";
+import { MODALITY_PROGRAMS } from "./modalityPrograms";
 import { copyReadyItem, getReadyLibrary } from "./readyLibrary";
 
 const prisma = new PrismaClient({ datasources: { db: { url: testDatabaseUrl() } } });
@@ -34,7 +35,7 @@ async function livre(label: string) {
 describe("biblioteca pronta do FitOS Livre", () => {
   it("lista os mesmos programas, treinos e aeróbicos do personal, com conteúdo e duração", async () => {
     const library = await getReadyLibrary(prisma);
-    expect(library.programs).toHaveLength(STARTER_LIBRARY.programs.length);
+    expect(library.programs).toHaveLength(STARTER_LIBRARY.programs.length + MODALITY_PROGRAMS.length);
     expect(library.workouts.length + library.cardio.length).toBe(STARTER_LIBRARY.workouts.length + STARTER_LIBRARY.cardio.length);
     expect(new Set([...library.programs, ...library.workouts, ...library.cardio].map((entry) => entry.id)).size).toBe(library.programs.length + library.workouts.length + library.cardio.length);
 

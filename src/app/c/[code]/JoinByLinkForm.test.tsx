@@ -35,7 +35,16 @@ describe("Entrar pelo convite (EPIC-33, E5)", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Emagrecer/ }));
     expect(fetchMock).toHaveBeenCalledWith("/api/meu-objetivo", expect.objectContaining({ body: JSON.stringify({ objective: "Emagrecer" }) }));
 
+    // Proposta 11: modalidades para orientar o personal; o programa não muda.
+    expect(await screen.findByRole("heading", { name: "Quais modalidades você quer praticar?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Funcional/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /CrossFit/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/minhas-modalidades", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ modalities: ["funcional", "crossfit"] }) }));
+
     expect(await screen.findByRole("heading", { name: "Tudo certo, Ana" })).toBeInTheDocument();
+    expect(screen.getByText("Preferências salvas. Murilo poderá usá-las no seu programa.")).toBeInTheDocument();
     expect(screen.getByText("Treino A — Inferiores")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Começar agora" })).toHaveAttribute("href", "/painel/treino/sessao");
     expect(JSON.parse(window.localStorage.getItem("fitos:conta")!)).toMatchObject({ name: "Ana Costa", role: "ALUNO" });
@@ -49,6 +58,30 @@ describe("Entrar pelo convite (EPIC-33, E5)", () => {
     await userEvent.type(screen.getByLabelText("Crie uma senha"), "senha-forte-123");
     await userEvent.click(screen.getByRole("button", { name: "Entrar em Studio Murilo" }));
     await userEvent.click(await screen.findByRole("radio", { name: /Ganhar massa/ }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: /Musculação/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
     expect(await screen.findByText(/Murilo vai montar seu treino em Studio Murilo/)).toBeInTheDocument();
+  });
+
+  it("falha ao salvar as modalidades mantém a seleção e permite tentar de novo", async () => {
+    let fail = true;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (String(url) === "/api/minhas-modalidades") return new Response("{}", { status: fail ? 500 : 200 });
+      if (String(url) === "/api/meu-inicio") return new Response(JSON.stringify({ hero: { kind: "noPlan" } }));
+      return new Response("{}", { status: String(url).startsWith("/api/convite-link") ? 201 : 200 });
+    });
+    render(<JoinByLinkForm code="abc23456" personalFirstName="Murilo" businessName="Studio Murilo" />);
+    await userEvent.type(screen.getByLabelText("Seu nome"), "Ana Costa");
+    await userEvent.type(screen.getByLabelText("E-mail"), "ana@ex.test");
+    await userEvent.type(screen.getByLabelText("Crie uma senha"), "senha-forte-123");
+    await userEvent.click(screen.getByRole("button", { name: "Entrar em Studio Murilo" }));
+    await userEvent.click(await screen.findByRole("radio", { name: /Ganhar massa/ }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: /Funcional/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByText("Não foi possível salvar suas preferências. Tente de novo.")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Funcional/ })).toHaveAttribute("aria-checked", "true");
+    fail = false;
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByRole("heading", { name: "Tudo certo, Ana" })).toBeInTheDocument();
   });
 });

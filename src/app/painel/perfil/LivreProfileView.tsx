@@ -9,6 +9,8 @@ import { LogoutButton } from "../LogoutButton";
 import { BiometricSwitch } from "./BiometricSwitch";
 import { MyDataRow, ProfileGroup, ProfileHeader, ProfileRow, SheetRow, TermsRow, sendJson } from "./ProfileParts";
 import { RoutineRows, type RoutinePreferences } from "./RoutineRows";
+import { ModalitiesEditor } from "./ModalitiesEditor";
+import { modalitiesLabel, type Modality } from "@/shared/lib/modalities";
 import styles from "./ProfileParts.module.css";
 
 interface LivreProfileViewProps {
@@ -21,6 +23,8 @@ interface LivreProfileViewProps {
   experienceLevel: ExperienceLevel;
   weeklyAvailability: WeeklyAvailability;
   subscriptionSummary: string;
+  /// Modalidades (proposta 11); vazio = ainda não definidas.
+  modalities: Modality[];
   /// Lembrete de treino e dias de treino (EPIC-31).
   preferences: RoutinePreferences;
 }
@@ -60,19 +64,22 @@ export function LivreProfileView(props: LivreProfileViewProps) {
         <SheetRow
           icon="treino"
           title="Meu treino"
-          summary={`${OBJECTIVE_LABELS[objective]} · ${EXPERIENCE_LABELS[experience]} · ${AVAILABILITY_LABELS[availability]}`}
+          summary={`${props.modalities.length > 0 ? `${modalitiesLabel(props.modalities)} · ` : ""}${OBJECTIVE_LABELS[objective]} · ${EXPERIENCE_LABELS[experience]} · ${AVAILABILITY_LABELS[availability]}`}
           footer={(close) => (
             <Button type="button" block onClick={close}>
               Pronto
             </Button>
           )}
         >
+          <div className={styles.form}>
+          <ModalitiesEditor value={props.modalities} note="Muda as próximas recomendações; seus treinos e programa continuam como estão." />
           <div className={styles.form} role="group" aria-label="Suas respostas">
             <ChipGroup label="Objetivo" showLabel tone="accent" value={objective} onChange={(value) => { const previous = objective; setObjective(value); answer({ objective: value }, previous, setObjective); }} options={options(OBJECTIVE_LABELS)} />
             <ChipGroup label="Experiência" showLabel tone="accent" value={experience} onChange={(value) => { const previous = experience; setExperience(value); answer({ experienceLevel: value }, previous, setExperience); }} options={options(EXPERIENCE_LABELS)} />
             <ChipGroup label="Dias por semana" showLabel tone="accent" value={availability} onChange={(value) => { const previous = availability; setAvailability(value); answer({ weeklyAvailability: value }, previous, setAvailability); }} options={options(AVAILABILITY_LABELS)} />
             <p className={styles.note}>Mudar as respostas não altera os seus treinos e programas.</p>
             {error ? <FormAlert>{error}</FormAlert> : null}
+          </div>
           </div>
         </SheetRow>
         <RoutineRows {...props.preferences} />

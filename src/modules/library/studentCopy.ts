@@ -180,7 +180,7 @@ export async function reviseStudentCopy(
   }
 
   return client.$transaction(async (tx) => {
-    const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name: plan.name, durationWeeks: plan.durationWeeks } });
+    const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name: plan.name, durationWeeks: plan.durationWeeks, modalities: plan.modalities } });
     const createItems = async (workoutId: string, rows: ItemData[]) => {
       for (const [position, data] of rows.entries()) {
         await tx.workoutExercise.create({ data: { ...data, tenantId: input.tenantId, workoutId, position } as Prisma.WorkoutExerciseUncheckedCreateInput });
@@ -238,7 +238,7 @@ export async function repeatStudentProgram(input: { tenantId: string; actorUserI
   return client.$transaction(async (tx) => {
     const now = new Date();
     await tx.planAssignment.update({ where: { id: assignment.id }, data: { active: false, endedAt: now } });
-    const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name, durationWeeks: plan.durationWeeks } });
+    const next = await tx.trainingPlan.create({ data: { tenantId: input.tenantId, name, durationWeeks: plan.durationWeeks, modalities: plan.modalities } });
     for (const [position, workout] of workouts.entries()) {
       const created = await tx.workout.create({ data: { tenantId: input.tenantId, trainingPlanId: next.id, name: workout.name, position, suggestedDays: workout.suggestedDays, ...workoutBlocksCopy(workout) } });
       for (const item of workout.workoutExercises) {

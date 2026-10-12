@@ -16,6 +16,7 @@ import { getOrCreateInviteCode } from "@/modules/students/inviteLink";
 import { LivreProfileView } from "./LivreProfileView";
 import { UpdateVersion } from "../../_version/UpdateVersion";
 import { getIndividualOnboardingProfile } from "@/modules/individual-onboarding/onboarding";
+import { storedModalities } from "@/shared/lib/modalities";
 import { ALUNO_NAV_ITEMS, INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
 
 export const metadata: Metadata = {
@@ -106,6 +107,7 @@ export default async function PerfilPage() {
           experienceLevel={profile.experienceLevel}
           weeklyAvailability={profile.weeklyAvailability}
           subscriptionSummary={subscriptionSummary(subscription, new Date())}
+          modalities={storedModalities(profile.modalities)}
           preferences={{ reminderHour: settings?.reminderHour ?? null, days: self?.preferredDays ?? [], planDays: [...new Set(workouts.flatMap((workout) => workout.suggestedDays))], coachFirst: null }}
         />
         <UpdateVersion />
@@ -140,6 +142,7 @@ export default async function PerfilPage() {
           planDays: [...new Set((assignment?.trainingPlan.workouts ?? []).flatMap((workout) => workout.suggestedDays))],
           coachFirst: student.tenant.owner.name.trim().split(/\s+/)[0] ?? null,
         }}
+        modalities={storedModalities(student.modalities)}
         invitePath={inviteCode ? `/c/${inviteCode}?ref=${student.id}` : null}
       />
       <UpdateVersion />

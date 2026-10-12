@@ -908,7 +908,7 @@ export async function assignTrainingPlanToStudent(
     });
 
     const snapshot = await tx.trainingPlan.create({
-      data: { tenantId: input.tenantId, name: plan.name, durationWeeks: plan.durationWeeks },
+      data: { tenantId: input.tenantId, name: plan.name, durationWeeks: plan.durationWeeks, modalities: plan.modalities },
     });
 
     for (const [index, workout] of sourceWorkouts.entries()) {

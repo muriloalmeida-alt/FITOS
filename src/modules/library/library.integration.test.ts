@@ -46,7 +46,8 @@ describe("biblioteca (EPIC-28)", () => {
   it("cria a biblioteca inicial uma única vez, com programas, treinos e aeróbicos", async () => {
     const f = await setup("inicial");
     const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
-    expect(library.programs).toHaveLength(7);
+    // 7 de musculação + 4 de Funcional e CrossFit (proposta 11).
+    expect(library.programs).toHaveLength(11);
     expect(library.programs.map((entry) => entry.name)).toEqual(expect.arrayContaining([
       "Corpo todo 3× · 30 min",
       "Corpo todo 3× · 45 min",
@@ -64,7 +65,7 @@ describe("biblioteca (EPIC-28)", () => {
     expect(library.programs.find((entry) => entry.name === "Hipertrofia 8 semanas")?.lines[0]).toEqual({ name: "Inferiores A", dose: "seg · 5 exercícios" });
 
     await getLibrary({ tenantId: f.tenant.id }, prisma);
-    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(7);
+    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(11);
   });
 
   it("treinos prontos (EPIC-32): cada um fecha no tempo do nome e usa só exercícios do catálogo", async () => {
@@ -88,9 +89,9 @@ describe("biblioteca (EPIC-28)", () => {
     const library = await getLibrary({ tenantId: f.tenant.id }, prisma);
     expect(library.workouts.map((entry) => entry.name)).not.toContain("Inferiores A");
     expect(library.workouts.map((entry) => entry.name)).toContain("Corpo todo · 45 min");
-    expect(library.programs).toHaveLength(4);
+    expect(library.programs).toHaveLength(8);
     await getLibrary({ tenantId: f.tenant.id }, prisma);
-    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(4);
+    expect(await prisma.trainingPlan.count({ where: { tenantId: f.tenant.id, isDraftBucket: false } })).toBe(8);
   });
 
   it("aplica programa a dois alunos (uma cópia para cada) e treino aeróbico como mais um treino", async () => {
@@ -118,7 +119,7 @@ describe("biblioteca (EPIC-28)", () => {
     const copy = (await getStudentCopy({ tenantId: f.tenant.id, studentId: f.ana.id }, prisma))!;
     expect(copy.planName).toBe("Caminhada inclinada");
     expect(copy.workouts).toHaveLength(1);
-    expect((await getLibrary({ tenantId: f.tenant.id }, prisma)).programs).toHaveLength(7);
+    expect((await getLibrary({ tenantId: f.tenant.id }, prisma)).programs).toHaveLength(11);
   });
 
   it("trocar na cópia gera nova versão, mantém a biblioteca e o histórico e permite desfazer", async () => {

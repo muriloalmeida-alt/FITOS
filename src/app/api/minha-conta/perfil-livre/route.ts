@@ -17,6 +17,9 @@ export async function PATCH(request: Request) {
       experienceLevel: optional<ExperienceLevel>(body.experienceLevel),
       weeklyAvailability: optional<WeeklyAvailability>(body.weeklyAvailability),
       spaceName: optional<string>(body.spaceName),
+      // Proposta 11: coleção validada no servidor (ids conhecidos, sem
+      // duplicatas, não vazia).
+      modalities: body.modalities,
     });
     return new Response(null, { status: 204 });
   } catch (error) {

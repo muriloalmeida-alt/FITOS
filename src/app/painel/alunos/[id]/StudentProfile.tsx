@@ -10,6 +10,7 @@ import { requestJson } from "../../_workout-builder/apiClient";
 import type { AccessStatus, ProfileAssessment, ProfileCharge, ProfileProgram, ProfileSession, ProfileStudent, ProgramChoice, TimelineEntry } from "./profileTypes";
 import { EvolutionPhotos, type EvolutionPhotoItem } from "../../_photos/EvolutionPhotos";
 import styles from "./StudentProfile.module.css";
+import { modalitiesLabel } from "@/shared/lib/modalities";
 
 const END_REASONS = ["Mudança de cidade", "Objetivo atingido", "Questão financeira", "Outro"];
 const METHODS = ["Pix", "Dinheiro", "Cartão", "Transferência"];
@@ -116,8 +117,17 @@ export function StudentProfile({ student, photos, health, referral, access, prog
             {student.status === "ATIVO" ? `Ativo · aluno desde ${student.sinceLabel}` : student.status === "INATIVO" ? "Inativo" : `Vínculo encerrado em ${student.endedLabel}`}
             {student.objective ? ` · objetivo: ${student.objective.toLowerCase()}` : ""}
           </p>
+          {student.modalities ? (
+            <p className={styles.muted}>Modalidades: {student.modalities.preferred.length > 0 ? modalitiesLabel(student.modalities.preferred) : "ainda não escolhidas"}</p>
+          ) : null}
         </div>
       </div>
+
+      {student.modalities && student.modalities.divergence.length > 0 ? (
+        <p className={styles.warn} role="note">
+          O programa atual inclui {modalitiesLabel(student.modalities.divergence)}, fora das modalidades que {first} escolheu. Revise quando fizer sentido; nada muda sozinho.
+        </p>
+      ) : null}
 
       {student.status === "INATIVO" ? (
         <div className={styles.block}>

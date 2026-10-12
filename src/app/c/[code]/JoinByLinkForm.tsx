@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, FormAlert, TextField } from "@/shared/ui";
 import { STUDENT_OBJECTIVES } from "@/shared/lib/studentObjectives";
+import type { Modality } from "@/shared/lib/modalities";
+import { ModalityPicker } from "../../_modalidades/ModalityPicker";
 import { PasswordField } from "../../_entrada/PasswordField";
 import { rememberAccount } from "../../_entrada/rememberedAccount";
 import { usePush } from "../../painel/_push/usePush";
@@ -22,7 +24,9 @@ type Hero =
 export function JoinByLinkForm({ code, personalFirstName, businessName, referrerId = null }: { code: string; personalFirstName: string; businessName: string; referrerId?: string | null }) {
   const router = useRouter();
   const push = usePush();
-  const [step, setStep] = useState<"conta" | "objetivo" | "pronto">("conta");
+  const [step, setStep] = useState<"conta" | "objetivo" | "modalidades" | "pronto">("conta");
+  const [modalities, setModalities] = useState<Modality[]>([]);
+  const [modalityError, setModalityError] = useState<string | null>(null);
   const [guide, setGuide] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -59,6 +63,21 @@ export function JoinByLinkForm({ code, personalFirstName, businessName, referrer
   async function pickObjective(objective: string) {
     setBusy(true);
     await fetch("/api/meu-objetivo", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ objective }) }).catch(() => undefined);
+    setBusy(false);
+    setStep("modalidades");
+  }
+
+  // Proposta 11: as modalidades orientam a prescrição do personal; nada
+  // muda no programa. Falha mantém a seleção e permite tentar de novo.
+  async function saveModalities() {
+    setBusy(true);
+    setModalityError(null);
+    const response = await fetch("/api/minhas-modalidades", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modalities }) }).catch(() => null);
+    if (!response?.ok) {
+      setBusy(false);
+      setModalityError("Não foi possível salvar suas preferências. Tente de novo.");
+      return;
+    }
     const today = (await fetch("/api/meu-inicio").then((r) => r.json()).catch(() => null)) as { hero?: Hero } | null;
     setHero(today?.hero ?? { kind: "noPlan" });
     setBusy(false);
@@ -101,10 +120,29 @@ export function JoinByLinkForm({ code, personalFirstName, businessName, referrer
     );
   }
 
+  if (step === "modalidades") {
+    return (
+      <div className={styles.form}>
+        <p className={styles.kicker}>Seu jeito de treinar</p>
+        <h1 className={styles.title}>Quais modalidades você quer praticar?</h1>
+        <p className={styles.muted}>Escolha uma ou mais opções.</p>
+        <ModalityPicker value={modalities} onChange={setModalities} disabled={busy} />
+        {modalityError ? <FormAlert variant="error">{modalityError}</FormAlert> : null}
+        <Button type="button" size="lg" block disabled={busy || modalities.length === 0} onClick={() => void saveModalities()}>
+          {busy ? "Salvando…" : "Continuar"}
+        </Button>
+        <p className={styles.muted}>{personalFirstName} vê suas escolhas e usa no seu programa.</p>
+      </div>
+    );
+  }
+
   if (step === "pronto") {
     return (
       <div className={styles.form}>
         <h1 className={styles.title}>Tudo certo, {first}</h1>
+        <p className={styles.hint} role="status">
+          Preferências salvas. {personalFirstName} poderá usá-las no seu programa.
+        </p>
         {hero?.kind === "today" || hero?.kind === "progress" ? (
           <div className={styles.action}>
             <span className={styles.actionKicker}>Seu treino de hoje</span>

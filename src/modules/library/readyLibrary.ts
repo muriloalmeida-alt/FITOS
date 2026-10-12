@@ -5,7 +5,15 @@ import { DEFAULT_PRESCRIPTION, ensureDraftTrainingPlanForTenant, WorkoutError } 
 import { estimateMinutes } from "@/modules/students/studentHome";
 import { prescriptionLine } from "@/shared/lib/prescription";
 import { WEEKDAYS } from "@/shared/lib/weekdays";
-import { STARTER_LIBRARY, type StarterItem, type StarterWorkout } from "./starterLibrary";
+import { MODALITY_LABEL, type Modality } from "@/shared/lib/modalities";
+import type { RecommendableProgram } from "@/shared/lib/programRecommendation";
+import { BLOCK_LABEL } from "@/shared/lib/workoutBlocks";
+import { STARTER_LIBRARY, STRENGTH_MODALITIES, type StarterItem, type StarterWorkout } from "./starterLibrary";
+import { MODALITY_PROGRAM_NOTES, MODALITY_PROGRAMS, type ModalityItem, type ModalityProgram } from "./modalityPrograms";
+
+const MODALITY_PROGRAM_NOTE_WARMUP = MODALITY_PROGRAM_NOTES.warmup;
+const MODALITY_PROGRAM_NOTE_LOAD = MODALITY_PROGRAM_NOTES.load;
+import { createModalityWorkout, resolveModalityExercises } from "./modalityProgramCopy";
 import type { Library, LibraryEntry } from "./library";
 
 /// Biblioteca pronta do FitOS Livre: os mesmos programas, treinos e
@@ -37,11 +45,13 @@ function keyed<T extends { name: string }>(defs: T[]): { key: string; def: T }[]
 }
 
 const PROGRAMS = keyed(STARTER_LIBRARY.programs);
+/// Funcional e CrossFit (proposta 11): a mesma biblioteca, classificada.
+const MODALITY = keyed(MODALITY_PROGRAMS);
 const WORKOUTS = keyed([...STARTER_LIBRARY.workouts, ...STARTER_LIBRARY.cardio]);
 
 type CatalogExercise = { id: string; name: string; type: string | null; imageUrl: string | null };
 
-async function catalog(defs: StarterWorkout[], client: PrismaClient): Promise<Map<string, CatalogExercise>> {
+async function catalog(defs: { items: { slug: string }[] }[], client: PrismaClient): Promise<Map<string, CatalogExercise>> {
   const slugs = [...new Set(defs.flatMap((def) => def.items.map((item) => item.slug)))];
   const rows = await client.exercise.findMany({ where: { externalId: { in: slugs }, tenantId: null, status: "ATIVO" }, select: { id: true, externalId: true, name: true, type: true, imageUrl: true } });
   return new Map(rows.map((row) => [row.externalId!, row]));
@@ -105,12 +115,71 @@ function programEntry(key: string, def: ProgramDef, exercises: Map<string, Catal
   };
 }
 
+function modalityDose(item: ModalityItem): string {
+  const amount = item.meters ? `${item.meters} m` : item.seconds ? `${item.seconds} s` : (item.range ?? `${item.reps} ${item.reps === 1 ? "repetição" : "repetições"}`);
+  return item.note ? `${amount} ${item.note.startsWith("por ") ? item.note : `(${item.note})`}` : amount;
+}
+
+function modalityEntry(key: string, def: ModalityProgram, exercises: Map<string, CatalogExercise>): LibraryEntry {
+  const all = def.workouts.flatMap((workout) => workout.items.map((item) => exercises.get(item.slug)).filter((exercise): exercise is CatalogExercise => Boolean(exercise)));
+  return {
+    id: key,
+    name: def.name,
+    meta: [`${def.workouts.length} treinos`, `${def.weeks} semanas`, `${def.minutes.min}–${def.minutes.max} min`].join(" · "),
+    thumbnails: all.map((exercise) => exercise.imageUrl).filter((url): url is string => Boolean(url)).slice(0, 3),
+    cardio: false,
+    minutes: null,
+    lines: def.workouts.map((workout) => ({ name: workout.name, dose: [daysLabel(workout.days), BLOCK_LABEL[workout.blocks[0]!.kind], `${workout.items.length} exercícios`].filter(Boolean).join(" · ") })),
+  };
+}
+
+/// Detalhe de um programa pronto para confirmar antes de ativar.
+export interface ReadyProgramDetail extends RecommendableProgram {
+  modalityLabel: string;
+  notes: string[];
+  workouts: { name: string; days: string; format: string | null; exercises: { name: string; dose: string }[] }[];
+}
+
+/// Programas prontos com a classificação e os dados reais (frequência,
+/// semanas, minutos e nível quando cadastrados) para a recomendação.
+export async function getRecommendablePrograms(client: PrismaClient = prisma): Promise<ReadyProgramDetail[]> {
+  const exercises = await catalog([...PROGRAMS.flatMap((entry) => entry.def.workouts), ...MODALITY.flatMap((entry) => entry.def.workouts)], client);
+  const strength = PROGRAMS.map(({ key, def }): ReadyProgramDetail => {
+    const days = new Set(def.workouts.flatMap((workout) => workout.days ?? []));
+    return {
+      key,
+      name: def.name,
+      modalities: STRENGTH_MODALITIES,
+      modalityLabel: MODALITY_LABEL.musculacao,
+      level: null,
+      weeks: def.weeks,
+      weeklyFrequency: days.size > 0 ? days.size : null,
+      minutes: null,
+      notes: [],
+      workouts: def.workouts.map((workout) => ({ name: workout.name, days: daysLabel(workout.days), format: null, exercises: resolved(workout, exercises).map((entry) => ({ name: entry.exercise.name, dose: prescriptionLine(entry) })) })),
+    };
+  });
+  const modality = MODALITY.map(({ key, def }): ReadyProgramDetail => ({
+    key,
+    name: def.name,
+    modalities: def.modalities,
+    modalityLabel: def.modalities.map((entry: Modality) => MODALITY_LABEL[entry]).join(" + "),
+    level: def.level,
+    weeks: def.weeks,
+    weeklyFrequency: def.weeklyFrequency,
+    minutes: def.minutes,
+    notes: [MODALITY_PROGRAM_NOTE_WARMUP, MODALITY_PROGRAM_NOTE_LOAD],
+    workouts: def.workouts.map((workout) => ({ name: workout.name, days: daysLabel(workout.days), format: workout.format, exercises: workout.items.map((item) => ({ name: exercises.get(item.slug)?.name ?? item.slug, dose: modalityDose(item) })) })),
+  }));
+  return [...strength, ...modality];
+}
+
 export async function getReadyLibrary(client: PrismaClient = prisma): Promise<Library> {
-  const exercises = await catalog([...WORKOUTS.map((entry) => entry.def), ...PROGRAMS.flatMap((entry) => entry.def.workouts)], client);
+  const exercises = await catalog([...WORKOUTS.map((entry) => entry.def), ...PROGRAMS.flatMap((entry) => entry.def.workouts), ...MODALITY.flatMap((entry) => entry.def.workouts)], client);
   const sort = (a: LibraryEntry, b: LibraryEntry) => a.name.localeCompare(b.name, "pt-BR");
   const loose = WORKOUTS.map(({ key, def }) => workoutEntry(key, def, exercises));
   return {
-    programs: PROGRAMS.map(({ key, def }) => programEntry(key, def, exercises)).sort(sort),
+    programs: [...PROGRAMS.map(({ key, def }) => programEntry(key, def, exercises)), ...MODALITY.map(({ key, def }) => modalityEntry(key, def, exercises))].sort(sort),
     workouts: loose.filter((entry) => !entry.cardio).sort(sort),
     cardio: loose.filter((entry) => entry.cardio).sort(sort),
   };
@@ -120,6 +189,8 @@ export async function getReadyLibrary(client: PrismaClient = prisma): Promise<Li
 /// aeróbico: entra em "Meus treinos". Programa: os treinos ativos vão para
 /// Arquivados (voltam quando quiser) e os do programa entram com os dias.
 export async function copyReadyItem(input: { tenantId: string; kind: Kind; key: string }, client: PrismaClient = prisma): Promise<{ workoutIds: string[] }> {
+  const modality = input.kind === "programa" ? MODALITY.find((entry) => entry.key === input.key) : undefined;
+  if (modality) return copyModalityProgram(input.tenantId, modality.def, client);
   const defs: StarterWorkout[] =
     input.kind === "programa" ? (PROGRAMS.find((entry) => entry.key === input.key)?.def.workouts ?? []) : [WORKOUTS.find((entry) => entry.key === input.key)?.def].filter((def): def is StarterWorkout => Boolean(def));
   if (defs.length === 0) throw new WorkoutError("NAO_ENCONTRADO", "Item não encontrado na biblioteca.");
@@ -143,4 +214,29 @@ export async function copyReadyItem(input: { tenantId: string; kind: Kind; key: 
     }
     return { workoutIds };
   });
+}
+
+/// Programa de Funcional ou CrossFit no espaço do Livre: como um programa
+/// de musculação (os treinos ativos vão para Arquivados), com os blocos e
+/// as metas do material. Exercício faltando aborta tudo.
+async function copyModalityProgram(tenantId: string, def: ModalityProgram, client: PrismaClient): Promise<{ workoutIds: string[] }> {
+  const idBySlug = await resolveModalityExercises(client);
+  const plan = await ensureDraftTrainingPlanForTenant(tenantId, client);
+  return client.$transaction(async (tx) => {
+    await tx.workout.updateMany({ where: { tenantId, status: "ATIVO", trainingPlan: { isSnapshot: false } }, data: { status: "ARQUIVADO" } });
+    let position = ((await tx.workout.aggregate({ where: { tenantId, trainingPlanId: plan.id }, _max: { position: true } }))._max.position ?? -1) + 1;
+    const workoutIds: string[] = [];
+    for (const workout of def.workouts) {
+      workoutIds.push(await createModalityWorkout(tx, { tenantId, planId: plan.id, position, def: workout, idBySlug }));
+      position += 1;
+    }
+    return { workoutIds };
+  });
+}
+
+/// Chaves dos programas prontos (para validar a escolha no onboarding).
+export function readyProgramModalities(key: string): string[] | null {
+  const modality = MODALITY.find((entry) => entry.key === key);
+  if (modality) return modality.def.modalities;
+  return PROGRAMS.some((entry) => entry.key === key) ? STRENGTH_MODALITIES : null;
 }

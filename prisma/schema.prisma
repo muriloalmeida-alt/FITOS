@@ -458,6 +458,9 @@ model IndividualProfile {
   /// nem altera esta data (FIT-119). `null` para perfis criados antes deste
   /// campo existir (FIT-101 a FIT-118) — nunca fabricado retroativamente.
   termsAcceptedAt    DateTime?
+  /// Modalidades que a pessoa quer praticar (proposta 11): ids estáveis
+  /// de `shared/lib/modalities.ts`. Vazio = ainda não definidas.
+  modalities         String[]            @default([])
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -548,6 +551,9 @@ model Student {
   /// "Meus dias" (EPIC-31): dias em que o aluno combinou treinar
   /// (SEGUNDA…DOMINGO). Vazio = os dias do programa.
   preferredDays        String[]      @default([])
+  /// Modalidades que o aluno quer praticar (proposta 11), para orientar a
+  /// prescrição do personal. Vazio = ainda não definidas.
+  modalities           String[]      @default([])
   /// Autorização explícita para fotos de evolução (EPIC-35,
   /// REGRAS-DE-NEGOCIO seção 7): quando e por quem foi registrada. Nula =
   /// sem autorização, nenhuma foto pode ser enviada.
@@ -731,6 +737,9 @@ model TrainingPlan {
   durationWeeks Int?
   isSnapshot    Boolean            @default(false)
   isDraftBucket Boolean            @default(false)
+  /// Classificação por modalidade (proposta 11). Vazio = sem
+  /// classificação: nunca entra em recomendação automática.
+  modalities    String[]           @default([])
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
