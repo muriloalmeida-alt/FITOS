@@ -11,7 +11,12 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 
 - [ ] Ambiente `production` com **banco próprio**. Nada de homologação é reaproveitado.
 - [ ] Backup do PostgreSQL: o plano Hobby não tem backup automático. Subir de plano ou configurar backup diário.
-- [ ] Domínio `fitosx.com.br` no serviço (Railway → Settings → Networking → Custom Domain) e `BETTER_AUTH_URL=https://<domínio do app>`. No Registro.br, o domínio raiz não aceita CNAME: use `app.fitosx.com.br` (CNAME) ou um DNS com CNAME/ALIAS na raiz (ex.: Cloudflare).
+- [ ] App em **`app.fitosx.com.br`** (decisão de 12/10/2026; DNS no Registro.br):
+  - no Railway: Settings → Networking → Custom Domain;
+  - no Registro.br: o registro CNAME `app` que o Railway indicar;
+  - `BETTER_AUTH_URL=https://app.fitosx.com.br`.
+
+  A raiz `fitosx.com.br` fica livre para um site.
 - [ ] Orçamento e alertas de consumo.
 - [ ] Variáveis com valores **novos**, nunca copiados de homologação:
 
@@ -19,7 +24,7 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 |---|---|
 | `DATABASE_URL` | banco de produção |
 | `BETTER_AUTH_SECRET`, `PAYMENT_KEYS_SECRET` | `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | `https://<domínio>` |
+| `BETTER_AUTH_URL` | `https://app.fitosx.com.br` |
 | `NEXT_PUBLIC_APP_ENV` | `production` |
 | `API_ASAAS` | chave de **produção** do Asaas |
 | `ASAAS_BASE_URL` | `https://api.asaas.com/v3` |
@@ -38,7 +43,7 @@ Situação em 12/10/2026. Marque cada item quando estiver feito.
 ## 3. Asaas
 
 - [ ] Conta de produção aprovada, com a conta bancária do FitOS.
-- [ ] Webhook de produção apontando para `https://<domínio>/api/webhooks/asaas`, com o token.
+- [ ] Webhook de produção apontando para `https://app.fitosx.com.br/api/webhooks/asaas`, com o token.
 - [ ] Runbooks no Sandbox (`RUNBOOK-VERIFICACAO-*`): assinatura real, checkout com cartão, webhook, gratuidade e cupons.
 - [ ] `GRATUIDADE_ASAAS=on` e `CUPONS_ASAAS=on`, só depois dos respectivos runbooks.
 
