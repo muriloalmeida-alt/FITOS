@@ -1,0 +1,122 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: calc(var(--fitos-space-6) + env(safe-area-inset-bottom));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(255, 120, 71, 0.4);
+  border-radius: 18px;
+  background-color: rgba(255, 120, 71, 0.08);
+}
+
+.queueTitle,
+.resultTitle {
+  margin: 0;
+  color: var(--fitos-color-on-surface);
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+
+.item > :first-child {
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.link,
+.linkMuted {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fitos-orange-300);
+  font-family: var(--fitos-font-family);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.linkMuted {
+  color: var(--fitos-color-text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.textareaLabel,
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--fitos-color-on-surface);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--fitos-color-on-surface);
+  font-family: var(--fitos-font-family);
+  font-size: 15px;
+  resize: vertical;
+}
+
+.errors {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--fitos-color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--fitos-color-on-surface);
+  font-size: 15px;
+  line-height: 1.5;
+}

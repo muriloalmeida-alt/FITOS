@@ -4,7 +4,11 @@ import { completeIndividualOnboarding, getIndividualOnboardingProfile, Onboardin
 import { SubscriptionError, subscribeTenantToPlan } from "@/modules/billing/subscriptions";
 import { createStarterPlanForIndividual } from "@/modules/individual-onboarding/starterPlan";
 import { listActivePlansForAudience } from "@/modules/billing/plans";
+import { cookies } from "next/headers";
 import { prisma } from "@/shared/db/prisma";
+import { claimInvite } from "@/modules/crm/prospects";
+import { CRM_INVITE_COOKIE } from "@/shared/lib/crmCookie";
+import { describeError, logEvent } from "@/shared/lib/serverLog";
 import { offerable, storedModalities } from "@/shared/lib/modalities";
 import { copyReadyItem, readyProgramModalities } from "@/modules/library/readyLibrary";
 
@@ -112,7 +116,20 @@ export async function POST(request: Request) {
       starterWorkouts = (await copyReadyItem({ tenantId: ctx.tenantId, kind: "programa", key: program.key })).workoutIds.length;
     }
 
-    return Response.json({ ...profile, starterWorkouts }, { status: 201 });
+    // Convite do CRM: o cadastro feito pelo link aplica o cupom do contato.
+    // Nunca derruba o cadastro; o cookie sai depois de usado.
+    const jar = await cookies();
+    const inviteToken = jar.get(CRM_INVITE_COOKIE)?.value;
+    let invite = { claimed: false, couponApplied: false };
+    if (inviteToken) {
+      invite = await claimInvite({ token: inviteToken, tenantId: ctx.tenantId, userId: ctx.userId }).catch((error) => {
+        logEvent("error", "crm_claim_failed", { tenantId: ctx.tenantId, ...describeError(error) });
+        return { claimed: false, couponApplied: false };
+      });
+      jar.delete(CRM_INVITE_COOKIE);
+    }
+
+    return Response.json({ ...profile, starterWorkouts, inviteCouponApplied: invite.couponApplied }, { status: 201 });
   } catch (error) {
     const response = authErrorResponse(error);
     if (response) return response;

@@ -35,6 +35,12 @@ vi.mock("@/modules/library/readyLibrary", async () => {
   return { ...actual, copyReadyItem: (...args: unknown[]) => copyReadyItem(...(args as [])) };
 });
 
+const cookieGet = vi.fn((_name: string): { value: string } | undefined => undefined);
+const cookieDelete = vi.fn();
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => cookieGet(name), delete: (name: string) => cookieDelete(name) }) }));
+const claimInvite = vi.fn(async () => ({ claimed: true, couponApplied: true }));
+vi.mock("@/modules/crm/prospects", () => ({ claimInvite: (...args: unknown[]) => claimInvite(...(args as [])) }));
+
 const listPlans = vi.fn(async () => [{ id: "plan-individual-livre-v2" }]);
 const findSubscription = vi.fn(async () => null);
 vi.mock("@/modules/billing/plans", () => ({ listActivePlansForAudience: (...args: unknown[]) => listPlans(...(args as [])) }));
@@ -239,6 +245,22 @@ describe("POST /api/onboarding", () => {
       expect(copyReadyItem).not.toHaveBeenCalled();
       expect(createStarterPlanForIndividual).not.toHaveBeenCalled();
     });
+  });
+
+  it("CRM: cadastro feito pelo link do convite aplica o cupom do contato e apaga o cookie", async () => {
+    requireIndividual.mockResolvedValue({ userId: "u1", role: "INDIVIDUAL", tenantId: "tenant-real" });
+    completeIndividualOnboarding.mockResolvedValue({ id: "p1", modalities: [] });
+    subscribeTenantToPlan.mockResolvedValue({});
+    listPlans.mockResolvedValue([{ id: "plan-livre" }]);
+    findSubscription.mockResolvedValue(null);
+    cookieGet.mockImplementation((name: string) => (name === "fitos_convite" ? { value: "tok123abc" } : undefined));
+    claimInvite.mockResolvedValue({ claimed: true, couponApplied: true });
+    const { POST } = await import("./route");
+    const response = await POST(new Request("http://localhost/api/onboarding", { method: "POST", body: JSON.stringify({ objective: "PERDER_PESO", experienceLevel: "INICIANTE", weeklyAvailability: "TRES_A_QUATRO_DIAS", modalities: ["musculacao"], program: null }) }));
+    expect(response.status).toBe(201);
+    expect(claimInvite).toHaveBeenCalledWith({ token: "tok123abc", tenantId: "tenant-real", userId: "u1" });
+    expect(cookieDelete).toHaveBeenCalledWith("fitos_convite");
+    expect(await response.json()).toMatchObject({ inviteCouponApplied: true });
   });
 
   it("retorna 400 com o motivo quando o domínio rejeita", async () => {
