@@ -7,7 +7,6 @@ import { difficultyLabel } from "@/shared/lib/difficulty";
 import { isExerciseCategory } from "@/shared/lib/exerciseCatalog";
 import { AuthError, requireSubscriber } from "@/modules/tenancy/authContext";
 import { listCatalogExercises, listCatalogFacets } from "@/modules/exercises/exercises";
-import { FilterLinks } from "../_workout-builder/FilterLinks";
 import { TrainingTabs } from "../_workout-builder/TrainingTabs";
 import { LogoutButton } from "../LogoutButton";
 import { INDIVIDUAL_NAV_ITEMS, PERSONAL_NAV_ITEMS } from "../navigation";
@@ -32,9 +31,9 @@ function hrefWith(base: Record<string, string | undefined>, changes: Record<stri
   return qs ? `/painel/exercicios?${qs}` : "/painel/exercicios";
 }
 
-/// Biblioteca de exercícios do Personal (FIT-147, P5 do protótipo): origem
-/// (Todos/Biblioteca/Meus), busca, músculo em chips, tipo e dificuldade em
-/// sheet, e cada exercício com foto e etiqueta de origem.
+/// Biblioteca de exercícios (FIT-147; busca e filtros da proposta 8):
+/// busca no topo, filtros numa modal (só os aplicados aparecem na página)
+/// e cada exercício com a miniatura real à esquerda.
 export default async function ExerciciosPage({ searchParams }: ExerciciosPageProps = {}) {
   let ctx;
   try {
@@ -59,20 +58,14 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
 
   return (
     <AppShell eyebrow="Exercícios" title="Sua biblioteca" subtitle={`${result.total} ${result.total === 1 ? "exercício" : "exercícios"}`} navItems={ctx.role === "PERSONAL" ? PERSONAL_NAV_ITEMS : INDIVIDUAL_NAV_ITEMS} activeKey={ctx.role === "PERSONAL" ? "exercicios" : "treinos"} trailing={<LogoutButton />}>
-      <TrainingTabs active="exercicios" area={ctx.role === "PERSONAL" ? "personal" : "livre"} />
-      <FilterLinks
-        label="Origem"
-        items={(["todos", "biblioteca", "meus"] as const).map((key) => ({
-          label: key === "todos" ? "Todos" : key === "biblioteca" ? "Biblioteca FitOS" : "Meus",
-          href: hrefWith(base, { origem: key === "todos" ? undefined : key }),
-          active: origin === key,
-        }))}
-      />
+      <div data-search-hide="">
+        <TrainingTabs active="exercicios" area={ctx.role === "PERSONAL" ? "personal" : "livre"} />
+      </div>
       <LibraryControls muscles={facets.muscles} types={facets.types} difficulties={facets.difficulties} categories={facets.categories} openCreate={sp.novo === "1"} />
 
       {result.items.length === 0 ? (
         <div className={styles.empty}>
-          <p className={styles.emptyTitle}>Nenhum resultado</p>
+          <p className={styles.emptyTitle}>Nenhum exercício encontrado</p>
           <p className={styles.meta}>{origin === "meus" ? "Você ainda não cadastrou exercícios próprios." : "Tente outro nome ou limpe os filtros."}</p>
           <Link href="/painel/exercicios" className={styles.link}>
             Limpar filtros
@@ -86,7 +79,7 @@ export default async function ExerciciosPage({ searchParams }: ExerciciosPagePro
             return (
               <li key={exercise.id}>
                 <Link href={`/painel/exercicios/${exercise.id}`} className={styles.row}>
-                  <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? ""} width={84} height={84} className={styles.thumb} />
+                  <ExerciseThumbnail src={exercise.imageUrl} alt={exercise.imageAlt ?? ""} width={56} height={56} className={styles.thumb} />
                   <span className={styles.text}>
                     <span className={styles.name}>{exercise.name}</span>
                     {meta ? <span className={styles.meta}>{meta}</span> : null}

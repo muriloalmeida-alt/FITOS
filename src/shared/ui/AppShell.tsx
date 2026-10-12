@@ -182,7 +182,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
 
   return (
     <div className={styles.shell}>
-      <header className={styles.topBar}>
+      <header className={styles.topBar} data-shell="top">
         <BrandLogo background="photo" size={44} className={styles.brand} />
         <div className={styles.topBarEnd}>
           {trailing ? <div className={styles.trailing}>{trailing}</div> : null}
@@ -207,7 +207,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         </nav>
 
         <main className={styles.content}>
-          <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader}>
+          <div className={headerMode === "mobile" ? `${styles.pageHeader} ${styles.pageHeaderMobileOnly}` : styles.pageHeader} data-shell="header">
             {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
             <h1 className={`${styles.title} ${styles[`title-${titleFit(title)}`] ?? ""}`} title={titleFit(title) === "tiny" ? title : undefined}>
               {title}
@@ -218,7 +218,7 @@ export function AppShell({ title, subtitle, eyebrow, headerMode = "always", navI
         </main>
       </div>
 
-      <nav className={styles.bottomNav} aria-label="Navegação principal">
+      <nav className={styles.bottomNav} aria-label="Navegação principal" data-shell="nav">
         {visible.map((item) => (
           <NavLink key={item.key} item={item} isActive={item.key === activeKey} />
         ))}
