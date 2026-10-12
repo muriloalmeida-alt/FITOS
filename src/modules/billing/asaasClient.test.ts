@@ -350,3 +350,20 @@ describe("gratuidade do administrador (feature 4)", () => {
     );
   });
 });
+
+describe("asaasBaseUrl (ambiente do Asaas)", () => {
+  it("Sandbox por padrão; produção só com ASAAS_BASE_URL", async () => {
+    const { asaasBaseUrl, ASAAS_SANDBOX_BASE_URL } = await import("./asaasClient");
+    expect(asaasBaseUrl({})).toBe(ASAAS_SANDBOX_BASE_URL);
+    expect(asaasBaseUrl({ ASAAS_BASE_URL: " " })).toBe(ASAAS_SANDBOX_BASE_URL);
+    expect(asaasBaseUrl({ ASAAS_BASE_URL: "https://api.asaas.com/v3/" })).toBe("https://api.asaas.com/v3");
+  });
+
+  it("as requisições da assinatura usam o ambiente configurado", async () => {
+    vi.stubEnv("ASAAS_BASE_URL", "https://api.asaas.com/v3");
+    const fetchImpl = vi.fn(async () => jsonResponse(200, { data: [] }));
+    await asaasRequest({ apiKey: FAKE_KEY, fetchImpl: fetchImpl as unknown as typeof fetch }, "/customers?limit=1");
+    expect((fetchImpl.mock.calls[0] as unknown as [string])[0]).toBe("https://api.asaas.com/v3/customers?limit=1");
+    vi.unstubAllEnvs();
+  });
+});
