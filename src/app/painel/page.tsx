@@ -6,7 +6,7 @@ import { getAuthContext } from "@/modules/tenancy/authContext";
 import { prisma } from "@/shared/db/prisma";
 import { getStudentHome } from "@/modules/students/studentHome";
 import { getIndividualHome } from "@/modules/workouts/individualHome";
-import { ensureCurrentMonthCharges, getFinancialSummary } from "@/modules/student-finance/charges";
+import { ensureCurrentMonthCharges } from "@/modules/student-finance/charges";
 import { listStudentRoster, weeklyCompletionRate } from "@/modules/students/roster";
 import { getPersonalFeed } from "@/modules/students/personalFeed";
 import { listOccurrences, nextOccurrencesForStudent } from "@/modules/schedule/schedule";
@@ -112,21 +112,17 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
       redirect("/onboarding-personal");
     }
     const now = new Date();
-    const currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    // O feed e a carteira atualizam cobranças vencidas antes de ler; a
-    // contagem de atrasadas vem depois, já com o status certo.
+    // O feed atualiza as cobranças vencidas antes de ler.
     // Mensalidades recorrentes do mês se lançam sozinhas (EPIC-29).
     await ensureCurrentMonthCharges({ tenantId: ctx.tenantId, now });
-    const [roster, feed, financialSummary, subscription, progressions, todayClasses, freeAccess] = await Promise.all([
+    const [roster, feed, subscription, progressions, todayClasses, freeAccess] = await Promise.all([
       listStudentRoster({ tenantId: ctx.tenantId, filter: "ativos", limit: 1000, now }),
       getPersonalFeed({ tenantId: ctx.tenantId, now }),
-      getFinancialSummary({ tenantId: ctx.tenantId, referenceMonth: currentMonth }),
       getSubscriptionForTenant(ctx.tenantId),
       suggestCoachProgressions({ tenantId: ctx.tenantId }).catch(() => []),
       listOccurrences({ tenantId: ctx.tenantId, from: localDate(now), to: localDate(now) }).catch(() => []),
       getOwnFreeAccess(ctx.tenantId).catch(() => null),
     ]);
-    const overdueCount = await prisma.studentCharge.count({ where: { tenantId: ctx.tenantId, status: "ATRASADO" } });
 
     return (
       <PersonalHome
@@ -138,8 +134,6 @@ export default async function PainelPage({ searchParams }: { searchParams?: Prom
           activeStudents: roster.counts.ativos,
           studentLimit: subscription?.plan.studentLimit ?? null,
           weekCompletion: weeklyCompletionRate(roster.rows),
-          receivedCents: financialSummary.recebidoCents,
-          overdueCount,
         }}
         feed={feed}
         isNewSpace={roster.counts.todos === 0}

@@ -55,9 +55,20 @@ describe("agenda de hoje no Início do personal (EPIC-48)", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("dia sem aulas", () => {
+  it("o dia na vertical, com rolagem só na agenda e já perto da hora atual", () => {
+    renderAgenda([aula({ ref: "a", startMinutes: 420 }), aula({ ref: "b", studentName: "Bia Lima", startMinutes: 1080 })], 600);
+    const timeline = screen.getByLabelText("Aulas de hoje, por horário");
+    // Quatro horas de 56 px à vista; 10:00 menos meia hora, a partir das 05:00.
+    expect(timeline).toHaveStyle({ height: "224px" });
+    expect(timeline.scrollTop).toBe(5 * 56 - 28);
+    expect(screen.getByText("05:00")).toBeInTheDocument();
+    expect(screen.getByText("22:00")).toBeInTheDocument();
+  });
+
+  it("dia sem aulas: só o cartão da agenda, que inteiro abre a agenda", () => {
     renderAgenda([], 600);
-    expect(screen.getByText(/nenhuma aula/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Marcar horário" })).toHaveAttribute("href", "/painel/agenda");
+    expect(screen.queryByText(/nenhuma aula/)).toBeNull();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.getByRole("link", { name: /Agenda de hoje/ })).toHaveAttribute("href", "/painel/agenda");
   });
 });

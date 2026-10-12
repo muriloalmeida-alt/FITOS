@@ -198,14 +198,13 @@ describe("PainelPage (FIT-012)", () => {
     expect(screen.getByRole("link", { name: /Teste grátis · 5 dias/ })).toHaveAttribute("href", "/painel/assinatura");
     expect(screen.getByText("de 15 do plano")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.200")).toBeInTheDocument();
-    expect(screen.getByText("2 atrasadas")).toBeInTheDocument();
+    // Sem o valor recebido: só alunos e treinos da semana.
+    expect(screen.queryByText("R$ 1.200")).toBeNull();
     expect(screen.getByRole("heading", { name: "Pede você agora" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recebi" })).toBeInTheDocument();
     expect(listStudentRoster).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1", filter: "ativos" }));
     expect(getPersonalFeed).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "t1" }));
-    expect(countCharges).toHaveBeenCalledWith({ where: { tenantId: "t1", status: "ATRASADO" } });
-    expect(getFinancialSummary.mock.calls[0]![0].referenceMonth.getUTCDate()).toBe(1);
+    expect(getFinancialSummary).not.toHaveBeenCalled();
     expect(findUniqueOrThrowStudent).not.toHaveBeenCalled();
   });
 
