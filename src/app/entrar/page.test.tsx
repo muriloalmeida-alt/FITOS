@@ -24,6 +24,6 @@ describe("EntrarPage (FIT-163)", () => {
     expect(screen.getByRole("link", { name: "Recebi um convite" })).toHaveAttribute("href", "/comecar?caminho=convite");
     expect(screen.getByRole("link", { name: "Termos de uso" })).toHaveAttribute("href", "/termos-de-uso");
     expect(screen.getByRole("link", { name: "Privacidade" })).toHaveAttribute("href", "/politica-de-privacidade");
-    expect(screen.queryByText(/Esqueceu a senha|Esqueci minha senha/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Esqueci minha senha" })).toHaveAttribute("href", "/esqueci-senha");
   });
 });
